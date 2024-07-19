@@ -57,6 +57,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
@@ -123,7 +124,8 @@ public class SegmentGeneratorFrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   )
   {
     if (extra == null || extra.isEmpty()) {
@@ -192,7 +194,9 @@ public class SegmentGeneratorFrameProcessorFactory
                   frameContext.indexMerger(),
                   meters,
                   parseExceptionHandler,
-                  true
+                  true,
+                  // MSQ doesn't support CentralizedDatasourceSchema feature as of now.
+                  CentralizedDatasourceSchemaConfig.create(false)
               );
 
           return new SegmentGeneratorFrameProcessor(

@@ -62,6 +62,8 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     assertCoerceArrayToList(stringList, stringList);
     assertCoerceArrayToList(stringList, stringArray);
     assertCoerceArrayToList(stringList, stringArray2);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList("a"), "a");
   }
 
   @Test
@@ -76,6 +78,8 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     assertCoerceArrayToList(listWithNull, arrayWithNull);
     assertCoerceArrayToList(list, list);
     assertCoerceArrayToList(list, array);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList(1L), 1L);
   }
 
   @Test
@@ -90,6 +94,8 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     assertCoerceArrayToList(listWithNull, arrayWithNull);
     assertCoerceArrayToList(list, list);
     assertCoerceArrayToList(list, array);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList(1.1), 1.1);
   }
 
   @Test
@@ -104,6 +110,8 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     assertCoerceArrayToList(listWithNull, arrayWithNull);
     assertCoerceArrayToList(list, list);
     assertCoerceArrayToList(list, array);
+    assertCoerceArrayToList(null, null);
+    assertCoerceArrayToList(Collections.singletonList(1.1f), 1.1f);
   }
 
   @Test
@@ -225,11 +233,6 @@ public class SqlResultsTest extends InitializedNullHandlingTest
       Assert.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
     }
   }
-  @Test
-  public void testCoerceArrayFails()
-  {
-    assertCannotCoerce("xyz", SqlTypeName.ARRAY);
-  }
 
   @Test
   public void testCoerceUnsupportedType()
@@ -238,15 +241,9 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMustCoerce()
+  public void testMayNotCoerceList()
   {
-    Assert.assertNull(SqlResults.maybeCoerceArrayToList("hello", true));
-  }
-
-  @Test
-  public void testMayNotCoerce()
-  {
-    Assert.assertEquals("hello", SqlResults.maybeCoerceArrayToList("hello", false));
+    Assert.assertEquals("hello", SqlResults.coerceArrayToList("hello", false));
   }
 
   private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)
@@ -269,9 +266,9 @@ public class SqlResultsTest extends InitializedNullHandlingTest
     MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));
   }
 
-  private static void assertCoerceArrayToList(Object expected, Object toCoerce)
+  private void assertCoerceArrayToList(Object expected, Object toCoerce)
   {
-    Object coerced = SqlResults.maybeCoerceArrayToList(toCoerce, true);
+    Object coerced = SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, SqlTypeName.ARRAY, "");
     Assert.assertEquals(expected, coerced);
   }
 }

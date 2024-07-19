@@ -35,7 +35,6 @@ import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
@@ -48,10 +47,10 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
-import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
@@ -71,6 +70,7 @@ import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.server.http.HttpMediaType;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -84,7 +84,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -126,7 +125,7 @@ public class OverlordResource
   private static final Logger log = new Logger(OverlordResource.class);
 
   private final TaskMaster taskMaster;
-  private final TaskStorageQueryAdapter taskStorageQueryAdapter;
+  private final TaskQueryTool taskQueryTool;
   private final IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
   private final TaskLogStreamer taskLogStreamer;
   private final JacksonConfigManager configManager;
@@ -163,7 +162,7 @@ public class OverlordResource
   @Inject
   public OverlordResource(
       TaskMaster taskMaster,
-      TaskStorageQueryAdapter taskStorageQueryAdapter,
+      TaskQueryTool taskQueryTool,
       IndexerMetadataStorageAdapter indexerMetadataStorageAdapter,
       TaskLogStreamer taskLogStreamer,
       JacksonConfigManager configManager,
@@ -175,7 +174,7 @@ public class OverlordResource
   )
   {
     this.taskMaster = taskMaster;
-    this.taskStorageQueryAdapter = taskStorageQueryAdapter;
+    this.taskQueryTool = taskQueryTool;
     this.indexerMetadataStorageAdapter = indexerMetadataStorageAdapter;
     this.taskLogStreamer = taskLogStreamer;
     this.configManager = configManager;
@@ -241,15 +240,7 @@ public class OverlordResource
             return Response.ok(ImmutableMap.of("task", task.getId())).build();
           }
           catch (DruidException e) {
-            return Response
-                .status(e.getStatusCode())
-                .entity(new ErrorResponse(e))
-                .build();
-          }
-          catch (org.apache.druid.common.exception.DruidException e) {
-            return Response.status(e.getResponseCode())
-                           .entity(ImmutableMap.of("error", e.getMessage()))
-                           .build();
+            return ServletResourceUtils.buildErrorResponseFrom(e);
           }
         }
     );
@@ -293,7 +284,7 @@ public class OverlordResource
     }
 
     // Build the response
-    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(minTaskPriority)).build();
+    return Response.ok(taskQueryTool.getLockedIntervals(minTaskPriority)).build();
   }
 
   @POST
@@ -307,7 +298,7 @@ public class OverlordResource
     }
 
     // Build the response
-    return Response.ok(taskStorageQueryAdapter.getLockedIntervals(lockFilterPolicies)).build();
+    return Response.ok(taskQueryTool.getLockedIntervals(lockFilterPolicies)).build();
   }
 
   @GET
@@ -318,7 +309,7 @@ public class OverlordResource
   {
     final TaskPayloadResponse response = new TaskPayloadResponse(
         taskid,
-        taskStorageQueryAdapter.getTask(taskid).orNull()
+        taskQueryTool.getTask(taskid).orNull()
     );
 
     final Response.Status status = response.getPayload() == null
@@ -334,7 +325,7 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    final TaskInfo<Task, TaskStatus> taskInfo = taskStorageQueryAdapter.getTaskInfo(taskid);
+    final TaskInfo<Task, TaskStatus> taskInfo = taskQueryTool.getTaskInfo(taskid);
     TaskStatusResponse response = null;
 
     if (taskInfo != null) {
@@ -408,8 +399,12 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskSegments(@PathParam("taskid") String taskid)
   {
-    final Set<DataSegment> segments = taskStorageQueryAdapter.getInsertedSegments(taskid);
-    return Response.ok().entity(segments).build();
+    final String errorMsg =
+        "Segment IDs committed by a task action are not persisted anymore."
+        + " Use the metric 'segment/added/bytes' to identify the segments created by a task.";
+    return Response.status(Status.NOT_FOUND)
+                   .entity(Collections.singletonMap("error", errorMsg))
+                   .build();
   }
 
   @POST
@@ -445,7 +440,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskQueue taskQueue)
           {
-            final List<TaskInfo<Task, TaskStatus>> tasks = taskStorageQueryAdapter.getActiveTaskInfo(dataSource);
+            final List<TaskInfo<Task, TaskStatus>> tasks = taskQueryTool.getActiveTaskInfo(dataSource);
             if (tasks.isEmpty()) {
               return Response.status(Status.NOT_FOUND).build();
             } else {
@@ -476,7 +471,7 @@ public class OverlordResource
       if (taskQueue.isPresent()) {
         optional = taskQueue.get().getTaskStatus(taskId);
       } else {
-        optional = taskStorageQueryAdapter.getStatus(taskId);
+        optional = taskQueryTool.getStatus(taskId);
       }
       if (optional.isPresent()) {
         result.put(taskId, optional.get());
@@ -818,7 +813,7 @@ public class OverlordResource
                   statusPlus.getId(),
                   statusPlus.getGroupId(),
                   statusPlus.getType(),
-                  runnerWorkItem.getCreatedTime(),
+                  statusPlus.getCreatedTime(),
                   runnerWorkItem.getQueueInsertionTime(),
                   statusPlus.getStatusCode(),
                   taskRunner.getRunnerTaskState(statusPlus.getId()), // this is racy for remoteTaskRunner
@@ -871,7 +866,7 @@ public class OverlordResource
         throw new IAE("Unknown state: [%s]", state);
     }
 
-    final Stream<TaskStatusPlus> taskStatusPlusStream = taskStorageQueryAdapter.getTaskStatusPlusList(
+    final Stream<TaskStatusPlus> taskStatusPlusStream = taskQueryTool.getTaskStatusPlusList(
         taskLookups,
         dataSource
     ).stream();

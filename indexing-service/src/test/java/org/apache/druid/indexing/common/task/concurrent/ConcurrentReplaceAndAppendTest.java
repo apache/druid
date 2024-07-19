@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.overlord.Segments;
@@ -53,6 +54,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -136,13 +138,15 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     );
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, new Period(0L), null, null, null),
+        new TaskQueueConfig(null, new Period(0L), null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
         taskActionClientFactory,
         getLockbox(),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     runningTasks.clear();
     taskQueue.start();
@@ -725,6 +729,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Append segment for Oct-Dec
     final DataSegment segmentV02 = asSegment(pendingSegment02);
     appendTask2.commitAppendSegments(segmentV02);
+    appendTask2.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(YEAR_23, segmentV02);
     verifyIntervalHasVisibleSegments(YEAR_23, segmentV02);
 
@@ -744,12 +749,14 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Append segment for Jan 1st
     final DataSegment segmentV01 = asSegment(pendingSegment01);
     appendTask.commitAppendSegments(segmentV01);
+    appendTask.finishRunAndGetStatus();
     verifyIntervalHasUsedSegments(YEAR_23, segmentV01, segmentV02);
     verifyIntervalHasVisibleSegments(YEAR_23, segmentV01, segmentV02);
 
     // Replace segment for whole year
     final DataSegment segmentV10 = createSegment(YEAR_23, v1);
     replaceTask.commitReplaceSegments(segmentV10);
+    replaceTask.finishRunAndGetStatus();
 
     final DataSegment segmentV11 = DataSegment.builder(segmentV01)
                                               .version(v1)
@@ -764,6 +771,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     // Append segment for quarter
     final DataSegment segmentV03 = asSegment(pendingSegment03);
     appendTask3.commitAppendSegments(segmentV03);
+    appendTask3.finishRunAndGetStatus();
 
     final DataSegment segmentV13 = DataSegment.builder(segmentV03)
                                               .version(v1)
@@ -972,10 +980,10 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private void verifySegments(Interval interval, Segments visibility, DataSegment... expectedSegments)
   {
     try {
+
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               WIKI,
-              null,
               ImmutableList.of(interval),
               visibility
           )
@@ -1009,16 +1017,19 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       TaskActionClientFactory taskActionClientFactory
   )
   {
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
+    centralizedDatasourceSchemaConfig.setEnabled(true);
     TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
         .setConfig(taskConfig)
         .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
-        .setTaskActionClientFactory(taskActionClientFactory);
+        .setTaskActionClientFactory(taskActionClientFactory)
+        .setCentralizedTableSchemaConfig(centralizedDatasourceSchemaConfig);
     return new TestTaskToolboxFactory(builder)
     {
       @Override
       public TaskToolbox build(TaskConfig config, Task task)
       {
-        return createTaskToolbox(config, task);
+        return createTaskToolbox(config, task, null);
       }
     };
   }

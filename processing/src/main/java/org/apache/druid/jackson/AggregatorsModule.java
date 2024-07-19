@@ -49,20 +49,20 @@ import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstFoldingAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstFoldingAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.aggregation.hyperloglog.PreComputedHyperUniquesSerde;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastFoldingAggregatorFactory;
 import org.apache.druid.query.aggregation.mean.DoubleMeanAggregatorFactory;
 import org.apache.druid.query.aggregation.mean.DoubleMeanHolder;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -83,6 +83,16 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
+    registerComplexMetricsAndSerde();
+
+    setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
+    setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
+
+    addSerializer(DoubleMeanHolder.class, DoubleMeanHolder.Serializer.INSTANCE);
+  }
+
+  public static void registerComplexMetricsAndSerde()
+  {
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
     ComplexMetrics.registerSerde(PreComputedHyperUniquesSerde.TYPE_NAME, new PreComputedHyperUniquesSerde());
     ComplexMetrics.registerSerde(
@@ -102,11 +112,6 @@ public class AggregatorsModule extends SimpleModule
         SerializablePairLongLongComplexMetricSerde.TYPE_NAME,
         new SerializablePairLongLongComplexMetricSerde()
     );
-
-    setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
-    setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
-
-    addSerializer(DoubleMeanHolder.class, DoubleMeanHolder.Serializer.INSTANCE);
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")

@@ -33,13 +33,14 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
 public class RetrieveSegmentsActionsTest
 {
   private static final Interval INTERVAL = Intervals.of("2017-10-01/2017-10-15");
+  private static final String UNUSED_V0 = "v0";
+  private static final String UNUSED_V1 = "v1";
 
   @ClassRule
   public static TaskActionTestKit actionTestKit = new TaskActionTestKit();
@@ -49,19 +50,21 @@ public class RetrieveSegmentsActionsTest
   private static Set<DataSegment> expectedUsedSegments;
 
   @BeforeClass
-  public static void setup() throws IOException
+  public static void setup()
   {
     task = NoopTask.create();
 
     actionTestKit.getTaskLockbox().add(task);
 
     expectedUnusedSegments = new HashSet<>();
-    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-05/2017-10-06"), "1"));
-    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), "1"));
-    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), "1"));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-05/2017-10-06"), UNUSED_V0));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), UNUSED_V0));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V0));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-06/2017-10-07"), UNUSED_V1));
+    expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V1));
 
     actionTestKit.getMetadataStorageCoordinator()
-                 .commitSegments(expectedUnusedSegments);
+                 .commitSegments(expectedUnusedSegments, null);
 
     expectedUnusedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 
@@ -71,7 +74,7 @@ public class RetrieveSegmentsActionsTest
     expectedUsedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), "2"));
 
     actionTestKit.getMetadataStorageCoordinator()
-                 .commitSegments(expectedUsedSegments);
+                 .commitSegments(expectedUsedSegments, null);
 
     expectedUsedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 
@@ -88,7 +91,7 @@ public class RetrieveSegmentsActionsTest
         ImmutableList.of("dim1", "dim2"),
         ImmutableList.of("met1", "met2"),
         NoneShardSpec.instance(),
-        Integer.valueOf(version),
+        9,
         1
     );
   }
@@ -98,31 +101,51 @@ public class RetrieveSegmentsActionsTest
   {
     final RetrieveUsedSegmentsAction action =
         new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
-    final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(expectedUsedSegments, resultSegments);
+    final Set<DataSegment> observedUsedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUsedSegments, observedUsedSegments);
   }
 
   @Test
-  public void testRetrieveUnusedSegmentsAction()
+  public void testRetrieveUnusedSegmentsActionWithVersions()
   {
-    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null);
-    final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(expectedUnusedSegments, resultSegments);
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
+        task.getDataSource(),
+        INTERVAL,
+        ImmutableList.of(UNUSED_V0, UNUSED_V1),
+        null,
+        null
+    );
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUnusedSegments, observedUnusedSegments);
+  }
+
+  @Test
+  public void testRetrieveUnusedSegmentsActionWithEmptyVersions()
+  {
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(
+        task.getDataSource(),
+        INTERVAL,
+        ImmutableList.of(),
+        null,
+        null
+    );
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(ImmutableSet.of(), observedUnusedSegments);
   }
 
   @Test
   public void testRetrieveUnusedSegmentsActionWithMinUsedLastUpdatedTime()
   {
-    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, DateTimes.MIN);
-    final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(ImmutableSet.of(), resultSegments);
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null, DateTimes.MIN);
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(ImmutableSet.of(), observedUnusedSegments);
   }
 
   @Test
   public void testRetrieveUnusedSegmentsActionWithNowUsedLastUpdatedTime()
   {
-    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, DateTimes.nowUtc());
-    final Set<DataSegment> resultSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
-    Assert.assertEquals(expectedUnusedSegments, resultSegments);
+    final RetrieveUnusedSegmentsAction action = new RetrieveUnusedSegmentsAction(task.getDataSource(), INTERVAL, null, null, DateTimes.nowUtc());
+    final Set<DataSegment> observedUnusedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
+    Assert.assertEquals(expectedUnusedSegments, observedUnusedSegments);
   }
 }

@@ -36,7 +36,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -184,6 +183,8 @@ public class WorkerImpl implements Worker
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final boolean durableStageStorageEnabled;
   private final WorkerStorageParameters workerStorageParameters;
+  private final boolean isRemoveNullBytes;
+
   /**
    * Only set for select jobs.
    */
@@ -229,6 +230,7 @@ public class WorkerImpl implements Worker
     QueryContext queryContext = QueryContext.of(task.getContext());
     this.durableStageStorageEnabled = MultiStageQueryContext.isDurableStorageEnabled(queryContext);
     this.selectDestination = MultiStageQueryContext.getSelectDestinationOrNull(queryContext);
+    this.isRemoveNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     this.workerStorageParameters = workerStorageParameters;
 
     long maxBytes = workerStorageParameters.isIntermediateStorageLimitConfigured()
@@ -498,20 +500,16 @@ public class WorkerImpl implements Worker
   @Override
   public void stopGracefully()
   {
-    log.info("Stopping gracefully for taskId [%s]", task.getId());
-    kernelManipulationQueue.add(
-        kernel -> {
-          // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
-          throw new MSQException(CanceledFault.INSTANCE);
-        }
-    );
+    // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
+    log.info("Worker task[%s] canceled.", task.getId());
+    doCancel();
   }
 
   @Override
   public void controllerFailed()
   {
-    controllerAlive = false;
-    stopGracefully();
+    log.info("Controller task[%s] for worker task[%s] failed. Canceling.", task.getControllerTaskId(), task.getId());
+    doCancel();
   }
 
   @Override
@@ -910,6 +908,31 @@ public class WorkerImpl implements Worker
   }
 
   /**
+   * Called by {@link #stopGracefully()} (task canceled, or containing process shut down) and
+   * {@link #controllerFailed()}.
+   */
+  private void doCancel()
+  {
+    // Set controllerAlive = false so we don't try to contact the controller after being canceled. If it canceled us,
+    // it doesn't need to know that we were canceled. If we were canceled by something else, the controller will
+    // detect this as part of its monitoring of workers.
+    controllerAlive = false;
+
+    // Close controller client to cancel any currently in-flight calls to the controller.
+    if (controllerClient != null) {
+      controllerClient.close();
+    }
+
+    // Clear the main loop event queue, then throw a CanceledFault into the loop to exit it promptly.
+    kernelManipulationQueue.clear();
+    kernelManipulationQueue.add(
+        kernel -> {
+          throw new MSQException(CanceledFault.INSTANCE);
+        }
+    );
+  }
+
+  /**
    * Log (at DEBUG level) a string explaining the status of all work assigned to this worker.
    */
   private static void logKernelStatus(final Collection<WorkerStageKernel> kernels)
@@ -1091,7 +1114,8 @@ public class WorkerImpl implements Worker
               inputChannelFactory,
               () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getStandardFrameSize()),
               exec,
-              cancellationId
+              cancellationId,
+              MultiStageQueryContext.removeNullBytes(QueryContext.of(task.getContext()))
           );
 
       inputSliceReader = new MapInputSliceReader(
@@ -1185,7 +1209,8 @@ public class WorkerImpl implements Worker
               frameContext,
               parallelism,
               counterTracker,
-              e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e)
+              e -> warningPublisher.publishException(kernel.getStageDefinition().getStageNumber(), e),
+              isRemoveNullBytes
           );
 
       final ProcessorManager<ProcessorReturnType, ManagerReturnType> processorManager = processors.getProcessorManager();
@@ -1522,7 +1547,8 @@ public class WorkerImpl implements Worker
                 memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
                 -1,
                 cancellationId,
-                counterTracker.sortProgress()
+                counterTracker.sortProgress(),
+                isRemoveNullBytes
             );
 
             return FutureUtils.transform(
@@ -1554,11 +1580,11 @@ public class WorkerImpl implements Worker
                 outputChannels.stream().map(OutputChannel::getWritableChannel).collect(Collectors.toList()),
                 kernel.getStageDefinition().getFrameReader(),
                 kernel.getStageDefinition().getClusterBy().getColumns().size(),
-                FrameWriters.makeFrameWriterFactory(
-                    FrameType.ROW_BASED,
+                FrameWriters.makeRowBasedFrameWriterFactory(
                     new ArenaMemoryAllocatorFactory(frameContext.memoryParameters().getStandardFrameSize()),
                     kernel.getStageDefinition().getSignature(),
-                    kernel.getStageDefinition().getSortKey()
+                    kernel.getStageDefinition().getSortKey(),
+                    isRemoveNullBytes
                 )
             );
 
@@ -1651,7 +1677,8 @@ public class WorkerImpl implements Worker
                         // Tracker is not actually tracked, since it doesn't quite fit into the way we report counters.
                         // There's a single SuperSorterProgressTrackerCounter per worker, but workers that do local
                         // sorting have a SuperSorter per partition.
-                        new SuperSorterProgressTracker()
+                        new SuperSorterProgressTracker(),
+                        isRemoveNullBytes
                     );
 
                     return FutureUtils.transform(sorter.run(), r -> Iterables.getOnlyElement(r.getAllChannels()));
@@ -1745,6 +1772,7 @@ public class WorkerImpl implements Worker
             @Override
             public void onSuccess(final ClusterByStatisticsCollector result)
             {
+              result.logSketches();
               kernelManipulationQueue.add(
                   holder ->
                       holder.getStageKernelMap().get(stageDefinition.getId())

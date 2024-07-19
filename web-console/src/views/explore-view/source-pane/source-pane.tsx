@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React from 'react';
 
 import { useQueryManager } from '../../../hooks';
@@ -47,7 +46,7 @@ export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps)
   });
 
   return (
-    <Popover2
+    <Popover
       className="source-pane"
       disabled={disabled}
       minimal
@@ -69,6 +68,6 @@ export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps)
         minimal
         disabled={disabled}
       />
-    </Popover2>
+    </Popover>
   );
 });

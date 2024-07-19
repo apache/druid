@@ -45,18 +45,19 @@ import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
@@ -65,6 +66,7 @@ import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -234,7 +236,7 @@ public class OverlordTest
 
     taskMaster = new TaskMaster(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, new Period(1), null, new Period(10), null),
+        new TaskQueueConfig(null, new Period(1), null, new Period(10), null, null),
         new DefaultTaskConfig(),
         taskLockbox,
         taskStorage,
@@ -247,7 +249,9 @@ public class OverlordTest
         supervisorManager,
         EasyMock.createNiceMock(OverlordDutyExecutor.class),
         new TestDruidLeaderSelector(),
-        EasyMock.createNiceMock(SegmentAllocationQueue.class)
+        EasyMock.createNiceMock(SegmentAllocationQueue.class),
+        new DefaultObjectMapper(),
+        new NoopTaskContextEnricher()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
@@ -265,14 +269,14 @@ public class OverlordTest
     Assert.assertEquals(taskMaster.getCurrentLeader(), druidNode.getHostAndPort());
     Assert.assertEquals(Optional.absent(), taskMaster.getRedirectLocation());
 
-    final TaskStorageQueryAdapter taskStorageQueryAdapter = new TaskStorageQueryAdapter(taskStorage, taskLockbox, taskMaster);
+    final TaskQueryTool taskQueryTool = new TaskQueryTool(taskStorage, taskLockbox, taskMaster);
     final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter = new WorkerTaskRunnerQueryAdapter(taskMaster, null);
     // Test Overlord resource stuff
     AuditManager auditManager = EasyMock.createNiceMock(AuditManager.class);
     overlordResource = new OverlordResource(
         taskMaster,
-        taskStorageQueryAdapter,
-        new IndexerMetadataStorageAdapter(taskStorageQueryAdapter, null),
+        taskQueryTool,
+        new IndexerMetadataStorageAdapter(taskStorage, null),
         null,
         null,
         auditManager,

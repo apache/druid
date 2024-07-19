@@ -34,16 +34,24 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
 {
   private final OvershadowableManager<T> overshadowableManager;
 
+  private short maxMinorVersion;
+
   public static <T extends Overshadowable<T>> PartitionHolder<T> copyWithOnlyVisibleChunks(
       PartitionHolder<T> partitionHolder
   )
   {
-    return new PartitionHolder<>(OvershadowableManager.copyVisible(partitionHolder.overshadowableManager));
+    return new PartitionHolder<>(
+        OvershadowableManager.copyVisible(partitionHolder.overshadowableManager),
+        partitionHolder.maxMinorVersion
+    );
   }
 
   public static <T extends Overshadowable<T>> PartitionHolder<T> deepCopy(PartitionHolder<T> partitionHolder)
   {
-    return new PartitionHolder<>(OvershadowableManager.deepCopy(partitionHolder.overshadowableManager));
+    return new PartitionHolder<>(
+        OvershadowableManager.deepCopy(partitionHolder.overshadowableManager),
+        partitionHolder.maxMinorVersion
+    );
   }
 
   public PartitionHolder(PartitionChunk<T> initialChunk)
@@ -60,14 +68,28 @@ public class PartitionHolder<T extends Overshadowable<T>> implements Iterable<Pa
     }
   }
 
-  protected PartitionHolder(OvershadowableManager<T> overshadowableManager)
+  protected PartitionHolder(OvershadowableManager<T> overshadowableManager, short maxMinorVersion)
   {
     this.overshadowableManager = overshadowableManager;
+    this.maxMinorVersion = maxMinorVersion;
   }
 
   public boolean add(PartitionChunk<T> chunk)
   {
-    return overshadowableManager.addChunk(chunk);
+    boolean added = overshadowableManager.addChunk(chunk);
+    if (added && chunk.getObject().getMinorVersion() > maxMinorVersion) {
+      maxMinorVersion = chunk.getObject().getMinorVersion();
+    }
+    return added;
+  }
+
+  /**
+   * Returns the maximum minor version across all the added segments.
+   * We do not handle updates of this variable when segments are removed for the sake of simplicity.
+   */
+  public short getMaxMinorVersion()
+  {
+    return maxMinorVersion;
   }
 
   @Nullable

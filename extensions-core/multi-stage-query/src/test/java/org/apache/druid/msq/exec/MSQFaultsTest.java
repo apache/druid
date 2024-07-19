@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
@@ -26,10 +27,13 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.error.InsertCannotAllocateSegmentFault;
 import org.apache.druid.msq.indexing.error.InsertCannotBeEmptyFault;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
@@ -39,9 +43,10 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -49,13 +54,17 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -279,11 +288,11 @@ public class MSQFaultsTest extends MSQTestBase
   }
 
   @Test
-  public void testInsertWithTooManySegments() throws IOException
+  public void testInsertWithTooManyPartitions() throws IOException
   {
     Map<String, Object> context = ImmutableMap.<String, Object>builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put("rowsPerSegment", 1)
+                                              .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 1)
                                               .build();
 
 
@@ -291,7 +300,7 @@ public class MSQFaultsTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .build();
 
-    File file = MSQTestFileUtils.generateTemporaryNdJsonFile(temporaryFolder, 30000, 1);
+    File file = createNdJsonFile(newTempFile("ndjson30k"), 30000, 1);
     String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
 
     testIngestQuery().setSql(" insert into foo1 SELECT\n"
@@ -310,6 +319,72 @@ public class MSQFaultsTest extends MSQTestBase
                      .verifyResults();
 
   }
+
+  @Test
+  public void testReplaceWithTooManySegmentsInTimeChunk() throws IOException
+  {
+    // Each segment will contain at most 10 rows. So with ALL granularity, an ingest query will
+    // attempt to generate a total of 5 segments for 50 input rows but will fail since only 1 segment is allowed.
+    final int maxNumSegments = 1;
+    final int rowsPerSegment = 10;
+    final int numRowsInInputFile = 50;
+
+    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+                                              .putAll(DEFAULT_MSQ_CONTEXT)
+                                              .put("maxNumSegments", maxNumSegments)
+                                              .put("rowsPerSegment", rowsPerSegment)
+                                              .build();
+
+
+    final File file = createNdJsonFile(newTempFile("ndjson30k"), numRowsInInputFile, 1);
+    final String filePathAsJson = queryFramework().queryJsonMapper().writeValueAsString(file.getAbsolutePath());
+
+    testIngestQuery().setSql(
+                         "REPLACE INTO foo1 "
+                         + " OVERWRITE ALL "
+                         + " SELECT FLOOR(TIME_PARSE(\"timestamp\") to day) AS __time"
+                         + " FROM TABLE(\n"
+                         + "  EXTERN(\n"
+                         + "    '{ \"files\": [" + filePathAsJson + "],\"type\":\"local\"}',\n"
+                         + "    '{\"type\": \"json\"}',\n"
+                         + "    '[{\"name\": \"timestamp\",\"type\":\"string\"}]'\n"
+                         + "  )\n"
+                         + " ) PARTITIONED BY ALL")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(RowSignature.builder().add("__time", ColumnType.LONG).build())
+                     .setQueryContext(context)
+                     .setExpectedMSQFault(
+                         new TooManySegmentsInTimeChunkFault(
+                             DateTimes.of("1970-01-01"),
+                             numRowsInInputFile / rowsPerSegment,
+                             maxNumSegments,
+                             Granularities.ALL
+                         )
+                     )
+                     .verifyResults();
+
+  }
+
+  /**
+   * Helper method that populates a file with {@code numRows} rows and {@code numColumns} columns where the
+   * first column is a string 'timestamp' while the rest are string columns with junk value
+   */
+  public static File createNdJsonFile(File file, final int numRows, final int numColumns) throws IOException
+  {
+    for (int currentRow = 0; currentRow < numRows; ++currentRow) {
+      StringBuilder sb = new StringBuilder();
+      sb.append("{");
+      sb.append("\"timestamp\":\"2016-06-27T00:00:11.080Z\"");
+      for (int currentColumn = 1; currentColumn < numColumns; ++currentColumn) {
+        sb.append(StringUtils.format(",\"column%s\":\"val%s\"", currentColumn, currentRow));
+      }
+      sb.append("}");
+      Files.write(file.toPath(), ImmutableList.of(sb.toString()), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+    }
+    return file;
+  }
+
+
 
   @Test
   public void testInsertWithManyColumns()
@@ -399,7 +474,7 @@ public class MSQFaultsTest extends MSQTestBase
 
     final int numFiles = 20000;
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
@@ -508,7 +583,10 @@ public class MSQFaultsTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 
@@ -554,7 +632,10 @@ public class MSQFaultsTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment))
            .when(testTaskActionClient)
-           .submit(ArgumentMatchers.isA(RetrieveUsedSegmentsAction.class));
+           .submit(ArgumentMatchers.argThat(
+               (ArgumentMatcher<TaskAction<?>>) argument ->
+                   argument instanceof RetrieveUsedSegmentsAction
+                   && "foo1".equals(((RetrieveUsedSegmentsAction) argument).getDataSource())));
 
     String expectedError = new TooManyBucketsFault(Limits.MAX_PARTITION_BUCKETS).getErrorMessage();
 

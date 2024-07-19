@@ -455,7 +455,7 @@ public class QueryRunnerTestHelper
       retVal.add(
           FluentQueryRunner.create(baseRunner, toolchest)
                            .applyPreMergeDecoration()
-                           .mergeResults()
+                           .mergeResults(true)
                            .applyPostMergeDecoration()
                            .setToString(baseRunner.toString())
       );
@@ -524,8 +524,7 @@ public class QueryRunnerTestHelper
     final DataSource base = query.getDataSource();
 
     final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
-                                                  .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
-                                                      adapter));
+                                                  .apply(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
     return makeQueryRunner(factory, segmentReference, runnerName);
   }
 
@@ -568,7 +567,7 @@ public class QueryRunnerTestHelper
             toolChest
         )
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration();
   }
 

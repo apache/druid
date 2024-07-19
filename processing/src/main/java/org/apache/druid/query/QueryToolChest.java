@@ -119,6 +119,30 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   /**
+   * Like {@link #mergeResults(QueryRunner)}, but with an additional flag that indicates the type of runner that is passeed to the call.
+   *
+   * willMergeRunner specifies that the input runner to the mergeResults would be the one created by the corresponding
+   * {@link QueryRunnerFactory#mergeRunners}.
+   * While it depends on the input runner, it is usually true since most of the time the same server is generating a runner
+   * that it wants to merge. The notable deviation from this norm is when the broker is accumulating the results from the
+   * data servers and needs to merge them together. In this case willMergeRunner is false.
+   *
+   * Currently, the sole consumer of this parameter is {@link org.apache.druid.query.groupby.GroupByQueryQueryToolChest}, where
+   * it is used to determine if the mergeResults is called with {@link org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner}
+   * to estimate the number of merge buffers required for the query to succeed. It is set false on the brokers, because they
+   * (mostly) fetch the results from the historicals, while the data servers set it to false (because they call this method
+   * with {@link QueryRunnerFactory#mergeRunners}.
+   *
+   * By default, the willMergeRunners is ignored, and the {@link #mergeResults(QueryRunner)} is called. For the toolchests
+   * that override this method must ensure that {@link #mergeResults(QueryRunner)} delegates to it (else it will use the
+   * default implementation for {@link #mergeResults(QueryRunner)}) which would be undesirable.
+   */
+  public QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner, boolean willMergeRunner)
+  {
+    return mergeResults(runner);
+  }
+
+  /**
    * Creates a merge function that is used to merge intermediate aggregates from historicals in broker. This merge
    * function is used in the default {@link ResultMergeQueryRunner} provided by
    * {@link QueryToolChest#mergeResults(QueryRunner)} and also used in
@@ -228,18 +252,35 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public abstract TypeReference<ResultType> getResultTypeReference();
 
   /**
+   * Like {@link #getCacheStrategy(Query, ObjectMapper)} but the caller doesn't supply the object mapper for deserializing
+   * and converting the cached data to desired type. It's upto the individual implementations to decide the appropriate action in that case.
+   * It can either throw an exception outright or decide if the query requires the object mapper for proper downstream processing and
+   * work with the generic java types if not.
+   * <p>
+   * @deprecated Use {@link #getCacheStrategy(Query, ObjectMapper)} instead
+   */
+  @Deprecated
+  @Nullable
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
+  {
+    return null;
+  }
+
+  /**
    * Returns a CacheStrategy to be used to load data into the cache and remove it from the cache.
    * <p>
    * This is optional.  If it returns null, caching is effectively disabled for the query.
    *
    * @param query The query whose results might be cached
+   * @param mapper Object mapper to convert the deserialized generic java objects to desired types. It can be nullable
+   *               to preserve backward compatibility.
    * @param <T>   The type of object that will be stored in the cache
    * @return A CacheStrategy that can be used to populate and read from the Cache
    */
   @Nullable
-  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
+  public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query, @Nullable ObjectMapper mapper)
   {
-    return null;
+    return getCacheStrategy(query);
   }
 
   /**

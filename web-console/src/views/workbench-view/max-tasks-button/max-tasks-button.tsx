@@ -17,9 +17,8 @@
  */
 
 import type { ButtonProps } from '@blueprintjs/core';
-import { Button, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { NumericInputDialog } from '../../../dialogs';
@@ -53,19 +52,24 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
   const maxNumTasks = getMaxNumTasks(queryContext);
   const taskAssigment = getTaskAssigment(queryContext);
 
-  const fullClusterCapacity = `${clusterCapacity} (full cluster capacity)`;
+  const fullClusterCapacity =
+    typeof clusterCapacity === 'number'
+      ? `${formatInteger(clusterCapacity)} (full cluster capacity)`
+      : undefined;
+
   const shownMaxNumTaskOptions = clusterCapacity
     ? MAX_NUM_TASK_OPTIONS.filter(_ => _ <= clusterCapacity)
     : MAX_NUM_TASK_OPTIONS;
+
   return (
     <>
-      <Popover2
+      <Popover
         className="max-tasks-button"
         position={Position.BOTTOM_LEFT}
         content={
           <Menu>
             <MenuDivider title="Maximum number of tasks to launch" />
-            {Boolean(clusterCapacity) && (
+            {Boolean(fullClusterCapacity) && (
               <MenuItem
                 icon={tickIcon(typeof maxNumTasks === 'undefined')}
                 text={fullClusterCapacity}
@@ -115,11 +119,11 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               ? clusterCapacity
                 ? fullClusterCapacity
                 : 2
-              : maxNumTasks
+              : formatInteger(maxNumTasks)
           }`}
           rightIcon={IconNames.CARET_DOWN}
         />
-      </Popover2>
+      </Popover>
       {customMaxNumTasksDialogOpen && (
         <NumericInputDialog
           title="Custom max task number"

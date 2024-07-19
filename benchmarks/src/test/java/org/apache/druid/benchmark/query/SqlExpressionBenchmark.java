@@ -37,6 +37,7 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -213,7 +214,12 @@ public class SqlExpressionBenchmark
       // 40: regex filtering
       "SELECT string4, COUNT(*) FROM foo WHERE REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL GROUP BY 1",
       // 41: complicated filtering
-      "SELECT string2, SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) GROUP BY 1 ORDER BY 2"
+      "SELECT string2, SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) GROUP BY 1 ORDER BY 2",
+      // 42: array_contains expr
+      "SELECT ARRAY_CONTAINS(\"multi-string3\", 100) FROM foo",
+      "SELECT ARRAY_CONTAINS(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo",
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 100]) FROM foo",
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo"
   );
 
   @Param({"5000000"})
@@ -230,6 +236,14 @@ public class SqlExpressionBenchmark
       "auto"
   })
   private String schema;
+
+  @Param({
+      "singleString",
+      "fixedWidth",
+      "fixedWidthNonNumeric",
+      "always"
+  })
+  private String deferExpressionDimensions;
 
   @Param({
       // non-expression reference
@@ -275,7 +289,11 @@ public class SqlExpressionBenchmark
       "38",
       "39",
       "40",
-      "41"
+      "41",
+      "42",
+      "43",
+      "44",
+      "45"
   })
   private String query;
 
@@ -351,13 +369,16 @@ public class SqlExpressionBenchmark
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           QUERIES.get(Integer.parseInt(query))
       );
+      log.info("non-vectorized and vectorized results match");
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "non-vectorized and vectorized results do not match");
     }
+
     final String sql = QUERIES.get(Integer.parseInt(query));
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
@@ -369,8 +390,8 @@ public class SqlExpressionBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "explain failed");
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
@@ -383,6 +404,9 @@ public class SqlExpressionBenchmark
         yielder.next(yielder.get());
       }
       log.info("Total result row count:" + rowCounter);
+    }
+    catch (Throwable ex) {
+      log.warn(ex, "failed to count rows");
     }
   }
 
@@ -399,7 +423,8 @@ public class SqlExpressionBenchmark
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize,
+        GroupByQueryConfig.CTX_KEY_DEFER_EXPRESSION_DIMENSIONS, deferExpressionDimensions
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {

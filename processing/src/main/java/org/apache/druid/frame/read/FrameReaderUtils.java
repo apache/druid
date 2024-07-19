@@ -22,12 +22,15 @@ package org.apache.druid.frame.read;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.allocation.MemoryRange;
+import org.apache.druid.frame.field.ComplexFieldReader;
 import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -215,6 +218,52 @@ public class FrameReaderUtils
 
     return Integer.compare(length1, length2);
   }
+
+  public static int compareComplexTypes(
+      final byte[] array1,
+      final int position1,
+      final byte[] array2,
+      final int position2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array1, position1),
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array2, position2)
+    );
+  }
+
+  public static int compareComplexTypes(
+      final Memory memory,
+      final long position1,
+      final byte[] array,
+      final int position2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory, position1),
+        ComplexFieldReader.readFieldFromByteArray(complexMetricSerde, array, position2)
+    );
+  }
+
+  public static int compareComplexTypes(
+      final Memory memory1,
+      final long position1,
+      final Memory memory2,
+      final long position2,
+      final ColumnType columnType,
+      final ComplexMetricSerde complexMetricSerde
+  )
+  {
+    return columnType.getNullableStrategy().compare(
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory1, position1),
+        ComplexFieldReader.readFieldFromMemory(complexMetricSerde, memory2, position2)
+    );
+  }
+
 
   /**
    * Returns whether a {@link ColumnSelectorFactory} may be able to provide a {@link MemoryRange}. This enables

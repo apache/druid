@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Icon } from '@blueprintjs/core';
+import { Button, Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { Column, QueryResult } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
@@ -32,7 +31,6 @@ import {
   columnToIcon,
   columnToSummary,
   columnToWidth,
-  filterMap,
   formatNumber,
   getNumericColumnBraces,
 } from '../../utils';
@@ -104,7 +102,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
   const finalPage =
     hasMoreResults && Math.floor(queryResult.rows.length / pagination.pageSize) === pagination.page; // on the last page
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, pagination);
   return (
     <div className={classNames('record-table-pane', { 'more-results': hasMoreResults })}>
       {finalPage ? (
@@ -133,7 +131,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
           showPagination={
             queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
           }
-          columns={filterMap(queryResult.header, (column, i) => {
+          columns={queryResult.header.map((column, i) => {
             const h = column.name;
             const icon = columnToIcon(column);
 
@@ -155,7 +153,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
                 const value = row.value;
                 return (
                   <div>
-                    <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -166,7 +164,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover2>
+                    </Popover>
                   </div>
                 );
               },
@@ -175,7 +173,9 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
           })}
         />
       )}
-      {showValue && <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} />}
+      {showValue && (
+        <ShowValueDialog onClose={() => setShowValue(undefined)} str={showValue} size="large" />
+      )}
     </div>
   );
 });

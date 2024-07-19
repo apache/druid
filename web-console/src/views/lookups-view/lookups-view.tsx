@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -60,7 +60,6 @@ const tableColumns: string[] = [
   'Version',
   'Poll period',
   'Summary',
-  ACTION_COLUMN_LABEL,
 ];
 
 const DEFAULT_LOOKUP_TIER = '__default';
@@ -296,8 +295,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           );
         }}
         confirmButtonText="Delete lookup"
-        successText="Lookup was deleted"
-        failText="Could not delete lookup"
+        successText={
+          <>
+            Lookup <Tag minimal>{deleteLookupName}</Tag> was deleted
+          </>
+        }
+        failText={
+          <>
+            Could not delete lookup <Tag minimal>{deleteLookupName}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ deleteLookupTier: undefined, deleteLookupName: undefined });
@@ -442,10 +449,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             accessor: 'id',
             Cell: ({ original }) => {
               const lookupId = original.id;
@@ -457,6 +464,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                     this.onDetail(original);
                   }}
                   actions={lookupActions}
+                  menuTitle={lookupId}
                 />
               );
             },

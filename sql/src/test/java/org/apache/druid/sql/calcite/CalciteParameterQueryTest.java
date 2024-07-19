@@ -42,7 +42,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +75,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -526,11 +525,8 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(
                       NullHandling.replaceWithDefault()
-                      ? in("cnt", ImmutableList.of("1.0", "100000001"), null)
-                      : or(
-                          equality("cnt", 1.0, ColumnType.DOUBLE),
-                          equality("cnt", 100000001.0, ColumnType.DOUBLE)
-                      )
+                      ? in("cnt", ImmutableList.of("1.0", "100000001"))
+                      : in("cnt", ColumnType.DOUBLE, ImmutableList.of(1.0, 1.00000001E8))
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -655,10 +651,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWrongTypeParameter()
   {
-    if (!useDefault) {
-      // cannot vectorize inline datasource
-      cannotVectorize();
-    }
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -692,7 +684,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .columns("EXPR$0")
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -704,7 +695,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullParameter()
   {
-    cannotVectorize();
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
     // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
 

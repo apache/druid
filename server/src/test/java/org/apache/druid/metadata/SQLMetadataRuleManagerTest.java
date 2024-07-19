@@ -62,7 +62,6 @@ public class SQLMetadataRuleManagerTest
   private MetadataRuleManagerConfig managerConfig;
   private SQLMetadataRuleManager ruleManager;
   private AuditManager auditManager;
-  private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
@@ -85,12 +84,8 @@ public class SQLMetadataRuleManagerTest
     connector.createRulesTable();
     managerConfig = new MetadataRuleManagerConfig();
     ruleManager = new SQLMetadataRuleManager(mapper, managerConfig, tablesConfig, connector, auditManager);
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
-    publisher = new SQLMetadataSegmentPublisher(
-        mapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
   }
 
   @Test
@@ -320,7 +315,7 @@ public class SQLMetadataRuleManagerTest
         1,
         1234L
     );
-    publisher.publishSegment(dataSegment);
+    SqlSegmentsMetadataManagerTestBase.publishSegment(connector, tablesConfig, mapper, dataSegment);
 
     // This will not delete the rule as the datasource has segment in the segment metadata table
     ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());

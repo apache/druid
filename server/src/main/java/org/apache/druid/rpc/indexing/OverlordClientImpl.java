@@ -32,6 +32,7 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -214,7 +215,7 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
   {
     final String path = StringUtils.format("/druid/indexer/v1/task/%s/reports", StringUtils.urlEncode(taskId));
 
@@ -223,7 +224,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT)
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskReport.ReportMap.class)
     );
   }
 
@@ -322,9 +323,6 @@ public class OverlordClientImpl implements OverlordClient
     return new JsonParserIterator<>(
         jsonMapper.getTypeFactory().constructType(clazz),
         Futures.immediateFuture(in),
-        "", // We don't know URL at this point, but it's OK to use empty; it's used for logs/errors
-        null,
-        "", // We don't know host at this point, but it's OK to use empty; it's used for logs/errors
         jsonMapper
     );
   }

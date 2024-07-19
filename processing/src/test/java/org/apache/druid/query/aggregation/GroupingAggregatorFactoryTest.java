@@ -31,7 +31,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -39,7 +38,6 @@ import org.junit.runners.Parameterized;
 import java.util.Arrays;
 import java.util.Collection;
 
-@RunWith(Enclosed.class)
 public class GroupingAggregatorFactoryTest
 {
   public static GroupingAggregatorFactory makeFactory(String[] groupings, @Nullable String[] keyDims)
@@ -132,6 +130,14 @@ public class GroupingAggregatorFactoryTest
           Long.SIZE - 1
       ));
       makeFactory(new String[Long.SIZE], null);
+    }
+
+    @Test
+    public void testWithDuplicateGroupings()
+    {
+      exception.expect(IllegalArgumentException.class);
+      exception.expectMessage("Encountered same dimension more than once in groupings");
+      makeFactory(new String[]{"a", "a"}, null);
     }
   }
 

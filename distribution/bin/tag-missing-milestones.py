@@ -16,14 +16,14 @@
 # limitations under the License.
 
 import os
+import requests
 import subprocess
 import sys
-import requests
-
 
 if len(sys.argv) != 5:
   sys.stderr.write('usage: program <github-username> <previous-release-commit> <new-release-commit> <milestone-number-to-tag>\n')
   sys.stderr.write("  e.g., program myusername 75c70c2ccc 29f3a328da 30\n")
+  sys.stderr.write("  e.g., The milestone number for Druid 30 is 56, since the milestone has the url https://github.com/apache/druid/milestone/56\n")
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.\n")
   sys.exit(1)
 
@@ -56,7 +56,7 @@ for sha in all_commits.splitlines():
         url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
         requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
       else:
-        print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, milestone))
+        print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, pr['milestone']['number']))
 
   except Exception as e:
     print("Got exception for commit: {}  ex: {}".format(sha, e))

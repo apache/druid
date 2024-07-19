@@ -38,6 +38,7 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -148,12 +149,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
-
-    if (legacy) {
-      throw new ISE("Cannot use this engine in legacy mode");
-    }
-
     if (runningCountForLimit != null
         && runningCountForLimit.get() > query.getScanRowsOffset() + query.getScanRowsLimit()) {
       return ReturnOrAwait.returnObject(Unit.instance());
@@ -340,6 +335,13 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
     catch (InvalidNullByteException inbe) {
       InvalidNullByteException.Builder builder = InvalidNullByteException.builder(inbe);
+      throw
+          builder.source(ParseExceptionUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
+                 .rowNumber(this.cursorOffset.getOffset() + 1)
+                 .build();
+    }
+    catch (InvalidFieldException ffwe) {
+      InvalidFieldException.Builder builder = InvalidFieldException.builder(ffwe);
       throw
           builder.source(ParseExceptionUtils.generateReadableInputSourceNameFromMappedSegment(this.segment)) // frame segment
                  .rowNumber(this.cursorOffset.getOffset() + 1)

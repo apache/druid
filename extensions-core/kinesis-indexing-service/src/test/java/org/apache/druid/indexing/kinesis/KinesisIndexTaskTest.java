@@ -43,7 +43,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
@@ -1182,7 +1182,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         newDataSchemaMetadata()
     );
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1201,8 +1201,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse value[notanumber] for field[met1]",
-        "could not convert value [notanumber] to float",
-        "could not convert value [notanumber] to long",
+        "Could not convert value [notanumber] to float for dimension [dimFloat].",
+        "Could not convert value [notanumber] to long for dimension [dimLong].",
         "Timestamp[null] is unparseable! Event: {} (Record: 1)",
         "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
         "Unable to parse row [unparseable] (Record: 1)",
@@ -1268,7 +1268,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
     Assert.assertNull(newDataSchemaMetadata());
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,

@@ -31,10 +31,16 @@ import java.util.Objects;
 
 /**
  * Encapsulates a {@link DataSegment} and additional metadata about it:
- * {@link DataSegmentPlus#createdDate}:               The time when the segment was created </li>
- * {@link DataSegmentPlus#usedStatusLastUpdatedDate}: The time when the segments used status was last updated </li>
+ * <ul>
+ * <li>{@link DataSegmentPlus#used} - Boolean flag representing if the segment is used.</li>
+ * <li>{@link DataSegmentPlus#createdDate} - The time when the segment was created.</li>
+ * <li>{@link DataSegmentPlus#usedStatusLastUpdatedDate} - The time when the segments
+ * used status was last updated.</li>
+ * <li>{@link DataSegmentPlus#upgradedFromSegmentId} - The segment id to which the same load spec originally belonged.
+ * Load specs can be shared as a result of segment version upgrades.</li>
+ * </ul>
  * <p>
- * The class closesly resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}
+ * This class closely resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}.
  * </p>
  */
 @UnstableApi
@@ -44,19 +50,35 @@ public class DataSegmentPlus
   private final DateTime createdDate;
   @Nullable
   private final DateTime usedStatusLastUpdatedDate;
+  private final Boolean used;
+
+  private final String schemaFingerprint;
+  private final Long numRows;
+
+  @Nullable
+  private final String upgradedFromSegmentId;
 
   @JsonCreator
   public DataSegmentPlus(
       @JsonProperty("dataSegment") final DataSegment dataSegment,
-      @JsonProperty("createdDate") final DateTime createdDate,
-      @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate
+      @JsonProperty("createdDate") @Nullable final DateTime createdDate,
+      @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate,
+      @JsonProperty("used") @Nullable final Boolean used,
+      @JsonProperty("schemaFingerprint") @Nullable final String schemaFingerprint,
+      @JsonProperty("numRows") @Nullable final Long numRows,
+      @JsonProperty("upgradedFromSegmentId") @Nullable final String upgradedFromSegmentId
   )
   {
     this.dataSegment = dataSegment;
     this.createdDate = createdDate;
     this.usedStatusLastUpdatedDate = usedStatusLastUpdatedDate;
+    this.used = used;
+    this.schemaFingerprint = schemaFingerprint;
+    this.numRows = numRows;
+    this.upgradedFromSegmentId = upgradedFromSegmentId;
   }
 
+  @Nullable
   @JsonProperty
   public DateTime getCreatedDate()
   {
@@ -76,6 +98,34 @@ public class DataSegmentPlus
     return dataSegment;
   }
 
+  @Nullable
+  @JsonProperty
+  public Boolean getUsed()
+  {
+    return used;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getSchemaFingerprint()
+  {
+    return schemaFingerprint;
+  }
+
+  @Nullable
+  @JsonProperty
+  public Long getNumRows()
+  {
+    return numRows;
+  }
+
+  @Nullable
+  @JsonProperty
+  public String getUpgradedFromSegmentId()
+  {
+    return upgradedFromSegmentId;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -88,7 +138,11 @@ public class DataSegmentPlus
     DataSegmentPlus that = (DataSegmentPlus) o;
     return Objects.equals(dataSegment, that.getDataSegment())
            && Objects.equals(createdDate, that.getCreatedDate())
-           && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate());
+           && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate())
+           && Objects.equals(used, that.getUsed())
+           && Objects.equals(schemaFingerprint, that.getSchemaFingerprint())
+           && Objects.equals(numRows, that.getNumRows())
+           && Objects.equals(upgradedFromSegmentId, that.getUpgradedFromSegmentId());
   }
 
   @Override
@@ -97,7 +151,11 @@ public class DataSegmentPlus
     return Objects.hash(
         dataSegment,
         createdDate,
-        usedStatusLastUpdatedDate
+        usedStatusLastUpdatedDate,
+        used,
+        schemaFingerprint,
+        numRows,
+        upgradedFromSegmentId
     );
   }
 
@@ -108,6 +166,10 @@ public class DataSegmentPlus
            "createdDate=" + getCreatedDate() +
            ", usedStatusLastUpdatedDate=" + getUsedStatusLastUpdatedDate() +
            ", dataSegment=" + getDataSegment() +
+           ", used=" + getUsed() +
+           ", schemaFingerprint=" + getSchemaFingerprint() +
+           ", numRows=" + getNumRows() +
+           ", upgradedFromSegmentId=" + getUpgradedFromSegmentId() +
            '}';
   }
 }

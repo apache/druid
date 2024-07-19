@@ -56,7 +56,11 @@ import { summarizeIndexSpec } from '../index-spec/index-spec';
 import type { InputFormat } from '../input-format/input-format';
 import { issueWithInputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
-import { FILTER_SUGGESTIONS, issueWithInputSource } from '../input-source/input-source';
+import {
+  FILTER_SUGGESTIONS,
+  issueWithInputSource,
+  OBJECT_GLOB_SUGGESTIONS,
+} from '../input-source/input-source';
 import type { MetricSpec } from '../metric-spec/metric-spec';
 import {
   getMetricSpecOutputType,
@@ -208,8 +212,10 @@ export function getIngestionTitle(ingestionType: IngestionComboTypeWithExtra): s
 
 export function getIngestionImage(ingestionType: IngestionComboTypeWithExtra): string {
   const parts = ingestionType.split(':');
-  if (parts.length === 2) return parts[1].toLowerCase();
-  return ingestionType;
+  return parts[parts.length - 1]
+    .split(/(?=[A-Z])/)
+    .join('-')
+    .toLowerCase();
 }
 
 export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
@@ -217,18 +223,21 @@ export function getIngestionDocLink(spec: Partial<IngestionSpec>): string {
 
   switch (type) {
     case 'kafka':
-      return `${getLink('DOCS')}/development/extensions-core/kafka-ingestion.html`;
+      return `${getLink('DOCS')}/ingestion/kafka-ingestion`;
 
     case 'kinesis':
-      return `${getLink('DOCS')}/development/extensions-core/kinesis-ingestion.html`;
+      return `${getLink('DOCS')}/ingestion/kinesis-ingestion`;
 
     default:
-      return `${getLink('DOCS')}/ingestion/native-batch.html#input-sources`;
+      return `${getLink('DOCS')}/ingestion/input-sources`;
   }
 }
 
 export function getRequiredModule(ingestionType: IngestionComboTypeWithExtra): string | undefined {
   switch (ingestionType) {
+    case 'azure-event-hubs':
+      return 'druid-kafka-indexing-service';
+
     case 'index_parallel:s3':
       return 'druid-s3-extensions';
 
@@ -297,7 +306,10 @@ export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   return Array.isArray(dimensions) && dimensions.length === 0 ? 'string-only-discovery' : 'fixed';
 }
 
-export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
+export function getArrayMode(
+  spec: Partial<IngestionSpec>,
+  whenUnclear: ArrayMode = 'arrays',
+): ArrayMode {
   const schemaMode = getSchemaMode(spec);
   switch (schemaMode) {
     case 'type-aware-discovery':
@@ -332,7 +344,7 @@ export function getArrayMode(spec: Partial<IngestionSpec>): ArrayMode {
         return 'multi-values';
       }
 
-      return 'arrays';
+      return whenUnclear;
     }
   }
 }
@@ -466,16 +478,9 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 /**
  * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
  * @param spec - the spec to clean
- * @param allowSuspended - allow keeping 'suspended' also
  */
-export function cleanSpec(
-  spec: Partial<IngestionSpec>,
-  allowSuspended?: boolean,
-): Partial<IngestionSpec> {
-  return allowKeys(
-    spec,
-    ['type', 'spec', 'context'].concat(allowSuspended ? ['suspended'] : []) as any,
-  ) as IngestionSpec;
+export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
+  return allowKeys(spec, ['type', 'spec', 'context', 'suspended']) as IngestionSpec;
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {
@@ -573,7 +578,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     info: (
       <p>
         Druid connects to raw data through{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>
           inputSources
         </ExternalLink>
         . You can change your selected inputSource here.
@@ -581,21 +586,29 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
     ),
   };
 
-  const inputSourceFilter: Field<IoConfig> = {
-    name: 'inputSource.filter',
-    label: 'File filter',
+  const inputSourceObjectGlob: Field<IoConfig> = {
+    name: 'inputSource.objectGlob',
+    label: 'Object glob',
     type: 'string',
-    suggestions: FILTER_SUGGESTIONS,
-    placeholder: '*',
+    suggestions: OBJECT_GLOB_SUGGESTIONS,
+    placeholder: '(all files)',
     info: (
-      <p>
-        A wildcard filter for files. See{' '}
-        <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
-          here
-        </ExternalLink>{' '}
-        for format information. Files matching the filter criteria are considered for ingestion.
-        Files not matching the filter criteria are ignored.
-      </p>
+      <>
+        <p>A glob for the object part of the URI.</p>
+        <p>
+          The glob must match the entire object part, not just the filename. For example, the glob
+          <Code>*.json</Code> does not match <Code>/bar/file.json</Code>, because and the{' '}
+          <Code>*</Code> does not match the slash. To match all objects ending in <Code>.json</Code>
+          , use <Code>**.json</Code> instead.
+        </p>
+        <p>
+          For more information, refer to the documentation for{' '}
+          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem#getPathMatcher-java.lang.String-">
+            FileSystem#getPathMatcher
+          </ExternalLink>
+          .
+        </p>
+      </>
     ),
   };
 
@@ -644,7 +657,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           required: true,
           info: (
             <>
-              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>
                 inputSource.baseDir
               </ExternalLink>
               <p>Specifies the directory to search recursively for files to be ingested.</p>
@@ -659,14 +672,12 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           suggestions: FILTER_SUGGESTIONS,
           info: (
             <>
-              <ExternalLink
-                href={`${getLink('DOCS')}/ingestion/native-batch.html#local-input-source`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#local-input-source`}>
                 inputSource.filter
               </ExternalLink>
               <p>
                 A wildcard filter for files. See{' '}
-                <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
+                <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter">
                   here
                 </ExternalLink>{' '}
                 for format information. Files matching the filter criteria are considered for
@@ -708,8 +719,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           hideInMore: true,
           info: (
             <p>
-              The{' '}
-              <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>filter</ExternalLink>{' '}
+              The <ExternalLink href={`${getLink('DOCS')}/querying/filters`}>filter</ExternalLink>{' '}
               to apply to the data as part of querying.
             </p>
           ),
@@ -769,7 +779,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3.html`}>
+                <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#s3-input-source`}>
                   S3 Objects
                 </ExternalLink>
                 .
@@ -778,7 +788,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
         {
           name: 'inputSource.properties.accessKeyId.type',
           label: 'Access key ID type',
@@ -932,7 +942,9 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure.html`}>
+                <ExternalLink
+                  href={`${getLink('DOCS')}/ingestion/input-sources#azure-input-source`}
+                >
                   S3 Objects
                 </ExternalLink>
                 .
@@ -941,7 +953,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
         {
           name: 'inputSource.properties.sharedAccessStorageToken',
           label: 'Shared Access Storage Token',
@@ -1006,7 +1018,11 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             <>
               <p>
                 JSON array of{' '}
-                <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google.html`}>
+                <ExternalLink
+                  href={`${getLink(
+                    'DOCS',
+                  )}/ingestion/input-sources#google-cloud-storage-input-source`}
+                >
                   Google Cloud Storage Objects
                 </ExternalLink>
                 .
@@ -1015,7 +1031,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
             </>
           ),
         },
-        inputSourceFilter,
+        inputSourceObjectGlob,
       ];
 
     case 'index_parallel:delta':
@@ -1027,6 +1043,27 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
+          info: (
+            <>
+              <p>A full path to the Delta Lake table.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.filter',
+          label: 'Delta filter',
+          type: 'json',
+          defaultValue: {},
+          info: (
+            <>
+              <ExternalLink
+                href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}
+              >
+                filter
+              </ExternalLink>
+              <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
         },
       ];
 
@@ -1052,11 +1089,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           placeholder: 'kafka_broker_host:9092',
           info: (
             <>
-              <ExternalLink
-                href={`${getLink(
-                  'DOCS',
-                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/kafka-ingestion#io-configuration`}>
                 consumerProperties
               </ExternalLink>
               <p>
@@ -1102,11 +1135,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           defaultValue: {},
           info: (
             <>
-              <ExternalLink
-                href={`${getLink(
-                  'DOCS',
-                )}/development/extensions-core/kafka-ingestion#supervisor-io-configuration`}
-              >
+              <ExternalLink href={`${getLink('DOCS')}/ingestion/kafka-ingestion#io-configuration`}>
                 consumerProperties
               </ExternalLink>
               <p>A map of properties to be passed to the Kafka consumer.</p>
@@ -1215,7 +1244,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           info: (
             <>
               The Amazon Kinesis stream endpoint for a region. You can find a list of endpoints{' '}
-              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak.html">
+              <ExternalLink href="https://docs.aws.amazon.com/general/latest/gr/ak">
                 here
               </ExternalLink>
               .
@@ -1845,7 +1874,9 @@ export function getSecondaryPartitionRelatedFormFields(
               <p>
                 This should be the first dimension in your schema which would make it first in the
                 sort order. As{' '}
-                <ExternalLink href={`${getLink('DOCS')}/ingestion/index.html#why-partition`}>
+                <ExternalLink
+                  href={`${getLink('DOCS')}/ingestion/partitioning#partitioning-and-sorting`}
+                >
                   Partitioning and sorting are best friends!
                 </ExternalLink>
               </p>
@@ -2068,6 +2099,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxPendingPersists',
     type: 'number',
+    defaultValue: 0,
     hideInMore: true,
     info: (
       <>
@@ -2414,7 +2446,10 @@ export function fillInputFormatIfNeeded(
     spec,
     'spec.ioConfig.inputFormat',
     getSpecType(spec) === 'kafka'
-      ? guessKafkaInputFormat(filterMap(sampleResponse.data, l => l.input))
+      ? guessKafkaInputFormat(
+          filterMap(sampleResponse.data, l => l.input),
+          typeof deepGet(spec, 'spec.ioConfig.topicPattern') === 'string',
+        )
       : guessSimpleInputFormat(
           filterMap(sampleResponse.data, l => l.input?.raw),
           isStreamingSpec(spec),
@@ -2426,15 +2461,27 @@ function noNumbers(xs: string[]): boolean {
   return xs.every(x => isNaN(Number(x)));
 }
 
-export function guessKafkaInputFormat(sampleRaw: Record<string, any>[]): InputFormat {
+export function guessKafkaInputFormat(
+  sampleRaw: Record<string, any>[],
+  multiTopic: boolean,
+): InputFormat {
   const hasHeader = sampleRaw.some(x => Object.keys(x).some(k => k.startsWith('kafka.header.')));
   const keys = filterMap(sampleRaw, x => x['kafka.key']);
-  const payloads = filterMap(sampleRaw, x => x.raw);
+  const valueFormat = guessSimpleInputFormat(
+    filterMap(sampleRaw, x => x.raw),
+    true,
+  );
+
+  if (!hasHeader && !keys.length && !multiTopic) {
+    // No headers or keys and just a single topic means do not pick the 'kafka' format by default as it is less performant
+    return valueFormat;
+  }
+
   return {
     type: 'kafka',
     headerFormat: hasHeader ? { type: 'string' } : undefined,
     keyFormat: keys.length ? guessSimpleInputFormat(keys, true) : undefined,
-    valueFormat: guessSimpleInputFormat(payloads, true),
+    valueFormat,
   };
 }
 
@@ -2456,7 +2503,7 @@ export function guessSimpleInputFormat(
     if (sampleDatum.startsWith('ORC')) {
       return inputFormatFromType({ type: 'orc' });
     }
-    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec.html#Object+Container+Files
+    // Avro OCF 4 byte magic header: https://avro.apache.org/docs/current/spec#Object+Container+Files
     if (sampleDatum.startsWith('Obj\x01')) {
       return inputFormatFromType({ type: 'avro_ocf' });
     }

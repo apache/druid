@@ -54,7 +54,7 @@ import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.data.input.kafkainput.KafkaStringHeaderFormat;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.IndexTaskTest;
@@ -367,7 +367,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
-    Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
+    Assert.assertTrue(task.getRunner().getSegmentGenerationMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -505,7 +505,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
-    Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
+    Assert.assertTrue(task.getRunner().getSegmentGenerationMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -554,7 +554,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     // Wait for task to exit
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
-    Assert.assertTrue(task.getRunner().getFireDepartmentMetrics().isProcessingDone());
+    Assert.assertTrue(task.getRunner().getSegmentGenerationMetrics().isProcessingDone());
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(
@@ -1615,7 +1615,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         newDataSchemaMetadata()
     );
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1634,8 +1634,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     List<String> expectedMessages = Arrays.asList(
         "Unable to parse value[notanumber] for field[met1]",
-        "could not convert value [notanumber] to float",
-        "could not convert value [notanumber] to long",
+        "Could not convert value [notanumber] to float for dimension [dimFloat].",
+        "Could not convert value [notanumber] to long for dimension [dimLong].",
         "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
         "Unable to parse row [unparseable] (Record: 1)",
         "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}] (Record: 1)"
@@ -1695,7 +1695,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
     Assert.assertNull(newDataSchemaMetadata());
 
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -2908,10 +2908,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     .put(
                         ScanQuery.class,
                         new ScanQueryRunnerFactory(
-                            new ScanQueryQueryToolChest(
-                                new ScanQueryConfig(),
-                                new DefaultGenericQueryMetricsFactory()
-                            ),
+                            new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                             new ScanQueryEngine(),
                             new ScanQueryConfig()
                         )
@@ -3061,7 +3058,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     // Verify unparseable data
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
@@ -3233,7 +3230,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     TaskStatus status = future.get();
 
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 1);
     Assert.assertEquals(reportData.getRecordsProcessed().values().iterator().next(), (Long) 6L);
   }
@@ -3281,7 +3278,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     TaskStatus status = future.get();
 
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    IngestionStatsAndErrorsTaskReportData reportData = getTaskReportData();
+    IngestionStatsAndErrors reportData = getTaskReportData();
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 2);
     Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
   }

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
 import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
@@ -180,6 +181,16 @@ class FunctionExpr implements Expr
   }
 
   @Override
+  public Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return new FunctionExpr(
+        function.asSingleThreaded(args, inspector),
+        name,
+        args
+    );
+  }
+
+  @Override
   public String toString()
   {
     return StringUtils.format("(%s %s)", name, args);
@@ -213,13 +224,18 @@ class FunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return function.canVectorize(inspector, args);
+    return function.canVectorize(inspector, args)
+           || (getOutputType(inspector) != null && inspector.canVectorize(args));
   }
 
   @Override
   public ExprVectorProcessor<?> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return function.asVectorProcessor(inspector, args);
+    if (function.canVectorize(inspector, args)) {
+      return function.asVectorProcessor(inspector, args);
+    } else {
+      return FallbackVectorProcessor.create(function, args, inspector);
+    }
   }
 
   @Override

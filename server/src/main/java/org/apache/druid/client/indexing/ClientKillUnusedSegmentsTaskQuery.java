@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -40,17 +41,20 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   private final String id;
   private final String dataSource;
   private final Interval interval;
-  private final Boolean markAsUnused;
+  @Nullable
+  private final List<String> versions;
   private final Integer batchSize;
-  @Nullable private final Integer limit;
-  @Nullable private final DateTime maxUsedStatusLastUpdatedTime;
+  @Nullable
+  private final Integer limit;
+  @Nullable
+  private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator
   public ClientKillUnusedSegmentsTaskQuery(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("markAsUnused") @Deprecated Boolean markAsUnused,
+      @JsonProperty("versions") @Nullable List<String> versions,
       @JsonProperty("batchSize") Integer batchSize,
       @JsonProperty("limit") @Nullable Integer limit,
       @JsonProperty("maxUsedStatusLastUpdatedTime") @Nullable DateTime maxUsedStatusLastUpdatedTime
@@ -65,7 +69,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     this.id = id;
     this.dataSource = dataSource;
     this.interval = interval;
-    this.markAsUnused = markAsUnused;
+    this.versions = versions;
     this.batchSize = batchSize;
     this.limit = limit;
     this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
@@ -98,18 +102,11 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return interval;
   }
 
-  /**
-   * This field has been deprecated as "kill" tasks should not be responsible for
-   * marking segments as unused. Instead, users should call the Coordinator API
-   * {@code /{dataSourceName}/markUnused} to explicitly mark segments as unused.
-   * Segments may also be marked unused by the Coordinator if they become overshadowed
-   * or have a {@code DropRule} applied to them.
-   */
-  @Deprecated
   @JsonProperty
-  public Boolean getMarkAsUnused()
+  @Nullable
+  public List<String> getVersions()
   {
-    return markAsUnused;
+    return versions;
   }
 
   @JsonProperty
@@ -146,7 +143,7 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
     return Objects.equals(id, that.id)
            && Objects.equals(dataSource, that.dataSource)
            && Objects.equals(interval, that.interval)
-           && Objects.equals(markAsUnused, that.markAsUnused)
+           && Objects.equals(versions, that.versions)
            && Objects.equals(batchSize, that.batchSize)
            && Objects.equals(limit, that.limit)
            && Objects.equals(maxUsedStatusLastUpdatedTime, that.maxUsedStatusLastUpdatedTime);
@@ -155,6 +152,6 @@ public class ClientKillUnusedSegmentsTaskQuery implements ClientTaskQuery
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, dataSource, interval, markAsUnused, batchSize, limit, maxUsedStatusLastUpdatedTime);
+    return Objects.hash(id, dataSource, interval, versions, batchSize, limit, maxUsedStatusLastUpdatedTime);
   }
 }

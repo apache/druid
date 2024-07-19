@@ -114,6 +114,7 @@ public class CalciteTests
   public static final String DATASOURCE3 = "numfoo";
   public static final String DATASOURCE4 = "foo4";
   public static final String DATASOURCE5 = "lotsocolumns";
+  public static final String ARRAYS_DATASOURCE = "arrays";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
@@ -124,6 +125,11 @@ public class CalciteTests
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String WIKIPEDIA = "wikipedia";
   public static final String WIKIPEDIA_FIRST_LAST = "wikipedia_first_last";
+  public static final String TBL_WITH_NULLS_PARQUET = "tblWnulls.parquet";
+  public static final String SML_TBL_PARQUET = "smlTbl.parquet";
+  public static final String ALL_TYPES_UNIQ_PARQUET = "allTypsUniq.parquet";
+  public static final String FEW_ROWS_ALL_DATA_PARQUET = "fewRowsAllData.parquet";
+  public static final String T_ALL_TYPE_PARQUET = "t_alltype.parquet";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)

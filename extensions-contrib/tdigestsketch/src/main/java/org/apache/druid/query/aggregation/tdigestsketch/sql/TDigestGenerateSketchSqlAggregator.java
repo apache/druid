@@ -25,11 +25,8 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
@@ -39,6 +36,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
+import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -80,7 +78,6 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String aggName = StringUtils.format("%s:agg", name);
 
     Integer compression = TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION;
     if (aggregateCall.getArgList().size() > 1) {
@@ -117,7 +114,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
     // No existing match found. Create a new one.
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new TDigestSketchAggregatorFactory(
-          aggName,
+          name,
           input.getDirectColumn(),
           compression
       );
@@ -126,7 +123,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           input,
           ColumnType.FLOAT
       );
-      aggregatorFactory = new TDigestSketchAggregatorFactory(aggName, virtualColumnName, compression);
+      aggregatorFactory = new TDigestSketchAggregatorFactory(name, virtualColumnName, compression);
     }
 
     return Aggregation.create(aggregatorFactory);
@@ -140,7 +137,7 @@ public class TDigestGenerateSketchSqlAggregator implements SqlAggregator
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          Calcites.complexReturnTypeWithNullability(TDigestSketchAggregatorFactory.TYPE, false),
           null,
           // Validation for signatures like 'TDIGEST_GENERATE_SKETCH(column)' and
           // 'TDIGEST_GENERATE_SKETCH(column, compression)'

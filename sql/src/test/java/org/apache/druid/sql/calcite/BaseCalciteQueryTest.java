@@ -26,21 +26,19 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
+import com.google.common.io.ByteStreams;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.DataSource;
@@ -49,7 +47,6 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -69,9 +66,9 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -83,10 +80,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
@@ -94,44 +88,32 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
-import org.apache.druid.sql.calcite.expression.ExpressionTestHelper;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.EngineFeature;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardPlannerComponentSupplier;
-import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
-
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -139,22 +121,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assume.assumeFalse;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * A base class for SQL query testing. It sets up query execution environment, provides useful helper methods,
  * and populates data using {@link CalciteTests#createMockWalker}.
  */
 public class BaseCalciteQueryTest extends CalciteTestBase
-    implements QueryComponentSupplier, PlannerComponentSupplier
 {
   public static final double ASSERTION_EPSILON = 1e-5;
   public static String NULL_STRING;
@@ -162,7 +143,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static Long NULL_LONG;
   public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupNullValues()
   {
     NULL_STRING = NullHandling.defaultStringValue();
@@ -274,6 +255,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       ImmutableMap.<String, Object>builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
                   .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  // Disallows the fallback to row based limiting
+                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
                   .build();
 
   // Add additional context to the given context map for when the
@@ -294,30 +277,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> OUTER_LIMIT_CONTEXT = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
-  @Nullable
-  public final SqlEngine engine0;
   final boolean useDefault = NullHandling.replaceWithDefault();
-
-  @Rule(order = 2)
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   public boolean cannotVectorize = false;
   public boolean skipVectorize = false;
-
-  public QueryLogHook queryLogHook;
-
-  private QueryComponentSupplier baseComponentSupplier;
-  public PlannerComponentSupplier basePlannerComponentSupplier = new StandardPlannerComponentSupplier();
-
-  public BaseCalciteQueryTest()
-  {
-    this(null);
-  }
-
-  public BaseCalciteQueryTest(@Nullable final SqlEngine engine)
-  {
-    this.engine0 = engine;
-  }
 
   static {
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
@@ -328,6 +291,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
 
     OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);
+  }
+
+  public static boolean developerIDEdetected()
+  {
+    String javaCmd = System.getProperties().getProperty("sun.java.command", "");
+    boolean isEclipse = javaCmd.contains("org.eclipse.jdt.internal.junit.runner.RemoteTestRunner");
+    return isEclipse;
   }
 
   // Generate timestamps for expected results
@@ -374,9 +344,29 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new IsTrueDimFilter(filter);
   }
 
-  public static InDimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
+  public static DimFilter in(String dimension, Collection<String> values)
   {
+    if (NullHandling.sqlCompatible()) {
+      return in(dimension, ColumnType.STRING, new ArrayList<>(values));
+    }
+    return new InDimFilter(dimension, values, null);
+  }
+
+  public static DimFilter in(String dimension, Collection<String> values, ExtractionFn extractionFn)
+  {
+    if (NullHandling.sqlCompatible() && extractionFn == null) {
+      return in(dimension, ColumnType.STRING, new ArrayList<>(values));
+    }
     return new InDimFilter(dimension, values, extractionFn);
+  }
+
+  public static DimFilter in(String dimension, ColumnType matchValueType, List<?> values)
+  {
+    if (NullHandling.sqlCompatible()) {
+      return new TypedInFilter(dimension, matchValueType, values, null, null);
+    }
+    Set<String> set = values.stream().map(Evals::asString).collect(Collectors.toSet());
+    return in(dimension, set, null);
   }
 
   public static DimFilter isNull(final String fieldName)
@@ -618,8 +608,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                        .legacy(false);
+    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST);
   }
 
   protected static DruidExceptionMatcher invalidSqlIs(String s)
@@ -632,131 +621,23 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return DruidExceptionMatcher.invalidSqlInput().expectMessageContains(s);
   }
 
-  @Rule
-  public QueryLogHook getQueryLogHook()
-  {
-    // Indirection for the JSON mapper. Otherwise, this rule method is called
-    // before Setup is called, causing the query framework to be built before
-    // tests have done their setup. The indirection means we access the query
-    // framework only when we log the first query. By then, the query framework
-    // will have been created via the normal path.
-    return queryLogHook = new QueryLogHook(() -> queryFramework().queryJsonMapper());
-  }
-
-  @ClassRule
-  public static SqlTestFrameworkConfig.ClassRule queryFrameworkClassRule = new SqlTestFrameworkConfig.ClassRule();
-
-  @Rule(order = 3)
-  public SqlTestFrameworkConfig.MethodRule queryFrameworkRule = queryFrameworkClassRule.methodRule(this);
+  @RegisterExtension
+  static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
 
   public SqlTestFramework queryFramework()
   {
-    return queryFrameworkRule.get();
-  }
-
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  ) throws IOException
-  {
-    return baseComponentSupplier.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
-  }
-
-  @Override
-  public SqlEngine createEngine(
-      final QueryLifecycleFactory qlf,
-      final ObjectMapper queryJsonMapper,
-      Injector injector
-  )
-  {
-    if (engine0 == null) {
-      return baseComponentSupplier.createEngine(qlf, queryJsonMapper, injector);
-    } else {
-      return engine0;
-    }
-  }
-
-  @Override
-  public void gatherProperties(Properties properties)
-  {
     try {
-      baseComponentSupplier = new StandardComponentSupplier(
-          temporaryFolder.newFolder()
-      );
+      return queryFrameworkRule.get();
     }
-    catch (IOException e) {
+    catch (Exception e) {
       throw new RuntimeException(e);
     }
-    baseComponentSupplier.gatherProperties(properties);
-  }
-
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    baseComponentSupplier.configureGuice(builder);
-  }
-
-  @Override
-  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer)
-  {
-    return baseComponentSupplier.createCongolmerate(builder, closer);
-  }
-
-  @Override
-  public void configureJsonMapper(ObjectMapper mapper)
-  {
-    baseComponentSupplier.configureJsonMapper(mapper);
-  }
-
-  @Override
-  public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
-  {
-    return baseComponentSupplier.createJoinableFactoryWrapper(lookupProvider);
-  }
-
-  @Override
-  public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
-  {
-    baseComponentSupplier.finalizeTestFramework(sqlTestFramework);
-  }
-
-  @Override
-  public Set<ExtensionCalciteRuleProvider> extensionCalciteRules()
-  {
-    return basePlannerComponentSupplier.extensionCalciteRules();
-  }
-
-  @Override
-  public ViewManager createViewManager()
-  {
-    return basePlannerComponentSupplier.createViewManager();
-  }
-
-  @Override
-  public void populateViews(ViewManager viewManager, PlannerFactory plannerFactory)
-  {
-    basePlannerComponentSupplier.populateViews(viewManager, plannerFactory);
-  }
-
-  @Override
-  public DruidSchemaManager createSchemaManager()
-  {
-    return basePlannerComponentSupplier.createSchemaManager();
-  }
-
-  @Override
-  public void finalizePlanner(PlannerFixture plannerFixture)
-  {
-    basePlannerComponentSupplier.finalizePlanner(plannerFixture);
   }
 
   public void assumeFeatureAvailable(EngineFeature feature)
   {
-    boolean featureAvailable = queryFramework().engine()
-        .featureAvailable(feature, ExpressionTestHelper.PLANNER_CONTEXT);
-    assumeTrue(StringUtils.format("test disabled; feature [%s] is not available!", feature), featureAvailable);
+    boolean featureAvailable = queryFramework().engine().featureAvailable(feature);
+    assumeTrue(featureAvailable, StringUtils.format("test disabled; feature [%s] is not available!", feature));
   }
 
   public void assertQueryIsUnplannable(final String sql, String expectedError)
@@ -770,7 +651,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           buildUnplannableExceptionMatcher().expectMessageContains(expectedError)
       );
@@ -1017,15 +898,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
 
     @Override
-    public QueryLogHook queryLogHook()
-    {
-      return queryLogHook;
-    }
-
-    @Override
     public PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)
     {
-      return queryFramework().plannerFixture(BaseCalciteQueryTest.this, plannerConfig, authConfig);
+      return queryFramework().plannerFixture(plannerConfig, authConfig);
     }
 
     @Override
@@ -1058,6 +933,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public Map<String, Object> baseQueryContext()
     {
       return baseQueryContext;
+    }
+
+    @Override
+    public SqlTestFramework queryFramework()
+    {
+      return BaseCalciteQueryTest.this.queryFramework();
     }
   }
 
@@ -1160,16 +1041,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     final List<ValueType> types = new ArrayList<>();
 
-    final boolean isMSQ = isMSQRowType(queryResults.signature);
-
-    if (!isMSQ) {
-      for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
-        Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
-        if (columnType.isPresent()) {
-          types.add(columnType.get().getType());
-        } else {
-          types.add(null);
-        }
+    for (int i = 0; i < queryResults.signature.getColumnNames().size(); i++) {
+      Optional<ColumnType> columnType = queryResults.signature.getColumnType(i);
+      if (columnType.isPresent()) {
+        types.add(columnType.get().getType());
+      } else {
+        types.add(null);
       }
     }
 
@@ -1186,17 +1063,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         matchMode.validate(
             row,
             i,
-            isMSQ ? null : types.get(i),
+            types.get(i),
             expectedCell,
             resultCell);
       }
     }
-  }
-
-  private boolean isMSQRowType(RowSignature signature)
-  {
-    List<String> colNames = signature.getColumnNames();
-    return colNames.size() == 1 && "TASK".equals(colNames.get(0));
   }
 
   public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
@@ -1258,7 +1129,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             .build()
             .run()
     );
-    MatcherAssert.assertThat(e, exceptionMatcher);
+    assertThat(e, exceptionMatcher);
   }
 
   public void analyzeResources(
@@ -1327,7 +1198,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       AuthConfig authConfig
   )
   {
-    return queryFramework().plannerFixture(this, plannerConfig, authConfig).statementFactory();
+    return queryFramework().plannerFixture(plannerConfig, authConfig).statementFactory();
   }
 
   protected void cannotVectorize()
@@ -1342,7 +1213,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   protected void msqIncompatible()
   {
-    assumeFalse("test case is not MSQ compatible", testBuilder().config.isRunningMSQ());
+    assumeFalse(testBuilder().config.isRunningMSQ(), "test case is not MSQ compatible");
+  }
+
+  protected boolean isRunningMSQ()
+  {
+    return testBuilder().config.isRunningMSQ();
   }
 
   protected static boolean isRewriteJoinToFilter(final Map<String, Object> queryContext)
@@ -1395,59 +1271,56 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    * It tests various configs that can be passed to join queries. All the configs provided by this provider should
    * have the join query engine return the same results.
    */
-  public static class QueryContextForJoinProvider
+  public static Object[] provideQueryContexts()
   {
-    @UsedByJUnitParamsRunner
-    public static Object[] provideQueryContexts()
-    {
-      return new Object[]{
-          // default behavior
-          QUERY_CONTEXT_DEFAULT,
-          // all rewrites enabled
-          new ImmutableMap.Builder<String, Object>()
-              .putAll(QUERY_CONTEXT_DEFAULT)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-              .build(),
-          // filter-on-value-column rewrites disabled, everything else enabled
-          new ImmutableMap.Builder<String, Object>()
-              .putAll(QUERY_CONTEXT_DEFAULT)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-              .build(),
-          // filter rewrites fully disabled, join-to-filter enabled
-          new ImmutableMap.Builder<String, Object>()
-              .putAll(QUERY_CONTEXT_DEFAULT)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-              .build(),
-          // filter rewrites disabled, but value column filters still set to true (it should be ignored and this should
-          // behave the same as the previous context)
-          new ImmutableMap.Builder<String, Object>()
-              .putAll(QUERY_CONTEXT_DEFAULT)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-              .build(),
-          // filter rewrites fully enabled, join-to-filter disabled
-          new ImmutableMap.Builder<String, Object>()
-              .putAll(QUERY_CONTEXT_DEFAULT)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
-              .build(),
-          // all rewrites disabled
-          new ImmutableMap.Builder<String, Object>()
-              .putAll(QUERY_CONTEXT_DEFAULT)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-              .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-              .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
-              .build(),
-          };
-    }
+    return new Object[] {
+        // default behavior
+        Named.of("default", QUERY_CONTEXT_DEFAULT),
+        // all rewrites enabled
+        Named.of("all_enabled", new ImmutableMap.Builder<String, Object>()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .build()),
+        // filter-on-value-column rewrites disabled, everything else enabled
+        Named.of("filter-on-value-column_disabled", new ImmutableMap.Builder<String, Object>()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .build()),
+        // filter rewrites fully disabled, join-to-filter enabled
+        Named.of("join-to-filter", new ImmutableMap.Builder<String, Object>()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .build()),
+        // filter rewrites disabled, but value column filters still set to true
+        // (it should be ignored and this should
+        // behave the same as the previous context)
+        Named.of("filter-rewrites-disabled", new ImmutableMap.Builder<String, Object>()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .build()),
+        // filter rewrites fully enabled, join-to-filter disabled
+        Named.of("filter-rewrites", new ImmutableMap.Builder<String, Object>()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
+            .build()),
+        // all rewrites disabled
+        Named.of("all_disabled", new ImmutableMap.Builder<String, Object>()
+            .putAll(QUERY_CONTEXT_DEFAULT)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
+            .build()),
+    };
   }
 
   protected Map<String, Object> withLeftDirectAccessEnabled(Map<String, Object> context)
@@ -1630,5 +1503,26 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     {
       sb.append(post);
     }
+  }
+
+  /**
+   * Helper method that copies a resource to a temporary file, then returns it.
+   */
+  public File getResourceAsTemporaryFile(final String resource)
+  {
+    final File file = newTempFile("resourceAsTempFile");
+    final InputStream stream = getClass().getResourceAsStream(resource);
+
+    if (stream == null) {
+      throw new RE(StringUtils.format("No such resource [%s]", resource));
+    }
+
+    try {
+      ByteStreams.copy(stream, Files.newOutputStream(file.toPath()));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return file;
   }
 }

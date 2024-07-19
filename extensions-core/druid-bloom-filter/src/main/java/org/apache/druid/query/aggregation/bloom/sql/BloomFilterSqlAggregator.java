@@ -25,9 +25,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -83,7 +81,6 @@ public class BloomFilterSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String aggName = StringUtils.format("%s:agg", name);
     final RexNode maxNumEntriesOperand = inputAccessor.getField(aggregateCall.getArgList().get(1));
 
     if (!maxNumEntriesOperand.isA(SqlKind.LITERAL)) {
@@ -159,7 +156,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
     }
 
     aggregatorFactory = new BloomFilterAggregatorFactory(
-        aggName,
+        name,
         spec,
         maxNumEntries
     );
@@ -175,7 +172,7 @@ public class BloomFilterSqlAggregator implements SqlAggregator
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
-          ReturnTypes.explicit(SqlTypeName.OTHER),
+          Calcites.complexReturnTypeWithNullability(BloomFilterAggregatorFactory.TYPE, false),
           null,
           // Allow signatures like 'BLOOM_FILTER(column, maxNumEntries)'
           DefaultOperandTypeChecker

@@ -79,6 +79,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -97,7 +98,6 @@ import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -161,10 +161,11 @@ public class QueryStackTests
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
+      GroupByQueryConfig groupByQueryConfig,
       Injector injector
   )
   {
-    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, injector.getInstance(EtagProvider.KEY));
+    return new TestClusterQuerySegmentWalker(timelines, conglomerate, scheduler, groupByQueryConfig, injector.getInstance(EtagProvider.KEY));
   }
 
   public static LocalQuerySegmentWalker createLocalQuerySegmentWalker(
@@ -242,12 +243,22 @@ public class QueryStackTests
       final Supplier<Integer> minTopNThresholdSupplier
   )
   {
+    return createQueryRunnerFactoryConglomerate(closer, minTopNThresholdSupplier, TestHelper.makeJsonMapper());
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final Supplier<Integer> minTopNThresholdSupplier,
+      final ObjectMapper jsonMapper
+  )
+  {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
             DEFAULT_NUM_MERGE_BUFFERS
         ),
-        minTopNThresholdSupplier
+        minTopNThresholdSupplier,
+        jsonMapper
     );
   }
 
@@ -266,7 +277,37 @@ public class QueryStackTests
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
+      final ObjectMapper jsonMapper
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(
+        closer,
+        processingConfig,
+        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
+        jsonMapper
+    );
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig,
       final Supplier<Integer> minTopNThresholdSupplier
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(
+        closer,
+        processingConfig,
+        minTopNThresholdSupplier,
+        TestHelper.makeJsonMapper()
+    );
+  }
+
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig,
+      final Supplier<Integer> minTopNThresholdSupplier,
+      final ObjectMapper jsonMapper
   )
   {
     final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
@@ -280,7 +321,7 @@ public class QueryStackTests
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory =
         GroupByQueryRunnerTest.makeQueryRunnerFactory(
-            GroupByQueryRunnerTest.DEFAULT_MAPPER,
+            jsonMapper,
             new GroupByQueryConfig()
             {
             },
@@ -302,10 +343,7 @@ public class QueryStackTests
             .put(
                 ScanQuery.class,
                 new ScanQueryRunnerFactory(
-                    new ScanQueryQueryToolChest(
-                        new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory()
-                    ),
+                    new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                     new ScanQueryEngine(),
                     new ScanQueryConfig()
                 )

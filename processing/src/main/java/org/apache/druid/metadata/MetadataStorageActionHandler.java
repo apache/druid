@@ -20,6 +20,8 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
@@ -31,6 +33,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@ExtensionPoint
 public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, LockType>
 {
   /**
@@ -44,7 +47,6 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
    * @param status status object associated wit this object, can be null
    * @param type entry type
    * @param groupId entry group id
-   * @throws EntryExistsException
    */
   void insert(
       @NotNull String id,
@@ -55,7 +57,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
       @Nullable StatusType status,
       @NotNull String type,
       @NotNull String groupId
-  ) throws EntryExistsException;
+  );
 
   /**
    * Sets or updates the status for any active entry with the given id.
@@ -162,21 +164,34 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   void removeTasksOlderThan(long timestamp);
 
   /**
-   * Add a log to the entry with the given id.
+   * Task logs are not used anymore and this method is never called by Druid code.
+   * It has been retained only for backwards compatibility with older extensions.
+   * New extensions must not implement this method.
    *
-   * @param entryId entry id
-   * @param log log to add
-   * @return true if the log was added
+   * @throws DruidException of category UNSUPPORTED whenever called.
    */
-  boolean addLog(String entryId, LogType log);
+  @Deprecated
+  default boolean addLog(String entryId, LogType log)
+  {
+    throw DruidException.defensive()
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Task actions are not logged anymore.");
+  }
 
   /**
-   * Returns the logs for the entry with the given id.
+   * Task logs are not used anymore and this method is never called by Druid code.
+   * It has been retained only for backwards compatibility with older extensions.
+   * New extensions must not implement this method.
    *
-   * @param entryId entry id
-   * @return list of logs
+   * @throws DruidException of category UNSUPPORTED whenever called.
    */
-  List<LogType> getLogs(String entryId);
+  @Deprecated
+  default List<LogType> getLogs(String entryId)
+  {
+    throw DruidException.defensive()
+                        .ofCategory(DruidException.Category.UNSUPPORTED)
+                        .build("Task actions are not logged anymore.");
+  }
 
   /**
    * Returns the locks for the given entry
@@ -189,7 +204,7 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   /**
    * Returns the lock id for the given entry and the lock.
    *
-   * @return lock id if found. Otherwise null.
+   * @return lock id if found, otherwise null.
    */
   @Nullable
   Long getLockId(String entryId, LockType lock);

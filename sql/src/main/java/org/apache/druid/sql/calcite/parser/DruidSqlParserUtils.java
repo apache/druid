@@ -38,7 +38,6 @@ import org.apache.calcite.sql.SqlUnknownLiteral;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -68,6 +67,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 public class DruidSqlParserUtils
@@ -241,18 +241,7 @@ public class DruidSqlParserUtils
 
   private static Granularity convertSqlLiteralCharToGranularity(SqlLiteral literal)
   {
-    String value = literal.getValueAs(String.class);
-    try {
-      return Granularity.fromString(value);
-    }
-    catch (IllegalArgumentException e) {
-      try {
-        return new PeriodGranularity(new Period(value), null, null);
-      }
-      catch (Exception e2) {
-        throw makeInvalidPartitionByException(literal);
-      }
-    }
+    return convertStringToGranularity(literal.getValueAs(String.class), literal);
   }
 
   private static Granularity convertSqlIdentiferToGranularity(SqlIdentifier identifier)
@@ -260,7 +249,11 @@ public class DruidSqlParserUtils
     if (identifier.names.isEmpty()) {
       throw makeInvalidPartitionByException(identifier);
     }
-    String value = identifier.names.get(0);
+    return convertStringToGranularity(identifier.names.get(0), identifier);
+  }
+
+  private static Granularity convertStringToGranularity(String value, SqlNode node)
+  {
     try {
       return Granularity.fromString(value);
     }
@@ -269,7 +262,7 @@ public class DruidSqlParserUtils
         return new PeriodGranularity(new Period(value), null, null);
       }
       catch (Exception e2) {
-        throw makeInvalidPartitionByException(identifier);
+        throw makeInvalidPartitionByException(node);
       }
     }
   }
@@ -421,7 +414,7 @@ public class DruidSqlParserUtils
   @Nullable
   public static List<String> resolveClusteredByColumnsToOutputColumns(
       final SqlNodeList clusteredByNodes,
-      final ImmutableList<Pair<Integer, String>> sourceFieldMappings
+      final List<Entry<Integer, String>> sourceFieldMappings
   )
   {
     // CLUSTERED BY is an optional clause
@@ -436,7 +429,7 @@ public class DruidSqlParserUtils
       if (clusteredByNode instanceof SqlNumericLiteral) {
         // The node is a literal number -- an ordinal in the CLUSTERED BY clause. Lookup the ordinal in field mappings.
         final int ordinal = ((SqlNumericLiteral) clusteredByNode).getValueAs(Integer.class);
-        retClusteredByNames.add(sourceFieldMappings.get(ordinal - 1).right);
+        retClusteredByNames.add(sourceFieldMappings.get(ordinal - 1).getValue());
       } else if (clusteredByNode instanceof SqlBasicCall) {
         // The node is an expression/operator.
         retClusteredByNames.add(getColumnNameFromSqlCall((SqlBasicCall) clusteredByNode));

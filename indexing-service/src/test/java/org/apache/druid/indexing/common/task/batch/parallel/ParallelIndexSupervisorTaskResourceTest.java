@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -35,10 +34,12 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -48,6 +49,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.security.AuthConfig;
@@ -289,19 +291,11 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     Assert.assertEquals(200, response.getStatus());
     final ParallelIndexingPhaseProgress monitorStatus = (ParallelIndexingPhaseProgress) response.getEntity();
 
-    // numRunningTasks
+    // Verify the number of tasks in different states
     Assert.assertEquals(runningTasks.size(), monitorStatus.getRunning());
-
-    // numSucceededTasks
     Assert.assertEquals(expectedSucceededTasks, monitorStatus.getSucceeded());
-
-    // numFailedTasks
     Assert.assertEquals(expectedFailedTask, monitorStatus.getFailed());
-
-    // numCompleteTasks
     Assert.assertEquals(expectedSucceededTasks + expectedFailedTask, monitorStatus.getComplete());
-
-    // numTotalTasks
     Assert.assertEquals(runningTasks.size() + expectedSucceededTasks + expectedFailedTask, monitorStatus.getTotal());
 
     // runningSubTasks
@@ -406,7 +400,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       ParallelIndexIOConfig ioConfig
   )
   {
-    // set up ingestion spec
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
@@ -423,43 +416,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null
         ),
         ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            NUM_SUB_TASKS,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        TuningConfigBuilder.forParallelIndexTask().withMaxNumConcurrentSubTasks(NUM_SUB_TASKS).build()
     );
 
-    // set up test tools
     return new TestSupervisorTask(
         null,
         null,
@@ -502,7 +461,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
   }
 
-  private class TestSupervisorTask extends TestParallelIndexSupervisorTask
+  private class TestSupervisorTask extends ParallelIndexSupervisorTask
   {
     TestSupervisorTask(
         String id,
@@ -513,6 +472,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     {
       super(
           id,
+          null,
           taskResource,
           ingestionSchema,
           context
@@ -522,10 +482,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     @Override
     SinglePhaseParallelIndexTaskRunner createSinglePhaseTaskRunner(TaskToolbox toolbox)
     {
-      return new TestRunner(
-          toolbox,
-          this
-      );
+      return new TestRunner(toolbox, this);
     }
   }
 
@@ -543,7 +500,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           supervisorTask.getId(),
           supervisorTask.getGroupId(),
           supervisorTask.getIngestionSchema(),
-          supervisorTask.getContext()
+          supervisorTask.getContext(),
+          CentralizedDatasourceSchemaConfig.create(true)
       );
       this.supervisorTask = supervisorTask;
     }
@@ -713,7 +671,13 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       );
 
       taskClient.report(
-          new PushedSegmentsReport(getId(), Collections.emptySet(), Collections.singleton(segment), ImmutableMap.of())
+          new PushedSegmentsReport(
+              getId(),
+              Collections.emptySet(),
+              Collections.singleton(segment),
+              new TaskReport.ReportMap(),
+              null
+          )
       );
       return TaskStatus.fromCode(getId(), state);
     }

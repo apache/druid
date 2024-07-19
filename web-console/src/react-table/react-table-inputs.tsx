@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 import type { Column, ReactTableFunction } from 'react-table';
@@ -57,7 +56,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
       })}
       key={key}
       leftElement={
-        <Popover2
+        <Popover
           placement="bottom-start"
           minimal
           isOpen={menuOpen}
@@ -77,7 +76,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
           }
         >
           <Button className="filter-mode-button" icon={filterModeToIcon(mode)} minimal />
-        </Popover2>
+        </Popover>
       }
       value={focusedText ?? needle}
       onChange={e => {

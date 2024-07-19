@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
+import { Button, Callout, Classes, Code, Dialog, Intent, Switch, Tooltip } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
@@ -121,9 +121,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
                   </p>
                   <p>
                     For more information refer to the{' '}
-                    <ExternalLink
-                      href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
-                    >
+                    <ExternalLink href={`${getLink('DOCS')}/ingestion/concurrent-append-replace`}>
                       documentation
                     </ExternalLink>
                     .
@@ -162,7 +160,13 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
             minimal
             onClick={() => setShowHistory(true)}
           />
-          {compactionConfig && <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />}
+          {compactionConfig ? (
+            <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />
+          ) : (
+            <Tooltip content="There is no compaction config currently set for this datasource">
+              <Button text="Delete" disabled intent={Intent.DANGER} />
+            </Tooltip>
+          )}
           <Button text="Close" onClick={onClose} />
           <Button
             text="Submit"

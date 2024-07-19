@@ -24,19 +24,15 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteTableAppendTest extends BaseCalciteQueryTest
 {
-  @Rule(order = 0)
-  public NotYetSupportedProcessor negativeTestProcessor = new NotYetSupportedProcessor();
-
   @Test
   public void testUnion()
   {
@@ -53,7 +49,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                     .virtualColumns(
                         expressionVirtualColumn("v0", "null", null)
                     )
-                    .legacy(false)
                     .build(),
                 Druids.newScanQueryBuilder()
                     .dataSource(CalciteTests.DATASOURCE3)
@@ -61,7 +56,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                     .columns("dim1", "dim4")
                     .context(QUERY_CONTEXT_DEFAULT)
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .legacy(false)
                     .build()
             )
         )
@@ -98,7 +92,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .columns("d1", "dim1", "dim4", "f1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -141,7 +134,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .filters(equality("dim1", "2", ColumnType.STRING))
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -169,7 +161,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .columns("dim1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -200,7 +191,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .columns("dim3")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -230,7 +220,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("No match found for function signature APPEND() (line [1], column [24])")
       );
@@ -247,7 +237,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
@@ -266,7 +256,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
@@ -285,7 +275,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
       );
@@ -303,7 +293,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assert.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("Table [t0] not found (line [1], column [62])")
       );

@@ -18,6 +18,7 @@
 
 import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
 
+import { maybeGetClusterCapacity } from '../../helpers';
 import {
   deepGet,
   deleteKeys,
@@ -192,7 +193,12 @@ export interface ExecutionValue {
 }
 
 export class Execution {
+  static USE_TASK_PAYLOAD = true;
+  static USE_TASK_REPORTS = true;
   static INLINE_DATASOURCE_MARKER = '__query_select';
+
+  static getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined =
+    maybeGetClusterCapacity;
 
   static validAsyncState(status: string | undefined): status is AsyncState {
     return oneOf(status, 'ACCEPTED', 'RUNNING', 'FINISHED', 'FAILED');
@@ -440,7 +446,10 @@ export class Execution {
     value.queryContext = queryContext;
     const parsedQuery = parseSqlQuery(sqlQuery);
     if (value.result && (parsedQuery || queryContext)) {
-      value.result = value.result.attachQuery({ context: queryContext }, parsedQuery);
+      value.result = value.result.attachQuery(
+        { ...this.nativeQuery, context: queryContext },
+        parsedQuery,
+      );
     }
 
     return new Execution(value);
@@ -463,7 +472,10 @@ export class Execution {
   public changeResult(result: QueryResult): Execution {
     return new Execution({
       ...this.valueOf(),
-      result: result.attachQuery({}, this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined),
+      result: result.attachQuery(
+        this.nativeQuery,
+        this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined,
+      ),
     });
   }
 

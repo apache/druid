@@ -20,16 +20,20 @@
 package org.apache.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
@@ -74,6 +78,7 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
+  private static final Logger log = new Logger(MetadataResource.class);
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
@@ -153,37 +158,46 @@ public class MetadataResource
       @QueryParam("includeRealtimeSegments") final @Nullable String includeRealtimeSegments
   )
   {
-    // realtime segments can be requested only when {@code includeOverShadowedStatus} is set
-    if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
-    }
+    try {
+      // realtime segments can be requested only when includeOverShadowedStatus is set
+      if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
+        return Response.status(Response.Status.BAD_REQUEST).build();
+      }
 
-    if (includeOvershadowedStatus != null) {
-      // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
-      // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
-      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
-    }
+      if (includeOvershadowedStatus != null) {
+        // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
+        // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
+        return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
+      }
 
-    Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-        segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
-    if (dataSources != null && !dataSources.isEmpty()) {
-      dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+      Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
+          segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+      if (dataSources != null && !dataSources.isEmpty()) {
+        dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+            .stream()
+            .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
+            .collect(Collectors.toList());
+      }
+      final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
           .stream()
-          .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
-          .collect(Collectors.toList());
+          .flatMap(t -> t.getSegments().stream());
+
+      final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
+
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
     }
-    final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
-
-    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
-    final Iterable<DataSegment> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
-
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(authorizedSegments).build();
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
+    catch (Exception e) {
+      log.error(e, "Error while fetching used segment information.");
+      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+    }
   }
 
   private Response getAllUsedSegmentsWithAdditionalDetails(
@@ -340,6 +354,7 @@ public class MetadataResource
   @GET
   @Path("/datasources/{dataSourceName}/unusedSegments")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getUnusedSegmentsInDataSource(
       @Context final HttpServletRequest req,
       @PathParam("dataSourceName") final String dataSource,
@@ -349,37 +364,43 @@ public class MetadataResource
       @QueryParam("sortOrder") @Nullable final String sortOrder
   )
   {
-    if (dataSource == null || dataSource.isEmpty()) {
-      throw InvalidInput.exception("dataSourceName must be non-empty");
+    try {
+      if (dataSource == null || dataSource.isEmpty()) {
+        throw InvalidInput.exception("dataSourceName must be non-empty.");
+      }
+
+      if (limit != null && limit < 0) {
+        throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0.", limit);
+      }
+
+      if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
+        throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+      }
+
+      final SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
+
+      final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+      final Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+          dataSource,
+          theInterval,
+          limit,
+          lastSegmentId,
+          theSortOrder
+      );
+
+      final List<DataSegmentPlus> retVal = new ArrayList<>();
+      unusedSegments.iterator().forEachRemaining(retVal::add);
+      return Response.status(Response.Status.OK).entity(retVal).build();
     }
-    if (limit != null && limit < 0) {
-      throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0", limit);
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
-
-    if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
-      throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+    catch (Exception e) {
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .build();
     }
-
-    SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
-
-    final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
-    Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
-        dataSource,
-        theInterval,
-        limit,
-        lastSegmentId,
-        theSortOrder
-    );
-
-    final Function<DataSegmentPlus, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
-
-    final Iterable<DataSegmentPlus> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, unusedSegments, raGenerator, authorizerMapper);
-
-    final List<DataSegmentPlus> retVal = new ArrayList<>();
-    authorizedSegments.iterator().forEachRemaining(retVal::add);
-    return Response.status(Response.Status.OK).entity(retVal).build();
   }
 
   @GET
@@ -449,5 +470,24 @@ public class MetadataResource
         authorizerMapper
     );
     return Response.status(Response.Status.OK).entity(authorizedDataSourceInformation).build();
+  }
+
+  /**
+   * @return all bootstrap segments determined by the coordinator.
+   */
+  @POST
+  @Path("/bootstrapSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getBootstrapSegments()
+  {
+    final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
+    if (broadcastSegments == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                     .entity("Bootstrap segments are not initialized yet."
+                         + " Please ensure that the Coordinator duties are running and try again.")
+                     .build();
+    }
+    return Response.status(Response.Status.OK).entity(broadcastSegments).build();
   }
 }

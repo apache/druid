@@ -38,7 +38,7 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
 
@@ -70,7 +70,7 @@ public interface AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -96,42 +96,45 @@ public interface AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   );
 
   Appenderator createClosedSegmentsOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   );
 
   Appenderator createOfflineAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   );
 
   /**

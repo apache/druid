@@ -195,7 +195,10 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, Expr.singleThreaded(expression));
+    ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -243,7 +246,10 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    final ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
@@ -469,15 +475,15 @@ public class ExpressionSelectors
     }
 
     final Class<?> clazz = selector.classOfObject();
-    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
-      // Number, String supported as-is.
+    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz) || Object[].class.isAssignableFrom(clazz)) {
+      // Number, String, Arrays supported as-is.
       return selector::getObject;
     } else if (clazz.isAssignableFrom(Number.class) || clazz.isAssignableFrom(String.class)) {
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof List) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
@@ -490,7 +496,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }

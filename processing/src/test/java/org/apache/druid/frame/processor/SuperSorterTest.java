@@ -62,7 +62,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -79,7 +78,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@RunWith(Enclosed.class)
 public class SuperSorterTest
 {
   private static final Logger log = new Logger(SuperSorterTest.class);
@@ -133,7 +131,8 @@ public class SuperSorterTest
           2,
           -1,
           null,
-          superSorterProgressTracker
+          superSorterProgressTracker,
+          false
       );
 
       superSorter.setNoWorkRunnable(() -> outputPartitionsFuture.set(ClusterByPartitions.oneUniversalPartition()));
@@ -292,7 +291,7 @@ public class SuperSorterTest
           maxBytesPerFrame
       ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
       final RowKeyReader keyReader = clusterBy.keyReader(signature);
-      final Comparator<RowKey> keyComparator = clusterBy.keyComparator();
+      final Comparator<RowKey> keyComparator = clusterBy.keyComparator(signature);
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
@@ -308,7 +307,8 @@ public class SuperSorterTest
           maxChannelsPerProcessor,
           -1,
           null,
-          superSorterProgressTracker
+          superSorterProgressTracker,
+          false
       );
 
       superSorter.setNoWorkRunnable(() -> clusterByPartitionsFuture.set(clusterByPartitions));

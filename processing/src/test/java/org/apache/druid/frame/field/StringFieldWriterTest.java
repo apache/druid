@@ -65,8 +65,8 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new StringFieldWriter(selector);
-    fieldWriterUtf8 = new StringFieldWriter(selectorUtf8);
+    fieldWriter = new StringFieldWriter(selector, false);
+    fieldWriterUtf8 = new StringFieldWriter(selectorUtf8, false);
   }
 
   @After

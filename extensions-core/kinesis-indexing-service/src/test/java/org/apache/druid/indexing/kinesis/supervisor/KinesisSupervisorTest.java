@@ -37,7 +37,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
 import org.apache.druid.indexing.common.TestUtils;
-import org.apache.druid.indexing.common.task.RealtimeIndexTask;
+import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
 import org.apache.druid.indexing.kinesis.KinesisIndexTask;
@@ -79,15 +79,12 @@ import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.EntryExistsException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -941,15 +938,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expectLastCall().anyTimes();
 
     // non KinesisIndexTask (don't kill)
-    Task id2 = new RealtimeIndexTask(
+    Task id2 = new NoopTask(
         "id2",
         null,
-        new FireDepartment(
-            dataSchema,
-            new RealtimeIOConfig(null, null),
-            null
-        ),
-        null
+        dataSchema.getDataSource(),
+        100,
+        100,
+        ImmutableMap.of()
     );
 
     List<Task> existingTasks = ImmutableList.of(id2);
@@ -3744,7 +3739,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
   @Test
   public void testDoNotKillCompatibleTasks()
-      throws InterruptedException, EntryExistsException
+      throws InterruptedException
   {
     // This supervisor always returns true for isTaskCurrent -> it should not kill its tasks
     int numReplicas = 2;
@@ -3840,8 +3835,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testKillIncompatibleTasks()
-      throws InterruptedException, EntryExistsException
+  public void testKillIncompatibleTasks() throws InterruptedException
   {
     // This supervisor always returns false for isTaskCurrent -> it should kill its tasks
     int numReplicas = 2;

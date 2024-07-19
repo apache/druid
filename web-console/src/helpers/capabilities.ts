@@ -38,7 +38,7 @@ export interface CapabilitiesValue {
   multiStageQuery: boolean;
   coordinator: boolean;
   overlord: boolean;
-  clusterCapacity?: number;
+  maxTaskSlots?: number;
 }
 
 export class Capabilities {
@@ -54,7 +54,7 @@ export class Capabilities {
   private readonly multiStageQuery: boolean;
   private readonly coordinator: boolean;
   private readonly overlord: boolean;
-  private readonly clusterCapacity?: number;
+  private readonly maxTaskSlots?: number;
 
   static async detectQueryType(): Promise<QueryType | undefined> {
     // Check SQL endpoint
@@ -65,8 +65,8 @@ export class Capabilities {
         { timeout: Capabilities.STATUS_TIMEOUT },
       );
     } catch (e) {
-      const { response } = e;
-      if (response.status !== 405 && response.status !== 404) {
+      const status = e.response?.status;
+      if (status !== 405 && status !== 404) {
         return; // other failure
       }
       try {
@@ -87,7 +87,7 @@ export class Capabilities {
           { timeout: Capabilities.STATUS_TIMEOUT },
         );
       } catch (e) {
-        if (response.status !== 405 && response.status !== 404) {
+        if (status !== 405 && status !== 404) {
           return; // other failure
         }
 
@@ -106,9 +106,9 @@ export class Capabilities {
         timeout: Capabilities.STATUS_TIMEOUT,
       });
     } catch (e) {
-      const { response } = e;
+      const status = e.response?.status;
       // If we detect error code 400 the management proxy is enabled but just does not know about the recently added /proxy/enabled route so treat this as a win.
-      return response.status === 400;
+      return status === 400;
     }
 
     return true;
@@ -171,7 +171,7 @@ export class Capabilities {
 
     return new Capabilities({
       ...capabilities.valueOf(),
-      clusterCapacity: capacity.totalTaskSlots,
+      maxTaskSlots: capacity.totalTaskSlots,
     });
   }
 
@@ -180,7 +180,7 @@ export class Capabilities {
     this.multiStageQuery = value.multiStageQuery;
     this.coordinator = value.coordinator;
     this.overlord = value.overlord;
-    this.clusterCapacity = value.clusterCapacity;
+    this.maxTaskSlots = value.maxTaskSlots;
   }
 
   public valueOf(): CapabilitiesValue {
@@ -189,7 +189,7 @@ export class Capabilities {
       multiStageQuery: this.multiStageQuery,
       coordinator: this.coordinator,
       overlord: this.overlord,
-      clusterCapacity: this.clusterCapacity,
+      maxTaskSlots: this.maxTaskSlots,
     };
   }
 
@@ -263,8 +263,8 @@ export class Capabilities {
     return this.hasSql() || this.hasOverlordAccess();
   }
 
-  public getClusterCapacity(): number | undefined {
-    return this.clusterCapacity;
+  public getMaxTaskSlots(): number | undefined {
+    return this.maxTaskSlots;
   }
 }
 Capabilities.FULL = new Capabilities({

@@ -20,7 +20,6 @@
 package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
@@ -30,7 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -119,8 +118,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
 
       final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
 
-      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
           rowSignature,
           Collections.emptyList()
@@ -138,7 +136,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
       return new EmptyRowsAndColumns();
     } else {
       final byte[] bytes = writer.toByteArray();
-      return new FrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
+      return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
     }
   }
 }

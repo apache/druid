@@ -54,9 +54,9 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -2268,8 +2268,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeSeriesWithFilteredAggAndExpressionFilteredAgg()
   {
-    // can't vectorize if expression
-    cannotVectorize();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)

@@ -32,12 +32,14 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -61,11 +63,14 @@ import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -76,26 +81,29 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
-import org.apache.druid.sql.calcite.CalciteArraysQueryTest;
+import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
+import java.io.File;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static org.apache.druid.sql.calcite.util.CalciteTests.ARRAYS_DATASOURCE;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE5;
+import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_LOTS_O_COLUMNS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
@@ -113,10 +121,12 @@ import static org.mockito.Mockito.doThrow;
 public class CalciteMSQTestsHelper
 {
   public static List<Module> fetchModules(
-      TemporaryFolder temporaryFolder,
+      Function<String, File> tempFolderProducer,
       TestGroupByBuffers groupByBuffers
   )
   {
+    File cacheManagerDir = tempFolderProducer.apply("test");
+    File storageDir = tempFolderProducer.apply("localsegments");
 
     Module customBindings =
         binder -> {
@@ -152,29 +162,18 @@ public class CalciteMSQTestsHelper
           );
           ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
           IndexIO indexIO = new IndexIO(testMapper, ColumnConfig.DEFAULT);
-          SegmentCacheManager segmentCacheManager = null;
-          try {
-            segmentCacheManager = new SegmentCacheManagerFactory(testMapper).manufacturate(temporaryFolder.newFolder(
-                "test"));
-          }
-          catch (IOException e) {
-            e.printStackTrace();
-          }
+          SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
+              .manufacturate(cacheManagerDir);
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
           MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
-          try {
-            config.storageDirectory = temporaryFolder.newFolder("localsegments");
-          }
-          catch (IOException e) {
-            throw new ISE(e, "Unable to create folder");
-          }
+          config.storageDirectory = storageDir;
           binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
               new LocalDataSegmentPusher(config),
               segmentManager
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(segmentId));
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
@@ -183,6 +182,7 @@ public class CalciteMSQTestsHelper
               groupByBuffers
           ).getGroupingEngine();
           binder.bind(GroupingEngine.class).toInstance(groupingEngine);
+          binder.bind(Bouncer.class).toInstance(new Bouncer(1));
         };
     return ImmutableList.of(
         customBindings,
@@ -206,116 +206,217 @@ public class CalciteMSQTestsHelper
     return mockFactory;
   }
 
-  private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(SegmentId segmentId)
+  private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(Function<String, File> tempFolderProducer, SegmentId segmentId)
   {
-    final TemporaryFolder temporaryFolder = new TemporaryFolder();
-    try {
-      temporaryFolder.create();
-    }
-    catch (IOException e) {
-      e.printStackTrace();
-    }
     final QueryableIndex index;
-    try {
-      switch (segmentId.getDataSource()) {
-        case DATASOURCE1:
-          IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
-              .withMetrics(
-                  new CountAggregatorFactory("cnt"),
-                  new FloatSumAggregatorFactory("m1", "m1"),
-                  new DoubleSumAggregatorFactory("m2", "m2"),
-                  new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-              )
-              .withRollup(false)
-              .build();
-          index = IndexBuilder
-              .create()
-              .tmpDir(temporaryFolder.newFolder())
-              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-              .schema(foo1Schema)
-              .rows(ROWS1)
-              .buildMMappedIndex();
-          break;
-        case DATASOURCE2:
-          final IncrementalIndexSchema indexSchemaDifferentDim3M1Types = new IncrementalIndexSchema.Builder()
-              .withDimensionsSpec(
-                  new DimensionsSpec(
-                      ImmutableList.of(
-                          new StringDimensionSchema("dim1"),
-                          new StringDimensionSchema("dim2"),
-                          new LongDimensionSchema("dim3")
-                      )
-                  )
-              )
-              .withMetrics(
-                  new CountAggregatorFactory("cnt"),
-                  new LongSumAggregatorFactory("m1", "m1"),
-                  new DoubleSumAggregatorFactory("m2", "m2"),
-                  new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-              )
-              .withRollup(false)
-              .build();
-          index = IndexBuilder
-              .create()
-              .tmpDir(temporaryFolder.newFolder())
-              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-              .schema(indexSchemaDifferentDim3M1Types)
-              .rows(ROWS2)
-              .buildMMappedIndex();
-          break;
-        case DATASOURCE3:
-        case CalciteTests.BROADCAST_DATASOURCE:
-          index = IndexBuilder
-              .create()
-              .tmpDir(temporaryFolder.newFolder())
-              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-              .schema(INDEX_SCHEMA_NUMERIC_DIMS)
-              .rows(ROWS1_WITH_NUMERIC_DIMS)
-              .buildMMappedIndex();
-          break;
-        case DATASOURCE5:
-          index = IndexBuilder
-              .create()
-              .tmpDir(temporaryFolder.newFolder())
-              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-              .schema(INDEX_SCHEMA_LOTS_O_COLUMNS)
-              .rows(ROWS_LOTS_OF_COLUMNS)
-              .buildMMappedIndex();
-          break;
-        case CalciteArraysQueryTest.DATA_SOURCE_ARRAYS:
+    switch (segmentId.getDataSource()) {
+      case WIKIPEDIA:
+        try {
+          final File directory = new File(tempFolderProducer.apply("tmpDir"), StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+          final IncrementalIndex incrementalIndex = TestIndex.makeWikipediaIncrementalIndex();
+          TestIndex.INDEX_MERGER.persist(incrementalIndex, directory, IndexSpec.DEFAULT, null);
+          index = TestIndex.INDEX_IO.loadIndex(directory);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        break;
+      case DATASOURCE1:
+        IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
+            .withMetrics(
+                new CountAggregatorFactory("cnt"),
+                new FloatSumAggregatorFactory("m1", "m1"),
+                new DoubleSumAggregatorFactory("m2", "m2"),
+                new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+            )
+            .withRollup(false)
+            .build();
+        index = IndexBuilder
+            .create()
+            .tmpDir(tempFolderProducer.apply("tmpDir"))
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(foo1Schema)
+            .rows(ROWS1)
+            .buildMMappedIndex();
+        break;
+      case DATASOURCE2:
+        final IncrementalIndexSchema indexSchemaDifferentDim3M1Types = new IncrementalIndexSchema.Builder()
+            .withDimensionsSpec(
+                new DimensionsSpec(
+                    ImmutableList.of(
+                        new StringDimensionSchema("dim1"),
+                        new StringDimensionSchema("dim2"),
+                        new LongDimensionSchema("dim3")
+                    )
+                )
+            )
+            .withMetrics(
+                new CountAggregatorFactory("cnt"),
+                new LongSumAggregatorFactory("m1", "m1"),
+                new DoubleSumAggregatorFactory("m2", "m2"),
+                new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+            )
+            .withRollup(false)
+            .build();
+        index = IndexBuilder
+            .create()
+            .tmpDir(tempFolderProducer.apply("tmpDir"))
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(indexSchemaDifferentDim3M1Types)
+            .rows(ROWS2)
+            .buildMMappedIndex();
+        break;
+      case DATASOURCE3:
+      case CalciteTests.BROADCAST_DATASOURCE:
+        index = IndexBuilder
+            .create()
+            .tmpDir(tempFolderProducer.apply("tmpDir"))
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(INDEX_SCHEMA_NUMERIC_DIMS)
+            .rows(ROWS1_WITH_NUMERIC_DIMS)
+            .buildMMappedIndex();
+        break;
+      case DATASOURCE5:
+        index = IndexBuilder
+            .create()
+            .tmpDir(tempFolderProducer.apply("tmpDir"))
+            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+            .schema(INDEX_SCHEMA_LOTS_O_COLUMNS)
+            .rows(ROWS_LOTS_OF_COLUMNS)
+            .buildMMappedIndex();
+        break;
+      case ARRAYS_DATASOURCE:
+        index = IndexBuilder.create()
+                            .tmpDir(tempFolderProducer.apply("tmpDir"))
+                            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                            .schema(
+                                new IncrementalIndexSchema.Builder()
+                                    .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                                    .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                                    .withMetrics(
+                                        new CountAggregatorFactory("cnt")
+                                    )
+                                    .withRollup(false)
+                                    .build()
+                            )
+                            .inputSource(
+                                ResourceInputSource.of(
+                                    NestedDataTestUtils.class.getClassLoader(),
+                                    NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+                                )
+                            )
+                            .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                            .inputTmpDir(tempFolderProducer.apply("tmpDir"))
+                            .buildMMappedIndex();
+        break;
+      case CalciteNestedDataQueryTest.DATA_SOURCE:
+      case CalciteNestedDataQueryTest.DATA_SOURCE_MIXED:
+        if (segmentId.getPartitionNum() == 0) {
           index = IndexBuilder.create()
-                              .tmpDir(temporaryFolder.newFolder())
+                              .tmpDir(tempFolderProducer.apply("tmpDir"))
                               .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                               .schema(
                                   new IncrementalIndexSchema.Builder()
-                                      .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
-                                      .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
                                       .withMetrics(
                                           new CountAggregatorFactory("cnt")
                                       )
+                                      .withDimensionsSpec(CalciteNestedDataQueryTest.ALL_JSON_COLUMNS.getDimensionsSpec())
                                       .withRollup(false)
                                       .build()
                               )
-                              .inputSource(
-                                  ResourceInputSource.of(
-                                      NestedDataTestUtils.class.getClassLoader(),
-                                      NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
-                                  )
-                              )
-                              .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
-                              .inputTmpDir(temporaryFolder.newFolder())
+                              .rows(CalciteNestedDataQueryTest.ROWS)
                               .buildMMappedIndex();
-          break;
-        case CalciteTests.WIKIPEDIA_FIRST_LAST:
-          index = TestDataBuilder.makeWikipediaIndexWithAggregation(temporaryFolder.newFolder());
-          break;
-        default:
+        } else if (segmentId.getPartitionNum() == 1) {
+          index = IndexBuilder.create()
+                              .tmpDir(tempFolderProducer.apply("tmpDir"))
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withDimensionsSpec(CalciteNestedDataQueryTest.JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .rows(CalciteNestedDataQueryTest.ROWS_MIX)
+                              .buildMMappedIndex();
+        } else {
           throw new ISE("Cannot query segment %s in test runner", segmentId);
+        }
+        break;
+      case CalciteNestedDataQueryTest.DATA_SOURCE_MIXED_2:
+        if (segmentId.getPartitionNum() == 0) {
+          index = IndexBuilder.create()
+                              .tmpDir(tempFolderProducer.apply("tmpDir"))
+                              .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                              .schema(
+                                  new IncrementalIndexSchema.Builder()
+                                      .withMetrics(
+                                          new CountAggregatorFactory("cnt")
+                                      )
+                                      .withDimensionsSpec(CalciteNestedDataQueryTest.JSON_AND_SCALAR_MIX.getDimensionsSpec())
+                                      .withRollup(false)
+                                      .build()
+                              )
+                              .rows(CalciteNestedDataQueryTest.ROWS_MIX)
+                              .buildMMappedIndex();
+        } else if (segmentId.getPartitionNum() == 1) {
+          index = IndexBuilder.create()
+                      .tmpDir(tempFolderProducer.apply("tmpDir"))
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withDimensionsSpec(CalciteNestedDataQueryTest.ALL_JSON_COLUMNS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(CalciteNestedDataQueryTest.ROWS)
+                      .buildMMappedIndex();
+        } else {
+          throw new ISE("Cannot query segment %s in test runner", segmentId);
+        }
+        break;
+      case CalciteNestedDataQueryTest.DATA_SOURCE_ALL:
+        index = IndexBuilder.create()
+                            .tmpDir(tempFolderProducer.apply("tmpDir"))
+                            .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                            .schema(
+                                new IncrementalIndexSchema.Builder()
+                                    .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                                    .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                                    .withMetrics(
+                                        new CountAggregatorFactory("cnt")
+                                    )
+                                    .withRollup(false)
+                                    .build()
+                            )
+                            .inputSource(
+                                ResourceInputSource.of(
+                                    NestedDataTestUtils.class.getClassLoader(),
+                                    NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                                )
+                            )
+                            .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                            .inputTmpDir(tempFolderProducer.apply("tmpDir"))
+                            .buildMMappedIndex();
+        break;
+      case CalciteTests.WIKIPEDIA_FIRST_LAST:
+        index = TestDataBuilder.makeWikipediaIndexWithAggregation(tempFolderProducer.apply("tmpDir"));
+        break;
+      case CalciteTests.TBL_WITH_NULLS_PARQUET:
+      case CalciteTests.SML_TBL_PARQUET:
+      case CalciteTests.ALL_TYPES_UNIQ_PARQUET:
+      case CalciteTests.FEW_ROWS_ALL_DATA_PARQUET:
+      case CalciteTests.T_ALL_TYPE_PARQUET:
+        index = TestDataBuilder.getQueryableIndexForDrillDatasource(segmentId.getDataSource(), tempFolderProducer.apply("tmpDir"));
+        break;
+      default:
+        throw new ISE("Cannot query segment %s in test runner", segmentId);
 
-      }
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Unable to load index for segment %s", segmentId);
     }
     Segment segment = new Segment()
     {

@@ -31,30 +31,26 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
  */
-@RunWith(Enclosed.class)
-public abstract class CalciteSelectJoinQueryMSQTest
+public class CalciteSelectJoinQueryMSQTest
 {
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
+  @SqlTestFrameworkConfig.ComponentSupplier(BroadcastJoinComponentSupplier.class)
   public static class BroadcastTest extends Base
   {
-    public BroadcastTest()
-    {
-      super(JoinAlgorithm.BROADCAST);
-    }
-
     @Override
     protected QueryTestBuilder testBuilder()
     {
@@ -66,11 +62,13 @@ public abstract class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
+  @SqlTestFrameworkConfig.ComponentSupplier(SortMergeJoinComponentSupplier.class)
   public static class SortMergeTest extends Base
   {
-    public SortMergeTest()
+    @Override
+    public boolean isSortBasedJoin()
     {
-      super(JoinAlgorithm.SORT_MERGE);
+      return true;
     }
 
     @Override
@@ -85,12 +83,40 @@ public abstract class CalciteSelectJoinQueryMSQTest
 
   public abstract static class Base extends CalciteJoinQueryTest
   {
-    private final JoinAlgorithm joinAlgorithm;
-
-
-    protected Base(final JoinAlgorithm joinAlgorithm)
+    @Override
+    protected QueryTestBuilder testBuilder()
     {
-      super(joinAlgorithm == JoinAlgorithm.SORT_MERGE);
+      return new QueryTestBuilder(new CalciteTestConfig(true))
+          .addCustomRunner(
+              new ExtractResultsFactory(
+                  () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
+          .skipVectorize(true);
+    }
+  }
+
+  protected static class SortMergeJoinComponentSupplier extends AbstractJoinComponentSupplier
+  {
+    public SortMergeJoinComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer, JoinAlgorithm.SORT_MERGE);
+    }
+  }
+
+  protected static class BroadcastJoinComponentSupplier extends AbstractJoinComponentSupplier
+  {
+    public BroadcastJoinComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer, JoinAlgorithm.BROADCAST);
+    }
+  }
+
+  protected abstract static class AbstractJoinComponentSupplier extends StandardComponentSupplier
+  {
+    private JoinAlgorithm joinAlgorithm;
+
+    public AbstractJoinComponentSupplier(TempDirProducer tempFolderProducer, JoinAlgorithm joinAlgorithm)
+    {
+      super(tempFolderProducer);
       this.joinAlgorithm = joinAlgorithm;
     }
 
@@ -99,7 +125,7 @@ public abstract class CalciteSelectJoinQueryMSQTest
     {
       super.configureGuice(builder);
       builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(temporaryFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
+          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
       );
     }
 
@@ -111,7 +137,14 @@ public abstract class CalciteSelectJoinQueryMSQTest
     )
     {
       final WorkerMemoryParameters workerMemoryParameters =
-          WorkerMemoryParameters.createInstance(WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50, 2, 10, 2, 0, 0);
+          WorkerMemoryParameters.createInstance(
+              WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+              2,
+              10,
+              2,
+              0,
+              0
+          );
       final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
           queryJsonMapper,
           injector,
@@ -122,10 +155,9 @@ public abstract class CalciteSelectJoinQueryMSQTest
       return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
       {
         @Override
-        public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+        public boolean featureAvailable(EngineFeature feature)
         {
-          plannerContext.queryContextMap().put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString());
-          return super.featureAvailable(feature, plannerContext);
+          return super.featureAvailable(feature);
         }
 
         @Override
@@ -135,16 +167,6 @@ public abstract class CalciteSelectJoinQueryMSQTest
           return super.buildQueryMakerForSelect(relRoot, plannerContext);
         }
       };
-    }
-
-    @Override
-    protected QueryTestBuilder testBuilder()
-    {
-      return new QueryTestBuilder(new CalciteTestConfig(true))
-          .addCustomRunner(
-              new ExtractResultsFactory(
-                  () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-          .skipVectorize(true);
     }
   }
 }

@@ -48,14 +48,12 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.util.Arrays;
 
-@RunWith(Enclosed.class)
 public class EqualityFilterTests
 {
   @RunWith(Parameterized.class)
@@ -108,6 +106,12 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("dim0", ColumnType.LONG, 1L, null), ImmutableList.of("1"));
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("dim0", ColumnType.LONG, 1L, null)),
+          ImmutableList.of("0", "2", "3", "4", "5")
+      );
+
+      assertFilterMatches(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null), ImmutableList.of("1"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null)),
           ImmutableList.of("0", "2", "3", "4", "5")
       );
     }

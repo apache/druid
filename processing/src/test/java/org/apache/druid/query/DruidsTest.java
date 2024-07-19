@@ -34,10 +34,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
 
-@RunWith(Enclosed.class)
 public class DruidsTest
 {
   private static final String DATASOURCE = "datasource";
