@@ -24,18 +24,18 @@ sidebar_label: Aggregate data with rollup
   -->
 
 
-Apache Druid&circledR; can summarize raw data at ingestion time using a process we refer to as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
-This tutorial will demonstrate the effects of rollup on an example dataset.
+This tutorial demonstrate the effects of rollup on an example dataset.
 
-For this tutorial, we'll assume you've already downloaded Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine. The examples in the tutorial use the [multi-stage query](../multi-stage-query/) (MSQ) task engine to execute SQL statements.
+For this tutorial, you should have Druid downloaded as described in
+the [single-machine quickstart](index.md) and have it running on your local machine. The examples in the tutorial use the [multi-stage query](../multi-stage-query/index.md) (MSQ) task engine to execute SQL statements.
 
-It will also be helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
+It is helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
 
 ## Example data
 
-For this tutorial, we'll use a small sample of network flow event data, representing packet and byte counts for traffic from a source to a destination IP address that occurred within a particular second.
+For this tutorial, you use a small sample of network flow event data, representing packet and byte counts for traffic from a source to a destination IP address that occurred within a particular second.
 
 ```json
 {"timestamp":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":20,"bytes":9024}
@@ -49,11 +49,11 @@ For this tutorial, we'll use a small sample of network flow event data, represen
 {"timestamp":"2018-01-02T21:35:45Z","srcIP":"7.7.7.7", "dstIP":"8.8.8.8","packets":12,"bytes":2818}
 ```
 
-We will see how to ingest this data using rollup.
+The tutorial guides you through how to ingest this data using rollup.
 
 ## Load the example data
 
-Load a sample dataset using INSERT and EXTERN functions. The EXTERN function lets you read external data or write to an external location.
+Load the sample dataset using INSERT and EXTERN functions. The EXTERN function lets you read external data or write to an external location.
 
 In the Druid web console, go to the Query view and run the following query:
 
@@ -79,9 +79,9 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-Note that the query uses the `FLOOR` function to give the `__time` a granularity of `MINUTE`. The query defines the dimmensions of the rollup by grouping columns 1, 2, and 3, which corresponds to the `timestamp`, `srcIP`, and `dstIP` columns. The query defines the metrics of the rollup by aggregating the `bytes` and `packets` columns.
+Note that the query uses the `FLOOR` function to give the `__time` a granularity of `MINUTE`. The query defines the dimensions of the rollup by grouping columns 1, 2, and 3, which corresponds to the `timestamp`, `srcIP`, and `dstIP` columns. The query defines the metrics of the rollup by aggregating the `bytes` and `packets` columns.
 
-After the script completes, we will query the data.
+After the ingestion completes, you can query the data.
 
 ## Query the example data
 
@@ -110,7 +110,7 @@ Consider the three events in the original input data that occur over the course 
 {"timestamp":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":11,"bytes":5780}
 ```
 
-Apache Druid combines the three rows into the following during rollup:
+Druid combines the three rows into the following during rollup:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
