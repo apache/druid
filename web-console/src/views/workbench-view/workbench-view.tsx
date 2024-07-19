@@ -30,7 +30,7 @@ import type { SqlQuery } from '@druid-toolkit/query';
 import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React from 'react';
+import React, { ComponentProps } from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
@@ -101,6 +101,9 @@ export interface WorkbenchViewProps {
   allowExplain: boolean;
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  maxTaskMenuHeader?: JSX.Element;
+  enginesLabelFn?: ComponentProps<typeof QueryTab>['enginesLabelFn'];
+  maxTaskLabelFn?: ComponentProps<typeof QueryTab>['maxTaskLabelFn'];
 }
 
 export interface WorkbenchViewState {
@@ -649,6 +652,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       allowExplain,
       goToTask,
       getClusterCapacity,
+      maxTaskMenuHeader,
+      enginesLabelFn,
+      maxTaskLabelFn,
     } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
@@ -673,6 +679,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
           getClusterCapacity={getClusterCapacity}
+          maxTaskMenuHeader={maxTaskMenuHeader}
+          enginesLabelFn={enginesLabelFn}
+          maxTaskLabelFn={maxTaskLabelFn}
           runMoreMenu={
             <Menu>
               {allowExplain &&

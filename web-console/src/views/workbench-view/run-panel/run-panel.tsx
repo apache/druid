@@ -30,7 +30,7 @@ import {
   useHotkeys,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import { MenuCheckbox, MenuTristate } from '../../../components';
@@ -111,6 +111,14 @@ const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
   ),
 };
 
+const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
+  if (!engine) return { text: 'auto' };
+  return {
+    text: engine,
+    label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
+  };
+};
+
 export interface RunPanelProps {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
@@ -120,11 +128,25 @@ export interface RunPanelProps {
   queryEngines: DruidEngine[];
   clusterCapacity: number | undefined;
   moreMenu?: JSX.Element;
+  maxTaskMenuHeader?: JSX.Element;
+  enginesLabelFn?: (engine: DruidEngine | undefined) => { text: string; label?: string };
+  maxTaskLabelFn?: ComponentProps<typeof MaxTasksButton>['maxNumLabelFn'];
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, running, small, queryEngines, clusterCapacity } =
-    props;
+  const {
+    query,
+    onQueryChange,
+    onRun,
+    moreMenu,
+    running,
+    small,
+    queryEngines,
+    clusterCapacity,
+    maxTaskMenuHeader,
+    maxTaskLabelFn,
+    enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
+  } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [editParametersDialogOpen, setEditParametersDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
@@ -186,24 +208,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   useHotkeys(hotkeys);
 
   const queryEngine = query.engine;
-  function renderQueryEngineMenuItem(e: DruidEngine | undefined) {
-    return (
-      <MenuItem
-        key={String(e)}
-        icon={tickIcon(e === queryEngine)}
-        text={typeof e === 'undefined' ? 'auto' : e}
-        label={e === 'sql-msq-task' ? 'multi-stage-query' : undefined}
-        onClick={() => onQueryChange(query.changeEngine(e))}
-        shouldDismissPopover={false}
-      />
-    );
-  }
 
   function changeQueryContext(queryContext: QueryContext) {
     onQueryChange(query.changeQueryContext(queryContext));
   }
-
-  const availableEngines = ([undefined] as (DruidEngine | undefined)[]).concat(queryEngines);
 
   function offsetOptions(): JSX.Element[] {
     const items: JSX.Element[] = [];
@@ -231,6 +239,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const intent = overloadWarning ? Intent.WARNING : undefined;
 
   const effectiveEngine = query.getEffectiveEngine();
+
+  const autoEngineLabel = enginesLabelFn(undefined);
+
   return (
     <div className="run-panel">
       <Button
@@ -262,7 +273,29 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 {queryEngines.length > 1 && (
                   <>
                     <MenuDivider title="Select engine" />
-                    {availableEngines.map(renderQueryEngineMenuItem)}
+                    <MenuItem
+                      key="auto"
+                      icon={tickIcon(queryEngine === undefined)}
+                      text={autoEngineLabel.text}
+                      label={autoEngineLabel.label}
+                      onClick={() => onQueryChange(query.changeEngine(undefined))}
+                      shouldDismissPopover={false}
+                    />
+                    {queryEngines.map(engine => {
+                      const { text, label } = enginesLabelFn(engine);
+
+                      return (
+                        <MenuItem
+                          key={String(engine)}
+                          icon={tickIcon(engine === queryEngine)}
+                          text={text}
+                          label={label}
+                          onClick={() => onQueryChange(query.changeEngine(engine))}
+                          shouldDismissPopover={false}
+                        />
+                      );
+                    })}
+
                     <MenuDivider />
                   </>
                 )}
@@ -485,7 +518,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
             }
           >
             <Button
-              text={`Engine: ${queryEngine || `auto (${effectiveEngine})`}`}
+              text={`Engine: ${
+                (enginesLabelFn ? enginesLabelFn(queryEngine).text : queryEngine) ||
+                `auto (${enginesLabelFn ? enginesLabelFn(effectiveEngine) : effectiveEngine})`
+              }`}
               rightIcon={IconNames.CARET_DOWN}
               intent={intent}
             />
@@ -495,6 +531,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               clusterCapacity={clusterCapacity}
               queryContext={queryContext}
               changeQueryContext={changeQueryContext}
+              menuHeader={maxTaskMenuHeader}
+              maxNumLabelFn={maxTaskLabelFn}
             />
           )}
           {ingestMode && (
