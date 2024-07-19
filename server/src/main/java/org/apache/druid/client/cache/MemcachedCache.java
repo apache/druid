@@ -641,14 +641,14 @@ public class MemcachedCache implements Cache
 
   public static final int MAX_PREFIX_LENGTH =
       MemcachedClientIF.MAX_KEY_LENGTH
-      - 40 // length of namespace hash
-      - 40 // length of key hash
+      - 64 // length of namespace hash
+      - 64 // length of key hash
       - 2; // length of separators
 
   private static String computeKeyHash(String memcachedPrefix, NamedKey key)
   {
     // hash keys to keep things under 250 characters for memcached
-    return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
+    return memcachedPrefix + ":" + DigestUtils.sha256Hex(key.namespace) + ":" + DigestUtils.sha256Hex(key.key);
   }
 
   @Override
