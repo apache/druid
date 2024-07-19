@@ -26,8 +26,8 @@ service Query {
 }
 
 enum QueryType {
-  NATIVE = 0;
-  SQL = 1;
+  SQL = 0;
+  NATIVE = 1;
 }
 
 // Defines the format of the query results. Must be one of the
@@ -68,26 +68,27 @@ message StringArray {
 }
 
 message QueryRequest {
-  QueryType queryType = 1;
-  string query = 2;
-  QueryResultFormat resultFormat = 3;
-  map<string, string> context = 4;
+  string query = 1;
+  QueryResultFormat resultFormat = 2;
+  map<string, string> context = 3;
   // Query parameters. If your query is SELECT * FROM foo WHERE x = ? AND y > ?
   // Then you would include two parameters in the order in which the question
   // marks lexically appear in the query.
-  repeated QueryParameter parameters = 5;
+  repeated QueryParameter parameters = 4;
   // The name of the Protobuf message to encode the response if the
   // resultFormat is one of the PROTOBUF formats.
-  optional string protobufMessageName = 6;
+  optional string protobufMessageName = 5;
 
   // used only for native query
   // columns to skip writing in the result, for example, it can used to skip writing
   // time field in the result for timeseries query
-  repeated string skipColumns = 7;
+  repeated string skipColumns = 6;
 
   // used only for native query
   // columns which should be converted to Timestamp
-  repeated string timeColumns = 8;
+  repeated string timeColumns = 7;
+
+  QueryType queryType = 8;
 }
 
 // Unauthorized errors return as a StatusRuntimeException with
