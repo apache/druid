@@ -3,7 +3,7 @@ type: "operatorValidation"
 sql: |
   SELECT
     m1,
-    COUNT(m1 > 1) OVER () cc
+    SUM(m1) OVER () cc
   FROM druid.foo
 
 expectedOperators:
@@ -14,12 +14,14 @@ expectedOperators:
       type: "framedAgg"
       frame: { type: "rows" }
       aggregations:
-        - type: count
-          name: "w0"
+        - type: doubleSum
+          name: w0
+          fieldName: m1
+
 expectedResults:
-  - [1.0,6]
-  - [2.0,6]
-  - [3.0,6]
-  - [4.0,6]
-  - [5.0,6]
-  - [6.0,6]
+  - [1.0,21.0]
+  - [2.0,21.0]
+  - [3.0,21.0]
+  - [4.0,21.0]
+  - [5.0,21.0]
+  - [6.0,21.0]

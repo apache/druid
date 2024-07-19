@@ -354,6 +354,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       failingTest,
       operatorValidation
     }
+
     @JsonProperty
     public TestType type;
 
