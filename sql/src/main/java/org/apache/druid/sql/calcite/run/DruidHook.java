@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite.run;
 
 import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
+import org.apache.druid.annotations.SuppressFBWarnings;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -74,6 +76,7 @@ public interface DruidHook<T>
 
   void invoke(HookKey<T> key, T object);
 
+  @SuppressFBWarnings({"MS_OOI_PKGPROTECT"})
   Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
 
   static void register(HookKey<?> label, DruidHook<?> hook)
