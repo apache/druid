@@ -24,7 +24,7 @@ sidebar_label: Aggregate data with rollup
   -->
 
 
-Apache Druid can summarize raw data at ingestion time using a process we refer to as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid&circledR; can summarize raw data at ingestion time using a process we refer to as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
 This tutorial will demonstrate the effects of rollup on an example dataset.
 
@@ -49,9 +49,7 @@ For this tutorial, we'll use a small sample of network flow event data, represen
 {"timestamp":"2018-01-02T21:35:45Z","srcIP":"7.7.7.7", "dstIP":"8.8.8.8","packets":12,"bytes":2818}
 ```
 
-Note that we have `srcIP` and `dstIP` defined as dimensions, a longSum metric is defined for the `packets` and `bytes` columns, and the `queryGranularity` has been defined as `minute`.
-
-We will see how these definitions are used after we load this data.
+We will see how to ingest this data using rollup.
 
 ## Load the example data
 
@@ -65,7 +63,9 @@ WITH "inline_data" AS (
   SELECT *
   FROM TABLE(EXTERN('{
     "type":"inline",
-    "data":"{\"timestamp\":\"2018-01-01T01:01:35Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":20,\"bytes\":9024}\n{\"timestamp\":\"2018-01-01T01:02:14Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":38,\"bytes\":6289}\n{\"timestamp\":\"2018-01-01T01:01:59Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":11,\"bytes\":5780}\n{\"timestamp\":\"2018-01-01T01:01:51Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":255,\"bytes\":21133}\n{\"timestamp\":\"2018-01-01T01:02:29Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":377,\"bytes\":359971}\n{\"timestamp\":\"2018-01-01T01:03:29Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":49,\"bytes\":10204}\n{\"timestamp\":\"2018-01-02T21:33:14Z\",\"srcIP\":\"7.7.7.7\",\"dstIP\":\"8.8.8.8\",\"packets\":38,\"bytes\":6289}\n{\"timestamp\":\"2018-01-02T21:33:45Z\",\"srcIP\":\"7.7.7.7\",\"dstIP\":\"8.8.8.8\",\"packets\":123,\"bytes\":93999}\n{\"timestamp\":\"2018-01-02T21:35:45Z\",\"srcIP\":\"7.7.7.7\",\"dstIP\":\"8.8.8.8\",\"packets\":12,\"bytes\":2818}"}', '{"type":"json"}')) EXTEND ("timestamp" VARCHAR, "srcIP" VARCHAR, "dstIP" VARCHAR, "packets" BIGINT, "bytes" BIGINT)
+    "data":"{\"timestamp\":\"2018-01-01T01:01:35Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":20,\"bytes\":9024}\n{\"timestamp\":\"2018-01-01T01:02:14Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":38,\"bytes\":6289}\n{\"timestamp\":\"2018-01-01T01:01:59Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":11,\"bytes\":5780}\n{\"timestamp\":\"2018-01-01T01:01:51Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":255,\"bytes\":21133}\n{\"timestamp\":\"2018-01-01T01:02:29Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":377,\"bytes\":359971}\n{\"timestamp\":\"2018-01-01T01:03:29Z\",\"srcIP\":\"1.1.1.1\",\"dstIP\":\"2.2.2.2\",\"packets\":49,\"bytes\":10204}\n{\"timestamp\":\"2018-01-02T21:33:14Z\",\"srcIP\":\"7.7.7.7\",\"dstIP\":\"8.8.8.8\",\"packets\":38,\"bytes\":6289}\n{\"timestamp\":\"2018-01-02T21:33:45Z\",\"srcIP\":\"7.7.7.7\",\"dstIP\":\"8.8.8.8\",\"packets\":123,\"bytes\":93999}\n{\"timestamp\":\"2018-01-02T21:35:45Z\",\"srcIP\":\"7.7.7.7\",\"dstIP\":\"8.8.8.8\",\"packets\":12,\"bytes\":2818}"}', 
+    '{"type":"json"}')) 
+    EXTEND ("timestamp" VARCHAR, "srcIP" VARCHAR, "dstIP" VARCHAR, "packets" BIGINT, "bytes" BIGINT)
 )
 SELECT
   FLOOR(TIME_PARSE("timestamp") TO MINUTE) AS __time,
@@ -78,6 +78,8 @@ FROM "inline_data"
 GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
+
+Note that the query uses the `FLOOR` function to give the `__time` a granularity of `MINUTE`. The query defines the dimmensions of the rollup by grouping columns 1, 2, and 3, which corresponds to the `timestamp`, `srcIP`, and `dstIP` columns. The query defines the metrics of the rollup by aggregating the `bytes` and `packets` columns.
 
 After the script completes, we will query the data.
 
@@ -108,7 +110,7 @@ Consider the three events in the original input data that occur over the course 
 {"timestamp":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":11,"bytes":5780}
 ```
 
-Apache Druid combines the three rows into the following using rollup:
+Apache Druid combines the three rows into the following during rollup:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
@@ -116,16 +118,16 @@ Apache Druid combines the three rows into the following using rollup:
 
 The input rows have been grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`.
 
-Before the grouping occurs, the timestamps of the original input data are bucketed/floored by minute, due to the `"queryGranularity":"minute"` setting in the ingestion spec.
+Before the grouping occurs, the timestamps of the original input data are bucketed/floored by minute, due to the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` function in the query.
 
-Likewise, consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
+Consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
 ```json
 {"timestamp":"2018-01-01T01:02:14Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":38,"bytes":6289}
 {"timestamp":"2018-01-01T01:02:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":377,"bytes":359971}
 ```
 
-The rows have been grouped into the following:
+The rows have been grouped into the following during rollup:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
@@ -137,7 +139,7 @@ In the original input data, only one event occurs over the course of minute `201
 {"timestamp":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":49,"bytes":10204}
 ```
 
-Therefor no rollup takes place:
+Therefore no rollup takes place:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
