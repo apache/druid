@@ -231,6 +231,65 @@ public class SqlInputSourceTest
   }
 
   @Test
+  public void testConnectorValidationInvalidUri()
+  {
+    derbyConnector = derbyConnectorRule.getConnector();
+    final List<String> sqls = SqlTestUtils.selectFrom(TABLE_1, TABLE_2);
+    Throwable t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new SqlTestUtils(
+            derbyConnector,
+            new MetadataStorageConnectorConfig()
+            {
+              @Override
+              public String getConnectURI()
+              {
+                return "";
+              }
+            }
+        )
+    );
+    Assert.assertEquals("connectURI cannot be null or empty", t.getMessage());
+  }
+
+  @Test
+  public void testConnectorValidationAllowedProperties()
+  {
+    derbyConnector = derbyConnectorRule.getConnector();
+    Throwable t = Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new SqlTestUtils(
+            derbyConnector,
+            new MetadataStorageConnectorConfig(),
+            new JdbcAccessSecurityConfig()
+        )
+    );
+    Assert.assertEquals(
+        "The property [user] is not in the allowed list [useSSL, requireSSL, ssl, sslmode]",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testConnectorValidationSkipAllowedProperties()
+  {
+    derbyConnector = derbyConnectorRule.getConnector();
+    SqlTestUtils testUtils = new SqlTestUtils(
+        derbyConnector,
+        new MetadataStorageConnectorConfig(),
+        new JdbcAccessSecurityConfig()
+        {
+          @Override
+          public boolean isEnforceAllowedProperties()
+          {
+            return false;
+          }
+        }
+    );
+    Assert.assertNotNull(testUtils);
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(SqlInputSource.class)
@@ -244,6 +303,7 @@ public class SqlInputSourceTest
                   .usingGetClass()
                   .verify();
   }
+
 
   @JsonTypeName("test")
   private static class TestSerdeInputSourceConnector extends SQLInputSourceDatabaseConnector

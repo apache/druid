@@ -61,12 +61,36 @@ public class SqlTestUtils
     );
   }
 
+  public SqlTestUtils(TestDerbyConnector derbyConnector, MetadataStorageConnectorConfig config)
+  {
+    this.derbyConnector = derbyConnector;
+    this.derbyInputSourceConnector = new TestDerbyInputSourceConnector(
+        config,
+        derbyConnector.getDBI()
+    );
+  }
+
+  public SqlTestUtils(
+      TestDerbyConnector derbyConnector,
+      MetadataStorageConnectorConfig config,
+      JdbcAccessSecurityConfig securityConfig
+  )
+  {
+    this.derbyConnector = derbyConnector;
+    this.derbyInputSourceConnector = new TestDerbyInputSourceConnector(
+        config,
+        securityConfig,
+        derbyConnector.getDBI()
+    );
+  }
+
   private static class TestDerbyInputSourceConnector extends SQLInputSourceDatabaseConnector
   {
     private final DBI dbi;
 
     private TestDerbyInputSourceConnector(
-        @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi
+        @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig,
+        DBI dbi
     )
     {
       final BasicDataSource datasource = getDatasource(
@@ -79,6 +103,21 @@ public class SqlTestUtils
               return ImmutableSet.of("user", "create");
             }
           }
+      );
+      datasource.setDriverClassLoader(getClass().getClassLoader());
+      datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
+      this.dbi = dbi;
+    }
+
+    private TestDerbyInputSourceConnector(
+        MetadataStorageConnectorConfig metadataStorageConnectorConfig,
+        JdbcAccessSecurityConfig securityConfig,
+        DBI dbi
+    )
+    {
+      final BasicDataSource datasource = getDatasource(
+          metadataStorageConnectorConfig,
+          securityConfig
       );
       datasource.setDriverClassLoader(getClass().getClassLoader());
       datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
