@@ -66,16 +66,16 @@ After the configurations are removed, Druid will ignore them if they exist in yo
 
 ## Migrate to SQL compliant mode
 
-If your business logic relies on the behavior of legacy mode, you have the following options to operate Druid in SQL compatible null handling mode:
+If your business logic relies on the behavior of legacy mode, you have the following options to operate Druid in an ANSI SQL compatible null handling mode:
 
-- Modify incoming data to either [avoid nulls](#replace-null-values-at-ingestion-time) or [avoid empty strings](#coerce-empty-strings-to-null-at-ingestion-time) to achieve the same query behavior as legacy mode. This means modifying your ingestion SQL and ingestion specs to handle nulls or empty strings.
+- Modify incoming data to either [avoid nulls](#replace-null-values-at-ingestion-time) or [avoid empty strings](#coerce-empty-strings-to-null-at-ingestion-time) to achieve the same query behavior as legacy mode. This means modifying your ingestion SQL queries and ingestion specs to handle nulls or empty strings.
     For example, replacing a null for a string column with an empty string or a 0 for a numeric column.
     However, it means that your existing queries should operate as if Druid were in legacy mode.
     If you do not care about preserving null values, this is a good option for you.
 
-- Preserve null values and update all of your SQL queries to be ANSI SQL compliant.
+- Preserve null values and [update all of your SQL queries to be ANSI SQL compliant](#rewrite-your-queries-to-be-sql-compliant).
     This means you can preserve the incoming data with nulls intact.
-    However, you must rewrite any affected client-side queries to be SQL compliant.
+    However, you must rewrite any affected client-side queries to be ANSI SQL compliant.
     If you have a requirement to preserve null values, choose this option.
 
 ### Replace null values at ingestion time
