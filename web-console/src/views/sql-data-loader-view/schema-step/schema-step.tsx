@@ -26,10 +26,10 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import {
   C,
   Column,
@@ -555,7 +555,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
       subtitle="Configure schema"
       toolbar={
         <>
-          <Popover2
+          <Popover
             position="bottom"
             content={
               <Menu>
@@ -586,9 +586,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 {ingestQueryPattern ? ingestQueryPattern.filters.length : '?'}
               </Tag>
             </Button>
-          </Popover2>
+          </Popover>
           {ingestQueryPattern && (
-            <Popover2
+            <Popover
               position="bottom"
               content={
                 <Menu>
@@ -624,10 +624,10 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     : ingestQueryPattern.partitionedBy}
                 </Tag>
               </Button>
-            </Popover2>
+            </Popover>
           )}
           {ingestQueryPattern && (
-            <Popover2
+            <Popover
               position="bottom"
               content={
                 <Menu>
@@ -683,7 +683,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   {ingestQueryPattern.clusteredBy.length}
                 </Tag>
               </Button>
-            </Popover2>
+            </Popover>
           )}
           <Button
             icon={IconNames.COMPRESSED}
@@ -751,7 +751,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           </div>
           {effectiveMode !== 'sql' && ingestQueryPattern && (
             <div className="control-line right">
-              <Popover2
+              <Popover
                 className="add-column-control"
                 position="bottom"
                 content={
@@ -805,7 +805,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 }
               >
                 <Button className="add-column" icon={IconNames.PLUS} text="Add column" />
-              </Popover2>
+              </Popover>
               <ClearableInput
                 className="column-filter-control"
                 value={columnSearch}

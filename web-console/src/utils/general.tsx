@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Classes, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -554,7 +554,7 @@ export function objectHash(obj: any): string {
 }
 
 export function hasPopoverOpen(): boolean {
-  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+  return Boolean(document.querySelector(`${Classes.PORTAL} ${Classes.OVERLAY} ${Classes.POPOVER}`));
 }
 
 export function checkedCircleIcon(checked: boolean): IconName {

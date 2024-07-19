@@ -20,6 +20,7 @@ import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 
+import { OverlaysProvider } from '@blueprintjs/core';
 import { QueryRunner } from '@druid-toolkit/query';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -100,13 +101,13 @@ QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
   return Api.instance.post(`/druid/v2${isSql ? '/sql' : ''}`, payload, { cancelToken });
 };
 
-const root = createRoot(container);
-
-root.render(
-  React.createElement(ConsoleApplication, {
-    defaultQueryContext: consoleConfig.defaultQueryContext,
-    mandatoryQueryContext: consoleConfig.mandatoryQueryContext,
-  }),
+createRoot(container).render(
+  <OverlaysProvider>
+    <ConsoleApplication
+      defaultQueryContext={consoleConfig.defaultQueryContext}
+      mandatoryQueryContext={consoleConfig.mandatoryQueryContext}
+    />
+  </OverlaysProvider>,
 );
 
 // ---------------------------------

@@ -16,14 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-
-.date-range-selector {
-  .#{$bp-ns}-popover-target {
-    display: block;
-  }
-
-  * {
-    cursor: pointer;
-  }
+// Adding div explicitly to make this selector slightly stronger
+.#{$ns}-dark div.#{$ns}-segmented-control {
+  background-color: $dark-gray3-half;
 }
