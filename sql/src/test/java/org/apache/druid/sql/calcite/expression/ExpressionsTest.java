@@ -76,7 +76,6 @@ import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.StringContains;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -88,6 +87,8 @@ import org.mockito.Mockito;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ExpressionsTest extends CalciteTestBase
 {
@@ -2859,7 +2860,7 @@ public class ExpressionsTest extends CalciteTestBase
         () -> testHelper.testExpression(rexNode, null, plannerContext)
     );
 
-    MatcherAssert.assertThat(t.getMessage(), StringContains.containsString("Encountered an OVER"));
+    assertThat(t.getMessage(), StringContains.containsString("Encountered an OVER"));
   }
 
   @Test
