@@ -1159,21 +1159,16 @@ Calculates x modulo y, or the remainder of x divided by y. Where x and y are num
 
 <details><summary>Example</summary>
 
-The following applies MOD with a y value of 10 to the `max_temperature` column, from the `taxi-trips` datasource.
+The following calculates 78 MOD 10.
 
 ```sql
-SELECT
-  "max_temperature",
-  MOD("max_temperature", 10) as "Mod"
-FROM "taxi-trips"
-WHERE "max_temperature" > 0
-LIMIT 1
+SELECT MOD(78, 10) as "mod"
 ```
 Returns the following:
 
-| `max_temperature` | `Mod` | 
-| -- | -- | 
-| `76` | `6` | 
+| `mod` | 
+| -- | 
+| `8` | 
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1363,20 +1358,15 @@ Calculates a numerical expression raised to the specified power.
 
 <details><summary>Example</summary>
 
-The following example raise the `trip_distance` column, from the `taxi-trips` datasource, to the power of 2.
+The following example raise 5 to the power of 2.
 ```sql
-SELECT
-  "trip_distance",
-  POWER("trip_distance", 2) as "PowerOf2"
-FROM "taxi-trips"
-WHERE "trip_distance" > 0
-LIMIT 1
+SELECT POWER(5, 2) AS "power"
 ```
 Returns the following:
 
-| `trip_distance` | `PowerOf2` | 
-| -- | -- | 
-| `26.46` | `700.6609` | 
+| `power` |
+| -- |
+| `25` | 
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1463,19 +1453,19 @@ Calculates the rounded value for a numerical expression.
 
 <details><summary>Example</summary>
 
-The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column, from the `taxi-trips` datasource.
+The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column. The `pickup_longitude` column is from the `taxi-trips` datasource.
 
 ```sql
 SELECT
-  "pickup_longitude",
-  ROUND("pickup_longitude", 0) as "Round"
+  "pickup_longitude" AS "pickup_longitude",
+  ROUND("pickup_longitude", 0) as "round_pickup_longitude"
 FROM "taxi-trips"
 WHERE "pickup_longitude" IS NOT NULL
 LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `Round` | 
+| `pickup_longitude` | `round_pickup_longitude` | 
 | -- | -- | 
 | `-73.9377670288086` | `-74` | 
 </details>
@@ -1526,26 +1516,21 @@ Calculates the trigonometric sine of an angle expressed in radians.
 
 Calculates the square root of a numeric expression.
 
-* **Syntax:** `SQRT(expr)`
+* **Syntax:** `SQRT(<NUMERIC>)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example applies SQRT to the `trip_distance` column, from the `taxi-trips` datasource.
+The following example applies SQRT to the `trip_distance` column from the `taxi-trips` datasource.
 
 ```sql
-SELECT
-  "trip_distance",
-  SQRT("trip_distance") as "Sqrt"
-FROM "taxi-trips"
-WHERE "trip_distance" > 0
-LIMIT 1
+SELECT SQRT(25) AS "square_root"
 ```
 Returns the following:
 
-| `trip_distance` | `Sqrt` | 
-| -- | -- | 
-| `26.46` | `5.144900387762624` | 
+| `square_root` |  
+| -- | 
+| `5` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1834,22 +1819,23 @@ Truncates a numerical expression to a specific number of decimal digits.
 
 <details><summary>Example</summary>
 
-The following applies the TRUNCATE function to 1 decimal places on the `pickup_longitude` column, from the `taxi-trips` datasource.
+The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column. The `pickup_longitude` column is from the `taxi-trips` datasource.
 
 ```sql
 SELECT
-  "pickup_longitude",
-  TRUNCATE("pickup_longitude", 1) as "Truncate"
+  "pickup_longitude" as "pickup_longitude",
+  TRUNCATE("pickup_longitude", 1) as "truncate_pickup_longitude"
 FROM "taxi-trips"
 WHERE "pickup_longitude" IS NOT NULL
 LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `Truncate` | 
+| `pickup_longitude` | `truncate_pickup_longitude` | 
 | -- | -- | 
 | `-73.9377670288086` | `-73.9` | 
 </details>
+
 
 [Learn more](sql-scalar.md#numeric-functions)
 
