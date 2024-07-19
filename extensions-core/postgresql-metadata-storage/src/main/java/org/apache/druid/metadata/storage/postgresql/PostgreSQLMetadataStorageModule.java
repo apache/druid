@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import org.apache.druid.firehose.PostgresqlFirehoseDatabaseConnector;
+import org.apache.druid.metadata.input.PostgresqlInputSourceDatabaseConnector;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -56,7 +56,7 @@ public class PostgreSQLMetadataStorageModule extends SQLMetadataStorageDruidModu
     return Collections.singletonList(
         new SimpleModule()
             .registerSubtypes(
-                new NamedType(PostgresqlFirehoseDatabaseConnector.class, "postgresql")
+                new NamedType(PostgresqlInputSourceDatabaseConnector.class, "postgresql")
             )
     );
   }

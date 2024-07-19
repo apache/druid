@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import org.apache.druid.firehose.sql.MySQLFirehoseDatabaseConnector;
+import org.apache.druid.metadata.input.MySQLInputSourceDatabaseConnector;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
@@ -55,7 +55,7 @@ public class MySQLMetadataStorageModule extends SQLMetadataStorageDruidModule im
     return Collections.singletonList(
         new SimpleModule()
             .registerSubtypes(
-                new NamedType(MySQLFirehoseDatabaseConnector.class, "mysql")
+                new NamedType(MySQLInputSourceDatabaseConnector.class, "mysql")
             )
     );
   }
