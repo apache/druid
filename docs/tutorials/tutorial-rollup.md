@@ -100,7 +100,7 @@ Returns the following:
 | `2018-01-02T21:35:00.000Z` | `7.7.7.7` | `8.8.8.8` | `2,818` | `1` | `12` |
 
 
-Let's look at the three events in the original input data that occurred during `2018-01-01T01:01`:
+Consider the three events in the original input data that occur over the course of minute `2018-01-01T01:01`:
 
 ```json
 {"timestamp":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":20,"bytes":9024}
@@ -108,7 +108,7 @@ Let's look at the three events in the original input data that occurred during `
 {"timestamp":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":11,"bytes":5780}
 ```
 
-These three rows have been "rolled up" into the following row:
+Apache Druid combines the three rows into the following using rollup:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
@@ -118,22 +118,26 @@ The input rows have been grouped by the timestamp and dimension columns `{timest
 
 Before the grouping occurs, the timestamps of the original input data are bucketed/floored by minute, due to the `"queryGranularity":"minute"` setting in the ingestion spec.
 
-Likewise, these two events that occurred during `2018-01-01T01:02` have been rolled up:
+Likewise, consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
 ```json
 {"timestamp":"2018-01-01T01:02:14Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":38,"bytes":6289}
 {"timestamp":"2018-01-01T01:02:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":377,"bytes":359971}
 ```
 
+The rows have been grouped into the following:
+
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
 | `2018-01-01T01:02:00.000Z` | `1.1.1.1` | `2.2.2.2` | `366,260` | `2` | `415` |
 
-For the last event recording traffic between 1.1.1.1 and 2.2.2.2, no rollup took place, because this was the only event that occurred during `2018-01-01T01:03`:
+In the original input data, only one event occurs over the course of minute `2018-01-01T01:03`:
 
 ```json
 {"timestamp":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":49,"bytes":10204}
 ```
+
+Therefor no rollup takes place:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
