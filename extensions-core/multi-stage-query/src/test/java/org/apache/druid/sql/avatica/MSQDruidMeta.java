@@ -95,6 +95,7 @@ public class MSQDruidMeta extends DruidMeta
       String str = objectMapper
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(payload.getStages());
+      str=str.replaceAll(taskId, "<taskId>");
       DruidHook.dispatch(DruidHook.MSQ_PLAN, str);
     }
     catch (JsonProcessingException e) {

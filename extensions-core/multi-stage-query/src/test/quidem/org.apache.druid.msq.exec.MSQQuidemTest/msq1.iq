@@ -19,7 +19,7 @@ order by 1;
 [ {
   "stageNumber" : 0,
   "definition" : {
-    "id" : "query-9d38a860-0463-4c5d-b7ed-b2d4e4a0ac6c_0",
+    "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
       "dataSource" : "wikipedia",
@@ -94,7 +94,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "9d38a860-0463-4c5d-b7ed-b2d4e4a0ac6c",
+          "sqlQueryId" : "dd89814f-71a0-4968-ae18-7fb16b354a42",
           "sqlStringifyArrays" : false
         }
       }
@@ -127,13 +127,13 @@ order by 1;
   "partitionCount" : 1,
   "shuffle" : "globalSort",
   "output" : "localStorage",
-  "startTime" : "2024-07-19T04:30:50.581Z",
-  "duration" : 742,
+  "startTime" : "2024-07-19T11:35:14.021Z",
+  "duration" : 727,
   "sort" : true
 }, {
   "stageNumber" : 1,
   "definition" : {
-    "id" : "query-9d38a860-0463-4c5d-b7ed-b2d4e4a0ac6c_1",
+    "id" : "<taskId>_1",
     "input" : [ {
       "type" : "stage",
       "stage" : 0
@@ -200,7 +200,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "9d38a860-0463-4c5d-b7ed-b2d4e4a0ac6c",
+          "sqlQueryId" : "dd89814f-71a0-4968-ae18-7fb16b354a42",
           "sqlStringifyArrays" : false
         }
       }
@@ -221,9 +221,9 @@ order by 1;
   "workerCount" : 1,
   "partitionCount" : 1,
   "output" : "localStorage",
-  "startTime" : "2024-07-19T04:30:51.323Z",
+  "startTime" : "2024-07-19T11:35:14.748Z",
   "duration" : 2
-} ]
+} ]tid:query-dd89814f-71a0-4968-ae18-7fb16b354a42
 !msqPlan
 LogicalSort(sort0=[$0], dir0=[ASC])
   LogicalAggregate(group=[{0}], cnt=[COUNT($1)], aall=[COUNT()])

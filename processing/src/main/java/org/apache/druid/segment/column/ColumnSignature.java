@@ -32,7 +32,7 @@ import javax.annotation.Nullable;
  * Package-private since it is not intended to be used outside that narrow use case. In other cases where passing
  * around information about column types is important, use {@link ColumnType} instead.
  */
-class ColumnSignature
+public /*FIXME*/ class ColumnSignature
 {
   private final String name;
 
