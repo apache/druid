@@ -217,6 +217,29 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testAppendCompatibleColumns2()
+  {
+    // dim3 has different type (string/long) in foo/foo2
+    testBuilder()
+        .sql("select u.dim3,f.dim3 from TABLE(APPEND('foo','foo')) u join foo f on u.dim3 is not distinct from f.dim3")
+        .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
+            ImmutableList.of(
+                new Object[] {"11"},
+                new Object[] {"12"},
+                new Object[] {"10"},
+                new Object[] {"[\"a\",\"b\"]"},
+                new Object[] {"[\"b\",\"c\"]"},
+                new Object[] {"d"},
+                new Object[] {""},
+                new Object[] {null},
+                new Object[] {null}
+            )
+        )
+        .run();
+  }
+
+  @Test
   public void testAppendNoTableIsInvalid()
   {
     try {

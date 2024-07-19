@@ -31,6 +31,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -82,9 +83,10 @@ public class Launcher
   {
     String quidemUri = System.getProperty(QUIDEM_URI, "druidtest:///");
     Properties p = System.getProperties();
-    for (Object string : p.keySet()) {
-      if (string.toString().startsWith("quidem")) {
-        log.info("[%s] -> %s", string, p.get(string));
+    for (Entry<Object, Object> entry : p.entrySet()) {
+      Object key = entry.getKey();
+      if (key.toString().startsWith("quidem")) {
+        log.info("[%s] -> %s", key, entry.getValue());
       }
     }
     log.info("Starting Quidem with URI[%s]", quidemUri);
