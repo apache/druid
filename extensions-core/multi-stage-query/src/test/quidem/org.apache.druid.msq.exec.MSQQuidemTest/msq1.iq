@@ -19,7 +19,7 @@ order by 1;
 [ {
   "stageNumber" : 0,
   "definition" : {
-    "id" : "query-8e797c48-d9eb-4bfb-831a-35ebd71c32b0_0",
+    "id" : "query-04f832a4-d6dd-4b44-b08e-f649b41d411c_0",
     "input" : [ {
       "type" : "table",
       "dataSource" : "wikipedia",
@@ -94,7 +94,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "8e797c48-d9eb-4bfb-831a-35ebd71c32b0",
+          "sqlQueryId" : "04f832a4-d6dd-4b44-b08e-f649b41d411c",
           "sqlStringifyArrays" : false
         }
       }
@@ -127,13 +127,13 @@ order by 1;
   "partitionCount" : 1,
   "shuffle" : "globalSort",
   "output" : "localStorage",
-  "startTime" : "2024-07-17T19:47:18.571Z",
-  "duration" : 664,
+  "startTime" : "2024-07-19T04:29:01.541Z",
+  "duration" : 633,
   "sort" : true
 }, {
   "stageNumber" : 1,
   "definition" : {
-    "id" : "query-8e797c48-d9eb-4bfb-831a-35ebd71c32b0_1",
+    "id" : "query-04f832a4-d6dd-4b44-b08e-f649b41d411c_1",
     "input" : [ {
       "type" : "stage",
       "stage" : 0
@@ -200,7 +200,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "8e797c48-d9eb-4bfb-831a-35ebd71c32b0",
+          "sqlQueryId" : "04f832a4-d6dd-4b44-b08e-f649b41d411c",
           "sqlStringifyArrays" : false
         }
       }
@@ -221,7 +221,7 @@ order by 1;
   "workerCount" : 1,
   "partitionCount" : 1,
   "output" : "localStorage",
-  "startTime" : "2024-07-17T19:47:19.234Z",
+  "startTime" : "2024-07-19T04:29:02.173Z",
   "duration" : 2
 } ]
 !msqPlan

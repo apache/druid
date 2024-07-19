@@ -23,14 +23,8 @@ import org.apache.druid.quidem.DruidQuidemTestBase;
 import org.apache.druid.quidem.ProjectPathUtils;
 import java.io.File;
 
-//@EnabledIf(value = "enabled", disabledReason = "These tests are only run in SqlCompatible mode!")
 public class MSQQuidemTest extends DruidQuidemTestBase
 {
-//  public static boolean enabled()
-//  {
-//    NullHandling.initializeForTests();
-//    return NullHandling.sqlCompatible();
-//  }
 
   public MSQQuidemTest()
   {
