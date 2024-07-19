@@ -126,9 +126,6 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
 
   private static boolean isEffectivelyUnbounded(WindowFrame frame, int numRows)
   {
-    if (frame.unwrap(WindowFrame.Unbounded.class) != null) {
-      return true;
-    }
     OffsetFrame offsetFrame = frame.unwrap(WindowFrame.OffsetFrame.class);
     if (offsetFrame.getLowerOffsetClamped(numRows) == -numRows
         && offsetFrame.getUpperOffsetClamped(numRows) == numRows) {

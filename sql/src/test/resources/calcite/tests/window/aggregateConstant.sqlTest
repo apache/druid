@@ -13,7 +13,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { type: "unbounded" }
+      frame: { type: "rows" }
       aggregations:
         - { type: "count", name: "w0" }
 

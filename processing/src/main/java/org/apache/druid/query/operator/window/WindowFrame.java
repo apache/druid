@@ -34,7 +34,6 @@ import java.util.Objects;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "unbounded", value = WindowFrame.Unbounded.class),
     @JsonSubTypes.Type(name = "rows", value = WindowFrame.Rows.class),
     @JsonSubTypes.Type(name = "groups", value = WindowFrame.Groups.class),
 })
@@ -43,7 +42,7 @@ public interface WindowFrame
 {
   static WindowFrame unbounded()
   {
-    return new WindowFrame.Unbounded();
+    return rows(null, null);
   }
 
   static Rows rows(Integer lowerOffset, Integer upperOffset)
@@ -59,35 +58,6 @@ public interface WindowFrame
   static WindowFrame forOrderBy(String... orderByColumns)
   {
     return groups(null, 0, Lists.newArrayList(orderByColumns));
-  }
-
-  class Unbounded implements WindowFrame
-  {
-    @JsonCreator
-    public Unbounded()
-    {
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-      if (obj == null) {
-        return false;
-      }
-      return getClass() == obj.getClass();
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return 0;
-    }
-
-    @Override
-    public String toString()
-    {
-      return "WindowFrame.Unbounded []";
-    }
   }
 
   abstract class OffsetFrame implements WindowFrame

@@ -28,14 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class WindowFrameTest
 {
   @Test
-  public void testEqualsUnbounded()
-  {
-    EqualsVerifier.forClass(WindowFrame.Unbounded.class)
-        .usingGetClass()
-        .verify();
-  }
-
-  @Test
   public void testEqualsRows()
   {
     EqualsVerifier.forClass(WindowFrame.Rows.class)

@@ -19,7 +19,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { type: "unbounded" }
+      frame: { type: "rows" }
       aggregations:
         - { "type": "longSum", "name": "w0", "fieldName": "a0" }
   - type: "window"
