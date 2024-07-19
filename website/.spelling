@@ -337,6 +337,8 @@ filesystem
 filterColumn
 filterValue
 firefox
+firehose
+firehoses
 fromPigAvroStorage
 frontends
 granularities
@@ -505,6 +507,7 @@ schemas
 schemaless
 searchable
 secondaryPartitionPruning
+seekable
 seekable-stream
 servlet
 setProcessingThreadNames
