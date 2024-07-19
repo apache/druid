@@ -1137,13 +1137,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
     }
 
-    // old constructor for backward compatibility
-    @Deprecated
-    public IndexIOConfig(@Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
-    {
-      this(null, null, appendToExisting, dropExisting);
-    }
-
     @Nullable
     @Override
     @JsonProperty

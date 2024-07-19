@@ -44,17 +44,4 @@ public class ParallelIndexIOConfig extends IndexIOConfig
   {
     super(inputSource, inputFormat, appendToExisting, dropExisting);
   }
-
-  // old constructor for backward compatibility
-  @Deprecated
-  public ParallelIndexIOConfig(@Nullable Boolean appendToExisting)
-  {
-    this(null, null, appendToExisting, null);
-  }
-
-  @Deprecated
-  public ParallelIndexIOConfig(@Nullable Boolean appendToExisting, boolean dropExisting)
-  {
-    this(null, null, appendToExisting, dropExisting);
-  }
 }

@@ -53,8 +53,8 @@ Most of the coordination logic for (real-time) ingestion is in the Druid indexin
 
 ## Real-time Ingestion
 
-Druid streaming tasks are based the 'seekable stream' classes such as `SeekableStreamSupervisor.java`,
-`SeekableStreamIndexTask.java`, and `SeekableStreamIndexTaskRunner.java`. The data processing happen through
+Druid streaming tasks are based on the 'seekable stream' classes such as `SeekableStreamSupervisor.java`,
+`SeekableStreamIndexTask.java`, and `SeekableStreamIndexTaskRunner.java`. The data processing happens through
 `StreamAppenderator.java`, and the persist and hand-off logic is in `StreamAppenderatorDriver.java`.
 
 ## Native Batch Ingestion
