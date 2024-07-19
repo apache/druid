@@ -31,13 +31,13 @@ Legacy mode is planned for removal from Druid.
 
 ## SQL compliant null handling
 
-As of Druid 28.0.0, Druid writes segments in a SQL compatible null handling mode by default.
+As of Druid 28.0.0, Druid writes segments in an ANSI SQL compatible null handling mode by default.
 This means that Druid stores null values distinctly from empty strings for string dimensions and distinctly from 0 for numeric dimensions.
 
 This can impact your application behavior because the ANSI SQL standard defines any comparison to null to be unknown.
 According to this three-valued logic, `x <> 'some value'` only returns non-null values.
 
-The default Druid configurations for 28.0.0 and later that enable SQL compatible null handling mode are the following:
+The default Druid configurations for 28.0.0 and later that enable ANSI SQL compatible null handling mode are the following:
 
 * `druid.generic.useDefaultValueForNull=false`
 * `druid.expressions.useStrictBooleans=true`
