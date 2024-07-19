@@ -2041,15 +2041,21 @@ public class CompactionTaskTest
                 null,
                 columnMap,
                 null,
-                () -> new Metadata(
+                false
+            )
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return new Metadata(
                     null,
                     aggregatorFactories.toArray(new AggregatorFactory[0]),
                     null,
                     null,
                     null
-                ),
-                false
-            )
+                );
+              }
+            }
         );
       }
     }
@@ -2072,10 +2078,15 @@ public class CompactionTaskTest
                 index.getBitmapFactoryForDimensions(),
                 index.getColumns(),
                 index.getFileMapper(),
-                () -> null,
                 false
             )
-        );
+        {
+          @Override
+          public Metadata getMetadata()
+          {
+            return null;
+          }
+        });
       }
     }
 
