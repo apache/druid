@@ -64,7 +64,6 @@ public class TestIndexTask extends IndexTask
         new IndexIngestionSpec(
             new DataSchema(dataSource, null, new AggregatorFactory[]{}, null, null, mapper),
             new IndexTask.IndexIOConfig(
-                null,
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),
                 false,

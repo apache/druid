@@ -37,8 +37,6 @@ import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -46,7 +44,6 @@ import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
@@ -130,9 +127,9 @@ import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
@@ -368,37 +365,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     }
   }
 
-  private static class MockFirehoseFactory implements FirehoseFactory
-  {
-    @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
-    {
-      final Iterator<InputRow> inputRowIterator = REALTIME_IDX_TASK_INPUT_ROWS.iterator();
-
-      return new Firehose()
-      {
-        @Override
-        public boolean hasMore()
-        {
-          return inputRowIterator.hasNext();
-        }
-
-        @Nullable
-        @Override
-        public InputRow nextRow()
-        {
-          return inputRowIterator.next();
-        }
-
-        @Override
-        public void close()
-        {
-
-        }
-      };
-    }
-  }
-
   @Before
   public void setUp() throws Exception
   {
@@ -446,7 +412,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       case METADATA_TASK_STORAGE: {
         TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
         mapper.registerSubtypes(
-            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory"),
             new NamedType(MockInputSource.class, "mockInputSource"),
             new NamedType(NoopInputFormat.class, "noopInputFormat")
         );
@@ -720,7 +685,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
                                .withMaxRowsInMemory(100)
@@ -783,7 +748,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 null,
                 mapper
             ),
-            new IndexIOConfig(null, new MockExceptionInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
                                .withMaxRowsInMemory(10)
@@ -1213,7 +1178,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
                                .withMaxRowsInMemory(10)
@@ -1301,7 +1266,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new MockInputSource(), new NoopInputFormat(), false, false),
+            new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
                                .withMaxRowsInMemory(10)

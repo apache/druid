@@ -215,7 +215,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     if (useInputFormatApi) {
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDirectory, filter),
           inputFormat,
           appendToExisting,
@@ -236,7 +235,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     } else {
       Preconditions.checkArgument(inputFormat == null && parseSpec != null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDirectory, filter),
           createInputFormatFromParseSpec(parseSpec),
           appendToExisting,

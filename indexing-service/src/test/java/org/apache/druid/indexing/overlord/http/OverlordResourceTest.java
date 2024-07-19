@@ -1423,7 +1423,7 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testResourceActionsForTaskWithFirehoseAndInputSecurityEnabled()
+  public void testResourceActionsForTaskWithInvalidSecurityAndInputSecurityEnabled()
   {
     final String dataSource = "dataSourceTest";
     final UOE expectedException = new UOE("unsupported");
