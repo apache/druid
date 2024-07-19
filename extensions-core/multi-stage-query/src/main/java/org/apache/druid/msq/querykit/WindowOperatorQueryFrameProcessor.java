@@ -51,6 +51,7 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -59,7 +60,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -499,7 +499,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     int match = 0;
     for (String columnName : partitionColumnNames) {
       int i = frameReader.signature().indexOf(columnName);
-      if (Objects.equals(row1.get(i), row2.get(i))) {
+      NullableTypeStrategy<Object> nullableTypeStrategy = frameReader.signature().getColumnType(columnName).get().getNullableStrategy();
+      if (nullableTypeStrategy.compare(row1.get(i), row2.get(i)) == 0) {
         match++;
       }
     }
