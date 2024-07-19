@@ -38,7 +38,7 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
