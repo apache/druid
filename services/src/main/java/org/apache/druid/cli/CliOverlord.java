@@ -67,6 +67,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
+import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
@@ -210,6 +211,7 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
+            binder.bind(DruidOverlord.class).in(ManageLifecycle.class);
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
             binder.bind(TaskSlotCountStatsProvider.class).to(TaskMaster.class);
@@ -382,11 +384,11 @@ public class CliOverlord extends ServerRunnable
               @Provides
               @LazySingleton
               @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
-              public Supplier<Map<String, Object>> getHeartbeatSupplier(TaskMaster taskMaster)
+              public Supplier<Map<String, Object>> getHeartbeatSupplier(DruidOverlord overlord)
               {
                 return () -> {
                   Map<String, Object> heartbeatTags = new HashMap<>();
-                  heartbeatTags.put("leader", taskMaster.isLeader() ? 1 : 0);
+                  heartbeatTags.put("leader", overlord.isLeader() ? 1 : 0);
 
                   return heartbeatTags;
                 };

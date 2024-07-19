@@ -420,17 +420,11 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // For creating a customized TaskQueue see testRealtimeIndexTaskFailure test
 
     taskStorage = setUpTaskStorage();
-
     handoffNotifierFactory = setUpSegmentHandOffNotifierFactory();
-
     dataSegmentPusher = setUpDataSegmentPusher();
-
     mdc = setUpMetadataStorageCoordinator();
-
     tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc);
-
     taskRunner = setUpThreadPoolTaskRunner(tb);
-
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
   }
 
@@ -477,7 +471,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
-    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster);
+    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, null);
     return taskStorage;
   }
 
@@ -738,7 +732,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null
     );
 
-    final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getTaskStatus(indexTask.getId());
     Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
 
     final TaskStatus mergedStatus = runTask(indexTask);
@@ -1235,7 +1229,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     taskQueue.start();
     taskStorage.insert(indexTask, TaskStatus.running(indexTask.getId()));
 
-    while (tsqa.getStatus(indexTask.getId()).get().isRunnable()) {
+    while (tsqa.getTaskStatus(indexTask.getId()).get().isRunnable()) {
       if (System.currentTimeMillis() > startTime + 10 * 1000) {
         throw new ISE("Where did the task go?!: %s", indexTask.getId());
       }
@@ -1319,7 +1313,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null
     );
 
-    final Optional<TaskStatus> preRunTaskStatus = tsqa.getStatus(indexTask.getId());
+    final Optional<TaskStatus> preRunTaskStatus = tsqa.getTaskStatus(indexTask.getId());
     Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
 
     final TaskStatus mergedStatus = runTask(indexTask);
@@ -1409,7 +1403,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TaskStatus retVal = null;
     try {
       TaskStatus status;
-      while ((status = tsqa.getStatus(taskId).get()).isRunnable()) {
+      while ((status = tsqa.getTaskStatus(taskId).get()).isRunnable()) {
         if (taskRunDuration.millisElapsed() > 10_000) {
           throw new ISE("Where did the task go?!: %s", task.getId());
         }
