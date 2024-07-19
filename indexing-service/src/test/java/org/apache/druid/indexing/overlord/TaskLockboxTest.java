@@ -2001,6 +2001,23 @@ public class TaskLockboxTest
     EasyMock.verify(coordinator);
   }
 
+  @Test
+  public void testGetLocksForDatasource()
+  {
+    Assert.assertTrue(lockbox.getLocksForDatasource(null).isEmpty());
+
+    Assert.assertTrue(lockbox.getLocksForDatasource("nonExistent").isEmpty());
+
+    final Task appendTask = NoopTask.forDatasource("DS");
+    final Task replaceTask = NoopTask.forDatasource("DS");
+    Set<TaskLock> expected = new HashSet<>();
+    expected.add(validator.expectLockCreated(TaskLockType.APPEND, appendTask, Intervals.of("2023/2024")));
+    expected.add(validator.expectLockCreated(TaskLockType.APPEND, appendTask, Intervals.of("2024/2025")));
+    expected.add(validator.expectLockCreated(TaskLockType.APPEND, appendTask, Intervals.of("2025/2026")));
+    expected.add(validator.expectLockCreated(TaskLockType.REPLACE, replaceTask, Intervals.ETERNITY));
+    Assert.assertEquals(expected, lockbox.getLocksForDatasource("DS"));
+  }
+
   private class TaskLockboxValidator
   {
 
