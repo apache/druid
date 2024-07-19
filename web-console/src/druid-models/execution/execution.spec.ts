@@ -129,7 +129,6 @@ describe('Execution', () => {
                     ],
                     "type": "intervals",
                   },
-                  "legacy": false,
                   "queryType": "scan",
                   "resultFormat": "compactedList",
                   "virtualColumns": [
@@ -255,7 +254,6 @@ describe('Execution', () => {
               ],
               "type": "intervals",
             },
-            "legacy": false,
             "queryType": "scan",
             "resultFormat": "compactedList",
             "virtualColumns": [
@@ -472,7 +470,6 @@ describe('Execution', () => {
                         ],
                         "type": "intervals",
                       },
-                      "legacy": false,
                       "queryType": "scan",
                       "resultFormat": "compactedList",
                       "virtualColumns": [

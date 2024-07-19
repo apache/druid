@@ -24,12 +24,12 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Position,
   Tag,
   useHotkeys,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { ComponentProps, JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
@@ -266,7 +266,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {!small && onQueryChange && (
         <ButtonGroup>
-          <Popover2
+          <Popover
             position={Position.BOTTOM_LEFT}
             content={
               <Menu>
@@ -525,7 +525,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               rightIcon={IconNames.CARET_DOWN}
               intent={intent}
             />
-          </Popover2>
+          </Popover>
           {effectiveEngine === 'sql-msq-task' && (
             <MaxTasksButton
               clusterCapacity={clusterCapacity}
@@ -536,7 +536,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
             />
           )}
           {ingestMode && (
-            <Popover2
+            <Popover
               position={Position.BOTTOM_LEFT}
               content={
                 <Menu>
@@ -562,14 +562,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 text={`Array ingest mode: ${arrayIngestMode ?? '(server default)'}`}
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover2>
+            </Popover>
           )}
         </ButtonGroup>
       )}
       {moreMenu && (
-        <Popover2 position={Position.BOTTOM_LEFT} content={moreMenu}>
+        <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
           <Button small={small} minimal={small} rightIcon={IconNames.MORE} />
-        </Popover2>
+        </Popover>
       )}
       {editContextDialogOpen && (
         <EditContextDialog

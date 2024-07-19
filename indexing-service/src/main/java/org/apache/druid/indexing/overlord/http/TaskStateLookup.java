@@ -17,30 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.actions;
+package org.apache.druid.indexing.overlord.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.StringUtils;
 
-/**
- * The configuration for task audit logging.
- * This class will be removed in future releases. See https://github.com/apache/druid/issues/5859.
- */
-@Deprecated
-public class TaskAuditLogConfig
+import javax.annotation.Nullable;
+
+public enum TaskStateLookup
 {
-  @JsonProperty
-  private final boolean enabled;
+  ALL,
+  WAITING,
+  PENDING,
+  RUNNING,
+  COMPLETE;
 
-  @JsonCreator
-  public TaskAuditLogConfig(@JsonProperty("enabled") boolean enabled)
+  public static TaskStateLookup fromString(@Nullable String state)
   {
-    this.enabled = enabled;
-  }
-
-  @JsonProperty("enabled")
-  public boolean isEnabled()
-  {
-    return enabled;
+    if (state == null) {
+      return ALL;
+    } else {
+      return TaskStateLookup.valueOf(StringUtils.toUpperCase(state));
+    }
   }
 }

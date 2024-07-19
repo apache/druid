@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Icon } from '@blueprintjs/core';
+import { Button, Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { Column, QueryResult } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import React, { useEffect, useState } from 'react';
@@ -154,7 +153,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
                 const value = row.value;
                 return (
                   <div>
-                    <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -165,7 +164,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover2>
+                    </Popover>
                   </div>
                 );
               },

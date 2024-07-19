@@ -34,7 +34,6 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "segmentLockAcquire", value = SegmentLockAcquireAction.class),
     @JsonSubTypes.Type(name = "lockList", value = LockListAction.class),
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
-    @JsonSubTypes.Type(name = "segmentInsertion", value = SegmentInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalAppend", value = SegmentTransactionalAppendAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalReplace", value = SegmentTransactionalReplaceAction.class),
@@ -60,8 +59,6 @@ public interface TaskAction<RetType>
   TypeReference<RetType> getReturnTypeReference(); // T_T
 
   RetType perform(Task task, TaskActionToolbox toolbox);
-
-  boolean isAudited();
 
   default boolean canPerformAsync(Task task, TaskActionToolbox toolbox)
   {
