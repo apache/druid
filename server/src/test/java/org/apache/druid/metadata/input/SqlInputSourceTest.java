@@ -234,7 +234,6 @@ public class SqlInputSourceTest
   public void testConnectorValidationInvalidUri()
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    final List<String> sqls = SqlTestUtils.selectFrom(TABLE_1, TABLE_2);
     Throwable t = Assert.assertThrows(
         IllegalArgumentException.class,
         () -> new SqlTestUtils(
