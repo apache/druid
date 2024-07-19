@@ -685,7 +685,6 @@ public class ClientQuerySegmentWalkerTest
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
                                                       .eternityInterval()
-                                                      .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
     final GroupByQuery query =
@@ -736,7 +735,6 @@ public class ClientQuerySegmentWalkerTest
     ScanQuery subquery = new Druids.ScanQueryBuilder().dataSource(MULTI)
                                                       .columns("s", "n")
                                                       .eternityInterval()
-                                                      .legacy(false)
                                                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                                       .build();
     final TopNQuery query =
@@ -858,7 +856,6 @@ public class ClientQuerySegmentWalkerTest
               .dataSource(FOO)
               .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
               .columns("s")
-              .legacy(false)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .build()
               .withId(DUMMY_QUERY_ID);
@@ -876,7 +873,6 @@ public class ClientQuerySegmentWalkerTest
                   )
               )
               .columns("v")
-              .legacy(false)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .build()
               .withId(DUMMY_QUERY_ID);

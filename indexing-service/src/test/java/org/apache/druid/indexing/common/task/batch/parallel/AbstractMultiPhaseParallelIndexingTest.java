@@ -74,10 +74,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   protected static final Granularity SEGMENT_GRANULARITY = Granularities.DAY;
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
-      new ScanQueryQueryToolChest(
-          new ScanQueryConfig().setLegacy(false),
-          DefaultGenericQueryMetricsFactory.instance()
-      ),
+      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
       new ScanQueryEngine(),
       new ScanQueryConfig()
   );
@@ -293,7 +290,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 null,
                 null,
                 columns,
-                false,
                 null,
                 null
             )

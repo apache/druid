@@ -170,7 +170,6 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
   "columns": [
     "channel"
   ],
-  "legacy": false,
   "context": {},
   "descending": false,
   "granularity": {
@@ -273,7 +272,6 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
   "columns": [
     "channel"
   ],
-  "legacy": false,
   "context": {},
   "descending": false,
   "granularity": {

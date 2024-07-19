@@ -187,7 +187,6 @@ describe('ExplainDialog', () => {
             limit: 101,
             filter: null,
             columns: ['channel'],
-            legacy: false,
             context: {},
             descending: false,
             granularity: {
@@ -223,7 +222,6 @@ describe('ExplainDialog', () => {
               extractionFn: null,
             },
             columns: ['channel'],
-            legacy: false,
             context: {},
             descending: false,
             granularity: {

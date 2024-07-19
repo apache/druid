@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -36,6 +35,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -59,8 +59,6 @@ import java.util.Set;
 
 public class ScanQueryEngine
 {
-  static final String LEGACY_TIMESTAMP_KEY = "timestamp";
-
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
@@ -68,10 +66,6 @@ public class ScanQueryEngine
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-
-    // "legacy" should be non-null due to toolChest.mergeResults
-    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
-
     final Long numScannedRows = responseContext.getRowScanCount();
     if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
       return Sequences.empty();
@@ -93,9 +87,6 @@ public class ScanQueryEngine
     final List<String> allColumns = new ArrayList<>();
 
     if (query.getColumns() != null && !query.getColumns().isEmpty()) {
-      if (legacy && !query.getColumns().contains(LEGACY_TIMESTAMP_KEY)) {
-        allColumns.add(LEGACY_TIMESTAMP_KEY);
-      }
 
       // Unless we're in legacy mode, allColumns equals query.getColumns() exactly. This is nice since it makes
       // the compactedList form easier to use.
@@ -103,7 +94,7 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              Collections.singleton(legacy ? LEGACY_TIMESTAMP_KEY : ColumnHolder.TIME_COLUMN_NAME),
+              Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
@@ -114,10 +105,6 @@ public class ScanQueryEngine
       );
 
       allColumns.addAll(availableColumns);
-
-      if (legacy) {
-        allColumns.remove(ColumnHolder.TIME_COLUMN_NAME);
-      }
     }
 
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
@@ -149,28 +136,15 @@ public class ScanQueryEngine
                       {
                         final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
                         final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+                        final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
                         for (String column : allColumns) {
-                          final BaseObjectColumnValueSelector selector;
-
-                          if (legacy && LEGACY_TIMESTAMP_KEY.equals(column)) {
-                            selector = cursor.getColumnSelectorFactory()
-                                             .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
-                            ColumnCapabilities columnCapabilities = cursor.getColumnSelectorFactory()
-                                                                          .getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
-                            rowSignatureBuilder.add(
-                                column,
-                                columnCapabilities == null ? null : columnCapabilities.toColumnType()
-                            );
-                          } else {
-                            selector = cursor.getColumnSelectorFactory().makeColumnValueSelector(column);
-                            ColumnCapabilities columnCapabilities = cursor.getColumnSelectorFactory()
-                                                                          .getColumnCapabilities(column);
-                            rowSignatureBuilder.add(
-                                column,
-                                columnCapabilities == null ? null : columnCapabilities.toColumnType()
-                            );
-                          }
+                          final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
+                          ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
+                          rowSignatureBuilder.add(
+                              column,
+                              columnCapabilities == null ? null : columnCapabilities.toColumnType()
+                          );
 
                           columnSelectors.add(selector);
                         }
@@ -246,14 +220,7 @@ public class ScanQueryEngine
                           private Object getColumnValue(int i)
                           {
                             final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
-                            final Object value;
-
-                            if (legacy && allColumns.get(i).equals(LEGACY_TIMESTAMP_KEY)) {
-                              value = DateTimes.utc((long) selector.getObject());
-                            } else {
-                              value = selector == null ? null : selector.getObject();
-                            }
-
+                            final Object value = selector == null ? null : selector.getObject();
                             return value;
                           }
                         };
