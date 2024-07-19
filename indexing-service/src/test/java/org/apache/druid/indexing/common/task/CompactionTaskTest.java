@@ -2080,13 +2080,13 @@ public class CompactionTaskTest
                 index.getFileMapper(),
                 false
             )
-        {
-          @Override
-          public Metadata getMetadata()
-          {
-            return null;
-          }
-        });
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return null;
+              }
+            });
       }
     }
 
