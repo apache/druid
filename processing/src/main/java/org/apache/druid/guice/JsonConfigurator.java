@@ -238,7 +238,7 @@ public class JsonConfigurator
       log.info(
           "Skipping property [%s]: one of it's prefixes [%s] is also used as a property key.",
           originalProperty,
-          nestedKey
+          propertyPrefix
       );
       return;
     }
