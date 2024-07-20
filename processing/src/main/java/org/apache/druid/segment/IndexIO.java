@@ -278,7 +278,7 @@ public class IndexIO
           }
         }
       } else if (vals1 instanceof Object[]) {
-        if (!(vals2 instanceof Object[] && Arrays.deepEquals((Object[]) vals1, (Object[]) vals2))) {
+        if (!Arrays.deepEquals((Object[]) vals1, (Object[]) vals2)) {
           throw notEqualValidationException(dim1Name, vals1, vals2);
         }
       } else {

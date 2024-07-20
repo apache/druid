@@ -22,6 +22,8 @@ package org.apache.druid.query.rowsandcols.semantic;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.query.rowsandcols.ArrayListRowsAndColumnsTest;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
@@ -54,6 +56,21 @@ public class FrameMakerTest
     Assert.assertEquals(ROW_SIGNATURE, frameMaker.computeSignature());
 
     final Frame frame = frameMaker.toColumnBasedFrame();
+    ColumnBasedFrameRowsAndColumns columnBasedFrameRowsAndColumns = new ColumnBasedFrameRowsAndColumns(
+        frame,
+        frameMaker.computeSignature()
+    );
+    for (String columnName : mapOfColumnsRowsAndColumns.getColumnNames()) {
+      ColumnAccessor expectedColumn = mapOfColumnsRowsAndColumns.findColumn(columnName).toAccessor();
+      ColumnAccessor actualColumn = columnBasedFrameRowsAndColumns.findColumn(columnName).toAccessor();
+
+      for (int i = 0; i < expectedColumn.numRows(); i++) {
+        Assert.assertEquals(
+            expectedColumn.getObject(i),
+            actualColumn.getObject(i)
+        );
+      }
+    }
     Assert.assertEquals(3, frame.numRows());
   }
 }
