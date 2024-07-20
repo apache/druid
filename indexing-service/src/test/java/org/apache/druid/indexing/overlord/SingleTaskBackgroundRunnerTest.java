@@ -94,7 +94,6 @@ public class SingleTaskBackgroundRunnerTest
         .setBaseDir(temporaryFolder.newFile().toString())
         .setDefaultRowFlushBoundary(50000)
         .setRestoreTasksOnRestart(true)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);

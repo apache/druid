@@ -51,6 +51,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -58,38 +59,48 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
+public class BatchAppenderatorTester implements AutoCloseable
 {
   public static final String DATASOURCE = "foo";
 
   private final DataSchema schema;
+  private final AppenderatorConfig tuningConfig;
   private final SegmentGenerationMetrics metrics;
-  private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
-  private final IndexIO indexIO;
-  private final IndexMergerV9 indexMerger;
   private final ServiceEmitter emitter;
-  private final AppenderatorConfig tuningConfig;
-
 
   private final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<>();
 
-  public OpenAndClosedSegmentsAppenderatorTester(
-      final int maxRowsInMemory,
-      final boolean enablePushFailure,
-      boolean batchMemoryMappedIndex
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory
   )
   {
-    this(maxRowsInMemory, -1, null, enablePushFailure, batchMemoryMappedIndex);
+    this(maxRowsInMemory, -1, null, false);
   }
 
-  public OpenAndClosedSegmentsAppenderatorTester(
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, -1, null, enablePushFailure);
+  }
+
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      final boolean enablePushFailure
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, null, enablePushFailure);
+  }
+
+  public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
       final File basePersistDirectory,
-      final boolean enablePushFailure,
-      boolean batchMemoryMappedIndex
+      final boolean enablePushFailure
   )
   {
     this(
@@ -98,19 +109,30 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         basePersistDirectory,
         enablePushFailure,
         new SimpleRowIngestionMeters(),
-        false,
-        batchMemoryMappedIndex
+        false
     );
   }
 
-  public OpenAndClosedSegmentsAppenderatorTester(
+  public BatchAppenderatorTester(
       final int maxRowsInMemory,
       final long maxSizeInBytes,
-      final File basePersistDirectory,
+      @Nullable final File basePersistDirectory,
+      final boolean enablePushFailure,
+      final RowIngestionMeters rowIngestionMeters
+  )
+  {
+    this(maxRowsInMemory, maxSizeInBytes, basePersistDirectory, enablePushFailure, rowIngestionMeters,
+         false
+    );
+  }
+  
+  public BatchAppenderatorTester(
+      final int maxRowsInMemory,
+      final long maxSizeInBytes,
+      @Nullable final File basePersistDirectory,
       final boolean enablePushFailure,
       final RowIngestionMeters rowIngestionMeters,
-      final boolean skipBytesInMemoryOverheadCheck,
-      boolean batchMemoryMappedIndex
+      final boolean skipBytesInMemoryOverheadCheck
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -128,17 +150,21 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         ),
         Map.class
     );
+
     schema = new DataSchema(
         DATASOURCE,
-        parserMap,
+        null,
+        null,
         new AggregatorFactory[]{
             new CountAggregatorFactory("count"),
             new LongSumAggregatorFactory("met", "met")
         },
         new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
         null,
+        parserMap,
         objectMapper
     );
+
     tuningConfig = new TestAppenderatorConfig(
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
         maxRowsInMemory,
@@ -152,16 +178,14 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
         basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory
     );
-
     metrics = new SegmentGenerationMetrics();
 
-    indexIO = new IndexIO(
+    IndexIO indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
+    IndexMergerV9 indexMerger = new IndexMergerV9(
         objectMapper,
-        new ColumnConfig()
-        {
-        }
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
-    indexMerger = new IndexMergerV9(objectMapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
 
     emitter = new ServiceEmitter(
         "test",
@@ -170,8 +194,10 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
     );
     emitter.start();
     EmittingLogger.registerEmitter(emitter);
-    dataSegmentPusher = new DataSegmentPusher()
+    DataSegmentPusher dataSegmentPusher = new DataSegmentPusher()
     {
+      private boolean mustFail = true;
+
       @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
@@ -188,8 +214,11 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
       {
-        if (enablePushFailure) {
+        if (enablePushFailure && mustFail) {
+          mustFail = false;
           throw new IOException("Push failure test");
+        } else if (enablePushFailure) {
+          mustFail = true;
         }
         pushedSegments.add(segment);
         return segment;
@@ -201,37 +230,20 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
         throw new UnsupportedOperationException();
       }
     };
-    if (batchMemoryMappedIndex) {
-      appenderator = Appenderators.createOpenSegmentsOffline(
-          schema.getDataSource(),
-          schema,
-          tuningConfig,
-          metrics,
-          dataSegmentPusher,
-          objectMapper,
-          indexIO,
-          indexMerger,
-          rowIngestionMeters,
-          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true,
-          CentralizedDatasourceSchemaConfig.create()
-      );
-    } else {
-      appenderator = Appenderators.createClosedSegmentsOffline(
-          schema.getDataSource(),
-          schema,
-          tuningConfig,
-          metrics,
-          dataSegmentPusher,
-          objectMapper,
-          indexIO,
-          indexMerger,
-          rowIngestionMeters,
-          new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
-          true,
-          CentralizedDatasourceSchemaConfig.create()
-      );
-    }
+    appenderator = Appenderators.createBatch(
+        schema.getDataSource(),
+        schema,
+        tuningConfig,
+        metrics,
+        dataSegmentPusher,
+        objectMapper,
+        indexIO,
+        indexMerger,
+        rowIngestionMeters,
+        new ParseExceptionHandler(rowIngestionMeters, false, Integer.MAX_VALUE, 0),
+        true,
+        CentralizedDatasourceSchemaConfig.create()
+    );
   }
 
   private long getDefaultMaxBytesInMemory()
@@ -252,11 +264,6 @@ public class OpenAndClosedSegmentsAppenderatorTester implements AutoCloseable
   public SegmentGenerationMetrics getMetrics()
   {
     return metrics;
-  }
-
-  public DataSegmentPusher getDataSegmentPusher()
-  {
-    return dataSegmentPusher;
   }
 
   public ObjectMapper getObjectMapper()

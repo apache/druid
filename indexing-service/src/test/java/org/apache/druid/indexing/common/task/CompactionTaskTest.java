@@ -1769,7 +1769,6 @@ public class CompactionTaskTest
     };
 
     final TaskConfig config = new TaskConfigBuilder()
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     return new TaskToolbox.Builder()
         .config(config)
