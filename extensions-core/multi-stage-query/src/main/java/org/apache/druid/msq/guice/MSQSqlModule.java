@@ -54,8 +54,6 @@ public class MSQSqlModule implements DruidModule
     // We want this module to bring InputSourceModule along for the ride.
     binder.install(new InputSourceModule());
 
-    // Currently, there are no supported segment morph factories, so bind an implementation which always
-    // returns an empty morph factory.
     binder.bind(MSQTerminalStageSpecFactory.class).toInstance(new MSQTerminalStageSpecFactory());
 
     binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);

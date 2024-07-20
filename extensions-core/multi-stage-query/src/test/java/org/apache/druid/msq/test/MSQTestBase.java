@@ -86,7 +86,6 @@ import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.ResultsContext;
-import org.apache.druid.msq.exec.TestSegmentMorpherFrameProcessorFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -748,7 +747,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     DruidSecondaryModule.setupJackson(injector, mapper);
 
     mapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
-    mapper.registerSubtypes(new NamedType(TestSegmentMorpherFrameProcessorFactory.class, "testSegmentMorpher"));
 
     // This should be reusing guice instead of using static classes
     InsertLockPreemptedFaultTest.LockPreemptedHelper.preempt(false);

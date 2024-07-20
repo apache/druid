@@ -21,6 +21,8 @@ package org.apache.druid.msq.indexing.destination;
 
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class DataSourceMSQDestinationTest
@@ -33,5 +35,12 @@ public class DataSourceMSQDestinationTest
                   .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testBackwardCompatibility()
+  {
+    DataSourceMSQDestination destination = new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null);
+    Assert.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
   }
 }
