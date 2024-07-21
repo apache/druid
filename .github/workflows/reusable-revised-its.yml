@@ -171,13 +171,12 @@ jobs:
 
       - name: Run IT
         id: run-it
-        env:
-          MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
-          DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
-          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
-        run: ${{ inputs.script }}
+        run: |
+          echo "BACKWARD_INCOMPATIBILITY_IT_ENABLED=${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}" >> $GITHUB_ENV 
+          echo "DRUID_PREVIOUS_VERSION=${{ inputs.DRUID_PREVIOUS_VERSION }}" >> $GITHUB_ENV 
+          echo "DRUID_PREVIOUS_VERSION_DOWNLOAD_URL=${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}" >> $GITHUB_ENV
+          echo "DRUID_PREVIOUS_IT_IMAGE_NAME=${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" >> $GITHUB_ENV
+          ${{ inputs.script }}
 
       - name: Collect docker logs on failure
         if: ${{ failure() && steps.run-it.conclusion == 'failure' }}
