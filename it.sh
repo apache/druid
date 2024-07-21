@@ -286,9 +286,16 @@ case $CMD in
     tail_logs
     ;;
   "github" )
+    echo "it.sh printing env vars"
+    echo $BACKWARD_INCOMPATIBILITY_IT_ENABLED
+    echo $DRUID_PREVIOUS_VERSION
+    echo $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL
+    echo $DRUID_PREVIOUS_IT_IMAGE_NAME
+
     set +e
     $0 test $CATEGORY
     RESULT=$?
+
 
     # Include logs, but only for failures.
     if [ $RESULT -ne 0 ]; then
