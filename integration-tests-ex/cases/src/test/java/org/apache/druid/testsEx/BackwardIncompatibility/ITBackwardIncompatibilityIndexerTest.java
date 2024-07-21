@@ -17,15 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.indexer;
+package org.apache.druid.testsEx.BackwardIncompatibility;
 
-import org.apache.druid.testsEx.categories.BatchIndex;
+import org.apache.druid.testsEx.categories.BackwardIncompatibility;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.IndexerTest;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
-@Category({BatchIndex.class})
-public class ITIndexerTest extends IndexerTest
+@Category({BackwardIncompatibility.class})
+public class ITBackwardIncompatibilityIndexerTest extends IndexerTest
 {
 }

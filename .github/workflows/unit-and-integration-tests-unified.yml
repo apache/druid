@@ -47,6 +47,10 @@ concurrency:
 env:
   MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
+  BACKWARD_INCOMPATIBILITY_IT_ENABLED: true
+  DRUID_PREVIOUS_VERSION: 30.0.0
+  DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: https://dlcdn.apache.org/druid/30.0.0/apache-druid-30.0.0-bin.tar.gz
+  DRUID_PREVIOUS_IT_IMAGE_NAME: org.apache.druid.integration-tests/test:30.0.0
 
 jobs:
   build:
@@ -111,6 +115,13 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
+      - name: Save previous version docker image
+        if: ${{ env.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' }}
+        run: |
+          docker tag ${DRUID_PREVIOUS_IT_IMAGE_NAME} ${DRUID_PREVIOUS_IT_IMAGE_NAME}-jdk${{ inputs.build_jdk }}-version${DRUID_PREVIOUS_VERSION}
+          echo ${DRUID_PREVIOUS_IT_IMAGE_NAME}
+          docker save "${DRUID_PREVIOUS_IT_IMAGE_NAME}" | gzip > druid-container-jdk${{ inputs.build_jdk }}-version${DRUID_PREVIOUS_VERSION}.tar.gz    
+
   unit-tests-phase2:
     strategy:
       fail-fast: false
@@ -141,7 +152,23 @@ jobs:
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
-  revised-its:
+  expose-vars:
     needs: unit-tests
+    runs-on: ubuntu-latest
+    outputs:
+      BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ env.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
+      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+    steps:
+      - run: echo "Exposing env vars"
+
+  revised-its:
+    needs: expose-vars
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
+    with:
+      BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ needs.expose-vars.outputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
+      DRUID_PREVIOUS_VERSION: ${{ needs.expose-vars.outputs.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.expose-vars.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.expose-vars.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}

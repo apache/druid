@@ -57,6 +57,19 @@ on:
       AWS_SECRET_ACCESS_KEY:
         required: false
         type: string
+      BACKWARD_INCOMPATIBILITY_IT_ENABLED:
+        required: false
+        type: string
+        default: false
+      DRUID_PREVIOUS_VERSION:
+        required: false
+        type: string
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL:
+        required: false
+        type: string
+      DRUID_PREVIOUS_IT_IMAGE_NAME:
+        required: false
+        type: string
 
 env:
   MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }} # Used by tests to connect to metadata store directly.
@@ -106,6 +119,15 @@ jobs:
             ./druid-container-jdk${{ inputs.build_jdk }}.tar.gz
             ./integration-tests-ex/image/target/env.sh
 
+      - name: Retrieve previous version cached docker image
+        if: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' }}
+        id: docker-restore-previous-version
+        uses: actions/cache/restore@v4
+        with:
+          key: druid-container-jdk8-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz-${{ github.sha }}
+          path: |
+            ./druid-container-jdk8-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz           
+
       - name: Maven build
         if: steps.maven-restore.outputs.cache-hit != 'true' || ( steps.docker-restore.outputs.cache-hit != 'true' && steps.targets-restore.outputs.cache-hit != 'true' )
         run: |
@@ -122,6 +144,15 @@ jobs:
           echo $DRUID_IT_IMAGE_NAME
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 
+      - name: Save previous version docker image
+        if: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' && (steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true') }}
+        env:
+          docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
+        run: |
+          docker tag ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }} ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}-jdk8-version${{ inputs.DRUID_PREVIOUS_VERSION }}
+          echo ${DRUID_PREVIOUS_IT_IMAGE_NAME}
+          docker save "${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk8-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
+
       - name: Stop and remove docker containers
         run: |
           echo "Force stopping all containers and pruning"
@@ -132,6 +163,11 @@ jobs:
         run: |
           docker load --input druid-container-jdk${{ inputs.build_jdk }}.tar.gz
           docker images
+
+      - name: Load previous version docker image
+        if: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' }}
+        run: |
+          docker load --input druid-container-jdk8-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
 
       - name: Run IT
         id: run-it
