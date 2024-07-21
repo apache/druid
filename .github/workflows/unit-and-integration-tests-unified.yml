@@ -101,7 +101,6 @@ jobs:
 
       - name: Maven build
         id: maven_build
-        if: false
         run: |
           ./it.sh ci
 
