@@ -23,26 +23,29 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.grpc.server.GrpcEndpointInitializer;
 import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
-
-import java.io.File;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Super-simple test server that uses the CalciteTests setup.
  */
-public class TestServer
+public class TestServer extends BaseCalciteQueryTest
 {
-  private static QueryFrameworkFixture frameworkFixture;
   private GrpcEndpointInitializer serverInit;
 
-  public static void main(String[] args)
-  {
-    new TestServer().run();
-  }
-
+  @Test
+  @Disabled
   public void run()
   {
-    frameworkFixture = new QueryFrameworkFixture(new File("/tmp/druid"));
+    SqlTestFramework sqlTestFramework = queryFramework();
+    SqlTestFramework.PlannerFixture plannerFixture = sqlTestFramework.plannerFixture(
+        BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
+        new AuthConfig()
+    );
     GrpcQueryConfig config = new GrpcQueryConfig(50051);
     AuthenticatorMapper authMapper = new AuthenticatorMapper(
         ImmutableMap.of(
@@ -52,8 +55,8 @@ public class TestServer
     );
     serverInit = new GrpcEndpointInitializer(
         config,
-        frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory(),
+        sqlTestFramework.queryJsonMapper(),
+        plannerFixture.statementFactory(),
         null,
         authMapper
     );

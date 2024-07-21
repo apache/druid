@@ -27,13 +27,13 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryResponse;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.apache.druid.grpc.server.QueryDriver;
+import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -41,21 +41,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class DriverTest
+public class DriverTest extends BaseCalciteQueryTest
 {
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private static QueryFrameworkFixture frameworkFixture;
-  private static QueryDriver driver;
+  private QueryDriver driver;
 
-  @BeforeClass
-  public static void setup() throws IOException
+  @BeforeEach
+  public void setup()
   {
-    frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
+    SqlTestFramework sqlTestFramework = queryFramework();
+    SqlTestFramework.PlannerFixture plannerFixture = sqlTestFramework.plannerFixture(
+        BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
+        new AuthConfig()
+    );
     driver = new QueryDriver(
-        frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory(),
-        frameworkFixture.getQueryLifecycleFactory()
+        sqlTestFramework.queryJsonMapper(),
+        plannerFixture.statementFactory(),
+        sqlTestFramework.queryLifecycleFactory()
     );
   }
 

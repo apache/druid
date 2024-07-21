@@ -33,14 +33,15 @@ import org.apache.druid.grpc.server.QueryServer;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.validator.CredentialsValidator;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -53,22 +54,24 @@ import static org.junit.Assert.assertThrows;
  * sanity check of the gRPC stack. Uses allow-all security, which
  * does a sanity check of the auth chain.
  */
-public class BasicAuthTest
+public class BasicAuthTest extends BaseCalciteQueryTest
 {
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private static QueryFrameworkFixture frameworkFixture;
   private static QueryServer server;
 
-  @BeforeClass
-  public static void setup() throws IOException
+  @BeforeEach
+  public void setup() throws IOException
   {
-    frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
-    QueryDriver driver = new QueryDriver(
-        frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory(),
-        frameworkFixture.getQueryLifecycleFactory()
+    SqlTestFramework sqlTestFramework = queryFramework();
+    SqlTestFramework.PlannerFixture plannerFixture = sqlTestFramework.plannerFixture(
+        BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
+        new AuthConfig()
     );
+    QueryDriver driver = new QueryDriver(
+        sqlTestFramework.queryJsonMapper(),
+        plannerFixture.statementFactory(),
+        sqlTestFramework.queryLifecycleFactory()
+    );
+
     CredentialsValidator validator = new CredentialsValidator()
     {
       @Override
@@ -123,8 +126,8 @@ public class BasicAuthTest
     }
   }
 
-  @AfterClass
-  public static void tearDown() throws InterruptedException
+  @AfterEach
+  public void tearDown() throws InterruptedException
   {
     if (server != null) {
       server.stop();

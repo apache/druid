@@ -228,6 +228,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
@@ -253,7 +258,6 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
   <build>
     <extensions>
       <!-- Sets the os.detected.classifier property we will use later to

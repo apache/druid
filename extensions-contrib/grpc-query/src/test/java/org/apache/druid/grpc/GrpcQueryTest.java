@@ -35,12 +35,14 @@ import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.grpc.server.QueryServer;
 import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -57,22 +59,25 @@ import static org.junit.Assert.assertTrue;
  * sanity check of the gRPC stack. Uses allow-all security, which
  * does a sanity check of the auth chain.
  */
-public class GrpcQueryTest
+public class GrpcQueryTest extends BaseCalciteQueryTest
 {
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private static QueryFrameworkFixture frameworkFixture;
   private static QueryServer server;
   private static TestClient client;
 
-  @BeforeClass
-  public static void setup() throws IOException
+  @BeforeEach
+  public void setup() throws IOException
   {
-    frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
+    SqlTestFramework sqlTestFramework = queryFramework();
+    SqlTestFramework.PlannerFixture plannerFixture = sqlTestFramework.plannerFixture(
+        BaseCalciteQueryTest.PLANNER_CONFIG_DEFAULT,
+        new AuthConfig()
+    );
+
+    //frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
     QueryDriver driver = new QueryDriver(
-        frameworkFixture.jsonMapper(),
-        frameworkFixture.statementFactory(),
-        frameworkFixture.getQueryLifecycleFactory()
+        sqlTestFramework.queryJsonMapper(),
+        plannerFixture.statementFactory(),
+        sqlTestFramework.queryLifecycleFactory()
     );
     AuthenticatorMapper authMapper = new AuthenticatorMapper(
         ImmutableMap.of(
@@ -92,8 +97,16 @@ public class GrpcQueryTest
     client = new TestClient(TestClient.DEFAULT_HOST);
   }
 
-  @AfterClass
-  public static void tearDown() throws InterruptedException
+  public static class XComponentSupplier extends SqlTestFramework.StandardComponentSupplier
+  {
+    public XComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+  }
+
+  @AfterEach
+  public void tearDown() throws InterruptedException
   {
     if (client != null) {
       client.close();
@@ -108,7 +121,7 @@ public class GrpcQueryTest
    * Do a very basic query.
    */
   @Test
-  public void testBasics_sql()
+  public void testBasics_sql() throws Exception
   {
     QueryRequest request = QueryRequest.newBuilder()
                                        .setQuery("SELECT * FROM foo")
