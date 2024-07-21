@@ -56,7 +56,7 @@ docker build -t $DRUID_IT_IMAGE_NAME \
 	--build-arg DRUID_TESTING_TOOLS_VERSION=$DRUID_VERSION \
 	.
 
-if [ $BACKWARD_COMPATIBILITY_IT_ENABLED != "true" ]; then
+if [ $BACKWARD_INCOMPATIBILITY_IT_ENABLED != "true" ]; then
   exit 1
 fi
 
