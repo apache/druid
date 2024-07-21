@@ -107,11 +107,11 @@ jobs:
 
       - name: Container build
         env:
-          MYSQL_DRIVER_CLASSNAME: ${{ inputs.mysql_driver }}
-          BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
-          DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
-          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+          MYSQL_DRIVER_CLASSNAME: ${{ env.mysql_driver }}
+          BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ env.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
+          DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
+          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
