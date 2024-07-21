@@ -6,17 +6,16 @@ exports[`MenuCheckbox matches snapshot checked 1`] = `
   role="none"
 >
   <a
-    class="bp4-menu-item menu-checkbox"
+    class="bp5-menu-item menu-checkbox"
     role="menuitem"
     tabindex="0"
   >
     <span
-      class="bp4-menu-item-icon"
+      class="bp5-menu-item-icon"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-tick-circle"
-        icon="tick-circle"
+        class="bp5-icon bp5-icon-tick-circle"
         tabindex="-1"
       >
         <svg
@@ -34,7 +33,7 @@ exports[`MenuCheckbox matches snapshot checked 1`] = `
       </span>
     </span>
     <div
-      class="bp4-fill bp4-text-overflow-ellipsis"
+      class="bp5-text-overflow-ellipsis bp5-fill"
     >
       hello
     </div>
@@ -48,17 +47,16 @@ exports[`MenuCheckbox matches snapshot unchecked 1`] = `
   role="none"
 >
   <a
-    class="bp4-menu-item menu-checkbox"
+    class="bp5-menu-item menu-checkbox"
     role="menuitem"
     tabindex="0"
   >
     <span
-      class="bp4-menu-item-icon"
+      class="bp5-menu-item-icon"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-circle"
-        icon="circle"
+        class="bp5-icon bp5-icon-circle"
         tabindex="-1"
       >
         <svg
@@ -76,7 +74,7 @@ exports[`MenuCheckbox matches snapshot unchecked 1`] = `
       </span>
     </span>
     <div
-      class="bp4-fill bp4-text-overflow-ellipsis"
+      class="bp5-text-overflow-ellipsis bp5-fill"
     >
       hello
     </div>

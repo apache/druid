@@ -28,7 +28,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
-import org.apache.druid.metadata.SQLFirehoseDatabaseConnector;
+import org.apache.druid.metadata.SQLInputSourceDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.junit.Rule;
@@ -49,24 +49,48 @@ public class SqlTestUtils
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  private final TestDerbyFirehoseConnector derbyFirehoseConnector;
+  private final TestDerbyInputSourceConnector derbyInputSourceConnector;
   private final TestDerbyConnector derbyConnector;
 
   public SqlTestUtils(TestDerbyConnector derbyConnector)
   {
     this.derbyConnector = derbyConnector;
-    this.derbyFirehoseConnector = new SqlTestUtils.TestDerbyFirehoseConnector(
+    this.derbyInputSourceConnector = new TestDerbyInputSourceConnector(
         new MetadataStorageConnectorConfig(),
         derbyConnector.getDBI()
     );
   }
 
-  private static class TestDerbyFirehoseConnector extends SQLFirehoseDatabaseConnector
+  public SqlTestUtils(TestDerbyConnector derbyConnector, MetadataStorageConnectorConfig config)
+  {
+    this.derbyConnector = derbyConnector;
+    this.derbyInputSourceConnector = new TestDerbyInputSourceConnector(
+        config,
+        derbyConnector.getDBI()
+    );
+  }
+
+  public SqlTestUtils(
+      TestDerbyConnector derbyConnector,
+      MetadataStorageConnectorConfig config,
+      JdbcAccessSecurityConfig securityConfig
+  )
+  {
+    this.derbyConnector = derbyConnector;
+    this.derbyInputSourceConnector = new TestDerbyInputSourceConnector(
+        config,
+        securityConfig,
+        derbyConnector.getDBI()
+    );
+  }
+
+  private static class TestDerbyInputSourceConnector extends SQLInputSourceDatabaseConnector
   {
     private final DBI dbi;
 
-    private TestDerbyFirehoseConnector(
-        @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig, DBI dbi
+    private TestDerbyInputSourceConnector(
+        @JsonProperty("connectorConfig") MetadataStorageConnectorConfig metadataStorageConnectorConfig,
+        DBI dbi
     )
     {
       final BasicDataSource datasource = getDatasource(
@@ -79,6 +103,21 @@ public class SqlTestUtils
               return ImmutableSet.of("user", "create");
             }
           }
+      );
+      datasource.setDriverClassLoader(getClass().getClassLoader());
+      datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
+      this.dbi = dbi;
+    }
+
+    private TestDerbyInputSourceConnector(
+        MetadataStorageConnectorConfig metadataStorageConnectorConfig,
+        JdbcAccessSecurityConfig securityConfig,
+        DBI dbi
+    )
+    {
+      final BasicDataSource datasource = getDatasource(
+          metadataStorageConnectorConfig,
+          securityConfig
       );
       datasource.setDriverClassLoader(getClass().getClassLoader());
       datasource.setDriverClassName("org.apache.derby.jdbc.ClientDriver");
@@ -151,9 +190,9 @@ public class SqlTestUtils
     );
   }
 
-  public TestDerbyFirehoseConnector getDerbyFirehoseConnector()
+  public TestDerbyInputSourceConnector getDerbyInputSourceConnector()
   {
-    return derbyFirehoseConnector;
+    return derbyInputSourceConnector;
   }
 
   /**

@@ -376,6 +376,7 @@
       "items": [
         "release-info/migr-front-coded-dict",
         "release-info/migr-subquery-limit",
+        "release-info/migr-ansi-sql-null",
         "release-info/migr-mvd-array"
       ]
     }

@@ -231,7 +231,6 @@ public class ParallelIndexSupervisorTaskTest
       final boolean appendToExisting = true;
       final boolean forceGuaranteedRollup = true;
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new InlineInputSource("test"),
           new JsonInputFormat(null, null, null, null, null),
           appendToExisting,
@@ -291,7 +290,6 @@ public class ParallelIndexSupervisorTaskTest
     {
       final ObjectMapper mapper = new DefaultObjectMapper();
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new InlineInputSource("test"),
           null,
           false,
@@ -528,7 +526,6 @@ public class ParallelIndexSupervisorTaskTest
       final boolean appendToExisting = false;
       final boolean forceGuaranteedRollup = true;
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-              null,
               new InlineInputSource("test"),
               new JsonInputFormat(null, null, null, null, null),
               appendToExisting,

@@ -157,7 +157,6 @@ public class NativeCompactionRunner implements CompactionRunner
     }
 
     return new ParallelIndexIOConfig(
-        null,
         new DruidInputSource(
             dataSchema.getDataSource(),
             interval,
