@@ -27,7 +27,7 @@ package org.apache.druid.error;
  * that it has not YET been implemented.  When one of these exceptions is seen, it is usually an indication that it is
  * now time to actually implement the path that was previously elided.
  * <p>
- * Often times, the code path wasn't implemented because the developer thought that it wasn't actually possible to
+ * Oftentimes, the code path wasn't implemented because the developer thought that it wasn't actually possible to
  * see it executed.  So, collecting and providing information about why the particular path got executed is often
  * extremely helpful in understanding why it happened and accelerating the implementation of what the correct behavior
  * should be.
