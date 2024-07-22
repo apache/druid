@@ -237,7 +237,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
                     throw cancellationGizmo.cancelAndThrow(new QueryTimeoutException());
                   }
 
-                  if (cancellationGizmo.isCancelled()) {
+                  if (cancellationGizmo.isCanceled()) {
                     throw cancellationGizmo.getRuntimeException();
                   }
 
@@ -254,7 +254,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               @Override
               public T next()
               {
-                if (cancellationGizmo.isCancelled()) {
+                if (cancellationGizmo.isCanceled()) {
                   throw cancellationGizmo.getRuntimeException();
                 }
 
@@ -359,7 +359,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               parallelTaskCount
           );
 
-          QueuePusher<ResultBatch<T>> resultsPusher = new QueuePusher<>(out, cancellationGizmo, hasTimeout, timeoutAt);
+          QueuePusher<T> resultsPusher = new QueuePusher<>(out, cancellationGizmo, hasTimeout, timeoutAt);
 
           for (Sequence<T> s : sequences) {
             sequenceCursors.add(new YielderBatchedResultsCursor<>(new SequenceBatcher<>(s, batchSize), orderingFn));
@@ -388,7 +388,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       catch (Throwable t) {
         closeAllCursors(sequenceCursors);
         cancellationGizmo.cancel(t);
-        out.offer(ResultBatch.TERMINAL);
+        // offer terminal result if queue is not full in case out is empty to allow downstream threads waiting on
+        // stuff to be present to stop blocking immediately. However, if the queue is full, it doesn't matter if we
+        // write anything because the cancellation signal has been set, which will also terminate processing.
+        out.offer(ResultBatch.terminal());
       }
     }
 
@@ -405,7 +408,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       for (List<Sequence<T>> partition : partitions) {
         BlockingQueue<ResultBatch<T>> outputQueue = new ArrayBlockingQueue<>(queueSize);
         intermediaryOutputs.add(outputQueue);
-        QueuePusher<ResultBatch<T>> pusher = new QueuePusher<>(outputQueue, cancellationGizmo, hasTimeout, timeoutAt);
+        QueuePusher<T> pusher = new QueuePusher<>(outputQueue, cancellationGizmo, hasTimeout, timeoutAt);
 
         List<BatchedResultsCursor<T>> partitionCursors = new ArrayList<>(sequences.size());
         for (Sequence<T> s : partition) {
@@ -433,7 +436,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         getPool().execute(task);
       }
 
-      QueuePusher<ResultBatch<T>> outputPusher = new QueuePusher<>(out, cancellationGizmo, hasTimeout, timeoutAt);
+      QueuePusher<T> outputPusher = new QueuePusher<>(out, cancellationGizmo, hasTimeout, timeoutAt);
       List<BatchedResultsCursor<T>> intermediaryOutputsCursors = new ArrayList<>(intermediaryOutputs.size());
       for (BlockingQueue<ResultBatch<T>> queue : intermediaryOutputs) {
         intermediaryOutputsCursors.add(
@@ -531,7 +534,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final PriorityQueue<BatchedResultsCursor<T>> pQueue;
     private final Ordering<T> orderingFn;
     private final BinaryOperator<T> combineFn;
-    private final QueuePusher<ResultBatch<T>> outputQueue;
+    private final QueuePusher<T> outputQueue;
     private final T initialValue;
     private final int yieldAfter;
     private final int batchSize;
@@ -541,7 +544,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     private MergeCombineAction(
         PriorityQueue<BatchedResultsCursor<T>> pQueue,
-        QueuePusher<ResultBatch<T>> outputQueue,
+        QueuePusher<T> outputQueue,
         Ordering<T> orderingFn,
         BinaryOperator<T> combineFn,
         T initialValue,
@@ -568,7 +571,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     protected void compute()
     {
-      if (cancellationGizmo.isCancelled()) {
+      if (cancellationGizmo.isCanceled()) {
         cleanup();
         return;
       }
@@ -630,7 +633,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         metricsAccumulator.incrementCpuTimeNanos(elapsedCpuNanos);
         metricsAccumulator.incrementTaskCount();
 
-        if (!pQueue.isEmpty() && !cancellationGizmo.isCancelled()) {
+        if (!pQueue.isEmpty() && !cancellationGizmo.isCanceled()) {
           // if there is still work to be done, execute a new task with the current accumulated value to continue
           // combining where we left off
           if (!outputBatch.isDrained()) {
@@ -672,10 +675,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               metricsAccumulator,
               cancellationGizmo
           ));
-        } else if (cancellationGizmo.isCancelled()) {
+        } else if (cancellationGizmo.isCanceled()) {
           // if we got the cancellation signal, go ahead and write terminal value into output queue to help gracefully
           // allow downstream stuff to stop
-          LOG.debug("cancelled after %s tasks", metricsAccumulator.getTaskCount());
+          LOG.debug("canceled after %s tasks", metricsAccumulator.getTaskCount());
           // make sure to close underlying cursors
           cleanup();
         } else {
@@ -684,7 +687,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
           metricsAccumulator.incrementOutputRows(batchCounter + 1L);
           outputQueue.offer(outputBatch);
           // ... and the terminal value to indicate the blocking queue holding the values is complete
-          outputQueue.offer(ResultBatch.TERMINAL);
+          outputQueue.offer(ResultBatch.terminal());
           LOG.debug("merge combine complete after %s tasks", metricsAccumulator.getTaskCount());
         }
       }
@@ -697,7 +700,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private void cleanup()
     {
       closeAllCursors(pQueue);
-      outputQueue.offer(ResultBatch.TERMINAL);
+      // offer terminal result if queue is not full in case out is empty to allow downstream threads waiting on
+      // stuff to be present to stop blocking immediately. However, if the queue is full, it doesn't matter if we
+      // write anything because the cancellation signal has been set, which will also terminate processing.
+      outputQueue.offer(ResultBatch.terminal());
     }
   }
 
@@ -722,7 +728,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     private final List<BatchedResultsCursor<T>> partition;
     private final Ordering<T> orderingFn;
     private final BinaryOperator<T> combineFn;
-    private final QueuePusher<ResultBatch<T>> outputQueue;
+    private final QueuePusher<T> outputQueue;
     private final int yieldAfter;
     private final int batchSize;
     private final long targetTimeNanos;
@@ -733,7 +739,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
 
     private PrepareMergeCombineInputsAction(
         List<BatchedResultsCursor<T>> partition,
-        QueuePusher<ResultBatch<T>> outputQueue,
+        QueuePusher<T> outputQueue,
         Ordering<T> orderingFn,
         BinaryOperator<T> combineFn,
         int yieldAfter,
@@ -770,7 +776,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
             cursor.close();
           }
         }
-        if (!cancellationGizmo.isCancelled() && !cursors.isEmpty()) {
+        if (!cancellationGizmo.isCanceled() && !cursors.isEmpty()) {
           getPool().execute(new MergeCombineAction<T>(
               cursors,
               outputQueue,
@@ -784,14 +790,17 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
               cancellationGizmo
           ));
         } else {
-          outputQueue.offer(ResultBatch.TERMINAL);
+          outputQueue.offer(ResultBatch.terminal());
         }
         metricsAccumulator.setPartitionInitializedTime(System.nanoTime() - startTime);
       }
       catch (Throwable t) {
         closeAllCursors(partition);
         cancellationGizmo.cancel(t);
-        outputQueue.tryOffer(ResultBatch.TERMINAL);
+        // offer terminal result if queue is not full in case out is empty to allow downstream threads waiting on
+        // stuff to be present to stop blocking immediately. However, if the queue is full, it doesn't matter if we
+        // write anything because the cancellation signal has been set, which will also terminate processing.
+        outputQueue.tryOfferTerminal();
       }
     }
   }
@@ -805,11 +814,11 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   {
     final boolean hasTimeout;
     final long timeoutAtNanos;
-    final BlockingQueue<E> queue;
+    final BlockingQueue<ResultBatch<E>> queue;
     final CancellationGizmo gizmo;
-    volatile E item = null;
+    volatile ResultBatch<E> item = null;
 
-    QueuePusher(BlockingQueue<E> q, CancellationGizmo gizmo, boolean hasTimeout, long timeoutAtNanos)
+    QueuePusher(BlockingQueue<ResultBatch<E>> q, CancellationGizmo gizmo, boolean hasTimeout, long timeoutAtNanos)
     {
       this.queue = q;
       this.gizmo = gizmo;
@@ -847,7 +856,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       return item == null;
     }
 
-    public void offer(E item)
+    public void offer(ResultBatch<E> item)
     {
       try {
         this.item = item;
@@ -859,9 +868,9 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       }
     }
 
-    public void tryOffer(E item)
+    public void tryOfferTerminal()
     {
-      this.queue.offer(item);
+      this.queue.offer(ResultBatch.terminal());
     }
   }
 
@@ -872,8 +881,10 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
    */
   static class ResultBatch<E>
   {
-    @SuppressWarnings("rawtypes")
-    static final ResultBatch TERMINAL = new ResultBatch();
+    static <T> ResultBatch<T> terminal()
+    {
+      return new ResultBatch<>();
+    }
 
     @Nullable
     private final Queue<E> values;
@@ -1184,7 +1195,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
         if (hasTimeout) {
           final long remainingNanos = timeoutAtNanos - System.nanoTime();
           if (remainingNanos < 0) {
-            resultBatch = ResultBatch.TERMINAL;
+            resultBatch = ResultBatch.terminal();
             throw gizmo.cancelAndThrow(new QueryTimeoutException());
           }
           final long blockTimeoutNanos = Math.min(remainingNanos, BLOCK_TIMEOUT);
@@ -1229,7 +1240,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
       throwable.compareAndSet(null, t);
     }
 
-    boolean isCancelled()
+    boolean isCanceled()
     {
       return throwable.get() != null;
     }
@@ -1288,7 +1299,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
     @Override
     public boolean cancel(boolean mayInterruptIfRunning)
     {
-      cancellationGizmo.cancel(new RuntimeException("Sequence cancelled"));
+      cancellationGizmo.cancel(new RuntimeException("Sequence canceled"));
       return super.cancel(mayInterruptIfRunning);
     }
   }
