@@ -887,7 +887,13 @@ public class KillUnusedSegmentsTest
             return 0;
           }
         }
-    );
+    ) {
+      @Override
+      int generateRandomCursorPosition(final int maxBound)
+      {
+        return 0;
+      }
+    };
   }
 
   private CoordinatorRunStats runDutyAndGetStats()

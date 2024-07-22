@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
+import org.apache.druid.collections.CircularList;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
@@ -42,12 +43,14 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -95,6 +98,9 @@ public class KillUnusedSegments implements CoordinatorDuty
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
+
+  private String prevDatasourceKilled;
+  private CircularList<String> datasourceCircularKillList;
 
   public KillUnusedSegments(
       SegmentsMetadataManager segmentsMetadataManager,
@@ -172,7 +178,14 @@ public class KillUnusedSegments implements CoordinatorDuty
       dataSourcesToKill = dynamicConfig.getSpecificDataSourcesToKillUnusedSegmentsIn();
     }
 
-    datasourceIterator.updateCandidates(dataSourcesToKill);
+    if (datasourceCircularKillList == null ||
+        !datasourceCircularKillList.equalsSet(dataSourcesToKill)) {
+      datasourceCircularKillList = new CircularList<>(dataSourcesToKill, Comparator.naturalOrder());
+
+      final int randomPosition = generateRandomCursorPosition(dataSourcesToKill.size());
+      datasourceCircularKillList.resetCursor(randomPosition);
+    }
+
     lastKillTime = DateTimes.nowUtc();
 
     killUnusedSegments(dataSourcesToKill, availableKillTaskSlots, stats);
@@ -181,6 +194,12 @@ public class KillUnusedSegments implements CoordinatorDuty
     // last kill interval removed from map.
     datasourceToLastKillIntervalEnd.keySet().retainAll(dataSourcesToKill);
     return params;
+  }
+
+  @VisibleForTesting
+  int generateRandomCursorPosition(final int maxBound)
+  {
+    return maxBound <= 0 ? 0 : ThreadLocalRandom.current().nextInt(maxBound);
   }
 
   /**
@@ -197,29 +216,23 @@ public class KillUnusedSegments implements CoordinatorDuty
       stats.add(Stats.Kill.SUBMITTED_TASKS, 0);
       return;
     }
-    final Iterator<String> dataSourcesToKillIterator = this.datasourceIterator.getIterator();
+
     final Set<String> remainingDatasourcesToKill = new HashSet<>(dataSourcesToKill);
 
     int submittedTasks = 0;
-    while (dataSourcesToKillIterator.hasNext()) {
-      if (remainingDatasourcesToKill.size() == 0) {
-        break;
+    for (String dataSource : datasourceCircularKillList) {
+      if (dataSource.equals(prevDatasourceKilled)) {
+        datasourceCircularKillList.advanceCursor();
       }
 
-      if (submittedTasks >= availableKillTaskSlots) {
-        log.info(
-            "Submitted [%d] kill tasks and reached kill task slot limit [%d].",
-            submittedTasks, availableKillTaskSlots
-        );
-        break;
-      }
-
-      final String dataSource = dataSourcesToKillIterator.next();
       final DateTime maxUsedStatusLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
       final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime, stats);
       if (intervalToKill == null) {
         datasourceToLastKillIntervalEnd.remove(dataSource);
         remainingDatasourcesToKill.remove(dataSource);
+        if (remainingDatasourcesToKill.size() == 0) {
+          break;
+        }
         continue;
       }
 
@@ -235,9 +248,22 @@ public class KillUnusedSegments implements CoordinatorDuty
             ),
             true
         );
+        datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
+        prevDatasourceKilled = dataSource;
         ++submittedTasks;
         remainingDatasourcesToKill.remove(dataSource);
-        datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
+
+        if (remainingDatasourcesToKill.size() == 0) {
+          break;
+        }
+
+        if (submittedTasks >= availableKillTaskSlots) {
+          log.info(
+              "Submitted [%d] kill tasks and reached kill task slot limit [%d].",
+              submittedTasks, availableKillTaskSlots
+          );
+          break;
+        }
       }
       catch (Exception ex) {
         log.error(ex, "Failed to submit kill task for dataSource[%s] in interval[%s]", dataSource, intervalToKill);
