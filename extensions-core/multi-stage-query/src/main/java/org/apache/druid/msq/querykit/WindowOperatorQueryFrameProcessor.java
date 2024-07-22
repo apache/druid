@@ -479,7 +479,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   /**
    * Compare two rows based on the columns in partitionColumnNames.
-   * If the partitionColumnNames is null, compare entire row.
    * If the partitionColumnNames is empty, the method will end up returning true.
    * <p>
    * For example, say:
@@ -497,17 +496,13 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
    */
   private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<String> partitionColumnNames)
   {
-    if (partitionColumnNames == null) {
-      return row1.equals(row2);
-    } else {
-      int match = 0;
-      for (String columnName : partitionColumnNames) {
-        int i = frameReader.signature().indexOf(columnName);
-        if (Objects.equals(row1.get(i), row2.get(i))) {
-          match++;
-        }
+    int match = 0;
+    for (String columnName : partitionColumnNames) {
+      int i = frameReader.signature().indexOf(columnName);
+      if (Objects.equals(row1.get(i), row2.get(i))) {
+        match++;
       }
-      return match == partitionColumnNames.size();
     }
+    return match == partitionColumnNames.size();
   }
 }

@@ -46,6 +46,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,7 +141,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                              queryToRun.getOperators(),
                              rowSignature,
                              maxRowsMaterialized,
-                             new ArrayList<>()
+                             Collections.emptyList()
                          ))
       );
     } else {

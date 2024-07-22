@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -75,6 +76,10 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
     this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
+
+    if (partitionColumnNames == null) {
+      throw DruidException.defensive("List of partition column names encountered as null.");
+    }
     this.partitionColumnNames = partitionColumnNames;
   }
 
