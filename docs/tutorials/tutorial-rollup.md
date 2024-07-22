@@ -26,7 +26,7 @@ sidebar_label: Aggregate data with rollup
 
 Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
-This tutorial demonstrate the effects of rollup on an example dataset.
+This tutorial demonstrates the effects of rollup on an example dataset.
 
 For this tutorial, you should have Druid downloaded as described in
 the [single-machine quickstart](index.md) and have it running on your local machine. The examples in the tutorial use the [multi-stage query](../multi-stage-query/index.md) (MSQ) task engine to execute SQL statements.
