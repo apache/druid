@@ -785,7 +785,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       if (call.getOperator().getKind() != SqlKind.COUNT) {
         if (clazz != null && !clazz.isAnnotationPresent(NativelySupportsDistinct.class)) {
           throw buildCalciteContextException(
-              String.format(
+              StringUtils.format(
                   "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
                   call.getOperator().getName()
               ),
