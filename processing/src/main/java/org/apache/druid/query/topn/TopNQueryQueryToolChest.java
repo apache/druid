@@ -66,7 +66,6 @@ import org.joda.time.DateTime;
 
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -507,12 +506,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public RowSignature resultArraySignature(TopNQuery query)
   {
-    return RowSignature.builder()
-                       .addTimeColumn()
-                       .addDimensions(Collections.singletonList(query.getDimensionSpec()))
-                       .addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN)
-                       .addPostAggregators(query.getPostAggregatorSpecs())
-                       .build();
+    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -558,16 +552,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature =
-        RowSignature.builder()
-                    .addTimeColumn()
-                    .addDimensions(Collections.singletonList(query.getDimensionSpec()))
-                    .addAggregators(
-                        query.getAggregatorSpecs(),
-                        query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
-                    )
-                    .addPostAggregators(query.getPostAggregatorSpecs())
-                    .build();
+    final RowSignature rowSignature = query.getResultSignature(
+        query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
+    );
+
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
