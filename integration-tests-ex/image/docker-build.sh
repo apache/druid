@@ -56,15 +56,10 @@ docker build -t $DRUID_IT_IMAGE_NAME \
 	--build-arg DRUID_TESTING_TOOLS_VERSION=$DRUID_VERSION \
 	.
 
-echo "printing env vars"
-
-echo $BACKWARD_INCOMPATIBILITY_IT_ENABLED
-echo $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL
-echo $DRUID_PREVIOUS_IT_IMAGE_NAME
-echo $DRUID_PREVIOUS_VERSION
-
-if [ $BACKWARD_INCOMPATIBILITY_IT_ENABLED != "true" ]; then
-  exit 1
+echo "val is $BACKWARD_INCOMPATIBILITY_IT_ENABLED"
+if [[ -z "${BACKWARD_INCOMPATIBILITY_IT_ENABLED:-""}" || $BACKWARD_INCOMPATIBILITY_IT_ENABLED != "true" ]]; then
+  echo "Not building previous version image."
+  exit 0
 fi
 
 # Download the previous druid tar

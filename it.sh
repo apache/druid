@@ -242,6 +242,10 @@ case $CMD in
     ;;
   "image" )
     echo "it.sh printing env vars"
+    export DRUID_PREVIOUS_VERSION=30.0.0
+    export BACKWARD_INCOMPATIBILITY_IT_ENABLED=true
+    export DRUID_PREVIOUS_VERSION_DOWNLOAD_URL=https://dlcdn.apache.org/druid/30.0.0/apache-druid-30.0.0-bin.tar.gz
+    export DRUID_PREVIOUS_IT_IMAGE_NAME=org.apache.druid.integration-tests/test:30.0.0
     echo $BACKWARD_INCOMPATIBILITY_IT_ENABLED
     echo $DRUID_PREVIOUS_VERSION
     echo $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL
