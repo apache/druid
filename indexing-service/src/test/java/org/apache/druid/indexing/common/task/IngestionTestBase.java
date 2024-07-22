@@ -443,7 +443,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         );
 
         final TaskConfig config = new TaskConfigBuilder()
-            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
         CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
         centralizedDatasourceSchemaConfig.setEnabled(true);

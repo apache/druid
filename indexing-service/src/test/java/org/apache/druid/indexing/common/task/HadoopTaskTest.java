@@ -111,7 +111,6 @@ public class HadoopTaskTest
         new TaskConfigBuilder()
             .setBaseDir(temporaryFolder.newFolder().toString())
             .setDefaultHadoopCoordinates(ImmutableList.of("something:hadoop:1"))
-            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build()
     ).once();
     EasyMock.replay(toolbox);

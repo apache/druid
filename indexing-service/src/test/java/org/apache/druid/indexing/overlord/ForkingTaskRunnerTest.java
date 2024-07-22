@@ -541,8 +541,7 @@ public class ForkingTaskRunnerTest
         .setDefaultHadoopCoordinates(ImmutableList.of())
         .setGracefulShutdownTimeout(new Period("PT0S"))
         .setDirectoryLockTimeout(new Period("PT10S"))
-        .setShuffleDataLocations(ImmutableList.of())
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
+        .setShuffleDataLocations(ImmutableList.of());
   }
 
   @Nonnull
