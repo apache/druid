@@ -731,7 +731,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                   .limit(10)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_DEFAULT)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of()
@@ -952,7 +951,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                              .intervals(querySegmentSpec(Filtration.eternity()))
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .columns("__time")
-                                             .legacy(false)
                                              .context(queryContext)
                                              .build()),
                                    "j0.",
@@ -1307,7 +1305,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .limit(1L)
                                 .order(ScanQuery.Order.DESCENDING)
                                 .columns("__time", "channel")
-                                .legacy(false)
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
                         ),

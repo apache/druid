@@ -20,7 +20,7 @@ import type { QueryResult } from '@druid-toolkit/query';
 import { C } from '@druid-toolkit/query';
 import type { Filter } from 'react-table';
 
-import { filterMap, formatNumber, oneOf } from './general';
+import { filterMap, formatNumber, isNumberLike, oneOf } from './general';
 import { deepSet } from './object-change';
 
 export interface Pagination {
@@ -55,9 +55,7 @@ export function getNumericColumnBraces(
     queryResult.header.forEach((column, i) => {
       if (!oneOf(column.nativeType, 'LONG', 'FLOAT', 'DOUBLE')) return;
       const formatter = columnHints?.get(column.name)?.formatter || formatNumber;
-      const braces = filterMap(rows, row =>
-        oneOf(typeof row[i], 'number', 'bigint') ? formatter(row[i]) : undefined,
-      );
+      const braces = filterMap(rows, row => (isNumberLike(row[i]) ? formatter(row[i]) : undefined));
       if (braces.length) {
         numericColumnBraces[i] = braces;
       }

@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Icon, Intent, Menu, MenuItem, Position, Tag } from '@blueprintjs/core';
+import { Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import { SqlExpression } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
@@ -789,7 +788,7 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: twoLines(
               'Stats',
-              <Popover2
+              <Popover
                 position={Position.BOTTOM}
                 content={
                   <Menu>
@@ -809,7 +808,7 @@ export class SupervisorsView extends React.PureComponent<
                 <i className="title-button">
                   {getRowStatsKeyTitle(statsKey)} <Icon icon={IconNames.CARET_DOWN} />
                 </i>
-              </Popover2>,
+              </Popover>,
             ),
             id: 'stats',
             width: 300,

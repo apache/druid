@@ -93,7 +93,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -244,7 +244,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -295,7 +294,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -358,7 +356,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -2727,7 +2724,6 @@ public class IndexTaskTest extends IngestionTestBase
               transformSpec
           ),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
               appendToExisting,
@@ -2755,7 +2751,6 @@ public class IndexTaskTest extends IngestionTestBase
               objectMapper
           ),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               createInputFormatFromParseSpec(parseSpec),
               appendToExisting,
