@@ -177,7 +177,7 @@ public class HashJoinEngine
       @Override
       public void advance()
       {
-        advanceUninterruptibly();
+        advance(true);
         BaseQuery.checkInterrupted();
       }
 
@@ -196,6 +196,31 @@ public class HashJoinEngine
 
       @Override
       public void advanceUninterruptibly()
+      {
+        advance(false);
+      }
+
+      @Override
+      public boolean isDone()
+      {
+        return leftCursor.isDone() && !joinMatcher.hasMatch();
+      }
+
+      @Override
+      public boolean isDoneOrInterrupted()
+      {
+        return isDone() || Thread.currentThread().isInterrupted();
+      }
+
+      @Override
+      public void reset()
+      {
+        leftCursor.reset();
+        joinMatcher.reset();
+        joinColumnSelectorFactory.resetRowId();
+      }
+
+      private void advance(boolean interruptibly)
       {
         joinColumnSelectorFactory.advanceRowId();
 
@@ -217,7 +242,11 @@ public class HashJoinEngine
 
         do {
           // No more right-hand side matches; advance the left-hand side.
-          leftCursor.advanceUninterruptibly();
+          if (interruptibly) {
+            leftCursor.advance();
+          } else {
+            leftCursor.advanceUninterruptibly();
+          }
 
           // Update joinMatcher state to match new cursor position.
           matchCurrentPosition();
@@ -227,26 +256,6 @@ public class HashJoinEngine
         } while (!joinableClause.getJoinType().isLefty()
                  && !joinMatcher.hasMatch()
                  && !leftCursor.isDone());
-      }
-
-      @Override
-      public boolean isDone()
-      {
-        return leftCursor.isDone() && !joinMatcher.hasMatch();
-      }
-
-      @Override
-      public boolean isDoneOrInterrupted()
-      {
-        return isDone() || Thread.currentThread().isInterrupted();
-      }
-
-      @Override
-      public void reset()
-      {
-        leftCursor.reset();
-        joinMatcher.reset();
-        joinColumnSelectorFactory.resetRowId();
       }
     }
 
