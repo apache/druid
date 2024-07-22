@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -37,12 +40,14 @@ public class CoordinatorCompactionConfig
   private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
   private static final CompactionEngine DEFAULT_COMPACTION_ENGINE = CompactionEngine.NATIVE;
+  private static final CompactionSegmentSearchPolicy DEFAULT_COMPACTION_POLICY = new NewestSegmentFirstPolicy(null);
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
   private final CompactionEngine compactionEngine;
+  private final CompactionSegmentSearchPolicy compactionPolicy;
 
   public static CoordinatorCompactionConfig from(
       CoordinatorCompactionConfig baseConfig,
@@ -54,34 +59,34 @@ public class CoordinatorCompactionConfig
         baseConfig.compactionTaskSlotRatio,
         baseConfig.maxCompactionTaskSlots,
         baseConfig.useAutoScaleSlots,
-        null
+        baseConfig.compactionEngine,
+        baseConfig.compactionPolicy
     );
   }
 
   public static CoordinatorCompactionConfig from(
       CoordinatorCompactionConfig baseConfig,
-      @Nullable Double compactionTaskSlotRatio,
-      @Nullable Integer maxCompactionTaskSlots,
-      @Nullable Boolean useAutoScaleSlots
+      CompactionConfigUpdateRequest update
   )
   {
     return new CoordinatorCompactionConfig(
         baseConfig.compactionConfigs,
-        compactionTaskSlotRatio == null ? baseConfig.compactionTaskSlotRatio : compactionTaskSlotRatio,
-        maxCompactionTaskSlots == null ? baseConfig.maxCompactionTaskSlots : maxCompactionTaskSlots,
-        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots,
-        null
+        Configs.valueOrDefault(update.getCompactionTaskSlotRatio(), baseConfig.compactionTaskSlotRatio),
+        Configs.valueOrDefault(update.getMaxCompactionTaskSlots(), baseConfig.maxCompactionTaskSlots),
+        Configs.valueOrDefault(update.getUseAutoScaleSlots(), baseConfig.useAutoScaleSlots),
+        Configs.valueOrDefault(update.getCompactionEngine(), baseConfig.compactionEngine),
+        Configs.valueOrDefault(update.getCompactionPolicy(), baseConfig.compactionPolicy)
     );
   }
 
   public static CoordinatorCompactionConfig from(List<DataSourceCompactionConfig> compactionConfigs)
   {
-    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null, null);
+    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null, null, null);
   }
 
   public static CoordinatorCompactionConfig empty()
   {
-    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null, null);
+    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null, null, null);
   }
 
   @JsonCreator
@@ -90,7 +95,8 @@ public class CoordinatorCompactionConfig
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine
+      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine,
+      @JsonProperty("compactionPolicy") @Nullable CompactionSegmentSearchPolicy compactionPolicy
   )
   {
     this.compactionConfigs = compactionConfigs;
@@ -98,6 +104,7 @@ public class CoordinatorCompactionConfig
     this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, DEFAULT_MAX_COMPACTION_TASK_SLOTS);
     this.useAutoScaleSlots = Configs.valueOrDefault(useAutoScaleSlots, DEFAULT_USE_AUTO_SCALE_SLOTS);
     this.compactionEngine = Configs.valueOrDefault(compactionEngine, DEFAULT_COMPACTION_ENGINE);
+    this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
   }
 
   @JsonProperty
@@ -130,6 +137,12 @@ public class CoordinatorCompactionConfig
     return compactionEngine;
   }
 
+  @JsonProperty
+  public CompactionSegmentSearchPolicy getCompactionPolicy()
+  {
+    return compactionPolicy;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -144,7 +157,8 @@ public class CoordinatorCompactionConfig
            maxCompactionTaskSlots == that.maxCompactionTaskSlots &&
            useAutoScaleSlots == that.useAutoScaleSlots &&
            compactionEngine == that.compactionEngine &&
-           Objects.equals(compactionConfigs, that.compactionConfigs);
+           Objects.equals(compactionConfigs, that.compactionConfigs) &&
+           Objects.equals(compactionPolicy, that.compactionPolicy);
   }
 
   @Override
@@ -155,7 +169,8 @@ public class CoordinatorCompactionConfig
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         useAutoScaleSlots,
-        compactionEngine
+        compactionEngine,
+        compactionPolicy
     );
   }
 
@@ -168,6 +183,7 @@ public class CoordinatorCompactionConfig
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            ", useAutoScaleSlots=" + useAutoScaleSlots +
            ", compactionEngine=" + compactionEngine +
+           ", compactionPolicy=" + compactionPolicy +
            '}';
   }
 }

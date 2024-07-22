@@ -150,6 +150,11 @@ public class TaskQueryTool
     return storage.getTaskInfo(taskId);
   }
 
+  public List<TaskStatusPlus> getAllActiveTasks()
+  {
+    return getTaskStatusPlusList(TaskStateLookup.ALL, null, null, 0, null);
+  }
+
   public List<TaskStatusPlus> getTaskStatusPlusList(
       TaskStateLookup state,
       @Nullable String dataSource,
@@ -178,7 +183,7 @@ public class TaskQueryTool
     // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
     // and use the snapshot from taskRunner as a reference for potential task state updates happened
     // after the first snapshotting.
-    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusList(
+    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusStream(
         state,
         dataSource,
         createdTimeDuration,
@@ -244,7 +249,7 @@ public class TaskQueryTool
     return taskStatuses;
   }
 
-  private Stream<TaskStatusPlus> getTaskStatusPlusList(
+  private Stream<TaskStatusPlus> getTaskStatusPlusStream(
       TaskStateLookup state,
       @Nullable String dataSource,
       Duration createdTimeDuration,

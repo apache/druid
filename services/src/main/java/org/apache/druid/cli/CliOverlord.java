@@ -66,6 +66,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
+import org.apache.druid.indexing.compact.CompactionScheduler;
+import org.apache.druid.indexing.compact.CompactionSchedulerImpl;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
@@ -91,6 +93,7 @@ import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleaner;
 import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
+import org.apache.druid.indexing.overlord.http.OverlordCompactionResource;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
 import org.apache.druid.indexing.overlord.http.OverlordResource;
 import org.apache.druid.indexing.overlord.sampler.SamplerModule;
@@ -103,6 +106,8 @@ import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManag
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -111,7 +116,9 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
+import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -201,6 +208,12 @@ public class CliOverlord extends ServerRunnable
               binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8290);
 
               JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
+
+              binder.bind(SegmentsMetadataManager.class)
+                    .toProvider(SegmentsMetadataManagerProvider.class)
+                    .in(ManageLifecycle.class);
+              binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
+              JsonConfigProvider.bind(binder, "druid.compaction.scheduler", CompactionSchedulerConfig.class);
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);
@@ -233,6 +246,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
+            binder.bind(CompactionScheduler.class).to(CompactionSchedulerImpl.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
@@ -281,6 +295,7 @@ public class CliOverlord extends ServerRunnable
             Jerseys.addResource(binder, OverlordResource.class);
             Jerseys.addResource(binder, SupervisorResource.class);
             Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
+            Jerseys.addResource(binder, OverlordCompactionResource.class);
 
 
             binder.bind(AppenderatorsManager.class)

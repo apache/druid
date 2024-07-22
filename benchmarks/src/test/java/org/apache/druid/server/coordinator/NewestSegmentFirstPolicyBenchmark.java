@@ -26,6 +26,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -61,7 +62,7 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(new DefaultObjectMapper());
+  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(null);
 
   @Param("100")
   private int numDataSources;
@@ -141,7 +142,12 @@ public class NewestSegmentFirstPolicyBenchmark
   @Benchmark
   public void measureNewestSegmentFirstPolicy(Blackhole blackhole)
   {
-    final CompactionSegmentIterator iterator = policy.createIterator(compactionConfigs, dataSources, Collections.emptyMap());
+    final CompactionSegmentIterator iterator = policy.createIterator(
+        compactionConfigs,
+        dataSources,
+        Collections.emptyMap(),
+        new CompactionStatusTracker(new DefaultObjectMapper())
+    );
     for (int i = 0; i < numCompactionTaskSlots && iterator.hasNext(); i++) {
       blackhole.consume(iterator.next());
     }

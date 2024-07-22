@@ -63,6 +63,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -82,7 +83,14 @@ public class NewestSegmentFirstPolicyTest
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(mapper);
+  private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
+  private CompactionStatusTracker statusTracker;
+
+  @Before
+  public void setup()
+  {
+    statusTracker = new CompactionStatusTracker(mapper);
+  }
 
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
@@ -97,7 +105,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     assertCompactSegmentIntervals(
@@ -122,7 +131,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     assertCompactSegmentIntervals(
@@ -156,7 +166,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     assertCompactSegmentIntervals(
@@ -204,7 +215,8 @@ public class NewestSegmentFirstPolicyTest
                 )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Interval lastInterval = null;
@@ -260,7 +272,8 @@ public class NewestSegmentFirstPolicyTest
                 )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Interval lastInterval = null;
@@ -301,7 +314,8 @@ public class NewestSegmentFirstPolicyTest
                 new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     assertCompactSegmentIntervals(
@@ -340,7 +354,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(inputSegmentSizeBytes, new Period("P0D"), null)),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
@@ -377,7 +392,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), null)),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -398,7 +414,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), null)),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -415,7 +432,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // We should only get segments in Oct
@@ -448,7 +466,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // We should only get segments in Oct
@@ -474,7 +493,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UserCompactionTaskGranularityConfig(Granularities.MINUTE, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // We should only get segments in Oct
@@ -512,7 +532,8 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-15T00:00:00/2017-11-15T20:00:00"),
                 Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
             )
-        )
+        ),
+        statusTracker
     );
 
     assertCompactSegmentIntervals(
@@ -550,7 +571,8 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-16T04:00:00/2017-11-16T10:00:00"),
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
             )
-        )
+        ),
+        statusTracker
     );
 
     assertCompactSegmentIntervals(
@@ -589,7 +611,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
@@ -638,7 +661,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get the segment of "2020-01-28/2020-02-03" back twice when the iterator returns for Jan and when the
     // iterator returns for Feb.
@@ -673,7 +697,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MINUTE, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
@@ -699,7 +724,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
@@ -743,7 +769,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     Assert.assertFalse(iterator.hasNext());
   }
@@ -776,7 +803,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     Assert.assertFalse(iterator.hasNext());
   }
@@ -809,7 +837,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -852,7 +881,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -904,7 +934,8 @@ public class NewestSegmentFirstPolicyTest
                         )
         ),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -955,7 +986,8 @@ public class NewestSegmentFirstPolicyTest
                         )
         ),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -1007,7 +1039,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, null, true))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1067,7 +1100,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, Granularities.MINUTE, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1141,7 +1175,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1182,7 +1217,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1261,7 +1297,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1302,7 +1339,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1385,7 +1423,8 @@ public class NewestSegmentFirstPolicyTest
             new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1426,7 +1465,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1443,7 +1483,8 @@ public class NewestSegmentFirstPolicyTest
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
@@ -1498,7 +1539,8 @@ public class NewestSegmentFirstPolicyTest
                         )
         ),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // We should get all segments in timeline back since indexSpec changed
     Assert.assertTrue(iterator.hasNext());
@@ -1565,7 +1607,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     Assert.assertFalse(iterator.hasNext());
 
@@ -1600,7 +1643,8 @@ public class NewestSegmentFirstPolicyTest
             null
         )),
         ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     Assert.assertFalse(iterator.hasNext());
   }
@@ -1631,7 +1675,8 @@ public class NewestSegmentFirstPolicyTest
                                         )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1663,7 +1708,8 @@ public class NewestSegmentFirstPolicyTest
                                         )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1695,7 +1741,8 @@ public class NewestSegmentFirstPolicyTest
                                         )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1727,7 +1774,8 @@ public class NewestSegmentFirstPolicyTest
                                         )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1759,7 +1807,8 @@ public class NewestSegmentFirstPolicyTest
                                         )
             )
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1810,7 +1859,8 @@ public class NewestSegmentFirstPolicyTest
             DATA_SOURCE,
             SegmentTimeline.forSegments(ImmutableSet.of(tombstone2023, dataSegment2023, tombstone2024))
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
 
     // Skips 2024/2025 since it has a single tombstone and no data.
@@ -1868,7 +1918,8 @@ public class NewestSegmentFirstPolicyTest
                 tombstone2025Mar
             ))
         ),
-        Collections.emptyMap()
+        Collections.emptyMap(),
+        statusTracker
     );
     // Does not skip the tombstones in 2025 since there are multiple of them which could potentially be condensed to one
     Assert.assertEquals(

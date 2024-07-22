@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.coordinator.compact;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -30,6 +32,11 @@ import java.util.Map;
 /**
  * Segment searching policy used by {@link CompactSegments}.
  */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class),
+    @JsonSubTypes.Type(name = "smallestSegmentFirst", value = SmallestSegmentFirstPolicy.class)
+})
 public interface CompactionSegmentSearchPolicy
 {
   /**
@@ -38,6 +45,7 @@ public interface CompactionSegmentSearchPolicy
   CompactionSegmentIterator createIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals
+      Map<String, List<Interval>> skipIntervals,
+      CompactionStatusTracker statusTracker
   );
 }

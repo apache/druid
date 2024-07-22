@@ -97,13 +97,13 @@ import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -229,6 +229,7 @@ public class CliCoordinator extends ServerRunnable
                 CachingCostBalancerStrategyConfig.class
             );
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
+            JsonConfigProvider.bind(binder, "druid.compaction.scheduler", CompactionSchedulerConfig.class);
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
@@ -255,6 +256,7 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
 
+            binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
             binder.bind(CoordinatorConfigManager.class);
             binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
@@ -291,9 +293,6 @@ public class CliCoordinator extends ServerRunnable
                   + "for more details about compaction."
               );
             }
-
-            //TODO: make this configurable when there are multiple search policies
-            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
 
             bindAnnouncer(
                 binder,

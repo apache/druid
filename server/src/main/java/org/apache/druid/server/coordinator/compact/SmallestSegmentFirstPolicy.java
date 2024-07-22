@@ -21,19 +21,18 @@ package org.apache.druid.server.coordinator.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.curator.shaded.com.google.common.collect.Ordering;
-import org.apache.druid.java.util.common.guava.Comparators;
+import com.google.common.collect.Ordering;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
 
 /**
- * This policy searches segments for compaction from newest to oldest.
+ * This policy searches segments for compaction from smallest to largest.
  */
-public class NewestSegmentFirstPolicy extends BaseSegmentSearchPolicy
+public class SmallestSegmentFirstPolicy extends BaseSegmentSearchPolicy
 {
   @JsonCreator
-  public NewestSegmentFirstPolicy(
+  public SmallestSegmentFirstPolicy(
       @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
   )
   {
@@ -43,7 +42,7 @@ public class NewestSegmentFirstPolicy extends BaseSegmentSearchPolicy
   @Override
   protected Comparator<SegmentsToCompact> getSegmentComparator()
   {
-    return (o1, o2) -> Comparators.intervalsByStartThenEnd()
-                           .compare(o2.getUmbrellaInterval(), o1.getUmbrellaInterval());
+    return Ordering.natural()
+                   .onResultOf(entry -> entry.getTotalBytes() / entry.size());
   }
 }

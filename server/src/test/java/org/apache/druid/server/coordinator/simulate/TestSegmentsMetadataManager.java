@@ -228,12 +228,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public void poll()
-  {
-
-  }
-
-  @Override
   public void populateUsedFlagLastUpdatedAsync()
   {
   }
