@@ -39,6 +39,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.task.CompactionIntervalSpec;
 import org.apache.druid.indexing.common.task.CompactionTask;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -399,39 +400,17 @@ public class MSQCompactionRunnerTest
       PartitionsSpec partitionsSpec
   )
   {
-    return new CompactionTask.CompactionTuningConfig(
-        null,
-        null, // null to compute maxRowsPerSegment automatically
-        null,
-        500000,
-        1000000L,
-        null,
-        null,
-        null,
-        null,
-        partitionsSpec,
-        indexSpec,
-        null,
-        null,
-        !(partitionsSpec instanceof DynamicPartitionsSpec),
-        false,
-        5000L,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder
+        .forCompactionTask()
+        .withMaxRowsInMemory(500000)
+        .withMaxBytesInMemory(1000000L)
+        .withMaxTotalRows(Long.MAX_VALUE)
+        .withPartitionsSpec(partitionsSpec)
+        .withIndexSpec(indexSpec)
+        .withForceGuaranteedRollup(!(partitionsSpec instanceof DynamicPartitionsSpec))
+        .withReportParseExceptions(false)
+        .withPushTimeout(5000L)
+        .build();
   }
 
   private static IndexSpec createIndexSpec()

@@ -34,12 +34,13 @@ export const ACTION_COLUMN_WIDTH = 70;
 export interface ActionCellProps {
   onDetail?: () => void;
   disableDetail?: boolean;
-  actions?: BasicAction[];
+  actions: BasicAction[];
+  menuTitle: string;
 }
 
 export const ActionCell = React.memo(function ActionCell(props: ActionCellProps) {
-  const { onDetail, disableDetail, actions } = props;
-  const actionsMenu = actions ? basicActionsToMenu(actions) : null;
+  const { onDetail, disableDetail, actions, menuTitle } = props;
+  const actionsMenu = basicActionsToMenu(actions, menuTitle);
 
   return (
     <div className="action-cell">

@@ -898,6 +898,7 @@ export class SupervisorsView extends React.PureComponent<
                 <ActionCell
                   onDetail={() => this.onSupervisorDetail(row.original)}
                   actions={supervisorActions}
+                  menuTitle={id}
                 />
               );
             },
