@@ -24,6 +24,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * This annotation is to distinguish {@link SqlAggregator} or {@link org.apache.calcite.sql.SqlAggFunction}
+ * which supports the distinct aggregation natively
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface NativelySupportsDistinct
