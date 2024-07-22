@@ -24,7 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
 
 import java.util.List;
 import java.util.Map;
@@ -54,18 +55,18 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
    * @return the template if a selector matches, otherwise fallback to base template
    */
   @Override
-  public Pair<String, PodTemplate> getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
+  public PodTemplateWithName getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
   {
     String templateKey = selectors.stream()
                                   .filter(selector -> selector.evaluate(task))
                                   .findFirst()
                                   .map(Selector::getSelectionKey)
-                                  .orElse("base");
+                                  .orElse(DruidK8sConstants.BASE_TEMPLATE_NAME);
 
     if (!templates.containsKey(templateKey)) {
-      templateKey = "base";
+      templateKey = DruidK8sConstants.BASE_TEMPLATE_NAME;
     }
-    return Pair.of(templateKey, templates.get(templateKey));
+    return new PodTemplateWithName(templateKey, templates.get(templateKey));
   }
 
   @JsonProperty
