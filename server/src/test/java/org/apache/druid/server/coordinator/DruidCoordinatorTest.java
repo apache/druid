@@ -191,7 +191,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        CompactionSchedulerConfig.defaultConfig(),
+        new CompactionSchedulerConfig(true),
         statusTracker
     );
   }
@@ -811,7 +811,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        CompactionSchedulerConfig.defaultConfig(),
+        new CompactionSchedulerConfig(true),
         statusTracker
     );
     coordinator.start();

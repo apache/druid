@@ -406,7 +406,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         throw new ISE("segmentsToCompact is empty?");
       }
 
-      final String dataSourceName = entry.getFirst().getDataSource();
+      final String dataSourceName = entry.getDataSource();
       LOG.info("Compacting version[%s].", entry.getFirst().getVersion());
 
       // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
@@ -564,7 +564,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     while (iterator.hasNext()) {
       final SegmentsToCompact entry = iterator.next();
       if (!entry.isEmpty()) {
-        final String dataSourceName = entry.getFirst().getDataSource();
+        final String dataSourceName = entry.getDataSource();
         currentRunAutoCompactionSnapshotBuilders
             .computeIfAbsent(dataSourceName, AutoCompactionSnapshot::builder)
             .incrementWaitingStats(entry.getStats());

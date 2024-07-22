@@ -38,6 +38,7 @@ public class SegmentsToCompact
 
   private final List<DataSegment> segments;
   private final Interval umbrellaInterval;
+  private final String datasource;
   private final long totalBytes;
   private final int numIntervals;
 
@@ -61,6 +62,7 @@ public class SegmentsToCompact
     this.totalBytes = 0L;
     this.numIntervals = 0;
     this.umbrellaInterval = null;
+    this.datasource = null;
   }
 
   private SegmentsToCompact(List<DataSegment> segments)
@@ -71,6 +73,7 @@ public class SegmentsToCompact
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
     );
     this.numIntervals = (int) segments.stream().map(DataSegment::getInterval).distinct().count();
+    this.datasource = segments.get(0).getDataSource();
   }
 
   public List<DataSegment> getSegments()
@@ -107,6 +110,11 @@ public class SegmentsToCompact
     return umbrellaInterval;
   }
 
+  public String getDataSource()
+  {
+    return datasource;
+  }
+
   public CompactionStatistics getStats()
   {
     return CompactionStatistics.create(totalBytes, size(), numIntervals);
@@ -116,7 +124,8 @@ public class SegmentsToCompact
   public String toString()
   {
     return "SegmentsToCompact{" +
-           "segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
+           "datasource=" + datasource +
+           ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", totalSize=" + totalBytes +
            '}';
   }

@@ -42,9 +42,13 @@ public class CompactionStatusTracker
 {
   private static final Logger log = new Logger(CompactionStatusTracker.class);
 
+  private static final int MAX_FAILURE_RETRIES = 3;
+  private static final int MAX_SKIPS_AFTER_SUCCESS = 5;
+  private static final int MAX_SKIPS_AFTER_FAILURE = 5;
+
   private final ObjectMapper objectMapper;
   private final Map<String, DatasourceStatus> datasourceStatuses = new HashMap<>();
-  private final Map<String, ClientCompactionTaskQuery> submittedTaskIdToPayload = new HashMap<>();
+  private final Map<String, SegmentsToCompact> submittedTaskIdToSegments = new HashMap<>();
 
   @Inject
   public CompactionStatusTracker(
@@ -121,7 +125,7 @@ public class CompactionStatusTracker
       SegmentsToCompact candidateSegments
   )
   {
-    submittedTaskIdToPayload.put(taskPayload.getId(), taskPayload);
+    submittedTaskIdToSegments.put(taskPayload.getId(), candidateSegments);
     getOrComputeDatasourceStatus(taskPayload.getDataSource())
         .handleSubmittedTask(candidateSegments);
   }
@@ -132,14 +136,14 @@ public class CompactionStatusTracker
       return;
     }
 
-    final ClientCompactionTaskQuery taskPayload = submittedTaskIdToPayload.remove(taskId);
-    if (taskPayload == null) {
+    final SegmentsToCompact candidateSegments = submittedTaskIdToSegments.remove(taskId);
+    if (candidateSegments == null) {
       // Nothing to do since we don't know the corresponding datasource or interval
       return;
     }
 
-    final Interval compactionInterval = taskPayload.getIoConfig().getInputSpec().getInterval();
-    getOrComputeDatasourceStatus(taskPayload.getDataSource())
+    final Interval compactionInterval = candidateSegments.getUmbrellaInterval();
+    getOrComputeDatasourceStatus(candidateSegments.getDataSource())
         .handleTaskStatus(compactionInterval, taskStatus);
   }
 
@@ -164,19 +168,28 @@ public class CompactionStatusTracker
       final IntervalStatus lastKnownStatus = intervalStatus.get(compactionInterval);
 
       if (taskStatus.isSuccess()) {
-        intervalStatus.put(compactionInterval, new IntervalStatus(IntervalState.COMPACTED, 10));
-      } else if (lastKnownStatus == null) {
+        intervalStatus.put(
+            compactionInterval,
+            new IntervalStatus(IntervalState.COMPACTED, MAX_SKIPS_AFTER_SUCCESS)
+        );
+      } else if (lastKnownStatus == null || !lastKnownStatus.isFailed()) {
         // This is the first failure
-        intervalStatus.put(compactionInterval, new IntervalStatus(IntervalState.FAILED, 0));
-      } else if (lastKnownStatus.state == IntervalState.FAILED && ++lastKnownStatus.retryCount > 10) {
+        intervalStatus.put(
+            compactionInterval,
+            new IntervalStatus(IntervalState.FAILED, 0)
+        );
+      } else if (++lastKnownStatus.retryCount >= MAX_FAILURE_RETRIES) {
         // Failure retries have been exhausted
-        intervalStatus.put(compactionInterval, new IntervalStatus(IntervalState.FAILED_ALL_RETRIES, 10));
+        intervalStatus.put(
+            compactionInterval,
+            new IntervalStatus(IntervalState.FAILED_ALL_RETRIES, MAX_SKIPS_AFTER_FAILURE)
+        );
       }
     }
 
     void handleSubmittedTask(SegmentsToCompact candidateSegments)
     {
-      getIntervalStatuses().computeIfAbsent(
+      intervalStatus.computeIfAbsent(
           candidateSegments.getUmbrellaInterval(),
           i -> new IntervalStatus(IntervalState.TASK_SUBMITTED, 0)
       );
@@ -214,6 +227,11 @@ public class CompactionStatusTracker
     {
       return turnsToSkip <= 0
              && (state == IntervalState.COMPACTED || state == IntervalState.FAILED_ALL_RETRIES);
+    }
+
+    boolean isFailed()
+    {
+      return state == IntervalState.FAILED || state == IntervalState.FAILED_ALL_RETRIES;
     }
   }
 

@@ -63,7 +63,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
     } else {
       comparator = Ordering.compound(
           Arrays.asList(
-              Ordering.explicit(priorityDatasource).onResultOf(entry -> entry.getFirst().getDataSource()),
+              Ordering.explicit(priorityDatasource).onResultOf(SegmentsToCompact::getDataSource),
               segmentPriority
           )
       );
@@ -131,7 +131,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       throw new NoSuchElementException();
     }
 
-    addNextItemForDatasourceToQueue(entry.getFirst().getDataSource());
+    addNextItemForDatasourceToQueue(entry.getDataSource());
     return entry;
   }
 
