@@ -97,7 +97,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     List<Selector> emptySelectors = Collections.emptyList();
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(emptySelectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).rhs.getMetadata().getName());
   }
 
   @Test
@@ -107,7 +107,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     List<Selector> selectors = Collections.singletonList(noMatchSelector);
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).rhs.getMetadata().getName());
   }
 
   @Test
@@ -124,7 +124,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     );
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("match", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+    Assert.assertEquals("match", strategy.getPodTemplateForTask(task, templates).rhs.getMetadata().getName());
   }
 
   @Test

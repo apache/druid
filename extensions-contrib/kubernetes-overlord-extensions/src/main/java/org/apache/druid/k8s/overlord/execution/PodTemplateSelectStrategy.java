@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.java.util.common.Pair;
 
 import javax.validation.constraints.NotNull;
 import java.util.Map;
@@ -44,5 +45,5 @@ public interface PodTemplateSelectStrategy
    * @param task The task for which the Pod template is determined.
    * @return The pod template that should be used to run the task.
    */
-  @NotNull PodTemplate getPodTemplateForTask(Task task, Map<String, PodTemplate> templates);
+  @NotNull Pair<String, PodTemplate> getPodTemplateForTask(Task task, Map<String, PodTemplate> templates);
 }

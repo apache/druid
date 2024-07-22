@@ -28,6 +28,7 @@ public class DruidK8sConstants
   public static final String TASK_TYPE = "task.type";
   public static final String TASK_GROUP_ID = "task.group.id";
   public static final String TASK_DATASOURCE = "task.datasource";
+  public static final String TASK_JOB_TEMPLATE = "task.jobTemplate";
   public static final int PORT = 8100;
   public static final int TLS_PORT = 8091;
   public static final int DEFAULT_CPU_MILLICORES = 1000;
