@@ -55,10 +55,6 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
              image name will typically be provided by the build enfironment, and will
              override this default name. -->
         <druid.it.image-name>${project.groupId}/test:${project.version}</druid.it.image-name>
-        <!-- <druid.it.prev.version>27.0.0</druid.it.prev.version>
-        <druid.it.prev.version.download.url>https://dlcdn.apache.org/druid/27.0.0/apache-druid-30.0.0-bin.tar.gz</druid.it.prev.version.download.url>
-        <druid.it.prev.image-name>${project.groupId}/test:${druid.it.prev.version}</druid.it.prev.image-name>
-        <druid.it.backward-incompatibility.enabled>false</druid.it.backward-incompatibility.enabled> -->
         <confluent-version>5.5.1</confluent-version>
         <mariadb.version>2.7.3</mariadb.version>
         <mysql.image.version>5.7-debian</mysql.image.version>
@@ -213,10 +209,6 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                         <HADOOP_VERSION>${hadoop.compile.version}</HADOOP_VERSION>
                                         <DRUID_VERSION>${project.version}</DRUID_VERSION>
                                         <DRUID_IT_IMAGE_NAME>${druid.it.image-name}</DRUID_IT_IMAGE_NAME>
-                                        <!-- DRUID_PREVIOUS_VERSION>${druid.it.prev.version}</DRUID_PREVIOUS_VERSION
-                                        <DRUID_PREVIOUS_VERSION_DOWNLOAD_URL>${druid.it.prev.version.download.url}</DRUID_PREVIOUS_VERSION_DOWNLOAD_URL>
-                                        <DRUID_PREVIOUS_IT_IMAGE_NAME>${druid.it.prev.image-name}</DRUID_PREVIOUS_IT_IMAGE_NAME>
-                                        <BACKWARD_INCOMPATIBILITY_IT_ENABLED>${druid.it.backward-incompatibility.enabled}</BACKWARD_INCOMPATIBILITY_IT_ENABLED> -->
                                         <TARGET_DIR>${project.build.directory}</TARGET_DIR>
                                         <!-- Maven has no good way to get the root directory, so
                                              this is as close as we can get. -->

@@ -241,15 +241,6 @@ case $CMD in
     mvn -B install -pl :druid-it-tools
     ;;
   "image" )
-    echo "it.sh printing env vars"
-    #export DRUID_PREVIOUS_VERSION=30.0.0
-    #export BACKWARD_INCOMPATIBILITY_IT_ENABLED=true
-    #export DRUID_PREVIOUS_VERSION_DOWNLOAD_URL=https://dlcdn.apache.org/druid/30.0.0/apache-druid-30.0.0-bin.tar.gz
-    #export DRUID_PREVIOUS_IT_IMAGE_NAME=org.apache.druid.integration-tests/test:30.0.0
-    echo $BACKWARD_INCOMPATIBILITY_IT_ENABLED
-    echo $DRUID_PREVIOUS_VERSION
-    echo $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL
-    echo $DRUID_PREVIOUS_IT_IMAGE_NAME
     cd $DRUID_DEV/integration-tests-ex/image
     mvn -B install -P test-image $MAVEN_IGNORE
     ;;
@@ -295,16 +286,9 @@ case $CMD in
     tail_logs
     ;;
   "github" )
-    echo "it.sh printing env vars"
-    echo $BACKWARD_INCOMPATIBILITY_IT_ENABLED
-    echo $DRUID_PREVIOUS_VERSION
-    echo $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL
-    echo $DRUID_PREVIOUS_IT_IMAGE_NAME
-
     set +e
     $0 test $CATEGORY
     RESULT=$?
-
 
     # Include logs, but only for failures.
     if [ $RESULT -ne 0 ]; then

@@ -73,4 +73,3 @@ RUN bash /test-setup.sh
 USER druid:druid
 WORKDIR /
 ENTRYPOINT [ "bash", "/launch.sh" ]
-

@@ -58,8 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #jdk: [ '8', '11', '17', '21' ]
-        jdK: [ '8' ]
+        jdk: [ '8', '11', '17', '21' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -144,13 +143,12 @@ jobs:
     name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
-    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     with:
       jdk: ${{ matrix.jdk }}
       sql_compatibility: true
 
   unit-tests:
-    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -164,12 +162,10 @@ jobs:
 
   standard-its:
     needs: unit-tests
-    if: false #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
   expose-vars:
-    #needs: unit-tests
-    needs: build
     runs-on: ubuntu-latest
     outputs:
       BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ env.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
@@ -180,8 +176,8 @@ jobs:
       - run: echo "Exposing env vars"
 
   revised-its:
-    needs: expose-vars
-    if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    needs: [unit-tests, expose-vars]
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
     with:
       BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ needs.expose-vars.outputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
