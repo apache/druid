@@ -124,9 +124,9 @@ jobs:
       - name: Save previous version docker image
         if: ${{ env.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' }}
         run: |
-          docker tag ${DRUID_PREVIOUS_IT_IMAGE_NAME} ${DRUID_PREVIOUS_IT_IMAGE_NAME}-jdk${{ inputs.build_jdk }}-version${DRUID_PREVIOUS_VERSION}
+          docker tag ${DRUID_PREVIOUS_IT_IMAGE_NAME} ${DRUID_PREVIOUS_IT_IMAGE_NAME}-jdk${{ matrix.jdk }}-version${DRUID_PREVIOUS_VERSION}
           echo ${DRUID_PREVIOUS_IT_IMAGE_NAME}
-          docker save "${DRUID_PREVIOUS_IT_IMAGE_NAME}" | gzip > druid-container-jdk${{ inputs.build_jdk }}-version${DRUID_PREVIOUS_VERSION}.tar.gz    
+          docker save "${DRUID_PREVIOUS_IT_IMAGE_NAME}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${DRUID_PREVIOUS_VERSION}.tar.gz    
 
   unit-tests-phase2:
     strategy:
