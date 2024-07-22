@@ -130,7 +130,7 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
-  public void testMSQEngineWithRollupFalseWithMetricsSpecIsInValid()
+  public void testMSQEngineWithRollupFalseWithMetricsSpecIsInvalid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
         new DynamicPartitionsSpec(3, null),
@@ -145,29 +145,6 @@ public class ClientCompactionRunnerInfoTest
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
         "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine.",
-        validationResult.getReason()
-    );
-  }
-
-  @Test
-  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
-  {
-    // Aggregators having different input and ouput column names are unsupported.
-    final String inputColName = "added";
-    final String outputColName = "sum_added";
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
-        new DynamicPartitionsSpec(3, null),
-        Collections.emptyMap(),
-        new UserCompactionTaskGranularityConfig(null, null, null),
-        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
-    );
-    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
-        compactionConfig,
-        CompactionEngine.NATIVE
-    );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
-        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
         validationResult.getReason()
     );
   }

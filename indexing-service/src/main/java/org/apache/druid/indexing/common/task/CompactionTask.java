@@ -610,7 +610,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     // Check index metadata & decide which values to propagate (i.e. carry over) for rollup & queryGranularity
     final ExistingSegmentAnalyzer existingSegmentAnalyzer = new ExistingSegmentAnalyzer(
         segments,
-        granularitySpec.isRollup() == null,
+        true, // Always need rollup to check if there are some rollup segments already present.
         granularitySpec.getQueryGranularity() == null,
         dimensionsSpec == null,
         metricsSpec == null
@@ -671,7 +671,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,
-        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null)
+        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
+        existingSegmentAnalyzer.getHasRolledUpSegments(),
+        null,
+    null
     );
   }
 
@@ -748,6 +751,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     // For processRollup:
     private boolean rollup = true;
+    private boolean hasRolledUpSegments = false;
 
     // For processQueryGranularity:
     private Granularity queryGranularity;
@@ -813,6 +817,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
 
       return rollup;
+    }
+
+    public Boolean getHasRolledUpSegments()
+    {
+      return hasRolledUpSegments;
     }
 
     public Granularity getQueryGranularity()
@@ -904,6 +913,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // Pick rollup value if all segments being compacted have the same, non-null, value otherwise set it to false
       final Boolean isIndexRollup = index.getMetadata().isRollup();
       rollup = rollup && Boolean.valueOf(true).equals(isIndexRollup);
+      hasRolledUpSegments = hasRolledUpSegments || Boolean.valueOf(true).equals(isIndexRollup);
     }
 
     private void processQueryGranularity(final QueryableIndex index)

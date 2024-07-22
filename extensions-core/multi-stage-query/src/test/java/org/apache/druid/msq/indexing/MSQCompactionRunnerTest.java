@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -54,6 +55,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -61,7 +63,6 @@ import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -73,6 +74,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MSQCompactionRunnerTest
 {
@@ -196,27 +198,6 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
-  {
-    // Aggregators having different input and ouput column names are unsupported.
-    final String inputColName = "added";
-    final String outputColName = "sum_added";
-    CompactionTask compactionTask = createCompactionTask(
-        new DynamicPartitionsSpec(3, null),
-        null,
-        Collections.emptyMap(),
-        new ClientCompactionTaskGranularitySpec(null, null, null),
-        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
-    );
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask);
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
-        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
-        validationResult.getReason()
-    );
-  }
-
-  @Test
   public void testRunCompactionTasksWithEmptyTaskListFails() throws Exception
   {
     CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap(), null, null);
@@ -288,6 +269,10 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertNull(msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY));
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assert.assertEquals(PARTITION_DIMENSIONS.stream().map(col -> new ScanQuery.OrderBy(
+        col,
+        ScanQuery.Order.ASCENDING
+    )).collect(Collectors.toList()), ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys());
   }
 
   @Test
@@ -356,6 +341,47 @@ public class MSQCompactionRunnerTest
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
     );
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+  }
+
+  @Test
+  public void testIntervalsWithRolledUpSegmentsAndNonIdempotentAggregatorFails() throws Exception
+  {
+    final String inputColName = "added";
+    final String outputColName = "sum_added";
+    CompactionTask compactionTask = createCompactionTask(
+        null,
+        null,
+        Collections.emptyMap(),
+        null,
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory(
+                outputColName,
+                inputColName
+            )
+        }
+    );
+    DataSchema dataSchema = new DataSchema(
+        DATA_SOURCE,
+        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
+        new DimensionsSpec(DIMENSIONS),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)},
+        new UniformGranularitySpec(
+            SEGMENT_GRANULARITY.getDefaultGranularity(),
+            null,
+            false,
+            Collections.singletonList(COMPACTION_INTERVAL)
+        ),
+        null,
+        true,
+        null,
+        null
+    );
+    TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.singletonMap(COMPACTION_INTERVAL, dataSchema), null);
+    Assert.assertTrue(taskStatus.isFailure());
+    Assert.assertEquals(taskStatus.getErrorMsg(), StringUtils.format(
+        "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
+        COMPACTION_INTERVAL
+    ));
   }
 
   private CompactionTask createCompactionTask(

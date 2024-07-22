@@ -49,7 +49,9 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -58,6 +60,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -139,7 +142,6 @@ public class MSQCompactionRunner implements CompactionRunner
       ));
     }
     validationResults.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(compactionTask.getContext()));
-    validationResults.add(ClientCompactionRunnerInfo.validateMetricsSpecForMSQ(compactionTask.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -159,6 +161,41 @@ public class MSQCompactionRunner implements CompactionRunner
       TaskToolbox taskToolbox
   ) throws Exception
   {
+    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalDataSchemas.entrySet()) {
+      if (Boolean.valueOf(true).equals(intervalDataSchema.getValue().getHasRolledUpSegments())) {
+        for (AggregatorFactory aggregatorFactory : intervalDataSchema.getValue().getAggregators()) {
+          // Don't proceed if either:
+          // - aggregator factory differs from its combining factory
+          // - input col name is different from the output name (idempotent)
+          // This is a conservative check as existing rollup may have been idempotent but the aggregator provided in
+          // compaction spec isn't. This would get properly compacted yet fails in the below pre-check.
+          if (
+              !(
+                  aggregatorFactory.getClass().equals(aggregatorFactory.getCombiningFactory().getClass()) &&
+                  (
+                      aggregatorFactory.requiredFields().isEmpty() ||
+                      (aggregatorFactory.requiredFields().size() == 1 &&
+                       aggregatorFactory.requiredFields()
+                                        .get(0)
+                                        .equals(aggregatorFactory.getName()))
+                  )
+              )
+          ) {
+            // MSQ doesn't support rolling up already rolled-up segments when aggregate column name is different from
+            // the aggregated column name. This is because the aggregated values would then get overwritten by new
+            // values and the existing values would be lost. Note that if no rollup is specified in an index spec,
+            // the default value is true.
+            String errorMsg = StringUtils.format(
+                "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
+                intervalDataSchema.getKey()
+            );
+            log.error(errorMsg);
+            return TaskStatus.failure(compactionTask.getId(), errorMsg);
+
+          }
+        }
+      }
+    }
     List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, intervalDataSchemas);
 
     if (msqControllerTasks.isEmpty()) {
@@ -291,6 +328,10 @@ public class MSQCompactionRunner implements CompactionRunner
     for (DimensionSchema dimensionSchema : dataSchema.getDimensionsSpec().getDimensions()) {
       rowSignatureBuilder.add(dimensionSchema.getName(), ColumnType.fromString(dimensionSchema.getTypeName()));
     }
+    // There can be columns that are part of metricsSpec for a datasource.
+    for (AggregatorFactory aggregatorFactory : dataSchema.getAggregators()) {
+      rowSignatureBuilder.add(aggregatorFactory.getName(), aggregatorFactory.getIntermediateType());
+    }
     return rowSignatureBuilder.build();
   }
 
@@ -354,15 +395,31 @@ public class MSQCompactionRunner implements CompactionRunner
   private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema)
   {
     RowSignature rowSignature = getRowSignature(dataSchema);
-    return new Druids.ScanQueryBuilder().dataSource(dataSchema.getDataSource())
-                                        .columns(rowSignature.getColumnNames())
-                                        .virtualColumns(getVirtualColumns(dataSchema, interval))
-                                        .columnTypes(rowSignature.getColumnTypes())
-                                        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
-                                        .legacy(false)
-                                        .filters(dataSchema.getTransformSpec().getFilter())
-                                        .context(compactionTask.getContext())
-                                        .build();
+    Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
+        .dataSource(dataSchema.getDataSource())
+        .columns(rowSignature.getColumnNames())
+        .virtualColumns(getVirtualColumns(dataSchema, interval))
+        .columnTypes(rowSignature.getColumnTypes())
+        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
+        .legacy(false)
+        .filters(dataSchema.getTransformSpec().getFilter())
+        .context(compactionTask.getContext());
+
+    if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
+      List<OrderByColumnSpec> orderByColumnSpecs = getOrderBySpec(compactionTask.getTuningConfig().getPartitionsSpec());
+
+      scanQueryBuilder.orderBy(
+          orderByColumnSpecs
+              .stream()
+              .map(orderByColumnSpec ->
+                       new ScanQuery.OrderBy(
+                           orderByColumnSpec.getDimension(),
+                           ScanQuery.Order.fromString(orderByColumnSpec.getDirection().toString())
+                       ))
+              .collect(Collectors.toList())
+      );
+    }
+    return scanQueryBuilder.build();
   }
 
   private static boolean isGroupBy(DataSchema dataSchema)
@@ -470,6 +527,8 @@ public class MSQCompactionRunner implements CompactionRunner
     }
     // Similar to compaction using the native engine, don't finalize aggregations.
     context.putIfAbsent(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
+    // Add appropriate finalization to native query context.
+    context.put(QueryContexts.FINALIZE_KEY, false);
     // Only scalar or array-type dimensions are allowed as grouping keys.
     context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
     return context;
