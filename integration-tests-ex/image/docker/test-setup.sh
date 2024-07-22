@@ -24,10 +24,10 @@ set -e
 set -u
 
 # Enable for tracing
-#set -x
+set -x
 
 # For debugging: verify environment
-#env
+env
 
 # Druid system user
 adduser --system --group --no-create-home druid
@@ -58,6 +58,7 @@ chmod a+x /run-druid.sh
 # should be added in this step.
 cd /usr/local/
 
+echo "untar the zip"
 tar -xzf apache-druid-${DRUID_VERSION}-bin.tar.gz
 rm apache-druid-${DRUID_VERSION}-bin.tar.gz
 

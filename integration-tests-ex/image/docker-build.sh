@@ -62,8 +62,14 @@ if [[ -z "${BACKWARD_INCOMPATIBILITY_IT_ENABLED:-""}" || $BACKWARD_INCOMPATIBILI
   exit 0
 fi
 
+echo $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL
+echo $DRUID_PREVIOUS_VERSION
+
 # Download the previous druid tar
 curl -L $DRUID_PREVIOUS_VERSION_DOWNLOAD_URL --output apache-druid-$DRUID_PREVIOUS_VERSION-bin.tar.gz
+
+echo "untarring "
+tar -xzf apache-druid-$DRUID_PREVIOUS_VERSION-bin.tar.gz
 
 docker build -t $DRUID_PREVIOUS_IT_IMAGE_NAME \
 	--build-arg DRUID_VERSION=$DRUID_PREVIOUS_VERSION \
