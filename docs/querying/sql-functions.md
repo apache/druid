@@ -1162,11 +1162,11 @@ Calculates x modulo y, or the remainder of x divided by y. Where x and y are num
 The following calculates 78 MOD 10.
 
 ```sql
-SELECT MOD(78, 10) as "mod"
+SELECT MOD(78, 10) as "modulo"
 ```
 Returns the following:
 
-| `mod` | 
+| `modulo` | 
 | -- | 
 | `8` | 
 </details>
@@ -1522,7 +1522,7 @@ Calculates the square root of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following example applies SQRT to the `trip_distance` column from the `taxi-trips` datasource.
+The following example calculates the square root of 25.
 
 ```sql
 SELECT SQRT(25) AS "square_root"
