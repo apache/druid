@@ -67,7 +67,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
-import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -778,12 +777,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct() && isSqlCallDistinct(call)) {
-      Class<?> clazz = null;
-      if (call.getOperator() instanceof SqlAggFunction || call.getOperator() instanceof SqlAggregator) {
-        clazz = call.getOperator().getClass();
-      }
-      if (call.getOperator().getKind() != SqlKind.COUNT) {
-        if (clazz != null && !clazz.isAnnotationPresent(NativelySupportsDistinct.class)) {
+      if (call.getOperator().getKind() != SqlKind.COUNT && call.getOperator() instanceof SqlAggFunction) {
+        if (!call.getOperator().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
           throw buildCalciteContextException(
               StringUtils.format(
                   "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
