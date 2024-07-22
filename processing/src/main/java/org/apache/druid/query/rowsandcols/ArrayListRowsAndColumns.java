@@ -212,6 +212,12 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   @Override
   public void addColumn(String name, Column column)
   {
+    if (rows.size() == numRows() && column instanceof ObjectArrayColumn) {
+      extraColumns.put(name, column);
+      columnNames.add(name);
+      return;
+    }
+
     // When an ArrayListRowsAndColumns is only a partial view, but adds a column, it believes that the same column
     // will eventually be added for all the rows so we pre-allocate storage for the entire set of data and copy.
 
