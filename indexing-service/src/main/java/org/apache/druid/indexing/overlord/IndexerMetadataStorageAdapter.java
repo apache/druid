@@ -25,6 +25,7 @@ import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.metadata.TaskLookup;
 import org.joda.time.Interval;
 
 import java.util.Comparator;
@@ -32,16 +33,16 @@ import java.util.Optional;
 
 public class IndexerMetadataStorageAdapter
 {
-  private final TaskStorageQueryAdapter taskStorageQueryAdapter;
+  private final TaskStorage taskStorage;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
 
   @Inject
   public IndexerMetadataStorageAdapter(
-      TaskStorageQueryAdapter taskStorageQueryAdapter,
+      TaskStorage taskStorage,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator
   )
   {
-    this.taskStorageQueryAdapter = taskStorageQueryAdapter;
+    this.taskStorage = taskStorage;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
   }
 
@@ -49,8 +50,8 @@ public class IndexerMetadataStorageAdapter
   {
     // Find the earliest active task created for the specified datasource; if one exists,
     // check if its interval overlaps with the delete interval.
-    final Optional<TaskInfo<Task, TaskStatus>> earliestActiveTaskOptional = taskStorageQueryAdapter
-        .getActiveTaskInfo(dataSource)
+    final Optional<TaskInfo<Task, TaskStatus>> earliestActiveTaskOptional = taskStorage
+        .getTaskInfos(TaskLookup.activeTasksOnly(), dataSource)
         .stream()
         .min(Comparator.comparing(TaskInfo::getCreatedTime));
 

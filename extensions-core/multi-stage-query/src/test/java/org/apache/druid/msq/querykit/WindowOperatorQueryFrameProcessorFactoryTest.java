@@ -17,30 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.common.actions;
+package org.apache.druid.msq.querykit;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-/**
- * The configuration for task audit logging.
- * This class will be removed in future releases. See https://github.com/apache/druid/issues/5859.
- */
-@Deprecated
-public class TaskAuditLogConfig
+public class WindowOperatorQueryFrameProcessorFactoryTest
 {
-  @JsonProperty
-  private final boolean enabled;
-
-  @JsonCreator
-  public TaskAuditLogConfig(@JsonProperty("enabled") boolean enabled)
+  @Test
+  public void testEqualsAndHashcode()
   {
-    this.enabled = enabled;
-  }
-
-  @JsonProperty("enabled")
-  public boolean isEnabled()
-  {
-    return enabled;
+    EqualsVerifier.forClass(WindowOperatorQueryFrameProcessorFactory.class)
+                  .withNonnullFields("query", "operatorList", "stageRowSignature", "isEmptyOver", "maxRowsMaterializedInWindow", "partitionColumnNames")
+                  .usingGetClass()
+                  .verify();
   }
 }

@@ -100,6 +100,8 @@ public class MultiStageQueryContext
   public static final String CTX_MSQ_MODE = "mode";
   public static final String DEFAULT_MSQ_MODE = MSQMode.STRICT_MODE.toString();
 
+  // Note: CTX_MAX_NUM_TASKS and DEFAULT_MAX_NUM_TASKS values used here should be kept in sync with those in
+  // org.apache.druid.client.indexing.ClientMsqContext
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   @VisibleForTesting
   static final int DEFAULT_MAX_NUM_TASKS = 2;
@@ -145,9 +147,11 @@ public class MultiStageQueryContext
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
   // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
   // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
+
+  public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -322,6 +326,12 @@ public class MultiStageQueryContext
   public static int getRowsInMemory(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+  }
+
+  public static Integer getMaxNumSegments(final QueryContext queryContext)
+  {
+    // The default is null, if the context is not set.
+    return queryContext.getInt(CTX_MAX_NUM_SEGMENTS);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)

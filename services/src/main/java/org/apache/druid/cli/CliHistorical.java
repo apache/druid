@@ -49,6 +49,7 @@ import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.SegmentBootstrapper;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -125,6 +126,7 @@ public class CliHistorical extends ServerRunnable
           if (isZkEnabled) {
             LifecycleModule.register(binder, ZkCoordinator.class);
           }
+          LifecycleModule.register(binder, SegmentBootstrapper.class);
 
           JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
           binder.install(new CacheModule());

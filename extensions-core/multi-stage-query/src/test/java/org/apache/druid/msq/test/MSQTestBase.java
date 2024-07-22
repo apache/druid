@@ -834,6 +834,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         expectedTuningConfig.getRowsPerSegment(),
         tuningConfig.getRowsPerSegment()
     );
+    Assert.assertEquals(
+        expectedTuningConfig.getMaxNumSegments(),
+        tuningConfig.getMaxNumSegments()
+    );
   }
 
   @Nullable
@@ -1284,6 +1288,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                       .stream()
                                                                       .filter(segmentId -> segmentId.getInterval()
                                                                                                     .contains((Long) row[0]))
+                                                                      .filter(segmentId -> {
+                                                                        List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
+                                                                        return lists.contains(Arrays.asList(row));
+                                                                      })
                                                                       .collect(Collectors.toList());
             if (diskSegmentList.size() != 1) {
               throw new IllegalStateException("Single key in multiple partitions");

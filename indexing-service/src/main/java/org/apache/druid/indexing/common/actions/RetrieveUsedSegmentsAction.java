@@ -187,12 +187,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

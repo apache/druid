@@ -39,6 +39,7 @@ import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -62,12 +63,14 @@ import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -91,6 +94,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -99,6 +103,7 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE1;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE2;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE3;
 import static org.apache.druid.sql.calcite.util.CalciteTests.DATASOURCE5;
+import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_LOTS_O_COLUMNS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
@@ -205,6 +210,17 @@ public class CalciteMSQTestsHelper
   {
     final QueryableIndex index;
     switch (segmentId.getDataSource()) {
+      case WIKIPEDIA:
+        try {
+          final File directory = new File(tempFolderProducer.apply("tmpDir"), StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+          final IncrementalIndex incrementalIndex = TestIndex.makeWikipediaIncrementalIndex();
+          TestIndex.INDEX_MERGER.persist(incrementalIndex, directory, IndexSpec.DEFAULT, null);
+          index = TestIndex.INDEX_IO.loadIndex(directory);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        break;
       case DATASOURCE1:
         IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
             .withMetrics(
@@ -390,6 +406,13 @@ public class CalciteMSQTestsHelper
         break;
       case CalciteTests.WIKIPEDIA_FIRST_LAST:
         index = TestDataBuilder.makeWikipediaIndexWithAggregation(tempFolderProducer.apply("tmpDir"));
+        break;
+      case CalciteTests.TBL_WITH_NULLS_PARQUET:
+      case CalciteTests.SML_TBL_PARQUET:
+      case CalciteTests.ALL_TYPES_UNIQ_PARQUET:
+      case CalciteTests.FEW_ROWS_ALL_DATA_PARQUET:
+      case CalciteTests.T_ALL_TYPE_PARQUET:
+        index = TestDataBuilder.getQueryableIndexForDrillDatasource(segmentId.getDataSource(), tempFolderProducer.apply("tmpDir"));
         break;
       default:
         throw new ISE("Cannot query segment %s in test runner", segmentId);
