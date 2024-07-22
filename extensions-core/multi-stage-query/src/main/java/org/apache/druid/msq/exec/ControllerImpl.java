@@ -128,6 +128,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
+import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.MapInputSpecSlicer;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.external.ExternalInputSpecSlicer;
@@ -1179,7 +1180,7 @@ public class ControllerImpl implements Controller
       final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
       TerminalStageSpec terminalStageSpec = destination.getTerminalStageSpec();
       if (destination.getTerminalStageSpec() instanceof SegmentGenerationStageSpec) {
-        return (Int2ObjectMap) ((SegmentGenerationStageSpec) terminalStageSpec).makeSegmentGeneratorWorkerFactoryInfos(
+        return (Int2ObjectMap) ((SegmentGenerationStageSpec) terminalStageSpec).getWorkerInfo(
             workerInputs,
             segmentsToGenerate
         );
@@ -1742,14 +1743,41 @@ public class ControllerImpl implements Controller
     }
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-      TerminalStageSpec terminalStageSpec = destination.getTerminalStageSpec();
-      if (terminalStageSpec instanceof SegmentGenerationStageSpec) {
-        return ((SegmentGenerationStageSpec) terminalStageSpec).constructFinalStage(queryId, queryDef, querySpec, jsonMapper);
-      } else {
-        throw DruidException.defensive("Unknown segment generation strategy [%s]", terminalStageSpec);
+      // Find the stage that provides shuffled input to the final segment-generation stage.
+      StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
+
+      while (!finalShuffleStageDef.doesShuffle()
+             && InputSpecs.getStageNumbers(finalShuffleStageDef.getInputSpecs()).size() == 1) {
+        finalShuffleStageDef = queryDef.getStageDefinition(
+            Iterables.getOnlyElement(InputSpecs.getStageNumbers(finalShuffleStageDef.getInputSpecs()))
+        );
       }
 
+      if (!finalShuffleStageDef.doesShuffle()) {
+        finalShuffleStageDef = null;
+      }
+
+      // Add all query stages.
+      // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+
+      for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
+        if (stageDef.equals(finalShuffleStageDef)) {
+          builder.add(StageDefinition.builder(stageDef).shuffleCheckHasMultipleValues(true));
+        } else {
+          builder.add(StageDefinition.builder(stageDef));
+        }
+      }
+
+      final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+      return builder.add(
+          destination.getTerminalStageSpec()
+                     .constructFinalStage(
+                         queryDef,
+                         querySpec,
+                         jsonMapper)
+                    )
+                    .build();
     } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
       return queryDef;
     } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {

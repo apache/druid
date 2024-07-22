@@ -28,13 +28,12 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
-import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.stage.ReadablePartition;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
-import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -61,45 +60,19 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
     return INSTANCE;
   }
 
-  public QueryDefinition constructFinalStage(String queryId, QueryDefinition queryDef, MSQSpec querySpec, ObjectMapper jsonMapper)
+  @Override
+  public StageDefinitionBuilder constructFinalStage(QueryDefinition queryDef, MSQSpec querySpec, ObjectMapper jsonMapper)
   {
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
     final ClusterBy queryClusterBy = queryDef.getFinalStageDefinition().getClusterBy();
 
-    // Find the stage that provides shuffled input to the final segment-generation stage.
-    StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
-
-    while (!finalShuffleStageDef.doesShuffle()
-           && InputSpecs.getStageNumbers(finalShuffleStageDef.getInputSpecs()).size() == 1) {
-      finalShuffleStageDef = queryDef.getStageDefinition(
-          Iterables.getOnlyElement(InputSpecs.getStageNumbers(finalShuffleStageDef.getInputSpecs()))
-      );
-    }
-
-    if (!finalShuffleStageDef.doesShuffle()) {
-      finalShuffleStageDef = null;
-    }
-
-    // Add all query stages.
-    // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
-    final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
-
-    for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
-      if (stageDef.equals(finalShuffleStageDef)) {
-        builder.add(StageDefinition.builder(stageDef).shuffleCheckHasMultipleValues(true));
-      } else {
-        builder.add(StageDefinition.builder(stageDef));
-      }
-    }
-
-    // Then, add a segment-generation stage.
+    // Add a segment-generation stage.
     final DataSchema dataSchema =
         SegmentGenerationUtils.makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
 
-    builder.add(
-        StageDefinition.builder(queryDef.getNextStageNumber())
+    return StageDefinition.builder(queryDef.getNextStageNumber())
                        .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
                        .maxWorkerCount(tuningConfig.getMaxNumWorkers())
                        .processorFactory(
@@ -108,13 +81,10 @@ public class SegmentGenerationStageSpec implements TerminalStageSpec
                                columnMappings,
                                tuningConfig
                            )
-                       )
     );
-
-    return builder.build();
   }
 
-  public Int2ObjectMap<List<SegmentIdWithShardSpec>> makeSegmentGeneratorWorkerFactoryInfos(
+  public Int2ObjectMap<List<SegmentIdWithShardSpec>> getWorkerInfo(
       final WorkerInputs workerInputs,
       @Nullable final List<SegmentIdWithShardSpec> segmentsToGenerate
   )
