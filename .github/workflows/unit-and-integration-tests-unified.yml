@@ -173,7 +173,7 @@ jobs:
 
   revised-its:
     needs: expose-vars
-    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    if: true #${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
     with:
       BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ needs.expose-vars.outputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
