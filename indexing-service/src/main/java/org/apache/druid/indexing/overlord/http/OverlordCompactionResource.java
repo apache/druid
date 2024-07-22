@@ -35,6 +35,10 @@ import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Collections;
 
+/**
+ * Contains the same logic as {@code CompactionResource} but the APIs are served
+ * by {@link CompactionScheduler} instead of {@code DruidCoordinator}.
+ */
 @Path("/druid/indexer/v1/compaction")
 public class OverlordCompactionResource
 {

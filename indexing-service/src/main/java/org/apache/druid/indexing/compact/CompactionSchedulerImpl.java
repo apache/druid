@@ -80,8 +80,10 @@ import java.util.function.Supplier;
  *  - [x] task state listener
  *  - [x] handle success and failure inside CompactionStatusTracker
  *  - [x] make policy serializable
- *  - [ ] handle priority datasource in policy
- *  - [ ] add another policy - newestSegmentFirst, smallestSegmentFirst, auto
+ *  - [x] handle priority datasource in policy
+ *  - [x] add another policy - smallestSegmentFirst
+ *  - [ ] add policy auto
+ *  - [ ] handle skipping turns if no more intervals in datasource
  *  - [x] enable segments polling if overlord is standalone
  *  - [ ] test on cluster - standalone, coordinator-overlord
  *  - [ ] unit tests

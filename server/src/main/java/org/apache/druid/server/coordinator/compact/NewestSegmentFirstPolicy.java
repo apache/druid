@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.compact;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.curator.shaded.com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nullable;

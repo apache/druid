@@ -115,7 +115,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       currentLeader = overlordLeaderSelector.getCurrentLeader();
       request.setAttribute(
           MODIFIED_PATH_ATTRIBUTE,
-          request.getRequestURI().replace(COMPACTION_COORDINATOR_PATH, COMPACTION_OVERLORD_PATH)
+          StringUtils.replace(request.getRequestURI(), COMPACTION_COORDINATOR_PATH, COMPACTION_OVERLORD_PATH)
       );
     } else if (requestURI.startsWith(STANDARD_COORDINATOR_BASE_PATH)) {
       currentLeader = coordLeaderSelector.getCurrentLeader();
