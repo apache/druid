@@ -212,7 +212,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   @Override
   public void addColumn(String name, Column column)
   {
-    if (rows.size() == numRows() && column instanceof ObjectArrayColumn) {
+    if (rows.size() == numRows() && column.as(ColumnValueSwapper.class) != null) {
       extraColumns.put(name, column);
       columnNames.add(name);
       return;
