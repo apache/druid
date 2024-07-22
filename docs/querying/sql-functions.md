@@ -1358,7 +1358,7 @@ Calculates a numerical expression raised to the specified power.
 
 <details><summary>Example</summary>
 
-The following example raise 5 to the power of 2.
+The following example raises 5 to the power of 2.
 
 ```sql
 SELECT POWER(5, 2) AS "power"
