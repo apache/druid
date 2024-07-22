@@ -4426,7 +4426,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_7")
   @Test
   public void test_nestedAggs_emtyOvrCls_7()
@@ -7274,9 +7274,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_8")
-  @Test
+  @Test 
   public void test_nestedAggs_emtyOvrCls_8()
   {
     windowQueryTest();
