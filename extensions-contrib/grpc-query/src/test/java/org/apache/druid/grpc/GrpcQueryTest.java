@@ -121,7 +121,7 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
    * Do a very basic query.
    */
   @Test
-  public void testBasics_sql() throws Exception
+  public void testBasics_sql()
   {
     QueryRequest request = QueryRequest.newBuilder()
                                        .setQuery("SELECT * FROM foo")
