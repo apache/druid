@@ -78,6 +78,7 @@ public class GroupByRules
             "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
             call.getAggregation().getKind()
         );
+        return null;
       }
     }
 

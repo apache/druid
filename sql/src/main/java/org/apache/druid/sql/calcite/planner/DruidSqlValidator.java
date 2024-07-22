@@ -67,6 +67,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -758,8 +759,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException(
             StringUtils.format(
                 "The query contains window functions; To run these window functions, specify [%s] in query context.",
-                PlannerContext.CTX_ENABLE_WINDOW_FNS),
-            call);
+                PlannerContext.CTX_ENABLE_WINDOW_FNS
+            ),
+            call
+        );
       }
     }
     if (call.getKind() == SqlKind.NULLS_FIRST) {
@@ -774,18 +777,23 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
-//    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct() && isSqlCallDistinct(call)) {
-//      if (call.getOperator() instanceof SqlAggFunction) {
-//        Class<?> clazz = ((SqlAggFunction) call.getOperator()).getClass();
-//        if (!clazz.isAnnotationPresent(NativelySupportsDistinct.class)
-//            || !clazz.getAnnotation(NativelySupportsDistinct.class).value()) {
-//          throw buildCalciteContextException(
-//              "Only COUNT with DISTINCT is supported when useApproximateCountDistinct is enabled. Run with disabling it.",
-//              call
-//          );
-//        }
-//      }
-//    }
+    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct() && isSqlCallDistinct(call)) {
+      Class<?> clazz = null;
+      if (call.getOperator() instanceof SqlAggFunction || call.getOperator() instanceof SqlAggregator) {
+        clazz = call.getOperator().getClass();
+      }
+      if (call.getOperator().getKind() != SqlKind.COUNT) {
+        if (clazz != null && !clazz.isAnnotationPresent(NativelySupportsDistinct.class)) {
+          throw buildCalciteContextException(
+              String.format(
+                  "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
+                  call.getOperator().getName()
+              ),
+              call
+          );
+        }
+      }
+    }
     super.validateCall(call, scope);
   }
 
