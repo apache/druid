@@ -47,9 +47,8 @@ import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
@@ -230,6 +229,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
             partitionColumnNames
         );
 
+        // We need to pass only the window factories for the window stage definition.
+        // Sorting and partitioning are expected to be handled by the shuffle spec of the previous stage.
+        final List<OperatorFactory> windowOperatorList = operatorList.get(i)
+                                                                     .stream()
+                                                                     .filter(operator -> operator instanceof WindowOperatorFactory)
+                                                                     .collect(Collectors.toList());
+
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + i)
                            .inputs(new StageInputSpec(firstStageNumber + i - 1))
@@ -238,7 +244,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                            .shuffleSpec(nextShuffleSpec)
                            .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                                queryToRun,
-                               operatorList.get(i),
+                               windowOperatorList,
                                stageRowSignature,
                                maxRowsMaterialized,
                                partitionColumnNames
@@ -302,26 +308,19 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
     }
 
-    Map<String, ColumnWithDirection.Direction> sortColumnsMap = new HashMap<>();
-    if (sort != null) {
-      for (ColumnWithDirection sortColumn : sort.getSortColumns()) {
-        sortColumnsMap.put(sortColumn.getColumn(), sortColumn.getDirection());
-      }
-    }
-
-    if (partition == null || partition.getPartitionColumns().isEmpty()) {
-      // If operatorFactories doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
-      // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
+    if (partition == null || partition.getPartitionColumns().isEmpty() || sort == null || sort.getSortColumns().isEmpty()) {
+      // If operatorFactories doesn't have any partitioning or sorting factory, then we should keep the shuffle spec from previous stage.
+      // This indicates that we already have the data partitioned and sorted correctly, and hence we don't need to do any shuffling.
       return null;
     }
 
     List<KeyColumn> keyColsOfWindow = new ArrayList<>();
-    for (String partitionColumn : partition.getPartitionColumns()) {
+    for (ColumnWithDirection sortColumn : sort.getSortColumns()) {
       KeyColumn kc;
-      if (sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC) {
-        kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
+      if (sortColumn.getDirection() == ColumnWithDirection.Direction.DESC) {
+        kc = new KeyColumn(sortColumn.getColumn(), KeyOrder.DESCENDING);
       } else {
-        kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
+        kc = new KeyColumn(sortColumn.getColumn(), KeyOrder.ASCENDING);
       }
       keyColsOfWindow.add(kc);
     }
