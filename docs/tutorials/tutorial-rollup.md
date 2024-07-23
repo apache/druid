@@ -24,16 +24,18 @@ sidebar_label: Aggregate data with rollup
   -->
 
 
-Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup." Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup." [Rollup](../ingestion/rollup.md) is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
-This tutorial demonstrates the effects of rollup on an example dataset.
+This tutorial demonstrates the effects of rollup on an example dataset. See [ingesting with rollup](https://druid.apache.org/docs/latest/multi-stage-query/concepts/#rollup) to learn more. 
 
-For this tutorial, you should have Druid downloaded as described in
-the [single-machine quickstart](index.md) and have it running on your local machine. The examples in the tutorial use the [multi-stage query](../multi-stage-query/index.md) (MSQ) task engine to execute SQL statements.
+## Prerequisites
 
-Before proceeding, it's recommended to complete the tutorials to [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md).
+Before proceeding, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
-## Example data
+You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
+
+
+## Load the example data
 
 For this tutorial, you use a small sample of network flow event data, representing IP traffic.
 The data contains packet and byte counts from a source IP address to a destination IP address.
@@ -52,11 +54,9 @@ The data contains packet and byte counts from a source IP address to a destinati
 
 The tutorial demonstrates how to apply rollup at ingestion and shows the effect of rollup at query time.
 
-## Load the example data
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to read data provided inline with the query.
 
-Load the sample dataset using the EXTERN function to read data provided inline with the query.
-
-In the Druid web console, go to the **Query** view and run the following query:
+In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
 ```sql
 INSERT INTO "rollup_tutorial"
@@ -73,8 +73,8 @@ SELECT
   "srcIP",
   "dstIP",
   SUM("bytes") AS "bytes",
-  COUNT(*) AS "count",
-  SUM("packets") AS "packets"
+  SUM("packets") AS "packets",
+  COUNT(*) AS "count"
 FROM "inline_data"
 GROUP BY 1, 2, 3
 PARTITIONED BY DAY
@@ -88,7 +88,7 @@ After the ingestion completes, you can query the data.
 
 ## Query the example data
 
-Open a new tab in the Query view. Run the following query to view the ingested data:
+In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
 
 ```sql
 SELECT * FROM "rollup_tutorial"
@@ -119,7 +119,7 @@ Druid combines the three rows into one during rollup:
 | -- | -- | -- | -- | -- | -- |
 | `2018-01-01T01:01:00.000Z` | `1.1.1.1` | `2.2.2.2` | `35,937` | `3` | `286` |
 
-The input rows were grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`.
+The input rows were grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`. The `count` metric shows how many rows in the original input data contributed to the final "rolled up" row.
 
 Before the grouping occurs, the timestamps of the original input data are bucketed (floored) by minute, due to the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression in the query.
 
@@ -148,5 +148,4 @@ Therefore, no rollup takes place:
 | -- | -- | -- | -- | -- | -- |
 | `2018-01-01T01:03:00.000Z` | `1.1.1.1` | `2.2.2.2` | `10,204` | `1` | `49` |
 
-Note that the `count` metric shows how many rows in the original input data contributed to the final "rolled up" row.
 
