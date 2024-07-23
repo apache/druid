@@ -35,7 +35,8 @@ Before proceeding, it's recommended to complete the tutorials to [Load a file](.
 
 ## Example data
 
-For this tutorial, you use a small sample of network flow event data, representing packet and byte counts for traffic from a source to a destination IP address that occurred within a particular second.
+For this tutorial, you use a small sample of network flow event data, representing IP traffic.
+The data contains packet and byte counts from a source IP address to a destination IP address.
 
 ```json
 {"timestamp":"2018-01-01T01:01:35Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":20,"bytes":9024}
@@ -49,13 +50,13 @@ For this tutorial, you use a small sample of network flow event data, representi
 {"timestamp":"2018-01-02T21:35:45Z","srcIP":"7.7.7.7", "dstIP":"8.8.8.8","packets":12,"bytes":2818}
 ```
 
-The tutorial guides you through how to ingest this data using rollup.
+The tutorial demonstrates how to apply rollup at ingestion and shows the effect of rollup at query time.
 
 ## Load the example data
 
-Load the sample dataset using INSERT and EXTERN functions. The EXTERN function lets you read external data or write to an external location.
+Load the sample dataset using the EXTERN function to read data provided inline with the query.
 
-In the Druid web console, go to the Query view and run the following query:
+In the Druid web console, go to the **Query** view and run the following query:
 
 ```sql
 INSERT INTO "rollup_tutorial"
@@ -79,13 +80,15 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-Note that the query uses the `FLOOR` function to give the `__time` a granularity of `MINUTE`. The query defines the dimensions of the rollup by grouping columns 1, 2, and 3, which corresponds to the `timestamp`, `srcIP`, and `dstIP` columns. The query defines the metrics of the rollup by aggregating the `bytes` and `packets` columns.
+Note that the query uses the `FLOOR` function to combine rows based on MINUTE granularity.
+In the query, you group by dimensions, the `timestamp`, `srcIP`, and `dstIP` columns.
+You apply aggregations for the metrics, specifically to sum the `bytes` and `packets` columns and to add a column to count the number of rows that get rolled up.
 
 After the ingestion completes, you can query the data.
 
 ## Query the example data
 
-Open a new tab in the Query view and run the following query to see what data was ingested:
+Open a new tab in the Query view. Run the following query to view the ingested data:
 
 ```sql
 SELECT * FROM "rollup_tutorial"
@@ -110,15 +113,15 @@ Consider the three events in the original input data that occur over the course 
 {"timestamp":"2018-01-01T01:01:59Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":11,"bytes":5780}
 ```
 
-Druid combines the three rows into the following during rollup:
+Druid combines the three rows into one during rollup:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
 | `2018-01-01T01:01:00.000Z` | `1.1.1.1` | `2.2.2.2` | `35,937` | `3` | `286` |
 
-The input rows have been grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`.
+The input rows were grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`.
 
-Before the grouping occurs, the timestamps of the original input data are bucketed/floored by minute, due to the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` function in the query.
+Before the grouping occurs, the timestamps of the original input data are bucketed (floored) by minute, due to the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression in the query.
 
 Consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
@@ -139,7 +142,7 @@ In the original input data, only one event occurs over the course of minute `201
 {"timestamp":"2018-01-01T01:03:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":49,"bytes":10204}
 ```
 
-Therefore no rollup takes place:
+Therefore, no rollup takes place:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
