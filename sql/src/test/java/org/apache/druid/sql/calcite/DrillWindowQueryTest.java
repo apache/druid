@@ -7764,4 +7764,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   {
     windowQueryTest();
   }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_3")
+  @Test
+  public void test_partition_by_array_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
 }
