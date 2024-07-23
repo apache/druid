@@ -104,6 +104,7 @@ export interface WorkbenchViewProps {
   maxTaskMenuHeader?: JSX.Element;
   enginesLabelFn?: ComponentProps<typeof QueryTab>['enginesLabelFn'];
   maxTaskLabelFn?: ComponentProps<typeof QueryTab>['maxTaskLabelFn'];
+  hideToolbar?: boolean;
 }
 
 export interface WorkbenchViewState {
@@ -613,8 +614,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderToolbar() {
-    const { queryEngines } = this.props;
+    const { queryEngines, hideToolbar } = this.props;
     if (!queryEngines.includes('sql-msq-task')) return;
+    if (hideToolbar) return;
 
     const { showRecentQueryTaskPanel } = this.state;
     return (
