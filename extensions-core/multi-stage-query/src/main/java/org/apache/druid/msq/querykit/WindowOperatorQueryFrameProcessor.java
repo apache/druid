@@ -85,6 +85,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
 
+  // List of type strategies to compare the partition columns across rows.
+  // Type strategies are pushed in the same order as column types in frameReader.signature()
+  private final List<NullableTypeStrategy<Object>> typeStrategies = new ArrayList<>();
+
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
       ReadableFrameChannel inputChannel,
@@ -103,13 +107,17 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
     this.jsonMapper = jsonMapper;
-    this.frameReader = frameReader;
     this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
     this.partitionColumnNames = partitionColumnNames;
+
+    this.frameReader = frameReader;
+    for (int i = 0; i < frameReader.signature().size(); i++) {
+      typeStrategies.add(frameReader.signature().getColumnType(i).get().getNullableStrategy());
+    }
   }
 
   @Override
@@ -499,8 +507,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     int match = 0;
     for (String columnName : partitionColumnNames) {
       int i = frameReader.signature().indexOf(columnName);
-      NullableTypeStrategy<Object> nullableTypeStrategy = frameReader.signature().getColumnType(columnName).get().getNullableStrategy();
-      if (nullableTypeStrategy.compare(row1.get(i), row2.get(i)) == 0) {
+      if (typeStrategies.get(i).compare(row1.get(i), row2.get(i)) == 0) {
         match++;
       }
     }
