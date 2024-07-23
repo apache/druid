@@ -28,6 +28,7 @@ public class DruidK8sConstants
   public static final String TASK_TYPE = "task.type";
   public static final String TASK_GROUP_ID = "task.group.id";
   public static final String TASK_DATASOURCE = "task.datasource";
+  public static final String TASK_JOB_TEMPLATE = "task.jobTemplate";
   public static final int PORT = 8100;
   public static final int TLS_PORT = 8091;
   public static final int DEFAULT_CPU_MILLICORES = 1000;
@@ -42,6 +43,7 @@ public class DruidK8sConstants
   public static final String DRUID_HOSTNAME_ENV = "HOSTNAME";
   public static final String LABEL_KEY = "druid.k8s.peons";
   public static final String DRUID_LABEL_PREFIX = "druid.";
+  public static final String BASE_TEMPLATE_NAME = "base";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB
   static final Predicate<Throwable> IS_TRANSIENT = e -> e instanceof KubernetesResourceNotFoundException;
 }
