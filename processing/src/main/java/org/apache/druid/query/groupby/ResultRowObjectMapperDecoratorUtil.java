@@ -149,7 +149,6 @@ public class ResultRowObjectMapperDecoratorUtil
             while (jp.nextToken() != JsonToken.END_ARRAY) {
               objectArray[index] = JacksonUtils.readObjectUsingDeserializationContext(jp, ctxt, javaTypes[index]);
               ++index;
-              jp.nextToken();
             }
 
             return ResultRow.of(objectArray);
