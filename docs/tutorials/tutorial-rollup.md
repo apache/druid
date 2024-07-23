@@ -31,7 +31,7 @@ This tutorial demonstrates the effects of rollup on an example dataset.
 For this tutorial, you should have Druid downloaded as described in
 the [single-machine quickstart](index.md) and have it running on your local machine. The examples in the tutorial use the [multi-stage query](../multi-stage-query/index.md) (MSQ) task engine to execute SQL statements.
 
-It is helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
+Before proceeding, it's recommended to complete the tutorials to [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md).
 
 ## Example data
 
