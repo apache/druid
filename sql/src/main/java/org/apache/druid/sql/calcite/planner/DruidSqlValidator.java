@@ -37,6 +37,7 @@ import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlOverOperator;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
@@ -114,6 +115,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
   {
+    if (isSqlCallDistinct(call)) {
+      throw buildCalciteContextException("DISTINCT is not supported for window functions", windowOrId);
+    }
+
     final SqlWindow targetWindow;
     switch (windowOrId.getKind()) {
       case IDENTIFIER:
@@ -860,6 +865,13 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     return src;
+  }
+
+  private boolean isSqlCallDistinct(@Nullable SqlCall call)
+  {
+    return call != null
+           && call.getFunctionQuantifier() != null
+           && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
   }
 
   @Override

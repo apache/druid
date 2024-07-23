@@ -591,7 +591,22 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 
     settableSupplier.set(ImmutableList.of("1", "2", "3"));
     Assert.assertArrayEquals(new String[]{"1", "2", "3"}, (Object[]) supplier.get());
+  }
 
+  @Test
+  public void test_supplierFromObjectSelector_onArray()
+  {
+    final SettableSupplier<Object[]> settableSupplier = new SettableSupplier<>();
+    final Supplier<Object> supplier = ExpressionSelectors.supplierFromObjectSelector(
+        objectSelectorFromSupplier(settableSupplier, Object[].class),
+        true
+    );
+
+    Assert.assertNotNull(supplier);
+    Assert.assertEquals(null, supplier.get());
+
+    settableSupplier.set(new String[]{"1", "2", "3"});
+    Assert.assertArrayEquals(new String[]{"1", "2", "3"}, (Object[]) supplier.get());
   }
 
   @Test

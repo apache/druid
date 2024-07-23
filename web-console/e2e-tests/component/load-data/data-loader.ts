@@ -66,7 +66,7 @@ export class DataLoader {
   }
 
   private async start() {
-    const cardSelector = `//*[contains(@class,"bp4-card")][p[contains(text(),"${this.connector.name}")]]`;
+    const cardSelector = `//*[contains(@class,"bp5-card")][p[contains(text(),"${this.connector.name}")]]`;
     await this.page.click(cardSelector);
     await clickButton(this.page, 'Connect data');
   }
@@ -126,7 +126,7 @@ export class DataLoader {
     const rollupChecked = await rollupInput!.evaluate(el => (el as HTMLInputElement).checked);
     if (rollupChecked !== configureSchemaConfig.rollup) {
       await this.page.click(rollupSelector);
-      const confirmationDialogSelector = '//*[contains(@class,"bp4-alert-body")]';
+      const confirmationDialogSelector = '//*[contains(@class,"bp5-alert-body")]';
       await this.page.waitForSelector(confirmationDialogSelector);
       await clickButton(this.page, 'Yes');
       const statusMessageSelector = '.recipe-toaster';

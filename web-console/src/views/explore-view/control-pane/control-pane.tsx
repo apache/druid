@@ -24,9 +24,9 @@ import {
   Menu,
   MenuItem,
   NumericInput,
+  Popover,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type {
   ExpressionMeta,
   OptionValue,
@@ -124,7 +124,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         const selectedOption: OptionValue | undefined = controlOptions.find(o => o === value);
         return {
           element: (
-            <Popover2
+            <Popover
               fill
               position="bottom-left"
               minimal
@@ -150,7 +150,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 fill
                 rightElement={<Button icon={IconNames.CARET_DOWN} minimal />}
               />
-            </Popover2>
+            </Popover>
           ),
         };
       }
@@ -171,7 +171,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       case 'column':
         return {
           element: (
-            <Popover2
+            <Popover
               fill
               position="bottom-left"
               minimal
@@ -191,7 +191,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 fill
                 rightElement={<Button icon={IconNames.CARET_DOWN} minimal />}
               />
-            </Popover2>
+            </Popover>
           ),
           onDropColumn: onValueChange,
         };
@@ -228,7 +228,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       case 'aggregate': {
         return {
           element: (
-            <Popover2
+            <Popover
               fill
               position="bottom-left"
               minimal
@@ -248,7 +248,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 fill
                 rightElement={<Button icon={IconNames.CARET_DOWN} minimal />}
               />
-            </Popover2>
+            </Popover>
           ),
           onDropColumn: column => {
             const aggregates = getPossibleAggregateForColumn(column);

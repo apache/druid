@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
@@ -70,6 +69,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final WindowOperatorQuery query;
 
   private final List<OperatorFactory> operatorFactoryList;
+  private final List<String> partitionColumnNames;
   private final ObjectMapper jsonMapper;
   private final ArrayList<RowsAndColumns> frameRowsAndCols;
   private final ArrayList<RowsAndColumns> resultRowAndCols;
@@ -79,13 +79,11 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final FrameReader frameReader;
   private final ArrayList<ResultRow> objectsOfASingleRac;
   private final int maxRowsMaterialized;
-  List<Integer> partitionColsIndex;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
-  private final boolean isOverEmpty;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -96,8 +94,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       ObjectMapper jsonMapper,
       final List<OperatorFactory> operatorFactoryList,
       final RowSignature rowSignature,
-      final boolean isOverEmpty,
-      final int maxRowsMaterializedInWindow
+      final int maxRowsMaterializedInWindow,
+      final List<String> partitionColumnNames
   )
   {
     this.inputChannel = inputChannel;
@@ -110,9 +108,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
-    this.partitionColsIndex = new ArrayList<>();
-    this.isOverEmpty = isOverEmpty;
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
+    this.partitionColumnNames = partitionColumnNames;
   }
 
   @Override
@@ -162,7 +159,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      *
      *
      * The flow would look like:
-     * 1. Validate if the operator has an empty OVER clause
+     * 1. Validate if the operator doesn't have any OVER() clause with PARTITION BY for this stage.
      * 2. If 1 is true make a giant rows and columns (R&C) using concat as shown above
      *    Let all operators run amok on that R&C
      * 3. If 1 is false
@@ -177,24 +174,22 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      *
      *  Future thoughts: {@link https://github.com/apache/druid/issues/16126}
      *
-     *  1. We are writing 1 partition to each frame in this way. In case of low cardinality data
-     *      we will me making a large number of small frames. We can have a check to keep size of frame to a value
+     *  1. We are writing 1 partition to each frame in this way. In case of high cardinality data
+     *      we will be making a large number of small frames. We can have a check to keep size of frame to a value
      *      say 20k rows and keep on adding to the same pending frame and not create a new frame
      *
      *  2. Current approach with R&C and operators materialize a single R&C for processing. In case of data
-     *     with high cardinality a single R&C might be too big to consume. Same for the case of empty OVER() clause
+     *     with low cardinality a single R&C might be too big to consume. Same for the case of empty OVER() clause
      *     Most of the window operations like SUM(), RANK(), RANGE() etc. can be made with 2 passes of the data.
      *     We might think to reimplement them in the MSQ way so that we do not have to materialize so much data
      */
 
-    // Phase 1 of the execution
-    // eagerly validate presence of empty OVER() clause
-    if (isOverEmpty) {
-      // if OVER() found
-      // have to bring all data to a single executor for processing
-      // convert each frame to rac
-      // concat all the racs to make a giant rac
-      // let all operators run on the giant rac when channel is finished
+    if (partitionColumnNames.isEmpty()) {
+      // If we do not have any OVER() clause with PARTITION BY for this stage.
+      // Bring all data to a single executor for processing.
+      // Convert each frame to RAC.
+      // Concatenate all the racs to make a giant RAC.
+      // Let all operators run on the giant RAC until channel is finished.
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         convertRowFrameToRowsAndColumns(frame);
@@ -218,7 +213,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           final Frame frame = inputChannel.read();
           frameCursor = FrameProcessors.makeCursor(frame, frameReader);
           final ColumnSelectorFactory frameColumnSelectorFactory = frameCursor.getColumnSelectorFactory();
-          partitionColsIndex = findPartitionColumns(frameReader.signature());
           final Supplier<Object>[] fieldSuppliers = new Supplier[frameReader.signature().size()];
           for (int i = 0; i < fieldSuppliers.length; i++) {
             final ColumnValueSelector<?> selector =
@@ -259,18 +253,17 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         if (outputRow == null) {
           outputRow = currentRow;
           objectsOfASingleRac.add(currentRow);
-        } else if (comparePartitionKeys(outputRow, currentRow, partitionColsIndex)) {
+        } else if (comparePartitionKeys(outputRow, currentRow, partitionColumnNames)) {
           // if they have the same partition key
           // keep adding them after checking
           // guardrails
+          objectsOfASingleRac.add(currentRow);
           if (objectsOfASingleRac.size() > maxRowsMaterialized) {
             throw new MSQException(new TooManyRowsInAWindowFault(
                 objectsOfASingleRac.size(),
                 maxRowsMaterialized
             ));
           }
-          objectsOfASingleRac.add(currentRow);
-
         } else {
           // key change noted
           // create rac from the rows seen before
@@ -484,37 +477,32 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     frameRowsAndCols.add(ldrc);
   }
 
-  private List<Integer> findPartitionColumns(RowSignature rowSignature)
-  {
-    List<Integer> indexList = new ArrayList<>();
-    for (OperatorFactory of : operatorFactoryList) {
-      if (of instanceof NaivePartitioningOperatorFactory) {
-        for (String s : ((NaivePartitioningOperatorFactory) of).getPartitionColumns()) {
-          indexList.add(rowSignature.indexOf(s));
-        }
-      }
-    }
-    return indexList;
-  }
-
   /**
-   *
-   * Compare two rows based only the columns in the partitionIndices
-   * In case the parition indices is empty or null compare entire row
-   *
+   * Compare two rows based on the columns in partitionColumnNames.
+   * If the partitionColumnNames is empty, the method will end up returning true.
+   * <p>
+   * For example, say:
+   * <ul>
+   *   <li>partitionColumnNames = ["d1", "d2"]</li>
+   *   <li>frameReader's row signature = {d1:STRING, d2:STRING, p0:STRING}</li>
+   *   <li>frameReader.signature.indexOf("d1") = 0</li>
+   *   <li>frameReader.signature.indexOf("d2") = 1</li>
+   *   <li>row1 = [d1_row1, d2_row1, p0_row1]</li>
+   *   <li>row2 = [d1_row2, d2_row2, p0_row2]</li>
+   * </ul>
+   * <p>
+   * Then this method will return true if d1_row1==d1_row2 && d2_row1==d2_row2, false otherwise.
+   * Returning true would indicate that these 2 rows can be put into the same partition for window function processing.
    */
-  private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<Integer> partitionIndices)
+  private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<String> partitionColumnNames)
   {
-    if (partitionIndices == null || partitionIndices.isEmpty()) {
-      return row1.equals(row2);
-    } else {
-      int match = 0;
-      for (int i : partitionIndices) {
-        if (Objects.equals(row1.get(i), row2.get(i))) {
-          match++;
-        }
+    int match = 0;
+    for (String columnName : partitionColumnNames) {
+      int i = frameReader.signature().indexOf(columnName);
+      if (Objects.equals(row1.get(i), row2.get(i))) {
+        match++;
       }
-      return match == partitionIndices.size();
     }
+    return match == partitionColumnNames.size();
   }
 }

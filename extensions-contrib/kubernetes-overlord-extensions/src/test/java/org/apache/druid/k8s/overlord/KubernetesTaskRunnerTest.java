@@ -655,6 +655,24 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_getTaskLocation_throws()
+  {
+    KubernetesWorkItem workItem = new KubernetesWorkItem(task, null)
+    {
+      @Override
+      public TaskLocation getLocation()
+      {
+        throw new RuntimeException();
+      }
+    };
+
+    runner.tasks.put(task.getId(), workItem);
+
+    TaskLocation taskLocation = runner.getTaskLocation(task.getId());
+    Assert.assertEquals(TaskLocation.unknown(), taskLocation);
+  }
+
+  @Test
   public void test_getTaskLocation_noTaskFound()
   {
     TaskLocation taskLocation = runner.getTaskLocation(task.getId());
