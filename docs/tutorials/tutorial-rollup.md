@@ -117,9 +117,9 @@ Druid combines the three rows into one during rollup:
 | -- | -- | -- | -- | -- | -- |
 | `2018-01-01T01:01:00.000Z` | `1.1.1.1` | `2.2.2.2` | `35,937` | `3` | `286` |
 
-The input rows were grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`. The `count` metric shows how many rows in the original input data contributed to the final "rolled up" row.
+Before the grouping occurs, the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression buckets (floors) the timestamp column of the original input by minute.
 
-Before the grouping occurs, the timestamps of the original input data are bucketed (floored) by minute, due to the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression in the query.
+The input rows are then grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`. The `count` metric shows how many rows from the original input data contributed to the final "rolled up" row.
 
 Now, consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
@@ -128,7 +128,7 @@ Now, consider the two events in the original input data that occur over the cour
 {"timestamp":"2018-01-01T01:02:29Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":377,"bytes":359971}
 ```
 
-The rows have been grouped into the following during rollup:
+The rows are grouped into the following during rollup:
 
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
