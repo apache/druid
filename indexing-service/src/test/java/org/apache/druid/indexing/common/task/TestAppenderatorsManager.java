@@ -101,7 +101,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
-  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
+  public Appenderator createBatchAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
@@ -116,71 +116,7 @@ public class TestAppenderatorsManager implements AppenderatorsManager
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    return Appenderators.createOpenSegmentsOffline(
-        taskId,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        indexIO,
-        indexMerger,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
-    );
-  }
-
-  @Override
-  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      SegmentGenerationMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    return Appenderators.createClosedSegmentsOffline(
-        taskId,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        indexIO,
-        indexMerger,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
-    );
-  }
-
-  @Override
-  public Appenderator createOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      SegmentGenerationMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    return Appenderators.createOffline(
+    return Appenderators.createBatch(
         taskId,
         schema,
         config,

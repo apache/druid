@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { formatInteger, nonEmptyArray, tickIcon } from '../../utils';
@@ -132,7 +131,7 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
           disabled={!canNext}
           onClick={() => changePage(page + 1)}
         />
-        <Popover2
+        <Popover
           position="top-left"
           disabled={!pageJumpMenuItem && !pageSizeChangeMenuItem}
           content={
@@ -143,7 +142,7 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
           }
         >
           <Button minimal text={pageInfo} />
-        </Popover2>
+        </Popover>
       </ButtonGroup>
       {showPageJumpDialog && (
         <PageJumpDialog

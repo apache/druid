@@ -31,6 +31,7 @@ import {
   Intent,
   Menu,
   MenuItem,
+  Popover,
   Radio,
   RadioGroup,
   Switch,
@@ -38,7 +39,6 @@ import {
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
@@ -2532,9 +2532,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
               {schemaToolsMenu && (
                 <FormGroup>
-                  <Popover2 content={schemaToolsMenu}>
+                  <Popover content={schemaToolsMenu}>
                     <Button icon={IconNames.BUILD} />
-                  </Popover2>
+                  </Popover>
                 </FormGroup>
               )}
             </>
@@ -2895,25 +2895,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       >
         {selectedDimensionSpec.index !== -1 && (
           <FormGroup>
-            <Popover2 content={reorderDimensionMenu}>
+            <Popover content={reorderDimensionMenu}>
               <Button
                 icon={IconNames.ARROWS_HORIZONTAL}
                 text="Reorder dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover2>
+            </Popover>
           </FormGroup>
         )}
         {selectedDimensionSpec.index !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
           <FormGroup>
-            <Popover2 content={convertToMetricMenu}>
+            <Popover content={convertToMetricMenu}>
               <Button
                 icon={IconNames.EXCHANGE}
                 text="Convert to metric"
                 rightIcon={IconNames.CARET_DOWN}
                 disabled={dimensions.length <= 1}
               />
-            </Popover2>
+            </Popover>
           </FormGroup>
         )}
       </FormEditor>
@@ -2978,13 +2978,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           schemaMode === 'fixed' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
-              <Popover2 content={convertToDimensionMenu}>
+              <Popover content={convertToDimensionMenu}>
                 <Button
                   icon={IconNames.EXCHANGE}
                   text="Convert to dimension"
                   rightIcon={IconNames.CARET_DOWN}
                 />
-              </Popover2>
+              </Popover>
             </FormGroup>
           )}
       </FormEditor>

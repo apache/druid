@@ -65,7 +65,7 @@ public class OverlordBlinkLeadershipTest
 
   /**
    * Test that we can start taskRunner, then stop it (emulating "losing leadership", see {@link
-   * TaskMaster#stop()}), then creating a new taskRunner from {@link
+   * TaskMaster#stopBeingLeader()}), then creating a new taskRunner from {@link
    * org.apache.curator.framework.recipes.leader.LeaderSelectorListener#takeLeadership} implementation in
    * {@link TaskMaster} and start it again.
    */

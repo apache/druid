@@ -16,8 +16,10 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+
 .columns-input {
-  .bp4-tag-input-values .bp4-tag {
+  .#{$ns}-tag-input-values .#{$ns}-tag {
     &.drop-before::after {
       content: '';
       height: 24px;

@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
@@ -82,6 +82,9 @@ export interface QueryTabProps {
   clusterCapacity: number | undefined;
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  maxTaskMenuHeader?: JSX.Element;
+  enginesLabelFn?: ComponentProps<typeof RunPanel>['enginesLabelFn'];
+  maxTaskLabelFn?: ComponentProps<typeof RunPanel>['maxTaskLabelFn'];
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -98,6 +101,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     clusterCapacity,
     goToTask,
     getClusterCapacity,
+    maxTaskMenuHeader,
+    enginesLabelFn,
+    maxTaskLabelFn,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -399,6 +405,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               queryEngines={queryEngines}
               clusterCapacity={clusterCapacity}
               moreMenu={runMoreMenu}
+              maxTaskMenuHeader={maxTaskMenuHeader}
+              enginesLabelFn={enginesLabelFn}
+              maxTaskLabelFn={maxTaskLabelFn}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel

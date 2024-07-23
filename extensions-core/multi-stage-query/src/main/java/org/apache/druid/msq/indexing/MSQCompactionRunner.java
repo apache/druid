@@ -401,7 +401,6 @@ public class MSQCompactionRunner implements CompactionRunner
         .virtualColumns(getVirtualColumns(dataSchema, interval))
         .columnTypes(rowSignature.getColumnTypes())
         .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
-        .legacy(false)
         .filters(dataSchema.getTransformSpec().getFilter())
         .context(compactionTask.getContext());
 
