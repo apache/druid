@@ -104,6 +104,9 @@ Returns the following:
 | `2018-01-02T21:33:00.000Z` | `7.7.7.7` | `8.8.8.8` | `100,288` | `2` | `161` |
 | `2018-01-02T21:35:00.000Z` | `7.7.7.7` | `8.8.8.8` | `2,818` | `1` | `12` |
 
+Notice there are only six rows as opposed to the nine rows of the example data. The next section covers how ingestion with rollup acomplishes this.
+
+## View rollup in action
 
 Consider the three events in the original input data that occur over the course of minute `2018-01-01T01:01`:
 
