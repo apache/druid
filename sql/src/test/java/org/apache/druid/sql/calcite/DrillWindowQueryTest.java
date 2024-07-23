@@ -7276,7 +7276,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_8")
-  @Test 
+  @Test
   public void test_nestedAggs_emtyOvrCls_8()
   {
     windowQueryTest();
