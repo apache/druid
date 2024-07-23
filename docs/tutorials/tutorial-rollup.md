@@ -76,8 +76,8 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-In the query, you group by dimensions, the `timestamp`, `srcIP`, and `dstIP` columns. Note that the query uses the `FLOOR` function to bucket rows based on MINUTE granularity.
-You apply aggregations for the metrics, specifically to sum the `bytes` and `packets` columns and to add a column that counts the number of rows that get rolled up.
+In the query, you group by dimensions, `timestamp`, `srcIP`, and `dstIP`. Note that the query uses the `FLOOR` function to bucket rows based on MINUTE granularity.
+For the metrics, you apply aggregations to sum the `bytes` and `packets` columns and add a column that counts the number of rows that get rolled up.
 
 After the ingestion completes, you can query the data.
 
@@ -119,7 +119,7 @@ Druid combines the three rows into one during rollup:
 
 Before the grouping occurs, the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression buckets (floors) the timestamp column of the original input by minute.
 
-The input rows are then grouped by the timestamp and dimension columns `{timestamp, srcIP, dstIP}` with sum aggregations on the metric columns `packets` and `bytes`. The `count` metric shows how many rows from the original input data contributed to the final "rolled up" row.
+The input rows are grouped because they have the same values for their dimension columns `{timestamp, srcIP, dstIP}`. The metric columns calculate the sum aggregation of the grouped rows for `packets` and `bytes`. The `count` metric shows how many rows from the original input data contributed to the final "rolled up" row.
 
 Now, consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
