@@ -18,7 +18,7 @@
 
 .segment-timeline {
   display: grid;
-  grid-template-columns: 1fr 200px;
+  grid-template-columns: 1fr 220px;
 
   .loader {
     width: 85%;
@@ -28,7 +28,6 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    -webkit-transform: translate(-50%, -50%);
     transform: translate(-50%, -50%);
   }
 

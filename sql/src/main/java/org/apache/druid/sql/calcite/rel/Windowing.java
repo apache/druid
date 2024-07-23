@@ -160,15 +160,13 @@ public class Windowing
               Collections.emptyList(),
               aggName,
               aggregateCall,
-              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
+              false // Windowed aggregations finalize later when we write the computed value to result RAC
           );
 
           if (aggregation == null
               || aggregation.getPostAggregator() != null
               || aggregation.getAggregatorFactories().size() != 1) {
-            if (null == plannerContext.getPlanningError()) {
-              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
-            }
+            plannerContext.setPlanningError("Aggregation [%s] is currently not supported for window functions", aggregateCall.getAggregation().getName());
             throw new CannotBuildQueryException(window, aggregateCall);
           }
 

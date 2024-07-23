@@ -16,17 +16,30 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import {
+  Button,
+  ButtonGroup,
+  Intent,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Popover,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlQuery } from '@druid-toolkit/query';
 import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React from 'react';
+import React, { ComponentProps } from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
-import type { DruidEngine, Execution, QueryWithContext, TabEntry } from '../../druid-models';
+import type {
+  CapacityInfo,
+  DruidEngine,
+  Execution,
+  QueryWithContext,
+  TabEntry,
+} from '../../druid-models';
 import { guessDataSourceNameFromInputSource, WorkbenchQuery } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
@@ -87,6 +100,10 @@ export interface WorkbenchViewProps {
   queryEngines: DruidEngine[];
   allowExplain: boolean;
   goToTask(taskId: string): void;
+  getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  maxTaskMenuHeader?: JSX.Element;
+  enginesLabelFn?: ComponentProps<typeof QueryTab>['enginesLabelFn'];
+  maxTaskLabelFn?: ComponentProps<typeof QueryTab>['maxTaskLabelFn'];
 }
 
 export interface WorkbenchViewState {
@@ -388,7 +405,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             WorkbenchQuery.blank()
               .changeQueryString(converted.queryString)
               .changeQueryContext(converted.queryContext || {}),
-            'Convert ' + getSpecDatasourceName(spec as any),
+            `Convert ${getSpecDatasourceName(spec as any) || 'spec'}`,
           );
         }}
         onClose={() => this.setState({ specDialogOpen: false })}
@@ -471,7 +488,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           return (
             <div key={i} className={classNames('tab-button', { active })}>
               {active ? (
-                <Popover2
+                <Popover
                   position="bottom"
                   content={
                     <Menu>
@@ -550,7 +567,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                     minimal
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
-                </Popover2>
+                </Popover>
               ) : (
                 <Button
                   className="tab-name"
@@ -628,8 +645,17 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderCenterPanel() {
-    const { capabilities, mandatoryQueryContext, queryEngines, allowExplain, goToTask } =
-      this.props;
+    const {
+      capabilities,
+      mandatoryQueryContext,
+      queryEngines,
+      allowExplain,
+      goToTask,
+      getClusterCapacity,
+      maxTaskMenuHeader,
+      enginesLabelFn,
+      maxTaskLabelFn,
+    } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
     const effectiveEngine = currentTabEntry.query.getEffectiveEngine();
@@ -650,8 +676,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           onQueryTab={this.handleNewTab}
           onDetails={this.handleDetails}
           queryEngines={queryEngines}
-          clusterCapacity={capabilities.getClusterCapacity()}
+          clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
+          getClusterCapacity={getClusterCapacity}
+          maxTaskMenuHeader={maxTaskMenuHeader}
+          enginesLabelFn={enginesLabelFn}
+          maxTaskLabelFn={maxTaskLabelFn}
           runMoreMenu={
             <Menu>
               {allowExplain &&

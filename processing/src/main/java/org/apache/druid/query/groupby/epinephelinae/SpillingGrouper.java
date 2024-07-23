@@ -152,7 +152,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     }
     this.aggregatorFactories = aggregatorFactories;
     this.temporaryStorage = temporaryStorage;
-    this.spillMapper = spillMapper;
+    this.spillMapper = keySerde.decorateObjectMapper(spillMapper);
     this.spillingAllowed = spillingAllowed;
     this.sortHasNonGroupingFields = sortHasNonGroupingFields;
   }
