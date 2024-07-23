@@ -123,7 +123,7 @@ public final class JacksonUtils
       serializer.serialize(o, jsonGenerator, serializers);
     }
   }
-  
+
   public static <T> T readObjectUsingDeserializationContext(
       final JsonParser jp,
       final DeserializationContext deserializationContext,
@@ -131,6 +131,15 @@ public final class JacksonUtils
   ) throws IOException
   {
     return deserializationContext.readValue(jp, clazz);
+  }
+
+  public static Object readObjectUsingDeserializationContext(
+      final JsonParser jp,
+      final DeserializationContext deserializationContext,
+      final JavaType javaType
+  ) throws IOException
+  {
+    return deserializationContext.readValue(jp, javaType);
   }
 
   /**

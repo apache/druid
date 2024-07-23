@@ -19,23 +19,14 @@
 
 package org.apache.druid.query.groupby;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -51,7 +42,6 @@ import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
@@ -82,7 +72,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -454,104 +443,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Override
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final GroupByQuery query)
   {
-    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
-
-    return objectMapper;
-
-//    // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
-//    final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
-//    {
-//      @Override
-//      public void serialize(
-//          final ResultRow resultRow,
-//          final JsonGenerator jg,
-//          final SerializerProvider serializers
-//      ) throws IOException
-//      {
-//        if (resultAsArray) {
-//          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.getArray());
-//        } else {
-//          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.toMapBasedRow(query));
-//        }
-//      }
-//    };
-//
-//    // Deserializer that can deserialize either array- or map-based rows.
-//    final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
-//    {
-//      final Class<?>[] dimensionClasses = createDimensionClasses(query);
-//      boolean containsComplexDimensions = query.getDimensions()
-//                                               .stream()
-//                                               .anyMatch(
-//                                                   dimensionSpec -> dimensionSpec.getOutputType().is(ValueType.COMPLEX)
-//                                               );
-//
-//      @Override
-//      public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
-//      {
-//        if (jp.isExpectedStartObjectToken()) {
-//          final Row row = jp.readValueAs(Row.class);
-//          final ResultRow resultRow = ResultRow.fromLegacyRow(row, query);
-//          if (containsComplexDimensions) {
-//            final List<DimensionSpec> queryDimensions = query.getDimensions();
-//            for (int i = 0; i < queryDimensions.size(); ++i) {
-//              if (queryDimensions.get(i).getOutputType().is(ValueType.COMPLEX)) {
-//                final int dimensionIndexInResultRow = query.getResultRowDimensionStart() + i;
-//                resultRow.set(
-//                    dimensionIndexInResultRow,
-//                    objectMapper.convertValue(
-//                        resultRow.get(dimensionIndexInResultRow),
-//                        dimensionClasses[i]
-//                    )
-//                );
-//              }
-//            }
-//          }
-//          return resultRow;
-//        } else {
-//          Object[] objectArray = new Object[query.getResultRowSizeWithPostAggregators()];
-//
-//          if (!jp.isExpectedStartArrayToken()) {
-//            throw DruidException.defensive("Expected start token, received [%s]", jp.currentToken());
-//          }
-//
-//          jp.nextToken();
-//
-//          int numObjects = 0;
-//          while (jp.currentToken() != JsonToken.END_ARRAY) {
-//            if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
-//              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
-//                  jp,
-//                  ctxt,
-//                  dimensionClasses[numObjects - query.getResultRowDimensionStart()]
-//              );
-//            } else {
-//              objectArray[numObjects] = JacksonUtils.readObjectUsingDeserializationContext(
-//                  jp,
-//                  ctxt,
-//                  Object.class
-//              );
-//            }
-//            jp.nextToken();
-//            ++numObjects;
-//          }
-//          return ResultRow.of(objectArray);
-//        }
-//      }
-//    };
-//
-//    class GroupByResultRowModule extends SimpleModule
-//    {
-//      private GroupByResultRowModule()
-//      {
-//        addSerializer(ResultRow.class, serializer);
-//        addDeserializer(ResultRow.class, deserializer);
-//      }
-//    }
-//
-//    final ObjectMapper newObjectMapper = objectMapper.copy();
-//    newObjectMapper.registerModule(new GroupByResultRowModule());
-//    return newObjectMapper;
+    return ResultRowObjectMapperDecoratorUtil.decorateObjectMapper(objectMapper, query, queryConfig);
   }
 
   @Override
