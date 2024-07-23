@@ -24,7 +24,7 @@ sidebar_label: Aggregate data with rollup
   -->
 
 
-Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup". Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup." Rollup is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
 This tutorial demonstrates the effects of rollup on an example dataset.
 
