@@ -26,7 +26,7 @@ sidebar_label: Aggregate data with rollup
 
 Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup." [Rollup](../ingestion/rollup.md) is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
-This tutorial demonstrates the effects of rollup on an example dataset. See [ingesting with rollup](https://druid.apache.org/docs/latest/multi-stage-query/concepts/#rollup) to learn more. 
+The tutorial demonstrates how to apply rollup at ingestion and shows the effect of rollup at query time. See [ingesting with rollup](https://druid.apache.org/docs/latest/multi-stage-query/concepts/#rollup) to learn more. 
 
 ## Prerequisites
 
@@ -52,11 +52,7 @@ The data contains packet and byte counts from a source IP address to a destinati
 {"timestamp":"2018-01-02T21:35:45Z","srcIP":"7.7.7.7", "dstIP":"8.8.8.8","packets":12,"bytes":2818}
 ```
 
-The tutorial demonstrates how to apply rollup at ingestion and shows the effect of rollup at query time.
-
-Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to read data provided inline with the query.
-
-In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to ingest the data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
 ```sql
 INSERT INTO "rollup_tutorial"
@@ -80,9 +76,8 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-Note that the query uses the `FLOOR` function to combine rows based on MINUTE granularity.
-In the query, you group by dimensions, the `timestamp`, `srcIP`, and `dstIP` columns.
-You apply aggregations for the metrics, specifically to sum the `bytes` and `packets` columns and to add a column to count the number of rows that get rolled up.
+In the query, you group by dimensions, the `timestamp`, `srcIP`, and `dstIP` columns. Note that the query uses the `FLOOR` function to bucket rows based on MINUTE granularity.
+You apply aggregations for the metrics, specifically to sum the `bytes` and `packets` columns and to add a column that counts the number of rows that get rolled up.
 
 After the ingestion completes, you can query the data.
 
@@ -104,7 +99,7 @@ Returns the following:
 | `2018-01-02T21:33:00.000Z` | `7.7.7.7` | `8.8.8.8` | `100,288` | `2` | `161` |
 | `2018-01-02T21:35:00.000Z` | `7.7.7.7` | `8.8.8.8` | `2,818` | `1` | `12` |
 
-Notice there are only six rows as opposed to the nine rows of the example data. The next section covers how ingestion with rollup acomplishes this.
+Notice there are only six rows as opposed to the nine rows in the example data. The next section covers how ingestion with rollup accomplishes this.
 
 ## View rollup in action
 
@@ -126,7 +121,7 @@ The input rows were grouped by the timestamp and dimension columns `{timestamp, 
 
 Before the grouping occurs, the timestamps of the original input data are bucketed (floored) by minute, due to the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression in the query.
 
-Consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
+Now, consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
 ```json
 {"timestamp":"2018-01-01T01:02:14Z","srcIP":"1.1.1.1", "dstIP":"2.2.2.2","packets":38,"bytes":6289}
