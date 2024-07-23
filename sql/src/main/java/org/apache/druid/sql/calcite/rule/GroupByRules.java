@@ -71,12 +71,11 @@ public class GroupByRules
       return null;
     }
 
-    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct() && call.isDistinct()) {
-      if (call.getAggregation().getKind() != SqlKind.COUNT
-          && !call.getAggregation().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
+    if (call.isDistinct() && call.getAggregation().getKind() != SqlKind.COUNT) {
+      if (!call.getAggregation().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
         plannerContext.setPlanningError(
             "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
-            call.getAggregation().getKind()
+            call.getAggregation().getName()
         );
         return null;
       }
