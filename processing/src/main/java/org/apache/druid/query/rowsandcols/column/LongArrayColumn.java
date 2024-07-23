@@ -192,13 +192,13 @@ public class LongArrayColumn implements Column
     @Override
     public FindResult findString(int startIndex, int endIndex, String val)
     {
-      throw NotYetImplemented.ex("findString is not currently supported for LongArrayColumns");
+      throw NotYetImplemented.ex(null, "findString is not currently supported for LongArrayColumns");
     }
 
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      throw NotYetImplemented.ex("findComplex is not currently supported for LongArrayColumns");
+      throw NotYetImplemented.ex(null, "findComplex is not currently supported for LongArrayColumns");
     }
   }
 }

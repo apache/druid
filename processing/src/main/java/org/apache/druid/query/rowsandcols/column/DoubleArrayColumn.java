@@ -185,13 +185,13 @@ public class DoubleArrayColumn implements Column
     @Override
     public FindResult findString(int startIndex, int endIndex, String val)
     {
-      throw NotYetImplemented.ex("findString is not currently supported for DoubleArrayColumns");
+      throw NotYetImplemented.ex(null, "findString is not currently supported for DoubleArrayColumns");
     }
 
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      throw NotYetImplemented.ex("findComplex is not currently supported for DoubleArrayColumns");
+      throw NotYetImplemented.ex(null, "findComplex is not currently supported for DoubleArrayColumns");
     }
   }
 }

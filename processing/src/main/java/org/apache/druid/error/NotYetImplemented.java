@@ -34,11 +34,6 @@ package org.apache.druid.error;
  */
 public class NotYetImplemented extends DruidException.Failure
 {
-  public static DruidException ex(String msg, Object... args)
-  {
-    return ex(null, msg, args);
-  }
-
   public static DruidException ex(Throwable t, String msg, Object... args)
   {
     return DruidException.fromFailure(new NotYetImplemented(t, msg, args));
