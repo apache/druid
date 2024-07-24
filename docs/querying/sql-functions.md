@@ -1080,11 +1080,30 @@ Returns the following:
 
 ## LOG10
 
-`LOG10(expr)`
+Calculates the base-10 logarithm of the numeric expression.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `LOG10(<NUMERIC>)`
+* **Function type:** Scalar, numeric
 
-Calculates the base-10 of the numeric expression.
+<details><summary>Example</summary>
+
+The following example applies the LOG10 function to the `max_temperature` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "max_temperature" AS "max_temperature",
+  LOG10("max_temperature") AS "log10_max_temp"
+FROM "taxi-trips"
+LIMIT 1
+```
+Returns the following:
+
+| `max_temperature` | `log10_max_temp` | 
+| -- | -- | 
+| `76` | `1.8808135922807914` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## LOOKUP
 
@@ -1144,11 +1163,26 @@ Returns the minimum value of a set of values.
 
 ## MOD
 
-`MOD(x, y)`
+Calculates x modulo y, or the remainder of x divided by y. Where x and y are numeric expressions.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `MOD(x, y)`
+* **Function type:** Scalar, numeric
 
-Calculates x modulo y, or the remainder of x divided by y.
+<details><summary>Example</summary>
+
+The following calculates 78 MOD 10.
+
+```sql
+SELECT MOD(78, 10) as "modulo"
+```
+Returns the following:
+
+| `modulo` | 
+| -- | 
+| `8` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## MV_APPEND
 
@@ -1328,11 +1362,26 @@ Returns the one-based index position of a substring within an expression, option
 
 ## POWER
 
-`POWER(expr, power)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates a numerical expression raised to the specified power.
+
+* **Syntax:** `POWER(base, exponent)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example raises 5 to the power of 2.
+
+```sql
+SELECT POWER(5, 2) AS "power"
+```
+Returns the following:
+
+| `power` |
+| -- |
+| `25` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## RADIANS
 
@@ -1409,11 +1458,31 @@ Returns the rightmost number of characters from an expression.
 
 ## ROUND
 
-`ROUND(expr[, digits])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the rounded value for a numerical expression.
+
+* **Syntax:** `ROUND(expr[, digits])`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "pickup_longitude" AS "pickup_longitude",
+  ROUND("pickup_longitude", 0) as "rounded_pickup_longitude"
+FROM "taxi-trips"
+WHERE "pickup_longitude" IS NOT NULL
+LIMIT 1
+```
+Returns the following:
+
+| `pickup_longitude` | `rounded_pickup_longitude` | 
+| -- | -- | 
+| `-73.9377670288086` | `-74` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ROW_NUMBER
 
@@ -1457,11 +1526,26 @@ Calculates the trigonometric sine of an angle expressed in radians.
 
 ## SQRT
 
-`SQRT(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the square root of a numeric expression.
+
+* **Syntax:** `SQRT(<NUMERIC>)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates the square root of 25.
+
+```sql
+SELECT SQRT(25) AS "square_root"
+```
+Returns the following:
+
+| `square_root` |  
+| -- | 
+| `5` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## STDDEV
 
@@ -1731,20 +1815,41 @@ Trims the leading or trailing characters of an expression.
 
 ## TRUNC
 
-`TRUNC(expr[, digits])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Alias for [`TRUNCATE`](#truncate).
+
+* **Syntax:** `TRUNC(expr[, digits])`
+* **Function type:** Scalar, numeric
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## TRUNCATE
 
-`TRUNCATE(expr[, digits])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Truncates a numerical expression to a specific number of decimal digits.
 
+* **Syntax:** `TRUNCATE(expr[, digits])`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "pickup_longitude" as "pickup_longitude",
+  TRUNCATE("pickup_longitude", 1) as "truncate_pickup_longitude"
+FROM "taxi-trips"
+WHERE "pickup_longitude" IS NOT NULL
+LIMIT 1
+```
+Returns the following:
+
+| `pickup_longitude` | `truncate_pickup_longitude` | 
+| -- | -- | 
+| `-73.9377670288086` | `-73.9` | 
+</details>
+
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## TRY_PARSE_JSON
 
@@ -1793,3 +1898,4 @@ Calculates the sample variance of a set of values.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Alias for [`VAR_SAMP`](#var_samp).
+
