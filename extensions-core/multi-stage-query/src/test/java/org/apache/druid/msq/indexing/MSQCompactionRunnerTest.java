@@ -60,9 +60,11 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -129,7 +131,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
   }
 
   @Test
@@ -142,7 +144,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
   }
 
   @Test
@@ -155,7 +157,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
   }
 
   @Test
@@ -168,7 +170,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
   }
 
   @Test
@@ -181,7 +183,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, Granularities.ALL, null),
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
   }
 
   @Test
@@ -194,7 +196,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, false),
         AGGREGATORS.toArray(new AggregatorFactory[0])
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
   }
 
   @Test
@@ -344,7 +346,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testIntervalsWithRolledUpSegmentsAndNonIdempotentAggregatorFails() throws Exception
+  public void testIntervalsWithRolledUpSegmentsAndNonIdempotentAggregatorFails()
   {
     final String inputColName = "added";
     final String outputColName = "sum_added";
@@ -360,7 +362,7 @@ public class MSQCompactionRunnerTest
             )
         }
     );
-    DataSchema dataSchema = new DataSchema(
+    CombinedDataSchema dataSchema = new CombinedDataSchema(
         DATA_SOURCE,
         new TimestampSpec(TIMESTAMP_COLUMN, null, null),
         new DimensionsSpec(DIMENSIONS),
@@ -372,13 +374,16 @@ public class MSQCompactionRunnerTest
             Collections.singletonList(COMPACTION_INTERVAL)
         ),
         null,
-        true,
         null,
-        null
+        null,
+        true
     );
-    TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.singletonMap(COMPACTION_INTERVAL, dataSchema), null);
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(taskStatus.getErrorMsg(), StringUtils.format(
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(validationResult.getReason(), StringUtils.format(
         "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
         COMPACTION_INTERVAL
     ));

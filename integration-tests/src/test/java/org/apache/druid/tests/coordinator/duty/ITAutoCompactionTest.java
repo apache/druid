@@ -1837,7 +1837,6 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         engine,
         ImmutableMap.of("maxNumTasks", 2)
     );
-    LOG.info("Submitting compaction config for engine[%s].", engine == null ? CompactionEngine.NATIVE: engine);
     compactionResource.submitCompactionConfig(compactionConfig);
 
     // Wait for compaction config to persist

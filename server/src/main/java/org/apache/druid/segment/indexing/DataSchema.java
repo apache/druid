@@ -66,7 +66,6 @@ public class DataSchema
   private final GranularitySpec granularitySpec;
   private final TransformSpec transformSpec;
   private final Map<String, Object> parserMap;
-  private final Boolean hasRolledUpSegments;
   private final ObjectMapper objectMapper;
 
   // The below fields can be initialized lazily from parser for backward compatibility.
@@ -84,7 +83,6 @@ public class DataSchema
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
-      @JsonProperty("hasRolledUpSegments") @Nullable Boolean hasRolledUpSegments,
       @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
       @JacksonInject ObjectMapper objectMapper
   )
@@ -110,7 +108,6 @@ public class DataSchema
     }
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
     this.parserMap = parserMap;
-    this.hasRolledUpSegments = hasRolledUpSegments;
     this.objectMapper = objectMapper;
 
     // Fail-fast if there are output name collisions. Note: because of the pull-from-parser magic in getDimensionsSpec,
@@ -126,30 +123,6 @@ public class DataSchema
     }
   }
 
-  public DataSchema(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec, // can be null in old task spec
-      @JsonProperty("dimensionsSpec") @Nullable DimensionsSpec dimensionsSpec, // can be null in old task spec
-      @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
-      @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
-      @JsonProperty("transformSpec") TransformSpec transformSpec,
-      @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
-      @JacksonInject ObjectMapper objectMapper
-  )
-  {
-    this(
-        dataSource,
-        timestampSpec,
-        dimensionsSpec,
-        aggregators,
-        granularitySpec,
-        transformSpec,
-        null,
-        parserMap,
-        objectMapper
-    );
-  }
-
   @VisibleForTesting
   public DataSchema(
       String dataSource,
@@ -160,7 +133,7 @@ public class DataSchema
       TransformSpec transformSpec
   )
   {
-    this(dataSource, timestampSpec, dimensionsSpec, aggregators, granularitySpec, transformSpec, null, null, null);
+    this(dataSource, timestampSpec, dimensionsSpec, aggregators, granularitySpec, transformSpec, null, null);
   }
 
   // old constructor for backward compatibility
@@ -174,7 +147,7 @@ public class DataSchema
       ObjectMapper objectMapper
   )
   {
-    this(dataSource, null, null, aggregators, granularitySpec, transformSpec, null, parserMap, objectMapper);
+    this(dataSource, null, null, aggregators, granularitySpec, transformSpec, parserMap, objectMapper);
   }
 
   private static void validateDatasourceName(String dataSource)
@@ -386,12 +359,6 @@ public class DataSchema
       inputRowParser = inputRowParser.withParseSpec(parseSpec);
     }
     return inputRowParser;
-  }
-
-  @Nullable
-  public Boolean getHasRolledUpSegments()
-  {
-    return hasRolledUpSegments;
   }
 
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)

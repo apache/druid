@@ -66,6 +66,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -126,7 +127,8 @@ public class MSQCompactionRunner implements CompactionRunner
    */
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
-      CompactionTask compactionTask
+      CompactionTask compactionTask,
+      Map<Interval, DataSchema> intervalToDataSchemaMap
   )
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
@@ -142,10 +144,56 @@ public class MSQCompactionRunner implements CompactionRunner
       ));
     }
     validationResults.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(compactionTask.getContext()));
+    validationResults.add(validateRolledUpSegments(intervalToDataSchemaMap));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
                             .orElse(new CompactionConfigValidationResult(true, null));
+  }
+
+  /**
+   * Valides that there are no rolled-up segments where either:
+   * <ul>
+   * <li>aggregator factory differs from its combining factory </li>
+   * <li>input col name is different from the output name (non-idempotent)</li>
+   * </ul>
+   */
+  private CompactionConfigValidationResult validateRolledUpSegments(Map<Interval, DataSchema> intervalToDataSchemaMap)
+  {
+    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalToDataSchemaMap.entrySet()) {
+      if (intervalDataSchema.getValue() instanceof CombinedDataSchema) {
+        CombinedDataSchema combinedDataSchema = (CombinedDataSchema) intervalDataSchema.getValue();
+        if (Boolean.TRUE.equals(combinedDataSchema.hasRolledUpSegments())) {
+          for (AggregatorFactory aggregatorFactory : combinedDataSchema.getAggregators()) {
+            // This is a conservative check as existing rollup may have been idempotent but the aggregator provided in
+            // compaction spec isn't. This would get properly compacted yet fails in the below pre-check.
+            if (
+                !(
+                    aggregatorFactory.getClass().equals(aggregatorFactory.getCombiningFactory().getClass()) &&
+                    (
+                        aggregatorFactory.requiredFields().isEmpty() ||
+                        (aggregatorFactory.requiredFields().size() == 1 &&
+                         aggregatorFactory.requiredFields()
+                                          .get(0)
+                                          .equals(aggregatorFactory.getName()))
+                    )
+                )
+            ) {
+              // MSQ doesn't support rolling up already rolled-up segments when aggregate column name is different from
+              // the aggregated column name. This is because the aggregated values would then get overwritten by new
+              // values and the existing values would be lost. Note that if no rollup is specified in an index spec,
+              // the default value is true.
+              return new CompactionConfigValidationResult(
+                  false,
+                  "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
+                  intervalDataSchema.getKey()
+              );
+            }
+          }
+        }
+      }
+    }
+    return new CompactionConfigValidationResult(true, null);
   }
 
   @Override
@@ -161,41 +209,6 @@ public class MSQCompactionRunner implements CompactionRunner
       TaskToolbox taskToolbox
   ) throws Exception
   {
-    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalDataSchemas.entrySet()) {
-      if (Boolean.valueOf(true).equals(intervalDataSchema.getValue().getHasRolledUpSegments())) {
-        for (AggregatorFactory aggregatorFactory : intervalDataSchema.getValue().getAggregators()) {
-          // Don't proceed if either:
-          // - aggregator factory differs from its combining factory
-          // - input col name is different from the output name (idempotent)
-          // This is a conservative check as existing rollup may have been idempotent but the aggregator provided in
-          // compaction spec isn't. This would get properly compacted yet fails in the below pre-check.
-          if (
-              !(
-                  aggregatorFactory.getClass().equals(aggregatorFactory.getCombiningFactory().getClass()) &&
-                  (
-                      aggregatorFactory.requiredFields().isEmpty() ||
-                      (aggregatorFactory.requiredFields().size() == 1 &&
-                       aggregatorFactory.requiredFields()
-                                        .get(0)
-                                        .equals(aggregatorFactory.getName()))
-                  )
-              )
-          ) {
-            // MSQ doesn't support rolling up already rolled-up segments when aggregate column name is different from
-            // the aggregated column name. This is because the aggregated values would then get overwritten by new
-            // values and the existing values would be lost. Note that if no rollup is specified in an index spec,
-            // the default value is true.
-            String errorMsg = StringUtils.format(
-                "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
-                intervalDataSchema.getKey()
-            );
-            log.error(errorMsg);
-            return TaskStatus.failure(compactionTask.getId(), errorMsg);
-
-          }
-        }
-      }
-    }
     List<MSQControllerTask> msqControllerTasks = createMsqControllerTasks(compactionTask, intervalDataSchemas);
 
     if (msqControllerTasks.isEmpty()) {
@@ -525,8 +538,9 @@ public class MSQCompactionRunner implements CompactionRunner
       );
     }
     // Similar to compaction using the native engine, don't finalize aggregations.
+    // Used for writing the data schema during segment generation phase.
     context.putIfAbsent(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
-    // Add appropriate finalization to native query context.
+    // Add appropriate finalization to native query context i.e. for the GroupBy query
     context.put(QueryContexts.FINALIZE_KEY, false);
     // Only scalar or array-type dimensions are allowed as grouping keys.
     context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);

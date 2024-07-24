@@ -77,6 +77,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -463,7 +464,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
-    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
+    CompactionConfigValidationResult supportsCompactionConfig =
+        compactionRunner.validateCompactionTask(this, intervalDataSchemas);
     if (!supportsCompactionConfig.isValid()) {
       throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }
@@ -665,16 +667,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       finalMetricsSpec = metricsSpec;
     }
 
-    return new DataSchema(
+    return new CombinedDataSchema(
         dataSource,
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,
         transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
-        existingSegmentAnalyzer.getHasRolledUpSegments(),
         null,
-    null
+        null,
+        existingSegmentAnalyzer.hasRolledUpSegments()
     );
   }
 
@@ -819,7 +821,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return rollup;
     }
 
-    public Boolean getHasRolledUpSegments()
+    public Boolean hasRolledUpSegments()
     {
       return hasRolledUpSegments;
     }
