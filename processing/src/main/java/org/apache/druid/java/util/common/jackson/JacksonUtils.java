@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.jackson;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JavaType;
@@ -124,21 +125,29 @@ public final class JacksonUtils
     }
   }
 
+  @Nullable
   public static <T> T readObjectUsingDeserializationContext(
       final JsonParser jp,
       final DeserializationContext deserializationContext,
       final Class<T> clazz
   ) throws IOException
   {
+    if (jp.currentToken() == JsonToken.VALUE_NULL) {
+      return null;
+    }
     return deserializationContext.readValue(jp, clazz);
   }
 
+  @Nullable
   public static Object readObjectUsingDeserializationContext(
       final JsonParser jp,
       final DeserializationContext deserializationContext,
       final JavaType javaType
   ) throws IOException
   {
+    if (jp.currentToken() == JsonToken.VALUE_NULL) {
+      return null;
+    }
     return deserializationContext.readValue(jp, javaType);
   }
 
