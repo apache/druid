@@ -18,7 +18,6 @@
  */
 
 package org.apache.druid.sql.avatica;
-//package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,8 +54,7 @@ public class MSQDruidMeta extends DruidMeta
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper,
       final MSQTestOverlordServiceClient overlordClient,
-      final ObjectMapper objectMapper
-      )
+      final ObjectMapper objectMapper)
   {
     super(sqlStatementFactory, config, errorHandler, authMapper);
     this.overlordClient = overlordClient;
@@ -86,22 +84,16 @@ public class MSQDruidMeta extends DruidMeta
     if (resultRows == null) {
       throw new ISE("Results report not present in the task's report payload");
     }
-//    extractedResults.add(
-//        results.withSignatureAndResults(
-//            convertColumnAndTypeToRowSignature(payload.getResults().getSignature()), resultRows
-//        )
-//    );
     try {
       String str = objectMapper
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(payload.getStages());
-      str=str.replaceAll(taskId, "<taskId>");
+      str = str.replaceAll(taskId, "<taskId>");
       DruidHook.dispatch(DruidHook.MSQ_PLAN, str);
     }
     catch (JsonProcessingException e) {
       DruidHook.dispatch(DruidHook.MSQ_PLAN, "error happened during json serialization");
     }
-
 
     Signature signature = makeSignature(druidStatement, payload.getResults().getSignature());
     @SuppressWarnings("unchecked")
@@ -137,10 +129,11 @@ public class MSQDruidMeta extends DruidMeta
   {
     return RowSignatures.toRelDataType(sig, DruidTypeSystem.TYPE_FACTORY);
 
-//    typeFactory.createStructType(
-//        signature.stream()
-//                 .map(columnAndType -> relDataTypeFactory.createJavaType(columnAndType.getType()))
-//                 .toArray(RelDataType[]::new));
+    // typeFactory.createStructType(
+    // signature.stream()
+    // .map(columnAndType ->
+    // relDataTypeFactory.createJavaType(columnAndType.getType()))
+    // .toArray(RelDataType[]::new));
 
   }
 
