@@ -382,7 +382,26 @@ Returns the following:
 
 ## BITWISE_CONVERT_DOUBLE_TO_LONG_BITS
 
-Converts the bits of an IEEE 754 floating-point double value to a long.
+Converts the bits of an IEEE 754 floating-point double value to long.
+
+* **Syntax:**`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example returns the IEEE 754 floating-point double representation of 255 as a long. 
+
+```sql
+SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
+```
+Returns the following:
+
+| `ieee_754_double_to_long` | 
+| -- |
+| `4643176031446892544` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 * **Syntax:**`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
 * **Function type:** Scalar, numeric
@@ -405,7 +424,26 @@ Returns the following:
 
 ## BITWISE_CONVERT_LONG_BITS_TO_DOUBLE
 
-Converts a long to the IEEE 754 floating-point double specified by the bits stored in the long.
+Converts the bits of a long to IEEE 754 floating-point double.
+
+* **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example returns the long representation of 4643176031446892544 as an IEEE 754 floating-point double. 
+
+```sql
+SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee_754_double"
+```
+Returns the following:
+
+| `long_to_ieee_754_double` | 
+| -- |
+| `255` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 * **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
 * **Function type:** Scalar, numeric
