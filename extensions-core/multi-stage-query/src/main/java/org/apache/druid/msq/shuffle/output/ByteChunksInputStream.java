@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.shuffle.output;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
@@ -45,7 +44,7 @@ public class ByteChunksInputStream extends InputStream
   }
 
   @Override
-  public int read() throws IOException
+  public int read()
   {
     if (chunkNum >= chunks.size()) {
       return -1;
@@ -63,13 +62,13 @@ public class ByteChunksInputStream extends InputStream
   }
 
   @Override
-  public int read(byte[] b) throws IOException
+  public int read(byte[] b)
   {
     return read(b, 0, b.length);
   }
 
   @Override
-  public int read(byte[] b, int off, int len) throws IOException
+  public int read(byte[] b, int off, int len)
   {
     if (len == 0) {
       return 0;
@@ -95,7 +94,7 @@ public class ByteChunksInputStream extends InputStream
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     chunkNum = chunks.size();
     positionWithinChunk = 0;

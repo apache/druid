@@ -70,7 +70,7 @@ public class NilStageOutputReader implements StageOutputReader
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Nothing to do.
   }

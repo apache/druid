@@ -48,7 +48,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
@@ -259,7 +258,7 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
 
     }

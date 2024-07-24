@@ -38,7 +38,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.LinkedList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 /**
  * Reader for {@link ReadableFrameChannel}.
@@ -64,7 +65,7 @@ public class ChannelStageOutputReader implements StageOutputReader
   /**
    * Pair of chunk size + chunk InputStream.
    */
-  private final LinkedList<byte[]> chunks = new LinkedList<>();
+  private final Deque<byte[]> chunks = new ArrayDeque<>();
 
   /**
    * State of this reader.
@@ -190,7 +191,7 @@ public class ChannelStageOutputReader implements StageOutputReader
   }
 
   @Override
-  public synchronized void close() throws IOException
+  public synchronized void close()
   {
     // Call channel.close() unless readLocally() has been called. In that case, we expect the caller to close it.
     if (state != State.LOCAL) {

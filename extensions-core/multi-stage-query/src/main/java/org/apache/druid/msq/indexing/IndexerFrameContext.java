@@ -36,7 +36,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import java.io.File;
-import java.io.IOException;
 
 public class IndexerFrameContext implements FrameContext
 {
@@ -154,7 +153,7 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     // Nothing to close.
   }

@@ -524,7 +524,8 @@ public class WorkerMemoryParameters
   }
 
   /**
-   * Compute the memory allocated to each processing bundle. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#estimateUsableMemory(int, int, long)}
+   * Compute the memory allocated to each processing bundle. Any computation changes done to this method should also be
+   * done in its corresponding method {@link WorkerMemoryParameters#estimateUsableMemory}
    */
   private static long memoryPerBundle(
       final long usableMemoryInJvm,
