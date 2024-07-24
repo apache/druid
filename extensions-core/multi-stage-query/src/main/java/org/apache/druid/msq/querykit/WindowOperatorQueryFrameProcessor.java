@@ -51,6 +51,7 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -59,7 +60,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -85,6 +85,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
 
+  // List of type strategies to compare the partition columns across rows.
+  // Type strategies are pushed in the same order as column types in frameReader.signature()
+  private final NullableTypeStrategy[] typeStrategies;
+
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
       ReadableFrameChannel inputChannel,
@@ -103,13 +107,18 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
     this.jsonMapper = jsonMapper;
-    this.frameReader = frameReader;
     this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
     this.partitionColumnNames = partitionColumnNames;
+
+    this.frameReader = frameReader;
+    this.typeStrategies = new NullableTypeStrategy[frameReader.signature().size()];
+    for (int i = 0; i < frameReader.signature().size(); i++) {
+      typeStrategies[i] = frameReader.signature().getColumnType(i).get().getNullableStrategy();
+    }
   }
 
   @Override
@@ -499,7 +508,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     int match = 0;
     for (String columnName : partitionColumnNames) {
       int i = frameReader.signature().indexOf(columnName);
-      if (Objects.equals(row1.get(i), row2.get(i))) {
+      if (typeStrategies[i].compare(row1.get(i), row2.get(i)) == 0) {
         match++;
       }
     }
