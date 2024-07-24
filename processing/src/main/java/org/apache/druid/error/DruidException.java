@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -480,11 +481,10 @@ public class DruidException extends RuntimeException
 
       StackTraceElement[] stackTrace = retVal.getStackTrace();
       int firstNonDruidExceptionIndex = 0;
-      while (
-          firstNonDruidExceptionIndex < stackTrace.length &&
-          stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
+      while (stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
         ++firstNonDruidExceptionIndex;
       }
+      retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
 
       return retVal;
     }
