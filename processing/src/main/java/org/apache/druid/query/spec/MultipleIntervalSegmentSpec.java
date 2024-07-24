@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -33,7 +32,6 @@ import java.util.Objects;
 
 /**
  */
-@Inline
 public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
 {
   private final List<Interval> intervals;

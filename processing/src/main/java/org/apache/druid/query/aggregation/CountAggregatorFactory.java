@@ -27,7 +27,6 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -35,7 +34,6 @@ import java.util.List;
 
 /**
  */
-@Inline
 public class CountAggregatorFactory extends AggregatorFactory
 {
   private final String name;

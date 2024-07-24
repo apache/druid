@@ -27,7 +27,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
-import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -35,7 +34,6 @@ import java.util.Objects;
 /**
  *
  */
-@Inline
 public class DefaultDimensionSpec implements DimensionSpec
 {
   public static DefaultDimensionSpec of(String dimensionName)

@@ -40,23 +40,39 @@ order by 1;
           "type" : "inputNumber",
           "inputNumber" : 0
         },
-        "intervals" : {"type" : "intervals","intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]},
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
         "filter" : {
           "type" : "inType",
           "column" : "cityName",
           "matchValueType" : "STRING",
           "sortedValues" : [ "Aarhus", "New York" ]
         },
-        "granularity" : {"type" : "all"},
-        "dimensions" : [ {"type" : "default","dimension" : "cityName","outputName" : "d0","outputType" : "STRING"} ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "cityName",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
         "aggregations" : [ {
           "type" : "filtered",
-          "aggregator" : {"type" : "count","name" : "a0"},
+          "aggregator" : {
+            "type" : "count",
+            "name" : "a0"
+          },
           "filter" : {
             "type" : "and",
             "fields" : [ {
               "type" : "not",
-              "field" : {"type" : "null","column" : "channel"}
+              "field" : {
+                "type" : "null",
+                "column" : "channel"
+              }
             }, {
               "type" : "range",
               "column" : "delta",
@@ -66,19 +82,33 @@ order by 1;
             } ]
           },
           "name" : "a0"
-        }, {"type" : "count","name" : "a1"} ],
-        "limitSpec" : {"type" : "NoopLimitSpec"},
+        }, {
+          "type" : "count",
+          "name" : "a1"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
         "context" : {
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "1a672bac-af09-4c2b-b7fb-3dec3bf248f5",
+          "sqlQueryId" : "d192187f-8ad1-458d-919e-b07a084156e9",
           "sqlStringifyArrays" : false
         }
       }
     },
-    "signature" : [ {"name" : "d0","type" : "STRING"}, {"name" : "a0","type" : "LONG"}, {"name" : "a1","type" : "LONG"} ],
+    "signature" : [ {
+      "name" : "d0",
+      "type" : "STRING"
+    }, {
+      "name" : "a0",
+      "type" : "LONG"
+    }, {
+      "name" : "a1",
+      "type" : "LONG"
+    } ],
     "shuffleSpec" : {
       "type" : "maxCount",
       "clusterBy" : {
@@ -97,8 +127,8 @@ order by 1;
   "partitionCount" : 1,
   "shuffle" : "globalSort",
   "output" : "localStorage",
-  "startTime" : "2024-07-24T17:13:03.981Z",
-  "duration" : 692,
+  "startTime" : "2024-07-24T17:16:24.473Z",
+  "duration" : 612,
   "sort" : true
 }, {
   "stageNumber" : 1,
@@ -116,23 +146,39 @@ order by 1;
           "type" : "inputNumber",
           "inputNumber" : 0
         },
-        "intervals" : {"type" : "intervals","intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]},
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
         "filter" : {
           "type" : "inType",
           "column" : "cityName",
           "matchValueType" : "STRING",
           "sortedValues" : [ "Aarhus", "New York" ]
         },
-        "granularity" : {"type" : "all"},
-        "dimensions" : [ {"type" : "default","dimension" : "cityName","outputName" : "d0","outputType" : "STRING"} ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "cityName",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
         "aggregations" : [ {
           "type" : "filtered",
-          "aggregator" : {"type" : "count","name" : "a0"},
+          "aggregator" : {
+            "type" : "count",
+            "name" : "a0"
+          },
           "filter" : {
             "type" : "and",
             "fields" : [ {
               "type" : "not",
-              "field" : {"type" : "null","column" : "channel"}
+              "field" : {
+                "type" : "null",
+                "column" : "channel"
+              }
             }, {
               "type" : "range",
               "column" : "delta",
@@ -142,26 +188,40 @@ order by 1;
             } ]
           },
           "name" : "a0"
-        }, {"type" : "count","name" : "a1"} ],
-        "limitSpec" : {"type" : "NoopLimitSpec"},
+        }, {
+          "type" : "count",
+          "name" : "a1"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        },
         "context" : {
           "__user" : null,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "1a672bac-af09-4c2b-b7fb-3dec3bf248f5",
+          "sqlQueryId" : "d192187f-8ad1-458d-919e-b07a084156e9",
           "sqlStringifyArrays" : false
         }
       }
     },
-    "signature" : [ {"name" : "d0","type" : "STRING"}, {"name" : "a0","type" : "LONG"}, {"name" : "a1","type" : "LONG"} ],
+    "signature" : [ {
+      "name" : "d0",
+      "type" : "STRING"
+    }, {
+      "name" : "a0",
+      "type" : "LONG"
+    }, {
+      "name" : "a1",
+      "type" : "LONG"
+    } ],
     "maxWorkerCount" : 1
   },
   "phase" : "FINISHED",
   "workerCount" : 1,
   "partitionCount" : 1,
   "output" : "localStorage",
-  "startTime" : "2024-07-24T17:13:04.672Z",
+  "startTime" : "2024-07-24T17:16:25.085Z",
   "duration" : 2
 } ]
 !msqPlan
