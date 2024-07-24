@@ -61,6 +61,7 @@ import org.apache.calcite.util.Util;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -919,4 +920,14 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
     }
   }
 
+  @Override
+  protected void validateWindowClause(SqlSelect select)
+  {
+    SqlNodeList windows = select.getWindowList();
+    for (SqlNode sqlNode : windows) {
+      if(SqlUtil.containsAgg(sqlNode)) {
+        throw DruidException.defensive("ds");
+      }
+    }
+  }
 }
