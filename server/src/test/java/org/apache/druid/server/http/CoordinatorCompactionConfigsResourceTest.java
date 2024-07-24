@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.audit.AuditManager;
@@ -28,14 +29,22 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
+import org.apache.druid.server.coordinator.compact.CompactionDutySimulator;
+import org.apache.druid.server.coordinator.compact.CompactionSimulateResult;
+import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
+import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,11 +58,15 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 @RunWith(MockitoJUnitRunner.class)
 public class CoordinatorCompactionConfigsResourceTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final DataSourceCompactionConfig OLD_CONFIG = new DataSourceCompactionConfig(
       "oldDataSource",
       null,
@@ -133,6 +146,7 @@ public class CoordinatorCompactionConfigsResourceTest
     ).thenReturn(ImmutableList.of());
     coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
         new CoordinatorConfigManager(mockJacksonConfigManager, mockConnector, mockConnectorConfig),
+        null,
         mockAuditManager
     );
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
@@ -400,8 +414,6 @@ public class CoordinatorCompactionConfigsResourceTest
         CompactionEngine.MSQ,
         ImmutableMap.of("key", "val")
     );
-    String author = "maytas";
-    String comment = "hello";
     Response result = coordinatorCompactionConfigsResource.addOrUpdateCompactionConfig(
         newConfig,
         mockHttpServletRequest
@@ -542,5 +554,69 @@ public class CoordinatorCompactionConfigsResourceTest
     );
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertTrue(((Collection) response.getEntity()).isEmpty());
+  }
+
+  @Test
+  public void testSimulateCompactionDynamicConfig()
+  {
+    final TestSegmentsMetadataManager segmentsMetadataManager = new TestSegmentsMetadataManager();
+    final CoordinatorConfigManager mockConfigManager = Mockito.mock(CoordinatorConfigManager.class);
+    Mockito.when(mockConfigManager.getCurrentCompactionConfig()).thenReturn(
+        new CoordinatorCompactionConfig(
+            Collections.singletonList(createDatasourceConfig("wiki")),
+            null, null, null, null, null
+        )
+    );
+
+    final MetadataManager metadataManager = new MetadataManager(
+        mockAuditManager,
+        mockConfigManager, segmentsMetadataManager, null, null, null, null
+    );
+
+    // Add some segments to the timeline
+    final List<DataSegment> wikiSegments
+        = CreateDataSegments.ofDatasource("wiki")
+                            .forIntervals(10, Granularities.DAY)
+                            .withNumPartitions(10)
+                            .startingAt("2013-01-01")
+                            .eachOfSizeInMb(100);
+    wikiSegments.forEach(segmentsMetadataManager::addSegment);
+
+    coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
+        null,
+        new CompactionDutySimulator(metadataManager, OBJECT_MAPPER),
+        null
+    );
+    Response response = coordinatorCompactionConfigsResource.simulateCompactionDynamicConfig(
+        new CompactionConfigUpdateRequest(null, null, null, null, null),
+        mockHttpServletRequest
+    );
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assert.assertTrue(response.getEntity() instanceof CompactionSimulateResult);
+
+    CompactionSimulateResult simulateResult = (CompactionSimulateResult) response.getEntity();
+    Assert.assertEquals(
+        Arrays.asList(
+            Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToCompact"),
+            Arrays.asList("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-08/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-04/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 2, ""),
+            Arrays.asList("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 2, "")
+        ),
+        simulateResult.getSubmittedTasks()
+    );
+  }
+
+  private static DataSourceCompactionConfig createDatasourceConfig(String datasource)
+  {
+    return new DataSourceCompactionConfig(
+        "wiki",
+        null, null, null, null, null, null, null, null, null, null, null, null
+    );
   }
 }

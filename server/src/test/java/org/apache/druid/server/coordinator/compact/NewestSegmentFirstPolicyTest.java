@@ -46,6 +46,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -79,7 +80,8 @@ import java.util.stream.Collectors;
 
 public class NewestSegmentFirstPolicyTest
 {
-  private static final String DATA_SOURCE = "dataSource";
+  private static final String DATA_SOURCE = "wikipedia";
+  private static final String DATASOURCE_KOALA = "koala";
   private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
@@ -1926,6 +1928,51 @@ public class NewestSegmentFirstPolicyTest
         ImmutableList.of(tombstone2025Jan, tombstone2025Feb, tombstone2025Mar),
         iterator.next().getSegments()
     );
+  }
+
+  @Test
+  public void testPriorityDatasource()
+  {
+    final List<DataSegment> wikiSegments
+        = CreateDataSegments.ofDatasource(DATA_SOURCE)
+                            .forIntervals(1, Granularities.DAY)
+                            .startingAt("2012-01-01")
+                            .withNumPartitions(10)
+                            .eachOfSizeInMb(100);
+    final List<DataSegment> koalaSegments
+        = CreateDataSegments.ofDatasource(DATASOURCE_KOALA)
+                            .forIntervals(1, Granularities.DAY)
+                            .startingAt("2013-01-01")
+                            .withNumPartitions(10)
+                            .eachOfSizeInMb(100);
+
+    // Setup policy and iterator with priorityDatasource = wikipedia
+    final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(DATA_SOURCE);
+    CompactionSegmentIterator iterator = policy.createIterator(
+        ImmutableMap.of(
+            DATA_SOURCE, createCompactionConfig(Long.MAX_VALUE, Period.seconds(0), null),
+            DATASOURCE_KOALA, createCompactionConfig(Long.MAX_VALUE, Period.seconds(0), null)
+        ),
+        ImmutableMap.of(
+            DATA_SOURCE, SegmentTimeline.forSegments(wikiSegments),
+            DATASOURCE_KOALA, SegmentTimeline.forSegments(koalaSegments)
+        ),
+        Collections.emptyMap(),
+        statusTracker
+    );
+
+    // Verify that the segments of "wikipedia" are preferred even though they are older
+    Assert.assertTrue(iterator.hasNext());
+    SegmentsToCompact next = iterator.next();
+    Assert.assertFalse(next.isEmpty());
+    Assert.assertEquals(DATA_SOURCE, next.getDataSource());
+    Assert.assertEquals(Intervals.of("2012-01-01/P1D"), next.getUmbrellaInterval());
+
+    Assert.assertTrue(iterator.hasNext());
+    next = iterator.next();
+    Assert.assertFalse(next.isEmpty());
+    Assert.assertEquals(DATASOURCE_KOALA, next.getDataSource());
+    Assert.assertEquals(Intervals.of("2013-01-01/P1D"), next.getUmbrellaInterval());
   }
 
   private static void assertCompactSegmentIntervals(

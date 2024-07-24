@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
+import org.apache.druid.server.coordinator.compact.CompactionDutySimulator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
@@ -72,15 +73,18 @@ public class CoordinatorCompactionConfigsResource
   static final int UPDATE_NUM_RETRY = 5;
 
   private final CoordinatorConfigManager configManager;
+  private final CompactionDutySimulator simulator;
   private final AuditManager auditManager;
 
   @Inject
   public CoordinatorCompactionConfigsResource(
       CoordinatorConfigManager configManager,
+      CompactionDutySimulator simulator,
       AuditManager auditManager
   )
   {
     this.configManager = configManager;
+    this.simulator = simulator;
     this.auditManager = auditManager;
   }
 
@@ -102,6 +106,17 @@ public class CoordinatorCompactionConfigsResource
     UnaryOperator<CoordinatorCompactionConfig> operator =
         current -> CoordinatorCompactionConfig.from(current, updatePayload);
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
+  }
+
+  @POST
+  @Path("/simulate")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response simulateCompactionDynamicConfig(
+      CompactionConfigUpdateRequest updatePayload,
+      @Context HttpServletRequest req
+  )
+  {
+    return Response.ok().entity(simulator.simulateRunWithConfigUpdate(updatePayload)).build();
   }
 
   @POST

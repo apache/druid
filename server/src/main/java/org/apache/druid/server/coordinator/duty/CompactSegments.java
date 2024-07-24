@@ -116,7 +116,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    statusTracker.reset();
+    // statusTracker.reset();
     run(
         params.getCoordinatorCompactionConfig(),
         params.getUsedSegmentsTimelinesPerDataSource(),
@@ -304,8 +304,7 @@ public class CompactSegments implements CoordinatorCustomDuty
    * Returns the maximum number of task slots used by one native compaction task at any time when the task is
    * issued with the given tuningConfig.
    */
-  @VisibleForTesting
-  static int findMaxNumTaskSlotsUsedByOneNativeCompactionTask(
+  public static int findMaxNumTaskSlotsUsedByOneNativeCompactionTask(
       @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig
   )
   {
@@ -418,7 +417,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       final List<DataSegment> segmentsToCompact = entry.getSegments();
 
       // Create granularitySpec to send to compaction task
-      ClientCompactionTaskGranularitySpec granularitySpec;
       Granularity segmentGranularityToUse = null;
       if (config.getGranularitySpec() == null || config.getGranularitySpec().getSegmentGranularity() == null) {
         // Determines segmentGranularity from the segmentsToCompact
@@ -443,14 +441,14 @@ public class CompactSegments implements CoordinatorCustomDuty
       } else {
         segmentGranularityToUse = config.getGranularitySpec().getSegmentGranularity();
       }
-      granularitySpec = new ClientCompactionTaskGranularitySpec(
+      final ClientCompactionTaskGranularitySpec granularitySpec = new ClientCompactionTaskGranularitySpec(
           segmentGranularityToUse,
           config.getGranularitySpec() != null ? config.getGranularitySpec().getQueryGranularity() : null,
           config.getGranularitySpec() != null ? config.getGranularitySpec().isRollup() : null
       );
 
       // Create dimensionsSpec to send to compaction task
-      ClientCompactionTaskDimensionsSpec dimensionsSpec;
+      final ClientCompactionTaskDimensionsSpec dimensionsSpec;
       if (config.getDimensionsSpec() != null) {
         dimensionsSpec = new ClientCompactionTaskDimensionsSpec(
             config.getDimensionsSpec().getDimensions()
@@ -638,8 +636,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   private String compactSegments(
       SegmentsToCompact entry,
       int compactionTaskPriority,
-      @Nullable ClientCompactionTaskQueryTuningConfig tuningConfig,
-      @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      ClientCompactionTaskQueryTuningConfig tuningConfig,
+      ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
