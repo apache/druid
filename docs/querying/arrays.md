@@ -71,7 +71,7 @@ The following shows an example `dimensionsSpec` for native ingestion of the data
 
 ### SQL-based ingestion
 
-Arrays can be inserted with [SQL-based ingestion](../multi-stage-query/index.md) .
+Arrays can be inserted with [SQL-based ingestion](../multi-stage-query/index.md).
 
 #### Examples
 
