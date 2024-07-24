@@ -87,7 +87,7 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public List<String> getTaskList()
+  public List<String> getWorkerIds()
   {
     return controller.getTaskIds();
   }

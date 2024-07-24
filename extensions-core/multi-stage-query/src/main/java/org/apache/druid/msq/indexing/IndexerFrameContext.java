@@ -20,9 +20,13 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.frame.processor.Bouncer;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.FrameContext;
+import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.IndexIO;
@@ -32,28 +36,35 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import java.io.File;
+import java.io.IOException;
 
 public class IndexerFrameContext implements FrameContext
 {
+  private final StageId stageId;
   private final IndexerWorkerContext context;
   private final IndexIO indexIO;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerMemoryParameters memoryParameters;
+  private final WorkerStorageParameters storageParameters;
   private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   public IndexerFrameContext(
+      StageId stageId,
       IndexerWorkerContext context,
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
       DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
-      WorkerMemoryParameters memoryParameters
+      WorkerMemoryParameters memoryParameters,
+      WorkerStorageParameters storageParameters
   )
   {
+    this.stageId = stageId;
     this.context = context;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
-    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.memoryParameters = memoryParameters;
+    this.storageParameters = storageParameters;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
   }
 
   @Override
@@ -90,7 +101,8 @@ public class IndexerFrameContext implements FrameContext
   @Override
   public File tempDir()
   {
-    return context.tempDir();
+    // No need to include query ID; each task handles a single query, so there is no ambiguity.
+    return new File(context.tempDir(), StringUtils.format("stage_%06d", stageId.getStageNumber()));
   }
 
   @Override
@@ -127,5 +139,23 @@ public class IndexerFrameContext implements FrameContext
   public WorkerMemoryParameters memoryParameters()
   {
     return memoryParameters;
+  }
+
+  @Override
+  public Bouncer processorBouncer()
+  {
+    return context.injector().getInstance(Bouncer.class);
+  }
+
+  @Override
+  public WorkerStorageParameters storageParameters()
+  {
+    return storageParameters;
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // Nothing to close.
   }
 }

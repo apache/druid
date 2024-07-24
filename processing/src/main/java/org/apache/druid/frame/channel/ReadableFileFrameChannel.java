@@ -105,6 +105,14 @@ public class ReadableFileFrameChannel implements ReadableFrameChannel
   }
 
   /**
+   * Returns whether this channel represents the entire underlying {@link FrameFile}.
+   */
+  public boolean isEntireFile()
+  {
+    return currentFrame == 0 && endFrame == frameFile.numFrames();
+  }
+
+  /**
    * Returns a new reference to the {@link FrameFile} that this channel is reading from. Callers should close this
    * reference when done reading.
    */
