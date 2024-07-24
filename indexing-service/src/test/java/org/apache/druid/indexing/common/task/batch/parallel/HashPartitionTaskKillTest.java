@@ -244,7 +244,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     if (useInputFormatApi) {
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDir, filter),
           inputFormat,
           appendToExisting,
@@ -265,7 +264,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     } else {
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDir, filter),
           createInputFormatFromParseSpec(parseSpec),
           appendToExisting,

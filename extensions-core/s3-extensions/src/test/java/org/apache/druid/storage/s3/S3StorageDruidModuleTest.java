@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.ServerModule;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
@@ -72,7 +73,8 @@ public class S3StorageDruidModuleTest
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             new AWSModule(),
-            new S3StorageDruidModule()
+            new S3StorageDruidModule(),
+            new ServerModule()
         )
     );
   }

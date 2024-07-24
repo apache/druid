@@ -152,13 +152,22 @@ public class QueryContextsTest
   }
 
   @Test
-  public void testDefaultWindowingStrictValidation()
+  public void testCatalogValidationEnabled()
   {
     Assert.assertEquals(
-        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION,
-        QueryContext.empty().isWindowingStrictValidation()
+        QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED,
+        QueryContext.empty().isCatalogValidationEnabled()
     );
+    Assert.assertTrue(QueryContext.of(ImmutableMap.of(
+        QueryContexts.CATALOG_VALIDATION_ENABLED,
+        true
+    )).isCatalogValidationEnabled());
+    Assert.assertFalse(QueryContext.of(ImmutableMap.of(
+        QueryContexts.CATALOG_VALIDATION_ENABLED,
+        false
+    )).isCatalogValidationEnabled());
   }
+
 
   @Test
   public void testGetEnableJoinLeftScanDirect()

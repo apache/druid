@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Classes, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -88,6 +88,10 @@ export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string |
 }
 
 // ----------------------------
+
+export function caseInsensitiveEquals(str1: string | undefined, str2: string | undefined): boolean {
+  return str1?.toLowerCase() === str2?.toLowerCase();
+}
 
 export function caseInsensitiveContains(testString: string, searchString: string): boolean {
   if (!searchString) return true;
@@ -236,7 +240,7 @@ export function formatInteger(n: NumberLike): string {
 }
 
 export function formatNumber(n: NumberLike): string {
-  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
 }
 
 export function formatRate(n: NumberLike) {
@@ -275,6 +279,18 @@ export function formatMillions(n: NumberLike): string {
   const s = (Number(n) / 1e6).toFixed(3);
   if (s === '0.000') return String(Math.round(Number(n)));
   return s + ' M';
+}
+
+export function forceSignInNumberFormatter(
+  formatter: (n: NumberLike) => string,
+): (n: NumberLike) => string {
+  return (n: NumberLike) => {
+    if (n > 0) {
+      return '+' + formatter(n);
+    } else {
+      return formatter(n);
+    }
+  };
 }
 
 function pad2(str: string | number): string {
@@ -538,7 +554,7 @@ export function objectHash(obj: any): string {
 }
 
 export function hasPopoverOpen(): boolean {
-  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+  return Boolean(document.querySelector(`${Classes.PORTAL} ${Classes.OVERLAY} ${Classes.POPOVER}`));
 }
 
 export function checkedCircleIcon(checked: boolean): IconName {

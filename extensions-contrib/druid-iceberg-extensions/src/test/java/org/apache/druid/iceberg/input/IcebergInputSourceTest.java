@@ -67,6 +67,7 @@ public class IcebergInputSourceTest
 
   private IcebergCatalog testCatalog;
   private TableIdentifier tableIdentifier;
+  private File warehouseDir;
 
   private Schema tableSchema = new Schema(
       Types.NestedField.required(1, "id", Types.StringType.get()),
@@ -80,8 +81,8 @@ public class IcebergInputSourceTest
   @Before
   public void setup() throws IOException
   {
-    final File warehouseDir = FileUtils.createTempDir();
-    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
+    warehouseDir = FileUtils.createTempDir();
+    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), true);
     tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
 
     createAndLoadTable(tableIdentifier);
@@ -187,6 +188,33 @@ public class IcebergInputSourceTest
     Assert.assertEquals(1, splits.count());
   }
 
+  @Test
+  public void testCaseInsensitiveFiltering() throws IOException
+  {
+    LocalCatalog caseInsensitiveCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), false);
+    Table icebergTableFromSchema = testCatalog.retrieveCatalog().loadTable(tableIdentifier);
+
+    icebergTableFromSchema.updateSchema().renameColumn("name", "Name").commit();
+    IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("name", "Foo"),
+        caseInsensitiveCatalog,
+        new LocalInputSourceFactory(),
+        null
+    );
+
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    List<File> localInputSourceList = splits.map(inputSource::withSplit)
+                                            .map(inpSource -> (LocalInputSource) inpSource)
+                                            .map(LocalInputSource::getFiles)
+                                            .flatMap(List::stream)
+                                            .collect(Collectors.toList());
+
+    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assert.assertEquals(1, localInputSourceList.size());
+  }
+
   @After
   public void tearDown()
   {
@@ -197,7 +225,6 @@ public class IcebergInputSourceTest
   {
     //Setup iceberg table and schema
     Table icebergTableFromSchema = testCatalog.retrieveCatalog().createTable(tableIdentifier, tableSchema);
-
     //Generate an iceberg record and write it to a file
     GenericRecord record = GenericRecord.create(tableSchema);
     ImmutableList.Builder<GenericRecord> builder = ImmutableList.builder();

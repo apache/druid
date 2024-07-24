@@ -37,8 +37,8 @@ import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
-import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.input.WindowedSegmentId;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -46,9 +46,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -171,19 +169,10 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final FireDepartment fireDepartmentForMetrics = new FireDepartment(
-        dataSchema,
-        new RealtimeIOConfig(null, null),
-        null
-    );
-    final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
-
-    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-        this,
-        fireDepartmentForMetrics,
-        buildSegmentsMeters
-    );
+    final TaskRealtimeMetricsMonitor metricsMonitor =
+        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, buildSegmentsMeters);
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -206,7 +195,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
-        fireDepartmentMetrics,
+        segmentGenerationMetrics,
         toolbox,
         dataSchema,
         tuningConfig,

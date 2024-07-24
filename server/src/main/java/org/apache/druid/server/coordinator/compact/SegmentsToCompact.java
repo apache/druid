@@ -107,9 +107,9 @@ public class SegmentsToCompact
     return umbrellaInterval;
   }
 
-  public long getNumIntervals()
+  public CompactionStatistics getStats()
   {
-    return numIntervals;
+    return CompactionStatistics.create(totalBytes, size(), numIntervals);
   }
 
   @Override

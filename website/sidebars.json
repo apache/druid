@@ -28,7 +28,8 @@
         "tutorials/tutorial-append-data",
         "tutorials/tutorial-update-data",
         "tutorials/tutorial-compaction",
-        "tutorials/tutorial-delete-data"]
+        "tutorials/tutorial-delete-data",
+        "tutorials/tutorial-latest-by"]
        },
       {"type": "category",
         "label": "Querying tutorials",
@@ -36,7 +37,8 @@
           "tutorials/tutorial-query",
           "tutorials/tutorial-sql-query-view",
           "tutorials/tutorial-unnest-arrays",
-          "tutorials/tutorial-query-deep-storage"]
+          "tutorials/tutorial-query-deep-storage",
+          "tutorials/tutorial-latest-by"]
       },
     "tutorials/tutorial-sketches-theta",
     "tutorials/tutorial-jdbc",
@@ -185,7 +187,16 @@
         "items": [
           "querying/datasource",
           "querying/joins",
-          "querying/lookups",
+          {"type": "category",
+          "label": "Lookups",
+           "link": {
+           "type": "doc",
+           "id": "querying/lookups"
+           },
+           "items":[
+            "querying/lookups-cached-global",
+            "querying/kafka-extraction-namespace"
+           ]},
           "querying/multi-value-dimensions",
           "querying/arrays",
           "querying/nested-columns",
@@ -354,7 +365,22 @@
   "items":
   [
     "release-info/release-notes",
-    "release-info/upgrade-notes"
+    "release-info/upgrade-notes",
+    {
+      "type": "category",
+      "label": "Migration guides",
+      "link": {
+        "type": "doc",
+        "id": "release-info/migration-guide"
+      },
+      "items": [
+        "release-info/migr-mvd-array",
+        "release-info/migr-front-coded-dict",
+        "release-info/migr-subquery-limit",
+        "release-info/migr-ansi-sql-null"
+        
+      ]
+    }
   ]},
   "misc/papers-and-talks"
   ]

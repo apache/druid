@@ -49,9 +49,10 @@ public class KllFloatsSketchToRankPostAggregatorTest
         0
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllFloatsSketchToRankPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllFloatsSketchToRankPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

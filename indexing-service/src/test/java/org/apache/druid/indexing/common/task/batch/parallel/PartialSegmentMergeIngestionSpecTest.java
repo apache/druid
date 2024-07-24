@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Before;
 import org.junit.Test;
@@ -37,7 +38,7 @@ public class PartialSegmentMergeIngestionSpecTest
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
   @Parameterized.Parameters(name = "partitionLocation = {0}")
-  public static Iterable<? extends Object> data()
+  public static Iterable<?> data()
   {
     return Arrays.asList(
         GENERIC_PARTITION_LOCATION,
@@ -65,24 +66,21 @@ public class PartialSegmentMergeIngestionSpecTest
   );
 
   private PartialSegmentMergeIngestionSpec target;
-  private PartialSegmentMergeIOConfig ioConfig;
-  private HashedPartitionsSpec partitionsSpec;
 
   @Before
   public void setup()
   {
-    ioConfig = new PartialSegmentMergeIOConfig(Collections.singletonList(partitionLocation));
-    partitionsSpec = new HashedPartitionsSpec(
-        null,
-        1,
-        Collections.emptyList()
-    );
+    PartialSegmentMergeIOConfig ioConfig =
+        new PartialSegmentMergeIOConfig(Collections.singletonList(partitionLocation));
+    HashedPartitionsSpec partitionsSpec =
+        new HashedPartitionsSpec(null, 1, Collections.emptyList());
     target = new PartialSegmentMergeIngestionSpec(
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
         ioConfig,
-        new ParallelIndexTestingFactory.TuningConfigBuilder()
-            .partitionsSpec(partitionsSpec)
-            .build()
+        TuningConfigBuilder.forParallelIndexTask()
+                           .withForceGuaranteedRollup(true)
+                           .withPartitionsSpec(partitionsSpec)
+                           .build()
     );
   }
 

@@ -22,8 +22,6 @@ package org.apache.druid.sql.calcite;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -42,9 +40,9 @@ public @interface DecoupledTestConfig
    *
    * The value of this field should describe the root cause of the difference.
    */
-  NativeQueryIgnore nativeQueryIgnore() default NativeQueryIgnore.NONE;
+  QuidemTestCaseReason quidemReason() default QuidemTestCaseReason.NONE;
 
-  enum NativeQueryIgnore
+  enum QuidemTestCaseReason
   {
     NONE,
     /**
@@ -68,16 +66,6 @@ public @interface DecoupledTestConfig
      * Worse plan; may loose vectorization; but no extra queries
      */
     SLIGHTLY_WORSE_PLAN,
-    /**
-     * {@link TimeseriesQuery} to {@link ScanQuery} change.
-     *
-     * Not yet sure if this is improvement; or some issue
-     */
-    TS_TO_SCAN,
-    /**
-     * GroupBy doesn't sorted?!
-     */
-    GBY_DOESNT_SORT,
     /**
      * Equvivalent plan.
      *
@@ -107,6 +95,7 @@ public @interface DecoupledTestConfig
     {
       return this != NONE;
     }
-  };
+  }
 
+  boolean separateDefaultModeTest() default false;
 }

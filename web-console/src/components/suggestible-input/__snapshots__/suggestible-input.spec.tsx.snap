@@ -5,29 +5,29 @@ exports[`SuggestibleInput matches snapshot 1`] = `
   class="formatted-input suggestible-input"
 >
   <div
-    class="bp4-input-group"
+    class="bp5-input-group"
   >
     <input
-      class="bp4-input"
+      class="bp5-input"
       style="padding-right: 0px;"
       type="text"
       value=""
     />
     <span
-      class="bp4-input-action"
+      class="bp5-input-action"
     >
       <span
-        aria-haspopup="true"
-        class="bp4-popover2-target"
+        class="bp5-popover-target"
       >
         <button
-          class="bp4-button bp4-minimal"
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp5-button bp5-minimal"
           type="button"
         >
           <span
             aria-hidden="true"
-            class="bp4-icon bp4-icon-caret-down"
-            icon="caret-down"
+            class="bp5-icon bp5-icon-caret-down"
           >
             <svg
               data-icon="caret-down"
@@ -54,29 +54,29 @@ exports[`SuggestibleInput matches snapshot with escaped value 1`] = `
   class="formatted-input suggestible-input"
 >
   <div
-    class="bp4-input-group"
+    class="bp5-input-group"
   >
     <input
-      class="bp4-input"
+      class="bp5-input"
       style="padding-right: 0px;"
       type="text"
       value="Here are some chars \\t\\r\\n lol"
     />
     <span
-      class="bp4-input-action"
+      class="bp5-input-action"
     >
       <span
-        aria-haspopup="true"
-        class="bp4-popover2-target"
+        class="bp5-popover-target"
       >
         <button
-          class="bp4-button bp4-minimal"
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp5-button bp5-minimal"
           type="button"
         >
           <span
             aria-hidden="true"
-            class="bp4-icon bp4-icon-caret-down"
-            icon="caret-down"
+            class="bp5-icon bp5-icon-caret-down"
           >
             <svg
               data-icon="caret-down"

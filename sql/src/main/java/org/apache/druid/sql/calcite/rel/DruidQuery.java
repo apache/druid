@@ -106,7 +106,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1602,7 +1601,8 @@ public class DruidQuery
 
     if (outputRowSignature.size() == 0) {
       // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
-      throw new ISE("Cannot convert to Scan query without any columns.");
+      this.plannerContext.setPlanningError("Cannot convert to Scan query without any columns.");
+      return null;
     }
 
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
@@ -1678,7 +1678,6 @@ public class DruidQuery
         orderByColumns,
         filtration.getDimFilter(),
         scanColumnsList,
-        false,
         withScanSignatureIfNeeded(
             virtualColumns,
             scanColumnsList,

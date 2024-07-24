@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canOutsideClickClose={false}
   className="index-spec-dialog"
   isOpen={true}
@@ -74,13 +74,13 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
             "defaultValue": "longs",
             "info": <React.Fragment>
               Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
-              <Unknown>
+              <ForwardRef>
                 auto
-              </Unknown>
+              </ForwardRef>
                encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. 
-              <Unknown>
+              <ForwardRef>
                 longs
-              </Unknown>
+              </ForwardRef>
                stores the value as-is with 8 bytes each.
             </React.Fragment>,
             "name": "longEncoding",
@@ -130,16 +130,16 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
     />
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -147,11 +147,11 @@ exports[`IndexSpecDialog matches snapshot with indexSpec 1`] = `
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;
 
 exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canOutsideClickClose={false}
   className="index-spec-dialog"
   isOpen={true}
@@ -224,13 +224,13 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
             "defaultValue": "longs",
             "info": <React.Fragment>
               Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. 
-              <Unknown>
+              <ForwardRef>
                 auto
-              </Unknown>
+              </ForwardRef>
                encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. 
-              <Unknown>
+              <ForwardRef>
                 longs
-              </Unknown>
+              </ForwardRef>
                stores the value as-is with 8 bytes each.
             </React.Fragment>,
             "name": "longEncoding",
@@ -276,16 +276,16 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
     />
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -293,5 +293,5 @@ exports[`IndexSpecDialog matches snapshot without compactionConfig 1`] = `
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;

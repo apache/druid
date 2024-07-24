@@ -138,6 +138,29 @@ public class InFilterTests
           NotDimFilter.of(inFilter("dim0", ColumnType.STRING, Arrays.asList("e", "x"))),
           ImmutableList.of("a", "b", "c", "d", "f")
       );
+
+      if (NullHandling.sqlCompatible()) {
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
+            ImmutableList.of("b", "c")
+        );
+
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
+            ImmutableList.of("b", "c")
+        );
+      } else {
+        // in default value mode, we actually end up using a classic InDimFilter, it does not match numbers well
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
+            ImmutableList.of("b", "c")
+        );
+
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
+            ImmutableList.of()
+        );
+      }
     }
     @Test
     public void testSingleValueStringColumnWithNulls()

@@ -149,12 +149,6 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
-
-    if (legacy) {
-      throw new ISE("Cannot use this engine in legacy mode");
-    }
-
     if (runningCountForLimit != null
         && runningCountForLimit.get() > query.getScanRowsOffset() + query.getScanRowsLimit()) {
       return ReturnOrAwait.returnObject(Unit.instance());
