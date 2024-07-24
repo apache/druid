@@ -112,8 +112,7 @@ public class CoordinatorCompactionConfigsResource
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response simulateCompactionDynamicConfig(
-      CompactionConfigUpdateRequest updatePayload,
-      @Context HttpServletRequest req
+      CompactionConfigUpdateRequest updatePayload
   )
   {
     return Response.ok().entity(simulator.simulateRunWithConfigUpdate(updatePayload)).build();

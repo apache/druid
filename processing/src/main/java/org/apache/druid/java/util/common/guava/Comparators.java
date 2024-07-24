@@ -26,7 +26,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.Objects;
 
 /**
  */
@@ -54,7 +53,8 @@ public class Comparators
   }
 
   /**
-   * Creates an ordering which always gives priority to the passed value.
+   * Creates an ordering which always gives priority to the specified value.
+   * Other values are considered equal to each other.
    */
   public static <T> Ordering<T> alwaysFirst(T value)
   {
