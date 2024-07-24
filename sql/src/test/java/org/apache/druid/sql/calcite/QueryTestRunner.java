@@ -356,15 +356,12 @@ public class QueryTestRunner
   public static class VerifyResults implements QueryVerifyStep
   {
     protected final BaseExecuteQuery execStep;
-    protected final boolean verifyRowSignature;
 
     public VerifyResults(
-        BaseExecuteQuery execStep,
-        boolean verifyRowSignature
+        BaseExecuteQuery execStep
     )
     {
       this.execStep = execStep;
-      this.verifyRowSignature = verifyRowSignature;
     }
 
     @Override
@@ -386,9 +383,7 @@ public class QueryTestRunner
       }
 
       QueryTestBuilder builder = execStep.builder();
-      if (verifyRowSignature) {
-        builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
-      }
+      builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
       builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
@@ -629,12 +624,15 @@ public class QueryTestRunner
       // times. Pick the first failure as that emulates the original code flow
       // where the first exception ended the test.
       for (QueryResults queryResults : execStep.results()) {
-        if (queryResults.exception == null) {
-          continue;
-        }
-
         // Delayed exception checking to let other verify steps run before running vectorized checks
         if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
+          if (queryResults.exception == null) {
+            Assert.fail(
+                "Expected vectorized execution to fail, but it did not. "
+                + "Please remove cannotVectorize() from this test case."
+            );
+          }
+
           MatcherAssert.assertThat(
               queryResults.exception,
               CoreMatchers.allOf(
@@ -644,7 +642,7 @@ public class QueryTestRunner
                   )
               )
           );
-        } else {
+        } else if (queryResults.exception != null) {
           throw queryResults.exception;
         }
       }
@@ -744,7 +742,7 @@ public class QueryTestRunner
       if (builder.expectedResultsVerifier != null) {
         // Don't verify the row signature when MSQ is running, since the broker receives the task id, and the signature
         // would be {TASK:STRING} instead of the expected results signature
-        verifySteps.add(new VerifyResults(finalExecStep, !config.isRunningMSQ()));
+        verifySteps.add(new VerifyResults(finalExecStep));
       }
 
       if (!builder.customVerifications.isEmpty()) {

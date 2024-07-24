@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#--------------------------------------------------------------------
+
+# Adopts base Calcite parser changes 
+#
+# Establishes a git friendly merge situation:
+#
+# Creates a commit which matches the original state of the calcite parser;
+# To this point creates to alternates:
+#   * one with local customizations
+#   * another with all the upstream updates
+# merges the two branches to obtain the upgrade state
+#
+
+[ $# -ne 2 ] && echo -e "updates base parser sources.\n usage: $0 <old_calcite_version> <new_calcite_version>" && exit 1
+
+CALCITE_OLD=$1
+CALCITE_NEW=$2
+
+set -e
+set -x
+
+BRANCH=`git name-rev --name-only HEAD`
+
+REPO=.git/calcite-upgrade
+rm -rf "$REPO"
+git clone $PWD --reference $PWD --branch $BRANCH $REPO
+
+cd "$REPO"
+git checkout -b curr-changes
+
+mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_OLD -Pskip-static-checks
+cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
+git commit -m 'current reverse' -a
+git revert --no-edit HEAD
+# HEAD is now at the same as before; but parent are the base calcite changes
+
+git branch base-changes curr-changes^
+git checkout base-changes
+git show|patch -p0 -R # undo temproarily to ensure maven runs
+
+mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_NEW -Pskip-static-checks
+cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./
+
+git commit --allow-empty -m base-changes -a
+git checkout -b new-state
+git merge --no-edit curr-changes
+
+echo ok
+cd -
+
+git remote remove calcite-upgrade &>/dev/null || echo -n
+git remote add -f calcite-upgrade "$REPO"
+
+
+echo "merge branch calcite-upgrade/curr-changes if satisfied with those changes"
+

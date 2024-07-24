@@ -200,7 +200,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Map of datasource and generic object extending DataSourceInformation.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<String, T> tables = new ConcurrentHashMap<>();
 
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
@@ -269,9 +269,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               final boolean wasRecentFailure = DateTimes.utc(lastFailure)
                                                         .plus(config.getMetadataRefreshPeriod())
                                                         .isAfterNow();
+
               if (isServerViewInitialized &&
                   !wasRecentFailure &&
-                  (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                  shouldRefresh() &&
                   (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                 // We need to do a refresh. Break out of the waiting loop.
                 break;
@@ -334,6 +335,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+
   /**
    * Lifecycle start method.
    */
@@ -361,6 +363,15 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // noop
   }
 
+  /**
+   * Refresh is executed only when there are segments or datasources needing refresh.
+   */
+  @SuppressWarnings("GuardedBy")
+  protected boolean shouldRefresh()
+  {
+    return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
+  }
+
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
@@ -373,6 +384,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    *
    * @return schema information for the given datasource
    */
+  @Nullable
   public T getDatasource(String name)
   {
     return tables.get(name);
@@ -733,7 +745,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
           log.warn("Got analysis for segment [%s] we didn't ask for, ignoring.", analysis.getId());
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
-          log.info("Segment[%s] has signature[%s].", segmentId, rowSignature);
+          log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
 
           if (segmentMetadataQueryResultHandler(dataSource, segmentId, rowSignature, analysis)) {
             retVal.add(segmentId);

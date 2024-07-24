@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -276,8 +275,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         }
       }
 
-      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
           signature,
           sortColumns
@@ -393,8 +391,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     long remainingRowsToSkip = limit.getOffset();
     long remainingRowsToFetch = limit.getLimitOrMax();
 
-    final FrameWriter frameWriter = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    final FrameWriter frameWriter = FrameWriters.makeColumnBasedFrameWriterFactory(
         memFactory,
         sigBob.build(),
         Collections.emptyList()

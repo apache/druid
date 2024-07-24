@@ -332,6 +332,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     return stateRef.get().lookupMap.keySet();
   }
 
+  @Override
+  public String getCanonicalLookupName(String lookupName)
+  {
+    return lookupName;
+  }
+
   // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
   LookupsState<LookupExtractorFactoryContainer> getAllLookupsState()
   {

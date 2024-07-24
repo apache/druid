@@ -56,15 +56,14 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    StorageConnectorProvider s3StorageConnectorProvider = getStorageConnectorProvider(properties);
+    StorageConnectorProvider storageConnectorProvider = getStorageConnectorProvider(properties);
 
-    assertInstanceOf(AzureStorageConnectorProvider.class, s3StorageConnectorProvider);
-    assertInstanceOf(AzureStorageConnector.class, s3StorageConnectorProvider.get());
-    assertEquals("container", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getContainer());
-    assertEquals("prefix", ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getPrefix());
+    assertInstanceOf(AzureStorageConnectorProvider.class, storageConnectorProvider);
+    assertInstanceOf(AzureStorageConnector.class, storageConnectorProvider.get());
+    assertEquals("container", ((AzureStorageConnectorProvider) storageConnectorProvider).getContainer());
+    assertEquals("prefix", ((AzureStorageConnectorProvider) storageConnectorProvider).getPrefix());
     assertEquals(new File("/tmp"),
-                            ((AzureStorageConnectorProvider) s3StorageConnectorProvider).getTempDir());
-
+                            ((AzureStorageConnectorProvider) storageConnectorProvider).getTempDir());
   }
 
   @Test
@@ -72,7 +71,7 @@ public class AzureStorageConnectorProviderTest
   {
 
     final Properties properties = new Properties();
-    properties.setProperty(CUSTOM_NAMESPACE + ".type", "s3");
+    properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
     properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
     assertThrows(

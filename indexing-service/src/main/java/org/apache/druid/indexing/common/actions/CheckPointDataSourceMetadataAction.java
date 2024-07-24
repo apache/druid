@@ -122,12 +122,6 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "CheckPointDataSourceMetadataAction{" +

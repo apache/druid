@@ -93,7 +93,6 @@ public class TimeseriesQueryEngine
 
 
     final CursorMaker cursorMaker = adapter.asCursorMaker(query.asCursorBuildSpec(timeseriesQueryMetrics));
-
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (query.context().getVectorize().shouldVectorize(cursorMaker.canVectorize(), cursorMaker::cleanup)) {

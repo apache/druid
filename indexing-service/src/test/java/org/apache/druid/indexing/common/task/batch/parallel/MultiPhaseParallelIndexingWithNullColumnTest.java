@@ -140,7 +140,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 JSON_FORMAT,
                 false,
@@ -191,7 +190,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 new JsonInputFormat(
                     new JSONPathSpec(true, null),
@@ -252,7 +250,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 new JsonInputFormat(
                     new JSONPathSpec(
@@ -321,7 +318,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 JSON_FORMAT,
                 false,

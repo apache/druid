@@ -35,6 +35,7 @@ import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -43,6 +44,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
+import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
 
@@ -63,6 +65,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
   private final String exportFilePath;
   private final Object2IntMap<String> outputColumnNameToFrameColumnNumberMap;
   private final RowSignature exportRowSignature;
+  private final ResultsContext resultsContext;
+  private final int partitionNum;
 
   private volatile ResultFormat.Writer exportWriter;
 
@@ -74,7 +78,9 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       final ObjectMapper jsonMapper,
       final ChannelCounters channelCounter,
       final String exportFilePath,
-      final ColumnMappings columnMappings
+      final ColumnMappings columnMappings,
+      final ResultsContext resultsContext,
+      final int partitionNum
   )
   {
     this.inputChannel = inputChannel;
@@ -84,6 +90,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
     this.jsonMapper = jsonMapper;
     this.channelCounter = channelCounter;
     this.exportFilePath = exportFilePath;
+    this.resultsContext = resultsContext;
+    this.partitionNum = partitionNum;
     this.outputColumnNameToFrameColumnNumberMap = new Object2IntOpenHashMap<>();
     final RowSignature inputRowSignature = frameReader.signature();
 
@@ -129,13 +137,13 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
       return ReturnOrAwait.awaitAll(1);
     }
 
+    if (exportWriter == null) {
+      createExportWriter();
+    }
     if (inputChannel.isFinished()) {
       exportWriter.writeResponseEnd();
       return ReturnOrAwait.returnObject(exportFilePath);
     } else {
-      if (exportWriter == null) {
-        createExportWriter();
-      }
       exportFrame(inputChannel.read());
       return ReturnOrAwait.awaitAll(1);
     }
@@ -166,9 +174,23 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
               for (int j = 0; j < exportRowSignature.size(); j++) {
                 String columnName = exportRowSignature.getColumnName(j);
                 BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
-                exportWriter.writeRowField(columnName, selector.getObject());
+                if (resultsContext == null) {
+                  throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                      .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                      .build("Received null resultsContext from the controller. This is due to a version mismatch between the controller and the worker. Please ensure that the worker and the controller are on the same version before retrying the query.");
+                }
+                exportWriter.writeRowField(
+                    columnName,
+                    SqlResults.coerce(
+                        jsonMapper,
+                        resultsContext.getSqlResultsContext(),
+                        selector.getObject(),
+                        resultsContext.getSqlTypeNames().get(j),
+                        columnName
+                    )
+                );
               }
-              channelCounter.incrementRowCount();
+              channelCounter.incrementRowCount(partitionNum);
               exportWriter.writeRowEnd();
               cursor.advance();
             }

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
@@ -42,7 +41,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
@@ -103,10 +101,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     SegmentLoadDropHandler segmentLoadDropHandler = new SegmentLoadDropHandler(
         new SegmentLoaderConfig(),
         EasyMock.createNiceMock(DataSegmentAnnouncer.class),
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
-        EasyMock.createNiceMock(SegmentManager.class),
-        EasyMock.createNiceMock(ScheduledExecutorService.class),
-        new ServerTypeConfig(ServerType.HISTORICAL)
+        EasyMock.createNiceMock(SegmentManager.class)
     )
     {
       @Override

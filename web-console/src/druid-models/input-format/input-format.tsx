@@ -76,7 +76,7 @@ function generateInputFormatFields(streaming: boolean) {
           <p>The parser used to parse the data.</p>
           <p>
             For more information see{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats`}>
               the documentation
             </ExternalLink>
             .
@@ -329,7 +329,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
         <p>The parser used to parse the key of the Kafka message.</p>
         <p>
           For more information see{' '}
-          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats`}>
             the documentation
           </ExternalLink>
           .

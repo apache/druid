@@ -93,7 +93,6 @@ public class ShuffleResourceTest
     };
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient()
     {

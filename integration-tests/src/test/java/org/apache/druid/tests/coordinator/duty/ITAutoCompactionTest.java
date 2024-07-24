@@ -26,6 +26,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -75,9 +76,11 @@ import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -105,6 +108,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private static final String INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS = "/indexer/wikipedia_index_no_rollup_preserve_metric.json";
   private static final int MAX_ROWS_PER_SEGMENT_COMPACTED = 10000;
   private static final Period NO_SKIP_OFFSET = Period.seconds(0);
+
+  @DataProvider(name = "engine")
+  public static Object[][] engine()
+  {
+    return new Object[][]{{CompactionEngine.NATIVE}, {CompactionEngine.MSQ}};
+  }
 
   @Inject
   protected CompactionResourceTestClient compactionResource;
@@ -383,6 +392,61 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionWithMetricColumnSameAsInputColShouldOverwriteInputWithMetrics(CompactionEngine engine)
+      throws Exception
+  {
+    // added = 31
+    loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
+    // added = 31
+    loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
+    if (engine == CompactionEngine.MSQ) {
+      updateCompactionTaskSlot(0.1, 2, false);
+    }
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 2 segments across 1 days...
+      verifySegmentsCount(2);
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 2,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))), ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(31))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(null, null, true),
+          new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
+          null,
+          new AggregatorFactory[] {new LongSumAggregatorFactory("added", "added")},
+          false,
+          engine
+      );
+      // should now only have 1 row after compaction
+      // added = 62
+      forceTriggerAutoCompaction(1);
+
+      queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%", "added",
+          "%%EXPECTED_COUNT_RESULT%%", 1,
+          "%%EXPECTED_SCAN_RESULT%%", ImmutableList.of(ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(62))))
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      checkCompactionIntervals(intervalsBeforeCompaction);
+
+      List<TaskResponseObject> compactTasksBefore = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      // Verify rollup segments does not get compacted again
+      forceTriggerAutoCompaction(1);
+      List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
+      Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
   @Test
   public void testAutoCompactionOnlyRowsWithMetricShouldPreserveExistingMetrics() throws Exception
   {
@@ -546,8 +610,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test
-  public void testAutoCompactionDutyCanDeleteCompactionConfig() throws Exception
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionDutyCanDeleteCompactionConfig(CompactionEngine engine) throws Exception
   {
     loadData(INDEX_TASK);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -557,7 +621,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, engine);
       deleteCompactionConfig();
 
       // ...should remains unchanged (4 total)
@@ -1398,7 +1462,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   }
 
   @Test
-  public void testAutoCompactionDutyWithMetricsSpec() throws Exception
+  public void testAutoCompationDutyWithMetricsSpec() throws Exception
   {
     loadData(INDEX_TASK_WITH_DIMENSION_SPEC);
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -1585,24 +1649,115 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest) throws Exception
+  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest)
+      throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, null);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec) throws Exception
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      @Nullable CompactionEngine engine
+  ) throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, engine);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, boolean dropExisting) throws Exception
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec
+  ) throws Exception
   {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, null, null, null, dropExisting);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, null);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest, UserCompactionTaskGranularityConfig granularitySpec, UserCompactionTaskDimensionsConfig dimensionsSpec, UserCompactionTaskTransformConfig transformSpec, AggregatorFactory[] metricsSpec, boolean dropExisting) throws Exception
+
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      @Nullable CompactionEngine engine
+  ) throws Exception
   {
-    submitCompactionConfig(new DynamicPartitionsSpec(maxRowsPerSegment, null), skipOffsetFromLatest, 1, granularitySpec, dimensionsSpec, transformSpec, metricsSpec, dropExisting);
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, engine);
+  }
+
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      boolean dropExisting
+  ) throws Exception
+  {
+    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, dropExisting, null);
+  }
+
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      boolean dropExisting,
+      @Nullable CompactionEngine engine
+  ) throws Exception
+  {
+    submitCompactionConfig(
+        maxRowsPerSegment,
+        skipOffsetFromLatest,
+        granularitySpec,
+        null,
+        null,
+        null,
+        dropExisting,
+        engine
+    );
+  }
+
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      UserCompactionTaskDimensionsConfig dimensionsSpec,
+      UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec,
+      boolean dropExisting
+  ) throws Exception
+  {
+    submitCompactionConfig(
+        maxRowsPerSegment,
+        skipOffsetFromLatest,
+        granularitySpec,
+        dimensionsSpec,
+        transformSpec,
+        metricsSpec,
+        dropExisting,
+        null
+    );
+  }
+
+  private void submitCompactionConfig(
+      Integer maxRowsPerSegment,
+      Period skipOffsetFromLatest,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      UserCompactionTaskDimensionsConfig dimensionsSpec,
+      UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec,
+      boolean dropExisting,
+      @Nullable CompactionEngine engine
+  ) throws Exception
+  {
+    submitCompactionConfig(
+        new DynamicPartitionsSpec(maxRowsPerSegment, null),
+        skipOffsetFromLatest,
+        1,
+        granularitySpec,
+        dimensionsSpec,
+        transformSpec,
+        metricsSpec,
+        dropExisting,
+        engine
+    );
   }
 
   private void submitCompactionConfig(
@@ -1614,6 +1769,31 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       UserCompactionTaskTransformConfig transformSpec,
       AggregatorFactory[] metricsSpec,
       boolean dropExisting
+  ) throws Exception
+  {
+    submitCompactionConfig(
+        partitionsSpec,
+        skipOffsetFromLatest,
+        maxNumConcurrentSubTasks,
+        granularitySpec,
+        dimensionsSpec,
+        transformSpec,
+        metricsSpec,
+        dropExisting,
+        null
+    );
+  }
+
+  private void submitCompactionConfig(
+      PartitionsSpec partitionsSpec,
+      Period skipOffsetFromLatest,
+      int maxNumConcurrentSubTasks,
+      UserCompactionTaskGranularityConfig granularitySpec,
+      UserCompactionTaskDimensionsConfig dimensionsSpec,
+      UserCompactionTaskTransformConfig transformSpec,
+      AggregatorFactory[] metricsSpec,
+      boolean dropExisting,
+      @Nullable CompactionEngine engine
   ) throws Exception
   {
     DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
@@ -1648,6 +1828,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         metricsSpec,
         transformSpec,
         !dropExisting ? null : new UserCompactionTaskIOConfig(true),
+        engine,
         null
     );
     compactionResource.submitCompactionConfig(compactionConfig);

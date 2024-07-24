@@ -29,7 +29,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
 import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.LifecycleModule;
@@ -123,7 +122,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new TombstoneDataStorageModule(),
-        new FirehoseModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
         new AuthenticatorMapperModule(),

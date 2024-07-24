@@ -34,7 +34,6 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ValueType;
@@ -46,7 +45,6 @@ import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -2061,42 +2059,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{null, null, "MMMM", "Fourems", 205L}
         )
     );
-  }
-
-  @Test
-  public void test_determineBaseColumnsWithPreAndPostJoinVirtualColumns()
-  {
-    List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
-    JoinFilterPreAnalysis analysis = makeDefaultConfigPreAnalysis(null, joinableClauses, VirtualColumns.EMPTY);
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
-        joinableClauses,
-        analysis
-    );
-    List<VirtualColumn> expectedPreJoin = ImmutableList.of(
-        makeExpressionVirtualColumn("concat(countryIsoCode,'L')", "v0"),
-        makeExpressionVirtualColumn("concat(countryIsoCode, countryNumber)", "v1"),
-        makeExpressionVirtualColumn("channel_uniques - 1", "v2"),
-        makeExpressionVirtualColumn("channel_uniques - __time", "v3")
-    );
-
-    List<VirtualColumn> expectedPostJoin = ImmutableList.of(
-        makeExpressionVirtualColumn("concat(countryIsoCode, dummyColumn)", "v4"),
-        makeExpressionVirtualColumn("dummyMetric - __time", "v5")
-    );
-    List<VirtualColumn> actualPreJoin = new ArrayList<>();
-    List<VirtualColumn> actualPostJoin = new ArrayList<>();
-    List<VirtualColumn> allVirtualColumns = new ArrayList<>();
-    allVirtualColumns.addAll(expectedPreJoin);
-    allVirtualColumns.addAll(expectedPostJoin);
-    adapter.determineBaseColumnsWithPreAndPostJoinVirtualColumns(
-        VirtualColumns.create(allVirtualColumns),
-        actualPreJoin,
-        actualPostJoin
-    );
-
-    Assert.assertEquals(expectedPreJoin, actualPreJoin);
-    Assert.assertEquals(expectedPostJoin, actualPostJoin);
   }
 
   @Test

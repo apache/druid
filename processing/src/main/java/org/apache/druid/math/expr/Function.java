@@ -622,11 +622,10 @@ public interface Function extends NamedFunction
         ExprEval<?> exprEval = expr.eval(bindings);
         ExpressionType exprType = exprEval.type();
 
-        if (isValidType(exprType)) {
-          outputType = ExpressionTypeConversion.function(outputType, exprType);
-        }
-
         if (exprEval.value() != null) {
+          if (isValidType(exprType)) {
+            outputType = ExpressionTypeConversion.function(outputType, exprType);
+          }
           evals.add(exprEval);
         }
       }

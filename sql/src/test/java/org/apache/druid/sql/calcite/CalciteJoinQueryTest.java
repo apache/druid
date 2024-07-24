@@ -3515,7 +3515,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .filters(equality("m2", "1000", ColumnType.DOUBLE))
               .columns("dim2")
-              .legacy(false)
               .build()
     );
 
@@ -3545,7 +3544,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                       false
                                   ))
                                   .columns("dim2")
-                                  .legacy(false)
                                   .build()
                         ),
                         rightTable,
@@ -4226,9 +4224,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
-    // Cannot vectorize due to virtual columns.
-    cannotVectorize();
-
     testQuery(
         "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -4699,7 +4694,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
-    cannotVectorize();
 
     // We don't handle non-equi join conditions for non-sql compatible mode.
     assumeFalse(NullHandling.replaceWithDefault());
@@ -4762,7 +4756,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Native JOIN operator cannot handle the condition, so a SQL JOIN with greater-than is translated into a
     // cross join with a filter.
-    cannotVectorize();
 
     // We don't handle non-equi join conditions for non-sql compatible mode.
     assumeFalse(NullHandling.replaceWithDefault());
@@ -5638,7 +5631,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   .columns("l1")
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .context(queryContext)
-                  .legacy(false)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6178,7 +6170,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6237,7 +6228,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6292,7 +6282,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                         .dataSource(CalciteTests.DATASOURCE1)
                                         .filters(in("dim2", ImmutableList.of("a", "b", "ab", "abc")))
-                                        .legacy(false)
                                         .context(context)
                                         .columns("dim2")
                                         .build()
@@ -6309,7 +6298,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6384,7 +6372,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     null
                                 ))
                                 .columns("dim2", "j0.unnest")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6456,7 +6443,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     ImmutableList.of("a", "ab", "abc", "b")
                                                 )
                                             )
-                                            .legacy(false)
                                             .context(context)
                                             .build()
                                     ),
@@ -6476,7 +6462,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),

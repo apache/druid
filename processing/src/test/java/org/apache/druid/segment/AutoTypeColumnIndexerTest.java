@@ -68,6 +68,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   public void testKeySizeEstimation()
   {
     AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
     Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
@@ -133,6 +134,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       Assert.assertEquals(48, key.getEffectiveSizeBytes());
       Assert.assertEquals(baseCardinality + 8, indexer.globalDictionary.getCardinality());
     }
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
   }
 
   @Test

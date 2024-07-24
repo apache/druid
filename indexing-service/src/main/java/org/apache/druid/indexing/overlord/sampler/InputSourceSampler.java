@@ -76,8 +76,8 @@ public class InputSourceSampler
       null
   );
 
-  // We want to be able to sort the list of processed results back into the same order that we read them from the
-  // firehose so that the rows in the data loader are not always changing. To do this, we add a temporary column to the
+  // We want to be able to sort the list of processed results back into the same order that we read them from the input
+  // source so that the rows in the data loader are not always changing. To do this, we add a temporary column to the
   // InputRow (in SamplerInputRow) and tag each row with a sortKey. We use an aggregator so that it will not affect
   // rollup, and we use a longMin aggregator so that as rows get rolled up, the earlier rows stay stable and later
   // rows may get rolled into these rows. After getting the results back from the IncrementalIndex, we sort by this

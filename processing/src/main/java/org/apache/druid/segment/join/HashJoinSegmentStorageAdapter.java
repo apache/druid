@@ -19,7 +19,10 @@
 
 package org.apache.druid.segment.join;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -31,7 +34,6 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
@@ -47,13 +49,10 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 public class HashJoinSegmentStorageAdapter implements StorageAdapter
 {
@@ -260,37 +259,35 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
             );
 
         final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
-        final JoinFilterSplit joinFilterSplit;
-
+        final JoinFilterPreAnalysis preAnalysis;
         if (keyIn.equals(keyCached)) {
           // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
-          joinFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseFilter);
+          preAnalysis = joinFilterPreAnalysis;
         } else {
           // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
           // layered on top of a join datasource.
-          joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-              JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn),
-              baseFilter
-          );
+          preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn);
         }
 
-        final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
-        final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
-
-        determineBaseColumnsWithPreAndPostJoinVirtualColumns(
-            spec.getVirtualColumns(),
-            preJoinVirtualColumns,
-            postJoinVirtualColumns
+        final JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+            preAnalysis,
+            baseFilter
         );
 
-        // We merge the filter on base table specified by the user and filter on the base table that is pushed from
-        // the join
-        preJoinVirtualColumns.addAll(joinFilterSplit.getPushDownVirtualColumns());
 
         if (joinFilterSplit.getBaseTableFilter().isPresent()) {
           cursorBuildSpecBuilder.setFilter(joinFilterSplit.getBaseTableFilter().get());
         }
-        cursorBuildSpecBuilder.setVirtualColumns(VirtualColumns.create(preJoinVirtualColumns));
+        final VirtualColumns preJoinVirtualColumns = VirtualColumns.fromIterable(
+            Iterables.concat(
+                Sets.difference(
+                    ImmutableSet.copyOf(spec.getVirtualColumns().getVirtualColumns()),
+                    joinFilterPreAnalysis.getPostJoinVirtualColumns()
+                ),
+                joinFilterSplit.getPushDownVirtualColumns()
+            )
+        );
+        cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
 
         final Sequence<Cursor> baseCursorSequence = baseAdapter.asCursorMaker(cursorBuildSpecBuilder.build())
                                                                .makeCursors();
@@ -309,7 +306,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
               return PostJoinCursor.wrap(
                   retVal,
-                  VirtualColumns.create(postJoinVirtualColumns),
+                  VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
                   joinFilterSplit.getJoinTableFilter().orElse(null)
               );
             }
@@ -351,7 +348,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-
     return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
@@ -362,47 +358,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   public boolean isBaseColumn(final String column)
   {
     return !getClauseForColumn(column).isPresent();
-  }
-
-  /**
-   * Return a String set containing the name of columns that belong to the base table (including any pre-join virtual
-   * columns as well).
-   *
-   * Additionally, if the preJoinVirtualColumns and/or postJoinVirtualColumns arguments are provided, this method
-   * will add each VirtualColumn in the provided virtualColumns to either preJoinVirtualColumns or
-   * postJoinVirtualColumns based on whether the virtual column is pre-join or post-join.
-   *
-   * @param virtualColumns         List of virtual columns from the query
-   * @param preJoinVirtualColumns  If provided, virtual columns determined to be pre-join will be added to this list
-   * @param postJoinVirtualColumns If provided, virtual columns determined to be post-join will be added to this list
-   *
-   * @return The set of base column names, including any pre-join virtual columns.
-   */
-  public Set<String> determineBaseColumnsWithPreAndPostJoinVirtualColumns(
-      VirtualColumns virtualColumns,
-      @Nullable List<VirtualColumn> preJoinVirtualColumns,
-      @Nullable List<VirtualColumn> postJoinVirtualColumns
-  )
-  {
-    final Set<String> baseColumns = new HashSet<>(baseAdapter.getRowSignature().getColumnNames());
-
-    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
-      // Virtual columns cannot depend on each other, so we don't need to check transitive dependencies.
-      if (baseColumns.containsAll(virtualColumn.requiredColumns())) {
-        // Since pre-join virtual columns can be computed using only base columns, we include them in the
-        // base column set.
-        baseColumns.add(virtualColumn.getOutputName());
-        if (preJoinVirtualColumns != null) {
-          preJoinVirtualColumns.add(virtualColumn);
-        }
-      } else {
-        if (postJoinVirtualColumns != null) {
-          postJoinVirtualColumns.add(virtualColumn);
-        }
-      }
-    }
-
-    return baseColumns;
   }
 
   /**

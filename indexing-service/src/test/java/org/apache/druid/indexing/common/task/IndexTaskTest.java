@@ -79,6 +79,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.handoff.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -92,8 +93,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
-import org.apache.druid.segment.realtime.plumber.NoopSegmentHandoffNotifierFactory;
+import org.apache.druid.segment.realtime.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -244,7 +244,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -295,7 +294,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -358,7 +356,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -1497,33 +1494,16 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("this is not JSON\n"); // invalid JSON
     }
 
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(2, null, null),
-        INDEX_SPEC,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        7,
-        7,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(2, null, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(7)
+        .withMaxSavedParseExceptions(7)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1601,8 +1581,8 @@ public class IndexTaskTest extends IngestionTestBase
             tmpFile.toURI()
         ),
         "Unable to parse value[notnumber] for field[val]",
-        "could not convert value [notnumber] to float",
-        "could not convert value [notnumber] to long",
+        "Could not convert value [notnumber] to float for dimension [dimFloat].",
+        "Could not convert value [notnumber] to long for dimension [dimLong].",
         StringUtils.format(
             "Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 1)",
             tmpFile.toURI()
@@ -1666,33 +1646,16 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new DynamicPartitionsSpec(2, null),
-        INDEX_SPEC,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new DynamicPartitionsSpec(2, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(false)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(2)
+        .withMaxSavedParseExceptions(5)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1802,33 +1765,16 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(2, null, null),
-        INDEX_SPEC,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(2, null, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(2)
+        .withMaxSavedParseExceptions(5)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -2609,33 +2555,17 @@ public class IndexTaskTest extends IngestionTestBase
       boolean reportParseException
   )
   {
-    return new IndexTuningConfig(
-        null,
-        maxRowsPerSegment,
-        null,
-        maxRowsInMemory,
-        null,
-        null,
-        maxTotalRows,
-        null,
-        null,
-        null,
-        partitionsSpec,
-        INDEX_SPEC,
-        null,
-        null,
-        forceGuaranteedRollup,
-        reportParseException,
-        null,
-        null,
-        null,
-        null,
-        null,
-        1,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder
+        .forIndexTask()
+        .withMaxRowsPerSegment(maxRowsPerSegment)
+        .withMaxRowsInMemory(maxRowsInMemory)
+        .withMaxTotalRows(maxTotalRows)
+        .withPartitionsSpec(partitionsSpec)
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(forceGuaranteedRollup)
+        .withReportParseExceptions(reportParseException)
+        .withMaxSavedParseExceptions(1)
+        .build();
   }
 
   @SuppressWarnings("unchecked")
@@ -2792,7 +2722,6 @@ public class IndexTaskTest extends IngestionTestBase
               transformSpec
           ),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
               appendToExisting,
@@ -2820,7 +2749,6 @@ public class IndexTaskTest extends IngestionTestBase
               objectMapper
           ),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               createInputFormatFromParseSpec(parseSpec),
               appendToExisting,

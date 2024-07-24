@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import org.apache.commons.lang.StringUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
@@ -43,6 +44,8 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeF
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -171,6 +174,19 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean isSkipEmptyBuckets()
   {
     return context().getBoolean(SKIP_EMPTY_BUCKETS, false);
+  }
+
+  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    builder.addTimeColumn();
+    String timestampResultField = getTimestampResultField();
+    if (StringUtils.isNotEmpty(timestampResultField)) {
+      builder.add(timestampResultField, ColumnType.LONG);
+    }
+    builder.addAggregators(aggregatorSpecs, finalization);
+    builder.addPostAggregators(postAggregatorSpecs);
+    return builder.build();
   }
 
   @Nullable

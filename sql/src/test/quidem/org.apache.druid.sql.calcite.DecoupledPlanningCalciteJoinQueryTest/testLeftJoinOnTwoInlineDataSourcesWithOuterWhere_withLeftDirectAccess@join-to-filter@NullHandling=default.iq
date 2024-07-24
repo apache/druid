@@ -18,11 +18,11 @@ with abc as
 )
 SELECT t1.dim1, t1."__time" from abc as t1 LEFT JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'
 ;
-+------+---------------------+
-| dim1 | __time              |
-+------+---------------------+
-| 10.1 | 2000-01-02 00:00:00 |
-+------+---------------------+
++------+-------------------------+
+| dim1 | __time                  |
++------+-------------------------+
+| 10.1 | 2000-01-02 00:00:00.000 |
++------+-------------------------+
 (1 row)
 
 !ok
@@ -75,7 +75,6 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
           "value" : "10.1"
         },
         "columns" : [ "__time", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "LONG", "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -101,7 +100,6 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
           "value" : "10.1"
         },
         "columns" : [ "dim1" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -124,7 +122,6 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "__time", "_v0" ],
-  "legacy" : false,
   "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"

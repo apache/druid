@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { Icon, Intent, Menu, MenuItem, Position, Tag } from '@blueprintjs/core';
+import { Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
+import { SqlExpression } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React from 'react';
@@ -65,6 +65,7 @@ import {
   assemble,
   checkedCircleIcon,
   deepGet,
+  filterMap,
   formatByteRate,
   formatBytes,
   formatInteger,
@@ -227,6 +228,12 @@ export class SupervisorsView extends React.PureComponent<
       ) => {
         let supervisors: SupervisorQueryResultRow[];
         if (capabilities.hasSql()) {
+          let filterClause = '';
+          const whereParts = filterMap(filtered, sqlQueryCustomTableFilter);
+          if (whereParts.length) {
+            filterClause = SqlExpression.and(...whereParts).toString();
+          }
+
           const sqlQuery = assemble(
             'WITH s AS (SELECT',
             '  "supervisor_id",',
@@ -238,9 +245,7 @@ export class SupervisorsView extends React.PureComponent<
             'FROM "sys"."supervisors")',
             'SELECT *',
             'FROM s',
-            filtered.length
-              ? `WHERE ${filtered.map(sqlQueryCustomTableFilter).join(' AND ')}`
-              : undefined,
+            filterClause ? `WHERE ${filterClause}` : undefined,
             sortedToOrderByClause(sorted),
             `LIMIT ${pageSize}`,
             page ? `OFFSET ${page * pageSize}` : undefined,
@@ -638,19 +643,23 @@ export class SupervisorsView extends React.PureComponent<
     return (
       <ReactTable
         data={supervisors}
+        pages={10000000} // Dummy, we are hiding the page selector
         loading={supervisorsState.loading}
         noDataText={
           supervisorsState.isEmpty() ? 'No supervisors' : supervisorsState.getErrorMessage() || ''
         }
+        manual
+        filterable
         filtered={filters}
         onFilteredChange={onFiltersChange}
-        filterable
         onFetchData={tableState => {
           this.fetchData(tableState);
         }}
+        showPageJump={false}
+        ofText=""
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
+        showPagination
         columns={[
           {
             Header: twoLines('Supervisor ID', <i>(datasource)</i>),
@@ -684,11 +693,11 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: 'Status',
             id: 'detailed_state',
-            width: 130,
+            width: 150,
             accessor: 'detailed_state',
             Cell: ({ value }) => (
               <TableFilterableCell
-                field="status"
+                field="detailed_state"
                 value={value}
                 filters={filters}
                 onFiltersChange={onFiltersChange}
@@ -779,7 +788,7 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: twoLines(
               'Stats',
-              <Popover2
+              <Popover
                 position={Position.BOTTOM}
                 content={
                   <Menu>
@@ -799,7 +808,7 @@ export class SupervisorsView extends React.PureComponent<
                 <i className="title-button">
                   {getRowStatsKeyTitle(statsKey)} <Icon icon={IconNames.CARET_DOWN} />
                 </i>
-              </Popover2>,
+              </Popover>,
             ),
             id: 'stats',
             width: 300,
@@ -888,6 +897,7 @@ export class SupervisorsView extends React.PureComponent<
                 <ActionCell
                   onDetail={() => this.onSupervisorDetail(row.original)}
                   actions={supervisorActions}
+                  menuTitle={id}
                 />
               );
             },

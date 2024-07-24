@@ -20,6 +20,7 @@
 package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -29,6 +30,10 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -259,14 +264,17 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
       } else {
         objectSelector = cursor.getColumnSelectorFactory().makeObjectSelector("v");
       }
+      GroupByVectorColumnSelector groupBySelector =
+          cursor.getColumnSelectorFactory().makeGroupByVectorColumnSelector("v", DeferExpressionDimensions.ALWAYS);
       while (!cursor.isDone()) {
+        final List<Object> resultsVector = new ArrayList<>();
         boolean[] nulls;
         switch (outputType.getType()) {
           case LONG:
             nulls = selector.getNullVector();
             long[] longs = selector.getLongVector();
             for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-              results.add(nulls != null && nulls[i] ? null : longs[i]);
+              resultsVector.add(nulls != null && nulls[i] ? null : longs[i]);
             }
             break;
           case DOUBLE:
@@ -275,24 +283,26 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
               nulls = selector.getNullVector();
               float[] floats = selector.getFloatVector();
               for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-                results.add(nulls != null && nulls[i] ? null : (double) floats[i]);
+                resultsVector.add(nulls != null && nulls[i] ? null : (double) floats[i]);
               }
             } else {
               nulls = selector.getNullVector();
               double[] doubles = selector.getDoubleVector();
               for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
-                results.add(nulls != null && nulls[i] ? null : doubles[i]);
+                resultsVector.add(nulls != null && nulls[i] ? null : doubles[i]);
               }
             }
             break;
           case STRING:
             Object[] objects = objectSelector.getObjectVector();
             for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++, rowCount++) {
-              results.add(objects[i]);
+              resultsVector.add(objects[i]);
             }
             break;
         }
 
+        verifyGroupBySelector(groupBySelector, resultsVector);
+        results.addAll(resultsVector);
         cursor.advance();
       }
     }
@@ -319,5 +329,25 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(rowCountCursor > 0);
     Assert.assertEquals(rowCountCursor, rowCount);
+  }
+
+  private static void verifyGroupBySelector(
+      final GroupByVectorColumnSelector groupBySelector,
+      final List<Object> expectedResults
+  )
+  {
+    final int keyOffset = 1;
+    final int keySize = groupBySelector.getGroupingKeySize() + keyOffset + 1; // 1 byte before, 1 byte after
+    final WritableMemory keySpace =
+        WritableMemory.allocate(keySize * expectedResults.size());
+
+    final int writeKeysRetVal = groupBySelector.writeKeys(keySpace, keySize, keyOffset, 0, expectedResults.size());
+    Assert.assertEquals(0, writeKeysRetVal);
+
+    for (int i = 0; i < expectedResults.size(); i++) {
+      final ResultRow resultRow = ResultRow.create(1);
+      groupBySelector.writeKeyToResultRow(new MemoryPointer(keySpace, (long) keySize * i), keyOffset, resultRow, 0);
+      Assert.assertEquals("row #" + i, expectedResults.get(i), resultRow.getArray()[0]);
+    }
   }
 }

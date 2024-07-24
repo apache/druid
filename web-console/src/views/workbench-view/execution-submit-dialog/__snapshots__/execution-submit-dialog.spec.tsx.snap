@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`ExecutionSubmitDialog matches snapshot 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   backdropProps={
     {
       "onDragLeave": [Function],
@@ -16,7 +16,7 @@ exports[`ExecutionSubmitDialog matches snapshot 1`] = `
   title="Load query detail archive"
 >
   <div
-    className="bp4-dialog-body"
+    className="bp5-dialog-body"
   >
     <p>
       You can load query detail archive files from other Druid clusters to render the query detail here.
@@ -24,15 +24,15 @@ exports[`ExecutionSubmitDialog matches snapshot 1`] = `
     <p>
       To download the query detail archive for a query, click on the query in the
        
-      <Unknown>
+      <ForwardRef>
         Recent query tasks
-      </Unknown>
+      </ForwardRef>
        panel in the query view.
     </p>
-    <Blueprint4.FormGroup
+    <Blueprint5.FormGroup
       label="Select query detail archive file"
     >
-      <Blueprint4.FileInput
+      <Blueprint5.FileInput
         fill={true}
         hasSelection={false}
         inputProps={
@@ -43,22 +43,22 @@ exports[`ExecutionSubmitDialog matches snapshot 1`] = `
         onInputChange={[Function]}
         text="Choose file..."
       />
-    </Blueprint4.FormGroup>
+    </Blueprint5.FormGroup>
     <p>
       Alternatively, drag a file directly onto this dialog.
     </p>
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={true}
         intent="primary"
         onClick={[Function]}
@@ -66,5 +66,5 @@ exports[`ExecutionSubmitDialog matches snapshot 1`] = `
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;

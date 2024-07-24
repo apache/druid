@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -122,12 +123,22 @@ public class VectorGroupByEngine
             try {
               final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
               final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
-                  dimensionSpec ->
-                      ColumnProcessors.makeVectorProcessor(
+                  dimensionSpec -> {
+                    if (dimensionSpec instanceof DefaultDimensionSpec) {
+                      // Delegate creation of GroupByVectorColumnSelector to the column selector factory, so that
+                      // virtual columns (like ExpressionVirtualColumn) can control their own grouping behavior.
+                      return columnSelectorFactory.makeGroupByVectorColumnSelector(
+                          dimensionSpec.getDimension(),
+                          config.getDeferExpressionDimensions()
+                      );
+                    } else {
+                      return ColumnProcessors.makeVectorProcessor(
                           dimensionSpec,
                           GroupByVectorColumnProcessorFactory.instance(),
                           columnSelectorFactory
-                      )
+                      );
+                    }
+                  }
               ).collect(Collectors.toList());
 
               return new VectorGroupByEngineIterator(
@@ -172,35 +183,32 @@ public class VectorGroupByEngine
       final List<DimensionSpec> dimensions
   )
   {
-    return dimensions
-        .stream()
-        .allMatch(
-            dimension -> {
-              if (!dimension.canVectorize()) {
-                return false;
-              }
+    for (DimensionSpec dimension : dimensions) {
+      if (!dimension.canVectorize()) {
+        return false;
+      }
 
-              if (dimension.mustDecorate()) {
-                // group by on multi value dimensions are not currently supported
-                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
-                // To be safe, we must return false here.
-                return false;
-              }
+      if (dimension.mustDecorate()) {
+        // group by on multi value dimensions are not currently supported
+        // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+        // To be safe, we must return false here.
+        return false;
+      }
 
-              if (!dimension.getOutputType().isPrimitive()) {
-                // group by on arrays and complex types is not currently supported in the vector processing engine
-                return false;
-              }
+      if (!dimension.getOutputType().isPrimitive()) {
+        // group by on arrays and complex types is not currently supported in the vector processing engine
+        return false;
+      }
 
-              // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              // null here currently means the column does not exist, nil columns can be vectorized
-              if (columnCapabilities == null) {
-                return true;
-              }
-              // must be single valued
-              return columnCapabilities.hasMultipleValues().isFalse();
-            });
+      // Now check column capabilities.
+      final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
+      if (columnCapabilities != null && columnCapabilities.hasMultipleValues().isMaybeTrue()) {
+        // null here currently means the column does not exist, nil columns can be vectorized
+        // multi-value columns implicit unnest is not currently supported in the vector processing engine
+        return false;
+      }
+    }
+    return true;
   }
 
   @VisibleForTesting
