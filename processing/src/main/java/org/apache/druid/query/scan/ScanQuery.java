@@ -443,6 +443,12 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return columnTypes;
   }
 
+  @JsonProperty("legacy")
+  public Boolean isLegacy()
+  {
+    return false;
+  }
+
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
