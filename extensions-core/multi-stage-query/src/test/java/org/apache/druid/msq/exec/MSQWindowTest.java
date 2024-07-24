@@ -609,7 +609,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -678,7 +677,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "m2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -750,7 +748,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "m2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -896,7 +893,6 @@ public class MSQWindowTest extends MSQTestBase
                 .virtualColumns(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -969,7 +965,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1053,7 +1048,6 @@ public class MSQWindowTest extends MSQTestBase
                                 .columns("m2", "v0")
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
-                                .legacy(false)
                                 .build()
                         ),
                         "j0.",
@@ -1068,7 +1062,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.m2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1159,7 +1152,6 @@ public class MSQWindowTest extends MSQTestBase
                                 .columns("m2", "v0")
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
-                                .legacy(false)
                                 .build()
                         ),
                         "j0.",
@@ -1174,7 +1166,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.m2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1248,7 +1239,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("dim2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1335,7 +1325,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.unnest", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1419,7 +1408,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.unnest", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1801,7 +1789,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("added", "cityName")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1893,7 +1880,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("added", "cityName", "countryIsoCode")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(innerContextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1923,7 +1909,6 @@ public class MSQWindowTest extends MSQTestBase
                                   .limit(5)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .context(outerContextWithRowSignature)
-                                  .legacy(false)
                                   .build();
 
     testSelectQuery()

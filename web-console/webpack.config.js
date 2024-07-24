@@ -53,7 +53,7 @@ module.exports = env => {
     mode: mode,
     devtool: mode === 'production' ? undefined : 'eval-cheap-module-source-map',
     entry: {
-      'web-console': './src/entry.ts',
+      'web-console': './src/entry.tsx',
     },
     output: {
       path: path.resolve(__dirname, './public'),

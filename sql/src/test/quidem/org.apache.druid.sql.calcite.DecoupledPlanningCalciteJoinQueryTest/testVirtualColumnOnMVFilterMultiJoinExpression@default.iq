@@ -72,7 +72,6 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim3", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -111,7 +110,6 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
               } ],
               "resultFormat" : "compactedList",
               "columns" : [ "dim3", "v0" ],
-              "legacy" : false,
               "columnTypes" : [ "STRING", "STRING" ],
               "granularity" : {
                 "type" : "all"
@@ -144,7 +142,6 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
               } ],
               "resultFormat" : "compactedList",
               "columns" : [ "v0" ],
-              "legacy" : false,
               "columnTypes" : [ "STRING" ],
               "granularity" : {
                 "type" : "all"
@@ -173,7 +170,6 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "_v0", "dim3" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
@@ -190,7 +186,6 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "_j0.dim3", "dim3" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"

@@ -94,8 +94,8 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.WindowedStorageAdapter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -2030,7 +2030,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     final TaskConfig config = new TaskConfigBuilder()
-            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create();
     centralizedDatasourceSchemaConfig.setEnabled(true);

@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`LookupEditDialog matches snapshot 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canEscapeKeyClose={false}
   canOutsideClickClose={true}
   className="lookup-edit-dialog"
@@ -12,21 +12,21 @@ exports[`LookupEditDialog matches snapshot 1`] = `
   <div
     className="content"
   >
-    <Blueprint4.FormGroup
+    <Blueprint5.FormGroup
       label="Name"
     >
-      <Blueprint4.InputGroup
+      <Blueprint5.InputGroup
         disabled={false}
         intent="none"
         onChange={[Function]}
         placeholder="Enter the lookup name"
         value="test"
       />
-    </Blueprint4.FormGroup>
-    <Blueprint4.FormGroup
+    </Blueprint5.FormGroup>
+    <Blueprint5.FormGroup
       label="Tier"
     >
-      <HTMLSelect
+      <Blueprint5.HTMLSelect
         onChange={[Function]}
         value="test"
       >
@@ -40,16 +40,16 @@ exports[`LookupEditDialog matches snapshot 1`] = `
         >
           alt-tier
         </option>
-      </HTMLSelect>
-    </Blueprint4.FormGroup>
-    <Blueprint4.FormGroup
+      </Blueprint5.HTMLSelect>
+    </Blueprint5.FormGroup>
+    <Blueprint5.FormGroup
       label="Version"
     >
-      <Blueprint4.InputGroup
+      <Blueprint5.InputGroup
         onChange={[Function]}
         placeholder="Enter the lookup version"
         rightElement={
-          <Blueprint4.Button
+          <Blueprint5.Button
             minimal={true}
             onClick={[Function]}
             text="Set to current ISO time"
@@ -57,7 +57,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
         }
         value="test"
       />
-    </Blueprint4.FormGroup>
+    </Blueprint5.FormGroup>
     <Memo(FormJsonSelector)
       onChange={[Function]}
       tab="form"
@@ -100,22 +100,22 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "defined": [Function],
             "info": <p>
               A URI which specifies a directory (or other searchable resource) in which to search for files specified as a 
-              <Unknown>
+              <ForwardRef>
                 file
-              </Unknown>
+              </ForwardRef>
               , 
-              <Unknown>
+              <ForwardRef>
                 hdfs
-              </Unknown>
+              </ForwardRef>
               , 
-              <Unknown>
+              <ForwardRef>
                 s3
-              </Unknown>
+              </ForwardRef>
               , or
                
-              <Unknown>
+              <ForwardRef>
                 gs
-              </Unknown>
+              </ForwardRef>
                path prefix.
             </p>,
             "issueWithValue": [Function],
@@ -129,22 +129,22 @@ exports[`LookupEditDialog matches snapshot 1`] = `
             "defined": [Function],
             "info": <p>
               URI for the file of interest, specified as a 
-              <Unknown>
+              <ForwardRef>
                 file
-              </Unknown>
+              </ForwardRef>
               , 
-              <Unknown>
+              <ForwardRef>
                 hdfs
-              </Unknown>
+              </ForwardRef>
               ,
                
-              <Unknown>
+              <ForwardRef>
                 s3
-              </Unknown>
+              </ForwardRef>
               , or 
-              <Unknown>
+              <ForwardRef>
                 gs
-              </Unknown>
+              </ForwardRef>
                path
             </p>,
             "issueWithValue": [Function],
@@ -170,9 +170,9 @@ exports[`LookupEditDialog matches snapshot 1`] = `
               </p>
               <p>
                 The 
-                <Unknown>
+                <ForwardRef>
                   simpleJson
-                </Unknown>
+                </ForwardRef>
                  lookupParseSpec does not take any parameters. It is simply a line delimited JSON file where the field is the key, and the field's value is the value.
               </p>
             </React.Fragment>,
@@ -462,16 +462,16 @@ exports[`LookupEditDialog matches snapshot 1`] = `
     />
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -479,5 +479,5 @@ exports[`LookupEditDialog matches snapshot 1`] = `
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;

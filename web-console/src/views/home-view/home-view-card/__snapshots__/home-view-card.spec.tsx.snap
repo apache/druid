@@ -6,15 +6,14 @@ exports[`HomeViewCard matches snapshot 1`] = `
   href="#somewhere"
 >
   <div
-    class="bp4-card bp4-interactive bp4-elevation-1"
+    class="bp5-card bp5-elevation-1 bp5-interactive"
   >
     <h5
-      class="bp4-heading"
+      class="bp5-heading"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-database"
-        icon="database"
+        class="bp5-icon bp5-icon-database"
       >
         <svg
           data-icon="database"
