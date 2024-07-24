@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.granularity;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormatter;
@@ -28,6 +29,7 @@ import org.joda.time.format.DateTimeFormatter;
 /**
  * AllGranularty buckets everything into a single bucket
  */
+@Inline
 public class AllGranularity extends Granularity
 {
   /**

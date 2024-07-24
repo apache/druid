@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.DateTimes;
@@ -155,6 +156,7 @@ public abstract class Granularity implements Cacheable
    */
   public abstract boolean isAligned(Interval interval);
 
+  @JsonIgnore
   public DateTimeZone getTimeZone()
   {
     return DateTimeZone.UTC;

@@ -43,12 +43,14 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+@Inline
 public class NullFilter extends AbstractOptimizableDimFilter implements Filter
 {
   public static NullFilter forColumn(String column)

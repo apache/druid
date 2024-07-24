@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 @JsonTypeName("table")
+@Inline
 public class TableDataSource implements DataSource
 {
   private final String name;

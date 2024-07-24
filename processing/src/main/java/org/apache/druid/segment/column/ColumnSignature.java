@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.sql.avatica.DruidPrettyPrinter;
 
 import javax.annotation.Nullable;
 
@@ -32,6 +33,7 @@ import javax.annotation.Nullable;
  * Package-private since it is not intended to be used outside that narrow use case. In other cases where passing
  * around information about column types is important, use {@link ColumnType} instead.
  */
+@DruidPrettyPrinter.Inline
 public /*FIXME*/ class ColumnSignature
 {
   private final String name;

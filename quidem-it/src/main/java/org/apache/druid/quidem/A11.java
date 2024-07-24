@@ -77,8 +77,8 @@ public class A11
     {
       Object v = g.getCurrentValue();
 
-      return v instanceof ColumnSignature;
-      // return false;
+//      return v instanceof ColumnSignature;
+       return false;
       // return v instanceof RowSignature;
       // return g.getCurrentValue() instanceof List;
 

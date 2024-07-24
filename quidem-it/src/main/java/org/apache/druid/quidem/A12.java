@@ -51,10 +51,9 @@ public class A12
     private DefaultPrettyPrinter.Indenter getDelegate()
     {
       if (isInside) {
-        return new DefaultPrettyPrinter.NopIndenter();
+        return DefaultPrettyPrinter.NopIndenter.instance;
       } else {
         return DefaultIndenter.SYSTEM_LINEFEED_INSTANCE;
-
       }
     }
 

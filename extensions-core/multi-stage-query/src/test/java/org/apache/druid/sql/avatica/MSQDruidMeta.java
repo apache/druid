@@ -86,7 +86,7 @@ public class MSQDruidMeta extends DruidMeta
     }
     try {
       String str = objectMapper
-          .writerWithDefaultPrettyPrinter()
+          .writer(new DruidPrettyPrinter())
           .writeValueAsString(payload.getStages());
       str = str.replaceAll(taskId, "<taskId>");
       DruidHook.dispatch(DruidHook.MSQ_PLAN, str);

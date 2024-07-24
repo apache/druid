@@ -25,12 +25,14 @@ import com.google.common.base.Functions;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.sql.avatica.DruidPrettyPrinter.Inline;
 
 import java.util.Set;
 
 /**
  *
  */
+@Inline
 public final class NoopLimitSpec implements LimitSpec
 {
   private static final byte CACHE_KEY = 0x0;
