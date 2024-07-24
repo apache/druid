@@ -145,10 +145,6 @@ This causes them to be stored as [multi-value strings](multi-value-dimensions.md
 as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`. This
 mode is not recommended and will be removed in a future release, but provided for backwards compatibility.
 
-When `arrayIngestMode` is `none`, Druid throws an exception when trying to store any type of arrays. This mode is most
-useful when set in the system default query context with `druid.query.default.context.arrayIngestMode = none`, in cases
-where the cluster administrator wants SQL query authors to explicitly provide one or the other in their query context.
-
 The following table summarizes the differences in SQL ARRAY handling between `arrayIngestMode: array` and
 `arrayIngestMode: mvd`.
 

@@ -228,11 +228,6 @@ public class MultiStageQueryContextTest
   public void arrayIngestMode_set_returnsCorrectValue()
   {
     Assert.assertEquals(
-        ArrayIngestMode.NONE,
-        MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "none")))
-    );
-
-    Assert.assertEquals(
         ArrayIngestMode.MVD,
         MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "mvd")))
     );
