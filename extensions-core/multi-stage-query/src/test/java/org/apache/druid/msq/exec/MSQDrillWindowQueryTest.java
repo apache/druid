@@ -20,27 +20,17 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.Provides;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
-import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
-import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.sql.SqlStatementFactory;
-import org.apache.druid.sql.SqlToolbox;
-import org.apache.druid.sql.avatica.DruidMeta;
-import org.apache.druid.sql.avatica.MSQDruidMeta;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -63,62 +53,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       super.configureGuice(builder);
       builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
       builder.addModule(new TestMSQSqlModule());
-    }
-
-    static class TestMSQSqlModule extends TestDruidModule {
-
-      @Provides
-      @MultiStageQuery
-      @LazySingleton
-      public SqlStatementFactory makeMSQSqlStatementFactory(
-          final MSQTaskSqlEngine sqlEngine,
-          SqlToolbox toolbox
-      )
-      {
-        return new SqlStatementFactory(toolbox.withEngine(sqlEngine));
-      }
-
-      @Provides
-      @LazySingleton
-      public MSQTaskSqlEngine createEngine(
-          QueryLifecycleFactory qlf,
-          ObjectMapper queryJsonMapper,
-          Injector injector,
-          MSQTestOverlordServiceClient indexingServiceClient
-      )
-      {
-        return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
-      }
-
-      @Provides
-      @LazySingleton
-      private MSQTestOverlordServiceClient extracted(ObjectMapper queryJsonMapper, Injector injector)
-      {
-        final WorkerMemoryParameters workerMemoryParameters = WorkerMemoryParameters.createInstance(
-            WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-            2,
-            10,
-            2,
-            0,
-            0
-        );
-        final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-            queryJsonMapper,
-            injector,
-            new MSQTestTaskActionClient(queryJsonMapper, injector),
-            workerMemoryParameters,
-            ImmutableList.of()
-        );
-        return indexingServiceClient;
-      }
-
-      @Provides
-      @LazySingleton
-      public DruidMeta createMeta(
-          MSQDruidMeta druidMeta)
-      {
-        return druidMeta;
-      }
     }
 
     @Override
