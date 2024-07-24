@@ -231,21 +231,16 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
-
-
   @Test
   public void testWithArrayConcat()
   {
     testBuilder()
-        .sql("select \n"
-            + "  countryName, \n"
-            + "  cityName, \n"
-            + "  channel, \n"
-            + "  row_number() over w as c\n"
-            + "from wikipedia \n"
-            + "where countryName in ('Austria', 'Republic of Korea')\n"
-            + "group by countryName, cityName, channel\n"
-            + "window w as (partition by max(length(cityName)) order by countryName, cityName, channel, max(length(cityName)))")
+        .sql("select countryName, cityName, channel, "
+             + "array_concat_agg(ARRAY['abc', channel], 10000) over (partition by cityName order by countryName) as c\n"
+             + "from wikipedia\n"
+             + "where countryName in ('Austria', 'Republic of Korea') "
+             + "and (cityName in ('Vienna', 'Seoul') or cityName is null)\n"
+             + "group by countryName, cityName, channel")
         .queryContext(ImmutableMap.of(
             PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
             QueryContexts.ENABLE_DEBUG, true
