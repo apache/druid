@@ -87,7 +87,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   // List of type strategies to compare the partition columns across rows.
   // Type strategies are pushed in the same order as column types in frameReader.signature()
-  private final List<NullableTypeStrategy<Object>> typeStrategies = new ArrayList<>();
+  private final NullableTypeStrategy[] typeStrategies;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -115,8 +115,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.partitionColumnNames = partitionColumnNames;
 
     this.frameReader = frameReader;
+    this.typeStrategies = new NullableTypeStrategy[frameReader.signature().size()];
     for (int i = 0; i < frameReader.signature().size(); i++) {
-      typeStrategies.add(frameReader.signature().getColumnType(i).get().getNullableStrategy());
+      typeStrategies[i] = frameReader.signature().getColumnType(i).get().getNullableStrategy();
     }
   }
 
@@ -507,7 +508,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     int match = 0;
     for (String columnName : partitionColumnNames) {
       int i = frameReader.signature().indexOf(columnName);
-      if (typeStrategies.get(i).compare(row1.get(i), row2.get(i)) == 0) {
+      if (typeStrategies[i].compare(row1.get(i), row2.get(i)) == 0) {
         match++;
       }
     }
