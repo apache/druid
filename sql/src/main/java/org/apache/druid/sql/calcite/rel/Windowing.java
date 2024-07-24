@@ -452,6 +452,9 @@ public class Windowing
       if (group.isRows) {
         return WindowFrame.rows(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound));
       } else {
+        /* Right now we support GROUPS based framing in the native layer;
+         * but the SQL layer doesn't accept that as of now.
+         */
         return WindowFrame.groups(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound), getOrderingColumNames());
       }
     }
