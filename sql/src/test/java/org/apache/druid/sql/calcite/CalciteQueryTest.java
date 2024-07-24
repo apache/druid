@@ -15502,6 +15502,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testDistinctSumNotSupportedWithApproximation()
+  {
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true))
+            .sql("SELECT sum(distinct m1) from druid.foo")
+            .run()
+    );
+
+    assertThat(e, invalidSqlContains("Aggregation [SUM] with DISTINCT is not supported"));
+  }
+
+  @Test
   public void testUnSupportedNullsFirst()
   {
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()

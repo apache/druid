@@ -41,6 +41,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -165,6 +166,7 @@ public class ArraySqlAggregator implements SqlAggregator
     }
   }
 
+  @NativelySupportsDistinct
   private static class ArrayAggFunction extends SqlAggFunction
   {
     private static final ArrayAggReturnTypeInference RETURN_TYPE_INFERENCE = new ArrayAggReturnTypeInference();
