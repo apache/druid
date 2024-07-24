@@ -25,6 +25,7 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.extraction.ExtractionFn;
+
 import javax.annotation.Nullable;
 import java.util.Set;
 

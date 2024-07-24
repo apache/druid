@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.joda.time.Period;
 
-public /*FIXME*/ class AvaticaServerConfig
+class AvaticaServerConfig
 {
   public static int DEFAULT_MAX_CONNECTIONS = 25;
   public static int DEFAULT_MAX_STATEMENTS_PER_CONNECTION = 4;

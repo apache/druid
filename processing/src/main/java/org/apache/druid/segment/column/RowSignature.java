@@ -188,7 +188,7 @@ public class RowSignature implements ColumnInspector
   }
 
   @JsonValue
-  public List<ColumnSignature> asColumnSignatures()
+  private List<ColumnSignature> asColumnSignatures()
   {
     final List<ColumnSignature> retVal = new ArrayList<>();
 
