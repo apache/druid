@@ -54,7 +54,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
@@ -97,7 +96,7 @@ public class WorkerResource
       @PathParam("partitionNumber") final int partitionNumber,
       @QueryParam("offset") final long offset,
       @Context final HttpServletRequest req
-  ) throws IOException
+  )
   {
     MSQResourceUtils.authorizeQueryRequest(permissionMapper, authorizerMapper, req, queryId);
 
