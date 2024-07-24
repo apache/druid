@@ -200,61 +200,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     );
     addDeserializer(ResponseContext.class, new ResponseContextDeserializer());
 
-    addSerializer(RowsAndColumns.class, new JsonSerializer<RowsAndColumns>()
-    {
-      @Override
-      public void serialize(
-          RowsAndColumns value,
-          JsonGenerator gen,
-          SerializerProvider serializers
-      ) throws IOException
-      {
-        // It would be really cool if jackson offered an output stream that would allow us to push bytes
-        // through, but it doesn't right now, so we have to build a byte[] instead.  Maybe something to contribute
-        // back to Jackson at some point.
-        if (value instanceof FrameRowsAndColumns) {
-          gen.writeBinary(WireTransferable.fromRAC(value).bytesToTransfer());
-        }
-//        if (value instanceof FrameRowsAndColumns) {
-//
-//          FrameRowsAndColumns frc = (FrameRowsAndColumns) value;
-//          JacksonUtils.writeObjectUsingSerializerProvider(gen, serializers, frc.getSignature());
-//
-//          Frame frame = frc.getFrame();
-//          final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-//          frame.writeTo(
-//              Channels.newChannel(baos),
-//              false,
-//              ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
-//              ByteTracker.unboundedTracker()
-//          );
-//
-//          gen.writeBinary(baos.toByteArray());
-//        } else {
-//          throw DruidException.defensive("expected frame RowsAndColumns");
-//        }
-      }
-    });
-
-    addDeserializer(RowsAndColumns.class, new JsonDeserializer<RowsAndColumns>()
-    {
-      @Override
-      public RowsAndColumns deserialize(
-          JsonParser p,
-          DeserializationContext ctxt
-      ) throws IOException
-      {
-       // WireTransferable.deserialzied(RowsAndColumns.class, p, ctxt);
-
-        RowSignature sig = p.readValueAs(RowSignature.class);
-        p.nextValue();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        p.readBinaryValue(baos);
-        Frame frame = Frame.wrap(baos.toByteArray());
-        return (frame.type() == FrameType.COLUMNAR)
-               ? new ColumnBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig)
-               : new RowBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
-      }
-    });
+    addSerializer(FrameRowsAndColumns.class, new FrameRowsAndColumns.FrameRACSerializer());
+    addDeserializer(FrameRowsAndColumns.class, new FrameRowsAndColumns.FrameRACDeserializer());
   }
 }
