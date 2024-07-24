@@ -1454,19 +1454,19 @@ Calculates the rounded value for a numerical expression.
 
 <details><summary>Example</summary>
 
-The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column. The `pickup_longitude` column is from the `taxi-trips` datasource.
+The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column from the `taxi-trips` datasource.
 
 ```sql
 SELECT
   "pickup_longitude" AS "pickup_longitude",
-  ROUND("pickup_longitude", 0) as "round_pickup_longitude"
+  ROUND("pickup_longitude", 0) as "rounded_pickup_longitude"
 FROM "taxi-trips"
 WHERE "pickup_longitude" IS NOT NULL
 LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `round_pickup_longitude` | 
+| `pickup_longitude` | `rounded_pickup_longitude` | 
 | -- | -- | 
 | `-73.9377670288086` | `-74` | 
 </details>
@@ -1820,7 +1820,7 @@ Truncates a numerical expression to a specific number of decimal digits.
 
 <details><summary>Example</summary>
 
-The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column. The `pickup_longitude` column is from the `taxi-trips` datasource.
+The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column from the `taxi-trips` datasource.
 
 ```sql
 SELECT
