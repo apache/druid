@@ -13,6 +13,7 @@ metadata:
     task.type: "noop"
     task.group.id: "id"
     task.datasource: "datasource"
+    task.jobTemplate: noop
 spec:
   activeDeadlineSeconds: 14400
   backoffLimit: 0
@@ -31,6 +32,7 @@ spec:
         task.type: "noop"
         task.group.id: "id"
         task.datasource: "datasource"
+        task.jobTemplate: noop
     spec:
       containers:
         - command:
