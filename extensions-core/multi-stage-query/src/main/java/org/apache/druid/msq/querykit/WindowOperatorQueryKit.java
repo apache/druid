@@ -93,10 +93,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
     if (nextShuffleSpec != null) {
-      final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
       originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
-          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL,
-          windowClusterBy
+          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC,
+          nextShuffleSpec
       ));
     }
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
@@ -309,10 +308,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
     }
 
-    if (partition == null || partition.getPartitionColumns().isEmpty()) {
+    if (partition == null) {
       // If operatorFactories doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
       // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
       return null;
+    }
+
+    if (partition.getPartitionColumns().isEmpty()) {
+      return MixShuffleSpec.instance();
     }
 
     List<KeyColumn> keyColsOfWindow = new ArrayList<>();
