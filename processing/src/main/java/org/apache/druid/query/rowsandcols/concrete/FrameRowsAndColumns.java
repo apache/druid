@@ -19,22 +19,13 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.common.base.Objects;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.CloseableShapeshifter;
@@ -43,10 +34,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 
@@ -112,6 +99,9 @@ public abstract class FrameRowsAndColumns implements RowsAndColumns, AutoCloseab
     if (StorageAdapter.class.equals(clazz)) {
       return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
     }
+    if (FrameRowsAndColumns.class.equals(clazz)) {
+      return (T) this;
+    }
     return null;
   }
 
@@ -139,57 +129,5 @@ public abstract class FrameRowsAndColumns implements RowsAndColumns, AutoCloseab
     FrameRowsAndColumns otherFrame = (FrameRowsAndColumns) o;
 
     return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
-  }
-
-  public static class FrameRACSerializer extends StdSerializer<FrameRowsAndColumns>
-  {
-    public FrameRACSerializer()
-    {
-      super(FrameRowsAndColumns.class);
-    }
-
-    @Override
-    public void serialize(
-        FrameRowsAndColumns frameRAC,
-        JsonGenerator jsonGenerator,
-        SerializerProvider serializerProvider
-    ) throws IOException
-    {
-      JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializerProvider, frameRAC.getSignature());
-
-      Frame frame = frameRAC.getFrame();
-      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      frame.writeTo(
-          Channels.newChannel(baos),
-          false,
-          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
-          ByteTracker.unboundedTracker()
-      );
-
-      jsonGenerator.writeBinary(baos.toByteArray());
-    }
-  }
-
-  public static class FrameRACDeserializer extends StdDeserializer<FrameRowsAndColumns>
-  {
-    public FrameRACDeserializer()
-    {
-      super(FrameRowsAndColumns.class);
-    }
-
-    @Override
-    public FrameRowsAndColumns deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
-        throws IOException
-    {
-      RowSignature sig = jsonParser.readValueAs(RowSignature.class);
-      jsonParser.nextValue();
-
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      jsonParser.readBinaryValue(baos);
-      Frame frame = Frame.wrap(baos.toByteArray());
-      return (frame.type() == FrameType.COLUMNAR)
-             ? new ColumnBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig)
-             : new RowBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
-    }
   }
 }

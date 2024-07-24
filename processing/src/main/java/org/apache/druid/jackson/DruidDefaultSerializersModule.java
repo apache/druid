@@ -27,10 +27,6 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -41,18 +37,10 @@ import org.apache.druid.query.FrameBasedInlineDataSourceSerializer;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
-import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTimeZone;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.Channels;
 
 /**
  *
@@ -200,7 +188,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     );
     addDeserializer(ResponseContext.class, new ResponseContextDeserializer());
 
-    addSerializer(FrameRowsAndColumns.class, new FrameRowsAndColumns.FrameRACSerializer());
-    addDeserializer(FrameRowsAndColumns.class, new FrameRowsAndColumns.FrameRACDeserializer());
+    addSerializer(RowsAndColumns.class, new RowsAndColumns.RowsAndColumnsSerializer());
+    addDeserializer(RowsAndColumns.class, new RowsAndColumns.RowsAndColumnsDeserializer());
   }
 }
