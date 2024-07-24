@@ -222,7 +222,6 @@ public class DruidAvaticaTestDriver implements Driver
     {
       delegate.configureGuice(builder);
       builder.addModule(connectionModule);
-      builder.addModule(new TestSqlModule());
       builder.addModule(
           binder -> {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
