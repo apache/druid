@@ -19,7 +19,10 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
+import org.apache.druid.annotations.SuppressFBWarnings;
+
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,10 +33,11 @@ import java.util.Objects;
 @FunctionalInterface
 public interface DruidHook<T>
 {
+  @Immutable
   class HookKey<T>
   {
-    private String label;
-    private Class<T> type;
+    private final String label;
+    private final Class<T> type;
 
     public HookKey(String label, Class<T> type)
     {
@@ -73,6 +77,7 @@ public interface DruidHook<T>
 
   void invoke(HookKey<T> key, T object);
 
+  @SuppressFBWarnings({"MS_OOI_PKGPROTECT"})
   Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
 
   static void register(HookKey<?> label, DruidHook<?> hook)
@@ -98,6 +103,7 @@ public interface DruidHook<T>
     };
   }
 
+  @SuppressWarnings({"rawtypes", "unchecked"})
   static <T> void dispatch(HookKey<T> key, T object)
   {
     List<DruidHook<?>> hooks = GLOBAL.get(key);
