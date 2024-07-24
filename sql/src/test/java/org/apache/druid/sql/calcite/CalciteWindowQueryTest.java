@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -34,14 +33,10 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.hamcrest.core.StringContains;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -56,11 +51,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -227,28 +220,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
-  }
-
-  /**
-   * If fails parser supports GROUPS so it should be enabled in Windowing
-   */
-  @Test
-  public void testGroupsIsNotSupportByParser()
-  {
-    PlannerFactory pf = queryFramework()
-        .plannerFixture(new PlannerConfig(), new AuthConfig())
-        .plannerFactory();
-
-    String sql = "SELECT COUNT(1) OVER (ORDER BY dim1 GROUPS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) from foo";
-    DruidException ex = assertThrows(
-        DruidException.class,
-        () -> pf.createPlannerForTesting(
-            queryFramework().engine(),
-            sql,
-            DEFAULT_QUERY_CONTEXT
-        )
-    );
-    assertThat(ex.getMessage(), StringContains.containsString("unexpected token [GROUPS]"));
   }
 
   @Test
