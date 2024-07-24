@@ -200,26 +200,6 @@ public class HashJoinEngine
         advance(false);
       }
 
-      @Override
-      public boolean isDone()
-      {
-        return leftCursor.isDone() && !joinMatcher.hasMatch();
-      }
-
-      @Override
-      public boolean isDoneOrInterrupted()
-      {
-        return isDone() || Thread.currentThread().isInterrupted();
-      }
-
-      @Override
-      public void reset()
-      {
-        leftCursor.reset();
-        joinMatcher.reset();
-        joinColumnSelectorFactory.resetRowId();
-      }
-
       private void advance(boolean interruptibly)
       {
         joinColumnSelectorFactory.advanceRowId();
@@ -256,6 +236,26 @@ public class HashJoinEngine
         } while (!joinableClause.getJoinType().isLefty()
                  && !joinMatcher.hasMatch()
                  && !leftCursor.isDone());
+      }
+
+      @Override
+      public boolean isDone()
+      {
+        return leftCursor.isDone() && !joinMatcher.hasMatch();
+      }
+
+      @Override
+      public boolean isDoneOrInterrupted()
+      {
+        return isDone() || Thread.currentThread().isInterrupted();
+      }
+
+      @Override
+      public void reset()
+      {
+        leftCursor.reset();
+        joinMatcher.reset();
+        joinColumnSelectorFactory.resetRowId();
       }
     }
 
