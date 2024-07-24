@@ -203,7 +203,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     assumeTrue(testCase.getType() != TestType.failingTest);
 
     if (testCase.getType() == TestType.operatorValidation) {
-      Map<String, String> a = testCase.input.queryContext;
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
