@@ -73,7 +73,8 @@ DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3)], druid=[logical])
         "columnTypes" : [ "LONG", "STRING", "FLOAT", "LONG" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {

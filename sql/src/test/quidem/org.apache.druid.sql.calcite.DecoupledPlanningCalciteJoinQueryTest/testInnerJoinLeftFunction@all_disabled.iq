@@ -66,7 +66,8 @@ DruidProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4], druid=[logical])
         "columnTypes" : [ "STRING", "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {
@@ -86,6 +87,7 @@ DruidProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4], druid=[logical])
   "columnTypes" : [ "STRING", "STRING", "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan
