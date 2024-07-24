@@ -107,7 +107,7 @@ public interface Worker
    *
    * @throws IOException when the worker output is found but there is an error while reading it.
    */
-  ListenableFuture<InputStream> readChannel(StageId stageId, int partitionNumber, long offset) throws IOException;
+  ListenableFuture<InputStream> readChannel(StageId stageId, int partitionNumber, long offset);
 
   /**
    * Returns a snapshot of counters.

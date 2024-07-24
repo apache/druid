@@ -93,7 +93,6 @@ public class ControllerResource
   @Produces(MediaType.APPLICATION_JSON)
   @Consumes(MediaType.APPLICATION_JSON)
   public Response httpPostDoneReadingInput(
-      @PathParam("queryId") final String queryId,
       @PathParam("stageNumber") final int stageNumber,
       @PathParam("workerNumber") final int workerNumber,
       @Context final HttpServletRequest req

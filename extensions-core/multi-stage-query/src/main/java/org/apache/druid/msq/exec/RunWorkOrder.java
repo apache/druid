@@ -488,7 +488,6 @@ public class RunWorkOrder
       throw new ISE(
           e,
           "Unable to create success file at location[%s]",
-          DurableStorageUtils.SUCCESS_MARKER_FILENAME,
           durableStorageOutputChannelFactory.getSuccessFilePath()
       );
     }
