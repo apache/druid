@@ -23,9 +23,18 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
+import org.apache.druid.frame.segment.FrameCursorUtils;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.FrameSignaturePair;
+import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -36,11 +45,14 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.NullColumn;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndColumns, WindowOperatorQuery>
@@ -114,6 +126,36 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
   {
     // Dark magic; see RowsAndColumnsUnravelingQueryRunner.
     return (Sequence) resultSequence;
+  }
+
+  @Override
+  public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
+      WindowOperatorQuery query,
+      Sequence<RowsAndColumns> resultSequence,
+      MemoryAllocatorFactory memoryAllocatorFactory,
+      boolean useNestedForUnknownTypes
+  )
+  {
+    RowSignature rowSignature = resultArraySignature(query);
+    RowSignature modifiedRowSignature = useNestedForUnknownTypes
+                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
+                                        : rowSignature;
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+        memoryAllocatorFactory,
+        modifiedRowSignature,
+        new ArrayList<>()
+    );
+    Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
+        resultsAsArrays(query, resultSequence),
+        rowSignature
+    );
+    Cursor cursor = cursorAndCloseable.lhs;
+    Closeable closeble = cursorAndCloseable.rhs;
+
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeble);
+
+    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   /**
