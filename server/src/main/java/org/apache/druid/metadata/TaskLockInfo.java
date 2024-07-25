@@ -23,37 +23,42 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
- * Specifies a policy to filter active locks held by a datasource
+ * Contains information about an active task lock for a given datasource
  */
-public class LockFilterPolicy
+public class TaskLockInfo
 {
-  private final String datasource;
+  private final String granularity;
+  private final String type;
   private final int priority;
-  private final List<Interval> intervals;
+  private final Interval interval;
 
   @JsonCreator
-  public LockFilterPolicy(
-      @JsonProperty("datasource") String datasource,
+  public TaskLockInfo(
+      @JsonProperty("granularity") String granularity,
+      @JsonProperty("type") String type,
       @JsonProperty("priority") int priority,
-      @JsonProperty("intervals") @Nullable List<Interval> intervals
+      @JsonProperty("interval") Interval interval
   )
   {
-    this.datasource = datasource;
+    this.granularity = granularity;
+    this.type = type;
     this.priority = priority;
-    this.intervals = intervals;
+    this.interval = interval;
   }
 
   @JsonProperty
-  public String getDatasource()
+  public String getGranularity()
   {
-    return datasource;
+    return granularity;
+  }
+
+  @JsonProperty
+  public String getType()
+  {
+    return type;
   }
 
   @JsonProperty
@@ -62,18 +67,10 @@ public class LockFilterPolicy
     return priority;
   }
 
-  @Deprecated
   @JsonProperty
-  public Map<String, Object> getContext()
+  public Interval getInterval()
   {
-    return Collections.emptyMap();
-  }
-
-  @Nullable
-  @JsonProperty
-  public List<Interval> getIntervals()
-  {
-    return intervals;
+    return interval;
   }
 
   @Override
@@ -85,15 +82,27 @@ public class LockFilterPolicy
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    LockFilterPolicy that = (LockFilterPolicy) o;
-    return Objects.equals(datasource, that.datasource)
+    TaskLockInfo that = (TaskLockInfo) o;
+    return Objects.equals(granularity, that.granularity)
+           && Objects.equals(type, that.type)
            && priority == that.priority
-           && Objects.equals(intervals, that.intervals);
+           && Objects.equals(interval, that.interval);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(datasource, priority, intervals);
+    return Objects.hash(granularity, type, priority, interval);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskLockInfo{" +
+           "granularity=" + granularity +
+           ", type=" + type +
+           ", interval=" + interval +
+           ", priority=" + priority +
+           '}';
   }
 }

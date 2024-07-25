@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.Duration;
@@ -85,28 +86,12 @@ public class TaskQueryTool
   }
 
   /**
-   * @param lockFilterPolicies Requests for conflicing lock intervals for various datasources
-   * @return Map from datasource to intervals locked by tasks that have a conflicting lock type that cannot be revoked
+   * @param lockFilterPolicies Requests for conflicing locks for various datasources
+   * @return Map from datasource to conflicting lock infos
    */
-  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
+  public Map<String, List<TaskLockInfo>> getConflictingLockInfos(List<LockFilterPolicy> lockFilterPolicies)
   {
-    return taskLockbox.getLockedIntervals(lockFilterPolicies);
-  }
-
-  /**
-   * Gets a List of Intervals locked by higher priority tasks for each datasource.
-   *
-   * @param minTaskPriority Minimum task priority for each datasource. Only the
-   *                        Intervals that are locked by Tasks with equal or
-   *                        higher priority than this are returned. Locked intervals
-   *                        for datasources that are not present in this Map are
-   *                        not returned.
-   * @return Map from Datasource to List of Intervals locked by Tasks that have
-   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
-   */
-  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
-  {
-    return taskLockbox.getLockedIntervals(minTaskPriority);
+    return taskLockbox.getConflictingLockInfos(lockFilterPolicies);
   }
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)

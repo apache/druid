@@ -41,6 +41,7 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -190,11 +191,11 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
+  public ListenableFuture<Map<String, List<TaskLockInfo>>> findConflictingLockInfos(
       List<LockFilterPolicy> lockFilterPolicies
   )
   {
-    final String path = "/druid/indexer/v1/lockedIntervals/v2";
+    final String path = "/druid/indexer/v1/conflictingLocks";
 
     return FutureUtils.transform(
         client.asyncRequest(
@@ -203,10 +204,10 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> {
-          final Map<String, List<Interval>> response = JacksonUtils.readValue(
+          final Map<String, List<TaskLockInfo>> response = JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<Map<String, List<Interval>>>() {}
+              new TypeReference<Map<String, List<TaskLockInfo>>>() {}
           );
 
           return response == null ? Collections.emptyMap() : response;

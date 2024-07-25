@@ -40,8 +40,8 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -925,11 +926,11 @@ public class TaskLockbox
 
   /**
    * @param lockFilterPolicies Lock filters for the given datasources
-   * @return Map from datasource to intervals locked by tasks satisfying the lock filter condititions
+   * @return Map from datasource to list of non-revoked lock infos with at least as much priority and an overlapping interval
    */
-  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
+  public Map<String, List<TaskLockInfo>> getConflictingLockInfos(List<LockFilterPolicy> lockFilterPolicies)
   {
-    final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
+    final Map<String, List<TaskLockInfo>> datasourceToLocks = new HashMap<>();
 
     // Take a lock and populate the maps
     giant.lock();
@@ -943,19 +944,12 @@ public class TaskLockbox
             }
 
             final int priority = lockFilter.getPriority();
-            final boolean isReplaceLock = TaskLockType.REPLACE.name().equals(
-                lockFilter.getContext().getOrDefault(
-                    Tasks.TASK_LOCK_TYPE,
-                    Tasks.DEFAULT_TASK_LOCK_TYPE
-                )
-            );
-            final boolean isUsingConcurrentLocks = Boolean.TRUE.equals(
-                lockFilter.getContext().getOrDefault(
-                    Tasks.USE_CONCURRENT_LOCKS,
-                    Tasks.DEFAULT_USE_CONCURRENT_LOCKS
-                )
-            );
-            final boolean ignoreAppendLocks = isUsingConcurrentLocks || isReplaceLock;
+            final List<Interval> intervals;
+            if (lockFilter.getIntervals() != null) {
+              intervals = lockFilter.getIntervals();
+            } else {
+              intervals = Collections.singletonList(Intervals.ETERNITY);
+            }
 
             running.get(datasource).forEach(
                 (startTime, startTimeLocks) -> startTimeLocks.forEach(
@@ -963,15 +957,17 @@ public class TaskLockbox
                         taskLockPosse -> {
                           if (taskLockPosse.getTaskLock().isRevoked()) {
                             // do nothing
-                          } else if (ignoreAppendLocks
-                                     && TaskLockType.APPEND.equals(taskLockPosse.getTaskLock().getType())) {
-                            // do nothing
                           } else if (taskLockPosse.getTaskLock().getPriority() == null
                                      || taskLockPosse.getTaskLock().getPriority() < priority) {
                             // do nothing
                           } else {
-                            datasourceToIntervals.computeIfAbsent(datasource, k -> new HashSet<>())
-                                                 .add(interval);
+                            for (Interval filterInterval : intervals) {
+                              if (interval.overlaps(filterInterval)) {
+                                datasourceToLocks.computeIfAbsent(datasource, ds -> new ArrayList<>())
+                                                 .add(taskLockPosse.getTaskLock().toTaskLockInfo());
+                                break;
+                              }
+                            }
                           }
                         }
                     )
@@ -984,72 +980,7 @@ public class TaskLockbox
       giant.unlock();
     }
 
-    return datasourceToIntervals.entrySet().stream()
-                                .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    entry -> new ArrayList<>(entry.getValue())
-                                ));
-  }
-
-  /**
-   * Gets a List of Intervals locked by higher priority tasks for each datasource.
-   * Here, Segment Locks are being treated the same as Time Chunk Locks i.e.
-   * a Task with a Segment Lock is assumed to lock a whole Interval and not just
-   * the corresponding Segment.
-   *
-   * @param minTaskPriority Minimum task priority for each datasource. Only the
-   *                        Intervals that are locked by Tasks with equal or
-   *                        higher priority than this are returned. Locked intervals
-   *                        for datasources that are not present in this Map are
-   *                        not returned.
-   * @return Map from Datasource to List of Intervals locked by Tasks that have
-   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
-   */
-  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
-  {
-    final Map<String, Set<Interval>> datasourceToIntervals = new HashMap<>();
-
-    // Take a lock and populate the maps
-    giant.lock();
-    try {
-      running.forEach(
-          (datasource, datasourceLocks) -> {
-            // If this datasource is not requested, do not proceed
-            if (!minTaskPriority.containsKey(datasource)) {
-              return;
-            }
-
-            datasourceLocks.forEach(
-                (startTime, startTimeLocks) -> startTimeLocks.forEach(
-                    (interval, taskLockPosses) -> taskLockPosses.forEach(
-                        taskLockPosse -> {
-                          if (taskLockPosse.getTaskLock().isRevoked()) {
-                            // Do not proceed if the lock is revoked
-                            return;
-                          } else if (taskLockPosse.getTaskLock().getPriority() == null
-                                     || taskLockPosse.getTaskLock().getPriority() < minTaskPriority.get(datasource)) {
-                            // Do not proceed if the lock has a priority strictly less than the minimum
-                            return;
-                          }
-
-                          datasourceToIntervals
-                              .computeIfAbsent(datasource, k -> new HashSet<>())
-                              .add(interval);
-                        })
-                )
-            );
-          }
-      );
-    }
-    finally {
-      giant.unlock();
-    }
-
-    return datasourceToIntervals.entrySet().stream()
-                                .collect(Collectors.toMap(
-                                    Map.Entry::getKey,
-                                    entry -> new ArrayList<>(entry.getValue())
-                                ));
+    return datasourceToLocks;
   }
 
   public void unlock(final Task task, final Interval interval)

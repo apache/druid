@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -67,8 +68,10 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -272,16 +275,25 @@ public class CompactSegments implements CoordinatorCustomDuty
    *   higher priority Task</li>
    * </ul>
    */
-  private Map<String, List<Interval>> getLockedIntervals(
+  private Map<String, Set<Interval>> getLockedIntervals(
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
     final List<LockFilterPolicy> lockFilterPolicies = compactionConfigs
         .stream()
-        .map(config -> new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), config.getTaskContext()))
+        .map(config -> new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), null))
         .collect(Collectors.toList());
-    final Map<String, List<Interval>> datasourceToLockedIntervals =
-        new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervals(lockFilterPolicies), true));
+    final Map<String, List<TaskLockInfo>> datasourceToLocks =
+        FutureUtils.getUnchecked(overlordClient.findConflictingLockInfos(lockFilterPolicies), true);
+    final Map<String, Set<Interval>> datasourceToLockedIntervals = new HashMap<>();
+    for (Map.Entry<String, List<TaskLockInfo>> locks : datasourceToLocks.entrySet()) {
+      final String datasource = locks.getKey();
+      datasourceToLockedIntervals.put(datasource, new HashSet<>());
+      for (TaskLockInfo lock : locks.getValue()) {
+        datasourceToLockedIntervals.get(datasource)
+                                   .add(lock.getInterval());
+      }
+    }
     LOG.debug(
         "Skipping the following intervals for Compaction as they are currently locked: %s",
         datasourceToLockedIntervals

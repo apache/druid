@@ -26,6 +26,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.joda.time.Interval;
@@ -97,7 +98,7 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
+  public ListenableFuture<Map<String, List<TaskLockInfo>>> findConflictingLockInfos(
       List<LockFilterPolicy> lockFilterPolicies
   )
   {

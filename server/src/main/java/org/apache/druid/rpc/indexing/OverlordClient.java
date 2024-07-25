@@ -34,6 +34,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -180,15 +181,13 @@ public interface OverlordClient
   ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses();
 
   /**
-   * Returns a list of intervals locked by higher priority conflicting lock types
+   * Returns a list of Locks of higher priority with conflicting intervals
    *
    * @param lockFilterPolicies List of all filters for different datasources
-   * @return Map from datasource name to list of intervals locked by tasks that have a conflicting lock type with
+   * @return Map from datasource name to list of locks held by tasks that have conflicting intervals with
    * priority greater than or equal to the {@code minTaskPriority} for that datasource.
    */
-  ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
-      List<LockFilterPolicy> lockFilterPolicies
-  );
+  ListenableFuture<Map<String, List<TaskLockInfo>>> findConflictingLockInfos(List<LockFilterPolicy> lockFilterPolicies);
 
   /**
    * Deletes pending segment records from the metadata store for a particular datasource. Records with
