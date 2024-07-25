@@ -70,14 +70,14 @@ Returns the following:
 
 ## ACOS
 
-Calculates the arc cosine of a numeric expression.
+Calculates the arc cosine (arccosine) of a numeric expression.
 
 * **Syntax:** `ACOS(expr)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example calculates the arc cosine (arccosine) of zero.
+The following example calculates the arc cosine  of `0`.
 
 ```sql
 SELECT ACOS(0) AS "arc_cosine"
@@ -302,7 +302,7 @@ Calculates the arc sine (arcsine) of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following example calculates the arc sine of one.
+The following example calculates the arc sine of `1`.
 
 ```sql
 SELECT ASIN(1) AS "arc_sine"
@@ -318,14 +318,14 @@ Returns the following:
 
 ## ATAN
 
-Calculates the arc tangent of a numeric expression.
+Calculates the arc tangent (arctangent) of a numeric expression.
 
 * **Syntax:** `ATAN(expr)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example calculates the arc tangent (arctangent) of one.
+The following example calculates the arc tangent of `1`.
 
 ```sql
 SELECT ATAN(1) AS "arc_tangent"
@@ -341,14 +341,14 @@ Returns the following:
 
 ## ATAN2
 
-Calculates the arc tangent (arctangent) of specified x and y coordinates.
+Calculates the arc tangent (arctangent) of a specified x and y coordinate.
 
 * **Syntax:** `ATAN2(x, y)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example calculates the arc tangent of the coordinate (1, -1)
+The following example calculates the arc tangent of the coordinate `(1, -1)`
 
 ```sql
 SELECT ATAN2(1,-1) AS "arc_tangent_2"
@@ -581,14 +581,14 @@ Calculates the trigonometric cosine of an angle expressed in radians.
 
 <details><summary>Example</summary>
 
-The following example calculates the cosine of `PI` over three radians.
+The following example calculates the cosine of angle `PI/3` radians.
 
 ```sql
 SELECT COS(PI / 3) AS "cosine"
 ```
 Returns the following:
 
-| `COS` |  
+| `cosine` |  
 | -- | 
 | `0.5000000000000001` |
 </details>
@@ -604,7 +604,7 @@ Calculates the trigonometric cotangent of an angle expressed in radians.
 
 <details><summary>Example</summary>
 
-The following example calculates the cotangent of `PI` over three radians.
+The following example calculates the cotangent of angle `PI/3` radians.
 
 ```sql
 SELECT COT(PI / 3) AS "cotangent"
@@ -686,7 +686,7 @@ Converts an angle from radians to degrees.
 
 <details><summary>Example</summary>
 
-The following example converts `PI` radians to degrees
+The following example converts an angle of `PI` radians to degrees
 
 ```sql
 SELECT DEGREES(PI) AS "degrees"
@@ -1437,7 +1437,7 @@ Converts an angle from degrees to radians.
 
 <details><summary>Example</summary>
 
-The following example converts 180 degrees to radians
+The following example converts an angle of `180` degrees to radians
 
 ```sql
 SELECT RADIANS(180) AS "radians"
@@ -1565,7 +1565,7 @@ Calculates the trigonometric sine of an angle expressed in radians.
 
 <details><summary>Example</summary>
 
-The following example calculates the sine of `PI` over three radians.
+The following example calculates the sine of angle `PI/3` radians.
 
 ```sql
 SELECT SIN(PI / 3) AS "sine"
@@ -1693,7 +1693,7 @@ Calculates the trigonometric tangent of an angle expressed in radians.
 
 <details><summary>Example</summary>
 
-The following example calculates the tangent of `PI` over three.
+The following example calculates the tangent of angle `PI/3` radians.
 
 ```sql
 SELECT TAN(PI / 3) AS "tangent"
