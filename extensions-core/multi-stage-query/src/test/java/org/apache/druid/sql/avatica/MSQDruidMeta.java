@@ -117,7 +117,7 @@ public class MSQDruidMeta extends DruidMeta
     RelDataType rowType = RowSignatures.toRelDataType(sig, DruidTypeSystem.TYPE_FACTORY);
     return Meta.Signature.create(
         AbstractDruidJdbcStatement.createColumnMetaData(rowType),
-        "FIXME some query?",
+        druidStatement.getSqlQuery().sql(),
         Collections.emptyList(),
         Meta.CursorFactory.ARRAY,
         Meta.StatementType.SELECT

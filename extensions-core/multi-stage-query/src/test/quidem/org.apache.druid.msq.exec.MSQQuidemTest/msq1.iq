@@ -94,7 +94,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "86f85662-42c2-462f-8d1f-a692c33ebe99",
+          "sqlQueryId" : "959637f0-a795-41f2-9cf0-f12e29361401",
           "sqlStringifyArrays" : false
         }
       }
@@ -127,8 +127,8 @@ order by 1;
   "partitionCount" : 1,
   "shuffle" : "globalSort",
   "output" : "localStorage",
-  "startTime" : "2024-07-24T17:24:33.755Z",
-  "duration" : 657,
+  "startTime" : "2024-07-25T03:33:28.256Z",
+  "duration" : 754,
   "sort" : true
 }, {
   "stageNumber" : 1,
@@ -200,7 +200,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "86f85662-42c2-462f-8d1f-a692c33ebe99",
+          "sqlQueryId" : "959637f0-a795-41f2-9cf0-f12e29361401",
           "sqlStringifyArrays" : false
         }
       }
@@ -221,7 +221,7 @@ order by 1;
   "workerCount" : 1,
   "partitionCount" : 1,
   "output" : "localStorage",
-  "startTime" : "2024-07-24T17:24:34.412Z",
+  "startTime" : "2024-07-25T03:33:29.010Z",
   "duration" : 2
 } ]
 !msqPlan
