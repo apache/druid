@@ -359,7 +359,7 @@ Returns the following:
 
 ## BITWISE_COMPLEMENT
 
-Returns the bitwise NOT for the expression, that is, `~expr`.
+Returns the bitwise complement (bitwise not) for the expression, that is, `~expr`.
 
 * **Syntax:** `BITWISE_COMPLEMENT(expr)`
 * **Function type:** Scalar, numeric
@@ -389,7 +389,7 @@ Converts the bits of an IEEE 754 floating-point double value to long.
 
 <details><summary>Example</summary>
 
-The following example returns the IEEE 754 floating-point double representation of 255 as a long. 
+The following example returns the IEEE 754 floating-point double representation of `255` as a long. 
 
 ```sql
 SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
@@ -403,54 +403,17 @@ Returns the following:
 
 [Learn more](sql-scalar.md#numeric-functions)
 
-* **Syntax:**`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example returns the IEEE 754 floating-point double representation of 255 as a long. 
-
-```sql
-SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
-```
-Returns the following:
-
-| `ieee_754_double_to_long` | 
-| -- |
-| `4643176031446892544` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_CONVERT_LONG_BITS_TO_DOUBLE
 
-Converts the bits of a long to IEEE 754 floating-point double.
+Converts the bits of a long value to IEEE 754 floating-point double.
 
 * **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
 
-The following example returns the long representation of 4643176031446892544 as an IEEE 754 floating-point double. 
-
-```sql
-SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee_754_double"
-```
-Returns the following:
-
-| `long_to_ieee_754_double` | 
-| -- |
-| `255` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
-
-* **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example returns the long representation of 4643176031446892544 as an IEEE 754 floating-point double. 
+The following example returns the long representation of `4643176031446892544` as an IEEE 754 floating-point double. 
 
 ```sql
 SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee_754_double"
@@ -512,8 +475,6 @@ Returns the following:
 
 ## BITWISE_SHIFT_RIGHT
 
-`BITWISE_SHIFT_RIGHT(expr1, expr2)`
-
 Returns x bitwise right shifts of an expr, That is, `expr >> x`.
 
 * **Syntax:** `BITWISE_SHIFT_RIGHT(expr, x)`
@@ -528,7 +489,7 @@ SELECT BITWISE_SHIFT_RIGHT(16, 3) AS "bitwise_shift_right"
 ```
 Returns the following:
 
-| `bitwise_shift_left` | 
+| `bitwise_shift_right` | 
 | -- |
 | `2` | 
 </details>
