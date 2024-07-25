@@ -114,26 +114,14 @@ public class MSQDruidMeta extends DruidMeta
   private Signature makeSignature(AbstractDruidJdbcStatement druidStatement, List<ColumnAndType> cat)
   {
     RowSignature sig = ColumnAndType.toRowSignature(cat);
-    RelDataType rowType = decodeRowRelDataType(sig);
+    RelDataType rowType = RowSignatures.toRelDataType(sig, DruidTypeSystem.TYPE_FACTORY);
     return Meta.Signature.create(
         AbstractDruidJdbcStatement.createColumnMetaData(rowType),
-        "some query?",
+        "FIXME some query?",
         Collections.emptyList(),
         Meta.CursorFactory.ARRAY,
-        Meta.StatementType.SELECT // We only support SELECT
+        Meta.StatementType.SELECT
     );
-
-  }
-
-  private RelDataType decodeRowRelDataType(RowSignature sig)
-  {
-    return RowSignatures.toRelDataType(sig, DruidTypeSystem.TYPE_FACTORY);
-
-    // typeFactory.createStructType(
-    // signature.stream()
-    // .map(columnAndType ->
-    // relDataTypeFactory.createJavaType(columnAndType.getType()))
-    // .toArray(RelDataType[]::new));
 
   }
 
