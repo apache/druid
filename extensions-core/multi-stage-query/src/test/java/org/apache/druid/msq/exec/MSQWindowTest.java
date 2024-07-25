@@ -2154,6 +2154,8 @@ public class MSQWindowTest extends MSQTestBase
                           + "group by countryName, cityName, channel "
                           + "order by countryName, cityName, channel";
 
+    final String nullValue = NullHandling.sqlCompatible() ? null : "";
+
     testSelectQuery()
         .setSql(sql)
         .setExpectedMSQSpec(MSQSpec.builder()
@@ -2172,14 +2174,14 @@ public class MSQWindowTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
             ImmutableList.<Object[]>of(
-                new Object[]{"Austria", null, "#de.wikipedia", 1L, 1L},
+                new Object[]{"Austria", nullValue, "#de.wikipedia", 1L, 1L},
                 new Object[]{"Austria", "Horsching", "#de.wikipedia", 2L, 1L},
                 new Object[]{"Austria", "Vienna", "#de.wikipedia", 3L, 1L},
                 new Object[]{"Austria", "Vienna", "#es.wikipedia", 4L, 2L},
                 new Object[]{"Austria", "Vienna", "#tr.wikipedia", 5L, 3L},
-                new Object[]{"Republic of Korea", null, "#en.wikipedia", 6L, 2L},
-                new Object[]{"Republic of Korea", null, "#ja.wikipedia", 7L, 3L},
-                new Object[]{"Republic of Korea", null, "#ko.wikipedia", 8L, 4L},
+                new Object[]{"Republic of Korea", nullValue, "#en.wikipedia", 6L, 2L},
+                new Object[]{"Republic of Korea", nullValue, "#ja.wikipedia", 7L, 3L},
+                new Object[]{"Republic of Korea", nullValue, "#ko.wikipedia", 8L, 4L},
                 new Object[]{"Republic of Korea", "Jeonju", "#ko.wikipedia", 9L, 1L},
                 new Object[]{"Republic of Korea", "Seongnam-si", "#ko.wikipedia", 10L, 1L},
                 new Object[]{"Republic of Korea", "Seoul", "#ko.wikipedia", 11L, 1L},
