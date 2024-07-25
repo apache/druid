@@ -57,7 +57,6 @@ import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1152,7 +1151,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   }
 
   @Test
-  public void testExplainInsertFromExternal() throws IOException
+  public void testExplainInsertFromExternal()
   {
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
