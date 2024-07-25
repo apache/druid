@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -33,5 +34,13 @@ public class DecoupledPlanningCalciteQueryTest extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return decoupledExtension.testBuilder();
+  }
+
+  @Override
+  @Test
+  @NotYetSupported(NotYetSupported.Modes.NOT_ENOUGH_RULES)
+  public void testOrderByNullType()
+  {
+    super.testOrderByNullType();
   }
 }
