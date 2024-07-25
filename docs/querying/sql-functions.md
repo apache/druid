@@ -77,14 +77,14 @@ Calculates the arc cosine of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following example calculates the arc cosine of zero.
+The following example calculates the arc cosine (arccosine) of zero.
 
 ```sql
 SELECT ACOS(0) AS "arc_cosine"
 ```
 Returns the following:
 
-| `arc_tangent` |  
+| `arc_cosine` |  
 | -- | 
 | `1.5707963267948966` |
 </details>
@@ -295,7 +295,7 @@ Joins all elements of `arr` by the delimiter specified by `str`.
 
 ## ASIN
 
-Calculates the arc sine of a numeric expression.
+Calculates the arc sine (arcsine) of a numeric expression.
 
 * **Syntax:** `ASIN(expr)`
 * **Function type:** Scalar, numeric
@@ -325,7 +325,7 @@ Calculates the arc tangent of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following example calculates the arc tangent of one.
+The following example calculates the arc tangent (arctangent) of one.
 
 ```sql
 SELECT ATAN(1) AS "arc_tangent"
@@ -341,7 +341,7 @@ Returns the following:
 
 ## ATAN2
 
-Calculates the arc tangent of specified x and y coordinates.
+Calculates the arc tangent (arctangent) of specified x and y coordinates.
 
 * **Syntax:** `ATAN2(x, y)`
 * **Function type:** Scalar, numeric
@@ -355,7 +355,7 @@ SELECT ATAN2(1,-1) AS "arc_tangent_2"
 ```
 Returns the following:
 
-| `arc_tangent` |  
+| `arc_tangent_2` |  
 | -- | 
 | `2.356194490192345` |
 </details>
