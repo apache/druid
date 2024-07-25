@@ -324,8 +324,32 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
-        "Compaction config not supported. Reason[MSQ context maxNumTasks [1] cannot be less than 2, "
-        + "since at least 1 controller and 1 worker is necessary.].",
+        "Compaction config not supported. Reason[MSQ: Context maxNumTasks[1]"
+        + " must be at least 2 (1 controller + 1 worker)].",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
+  }
+
+  @Test
+  public void testUpdateEngineToMSQWithInvalidDatasourceConfigThrowsBadRequest()
+  {
+    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(DS.WIKI)
+        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .build();
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.OK, response);
+
+    response = resource.updateClusterCompactionConfig(
+        new CompactionConfigUpdateRequest(null, null, null, CompactionEngine.MSQ),
+        mockHttpServletRequest
+    );
+    verifyStatus(Response.Status.BAD_REQUEST, response);
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "Cannot update engine to [msq] as it does not support compaction config of DataSource[wiki]."
+        + " Reason[MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)].",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }
