@@ -518,25 +518,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createLogTable(final String tableName, final String entryTypeName)
-  {
-    createTable(
-        tableName,
-        ImmutableList.of(
-            StringUtils.format(
-                "CREATE TABLE %1$s (\n"
-                + "  id %2$s NOT NULL,\n"
-                + "  %4$s_id VARCHAR(255) DEFAULT NULL,\n"
-                + "  log_payload %3$s,\n"
-                + "  PRIMARY KEY (id)\n"
-                + ")",
-                tableName, getSerialType(), getPayloadType(), entryTypeName
-            ),
-            StringUtils.format("CREATE INDEX idx_%1$s_%2$s_id ON %1$s(%2$s_id)", tableName, entryTypeName)
-        )
-    );
-  }
-
   public void createLockTable(final String tableName, final String entryTypeName)
   {
     createTable(
@@ -814,7 +795,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
       prepareTaskEntryTable(tablesConfig.getEntryTable(entryType));
-      createLogTable(tablesConfig.getLogTable(entryType), entryType);
       createLockTable(tablesConfig.getLockTable(entryType), entryType);
     }
   }

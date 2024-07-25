@@ -20,6 +20,7 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.timeline.partition.ShardSpec;
@@ -116,13 +117,19 @@ public class DimFilterUtils
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache
   )
   {
+    if (dimFilter == null) {
+      // ImmutableSet retains order from "input".
+      return ImmutableSet.copyOf(input);
+    }
+
+    // LinkedHashSet retains order from "input".
     Set<T> retSet = new LinkedHashSet<>();
 
     for (T obj : input) {
       ShardSpec shard = converter.apply(obj);
       boolean include = true;
 
-      if (dimFilter != null && shard != null) {
+      if (shard != null) {
         Map<String, RangeSet<String>> filterDomain = new HashMap<>();
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {

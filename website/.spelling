@@ -55,6 +55,7 @@ CPUs
 CSVs
 CentralizedDatasourceSchema
 Ceph
+circledR
 CloudWatch
 ColumnDescriptor
 Corretto
@@ -97,7 +98,6 @@ EMRFS
 ETL
 Elasticsearch
 Enums
-FirehoseFactory
 FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
@@ -112,7 +112,6 @@ GUIs
 GroupBy
 Guice
 HDFS
-HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -228,7 +227,6 @@ SSDs
 SSL
 Samza
 Splunk
-SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
@@ -509,6 +507,7 @@ schemas
 schemaless
 searchable
 secondaryPartitionPruning
+seekable
 seekable-stream
 servlet
 setProcessingThreadNames
@@ -879,8 +878,6 @@ hadoop3
 ambari-metrics
 metricName
 trustStore
-StaticAzureBlobStoreFirehose
-StaticS3Firehose
 fetchTimeout
 gz
 maxCacheCapacityBytes
@@ -889,11 +886,9 @@ maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
 sharedAccessStorageToken
-StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
-StaticAzureBlobStoreFirehose
 gz
 shardSpecs
 maxCacheCapacityBytes
@@ -1095,7 +1090,6 @@ POD_NAMESPACE
 ConfigMap
 PT17S
 GCS
-StaticGoogleBlobStoreFirehose
 gcs-connector
 hdfs
 Aotearoa
@@ -1295,7 +1289,6 @@ QueryRunnerFactory
 segmentmetadataquery
 SegmentMetadataQuery
 SegmentMetadataQueryQueryToolChest
-StaticS3FirehoseFactory
 loadSpec
 multibind
 pom.xml
@@ -1336,10 +1329,8 @@ valueFormat
 IOConfig
 compactionTask
 compactionTasks
-ingestSegmentFirehose
 numShards
 IngestSegment
-IngestSegmentFirehose
 maxSizes
 snapshotTime
 windowPeriod
@@ -1401,14 +1392,10 @@ useYarnRMJobStatusFallback
 workingPath
 z.example.com
 150MB
-CombiningFirehose
 DataSchema
 DefaultPassword
 EnvironmentVariablePasswordProvider
-HttpFirehose
 IOConfig
-InlineFirehose
-LocalFirehose
 PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
@@ -1445,12 +1432,9 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
-StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
-LocalFirehose
 baseDir
-HttpFirehose
 httpAuthenticationUsername
 DefaultPassword
 PasswordProviders
@@ -1461,8 +1445,6 @@ maxInputSegmentBytesPerTask
 foldCase
 sqls
 connectorConfig
-InlineFirehose
-CombiningFirehose
 httpAuthenticationPassword
 accessKeyId
 secretAccessKey
@@ -1659,8 +1641,6 @@ Temurin
 0.14.x
 1s
 Bufferpool
-EventReceiverFirehose
-EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
 jvmVersion
@@ -1983,7 +1963,6 @@ GiB
 Autoscaler
 APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
-EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool

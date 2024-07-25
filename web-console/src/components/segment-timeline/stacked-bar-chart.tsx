@@ -66,7 +66,10 @@ interface StackedBarChartProps {
   barWidth: number;
 }
 
-export const StackedBarChart = React.memo(function StackedBarChart(props: StackedBarChartProps) {
+export const StackedBarChart = React.forwardRef(function StackedBarChart(
+  props: StackedBarChartProps,
+  ref,
+) {
   const {
     activeDataType,
     svgWidth,
@@ -148,7 +151,7 @@ export const StackedBarChart = React.memo(function StackedBarChart(props: Stacke
   }
 
   return (
-    <div className="stacked-bar-chart">
+    <div className="stacked-bar-chart" ref={ref as any}>
       {hoverOn && (
         <>
           <div className="bar-chart-tooltip">

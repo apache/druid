@@ -47,6 +47,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -226,6 +227,7 @@ public class StringSqlAggregator implements SqlAggregator
     }
   }
 
+  @NativelySupportsDistinct
   private static class StringAggFunction extends SqlAggFunction
   {
     private static final StringAggReturnTypeInference RETURN_TYPE_INFERENCE = new StringAggReturnTypeInference();

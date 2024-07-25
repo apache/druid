@@ -74,12 +74,6 @@ public class RetrieveUpgradedFromSegmentIdsAction implements TaskAction<Upgraded
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public String toString()
   {
     return getClass().getSimpleName() + "{" +

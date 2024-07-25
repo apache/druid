@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
@@ -37,26 +36,12 @@ public class ParallelIndexIOConfig extends IndexIOConfig
 {
   @JsonCreator
   public ParallelIndexIOConfig(
-      @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
       @JsonProperty("inputSource") @Nullable InputSource inputSource,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
       @JsonProperty("dropExisting") @Nullable Boolean dropExisting
   )
   {
-    super(firehoseFactory, inputSource, inputFormat, appendToExisting, dropExisting);
-  }
-
-  // old constructor for backward compatibility
-  @Deprecated
-  public ParallelIndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting)
-  {
-    this(firehoseFactory, null, null, appendToExisting, null);
-  }
-
-  @Deprecated
-  public ParallelIndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, boolean dropExisting)
-  {
-    this(firehoseFactory, null, null, appendToExisting, dropExisting);
+    super(inputSource, inputFormat, appendToExisting, dropExisting);
   }
 }
