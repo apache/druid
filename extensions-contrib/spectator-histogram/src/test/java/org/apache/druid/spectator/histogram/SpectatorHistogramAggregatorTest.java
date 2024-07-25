@@ -20,8 +20,14 @@
 package org.apache.druid.spectator.histogram;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.netflix.spectator.api.histogram.PercentileBuckets;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.NoopInputRowParser;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -32,6 +38,9 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
@@ -42,13 +51,17 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -59,6 +72,7 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -714,6 +728,59 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
       // Should be within 18%
       Assert.assertEquals(expectedPercentile, resultPercentile, error18pcnt);
     }
+  }
+
+  @Test
+  public void testBuildingAndCountingHistogramsIncrementalIndex() throws Exception
+  {
+    List<String> dimensions = Collections.singletonList("d");
+    int n = 10;
+    DateTime startOfDay = DateTimes.of("2000-01-01");
+    List<InputRow> inputRows = new ArrayList<>(n);
+    for (int i = 1; i <= n; i++) {
+      String val = String.valueOf(i * 1.0d);
+
+      inputRows.add(new MapBasedInputRow(
+          startOfDay.plusMinutes(i),
+          dimensions,
+          ImmutableMap.of("x", i, "d", val)
+      ));
+    }
+
+    IncrementalIndex index = AggregationTestHelper.createIncrementalIndex(
+        inputRows.iterator(),
+        new NoopInputRowParser(null),
+        new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new SpectatorHistogramAggregatorFactory("histogram", "x")
+        },
+        0,
+        Granularities.NONE,
+        100,
+        false
+    );
+
+    ImmutableList<Segment> segments = ImmutableList.of(
+        new IncrementalIndexSegment(index, SegmentId.dummy("test")),
+        helper.persistIncrementalIndex(index, null)
+    );
+
+    GroupByQuery query = new GroupByQuery.Builder()
+        .setDataSource("test")
+        .setGranularity(Granularities.HOUR)
+        .setInterval("1970/2050")
+        .setAggregatorSpecs(
+            new DoubleSumAggregatorFactory("doubleSum", "histogram")
+        ).build();
+
+    Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segments, query);
+
+    List<ResultRow> results = seq.toList();
+    Assert.assertEquals(1, results.size());
+    // Check timestamp
+    Assert.assertEquals(startOfDay.getMillis(), results.get(0).get(0));
+    // Check doubleSum
+    Assert.assertEquals(n * segments.size(), (Double) results.get(0).get(1), 0.001);
   }
 
   private static void assertResultsMatch(List<ResultRow> results, int rowNum, String expectedProduct)
