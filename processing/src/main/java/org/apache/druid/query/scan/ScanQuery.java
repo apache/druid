@@ -443,6 +443,18 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return columnTypes;
   }
 
+  /**
+   * Prior to PR https://github.com/apache/druid/pull/16659 (Druid 31) data servers require
+   * the "legacy" parameter to be set to a non-null value. For compatibility with older data
+   * servers during rolling updates, we need to write out "false".
+   */
+  @Deprecated
+  @JsonProperty("legacy")
+  public Boolean isLegacy()
+  {
+    return false;
+  }
+
   @Override
   public Ordering<ScanResultValue> getResultOrdering()
   {
