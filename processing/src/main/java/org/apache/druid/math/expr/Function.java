@@ -368,20 +368,24 @@ public interface Function extends NamedFunction
 
   /**
    * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
-   * argument is {@link ExprType#LONG}
+   * argument is {@link ExprType#LONG}. These functions return null if either argument is null.
    */
   abstract class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
-        throw validationFailed("needs a STRING as first argument and a LONG as second argument");
+      final String xString = x.asString();
+      if (xString == null) {
+        return ExprEval.of(null);
       }
-      return eval(x.asString(), y.asInt());
+      if (y.isNumericNull()) {
+        return ExprEval.of(null);
+      }
+      return eval(xString, y.asLong());
     }
 
-    protected abstract ExprEval eval(@Nullable String x, int y);
+    protected abstract ExprEval eval(String x, long y);
   }
 
   /**
@@ -2824,16 +2828,14 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    protected ExprEval eval(@Nullable String x, int y)
+    protected ExprEval eval(String x, long y)
     {
-      if (y < 0) {
+      int yInt = (int) y;
+      if (y < 0 || yInt != y) {
         throw validationFailed("needs a positive integer as the second argument");
       }
-      if (x == null) {
-        return ExprEval.of(null);
-      }
       int len = x.length();
-      return ExprEval.of(y < len ? x.substring(len - y) : x);
+      return ExprEval.of(y < len ? x.substring(len - yInt) : x);
     }
   }
 
@@ -2853,15 +2855,13 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    protected ExprEval eval(@Nullable String x, int y)
+    protected ExprEval eval(String x, long y)
     {
-      if (y < 0) {
-        throw validationFailed("needs a postive integer as second argument");
+      int yInt = (int) y;
+      if (yInt < 0 || yInt != y) {
+        throw validationFailed("needs a positive integer as the second argument");
       }
-      if (x == null) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
+      return ExprEval.of(y < x.length() ? x.substring(0, yInt) : x);
     }
   }
 
@@ -3005,12 +3005,13 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    protected ExprEval eval(String x, int y)
+    protected ExprEval eval(String x, long y)
     {
-      if (x == null) {
-        return ExprEval.of(null);
+      int yInt = (int) y;
+      if (yInt != y) {
+        throw validationFailed("needs an integer as the second argument");
       }
-      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
+      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, yInt));
     }
   }
 
