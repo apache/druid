@@ -87,7 +87,7 @@ public class CoordinatorCompactionConfigsResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig()
+  public Response getClusterCompactionConfig()
   {
     return Response.ok(configManager.getCurrentCompactionConfig()).build();
   }
@@ -95,7 +95,7 @@ public class CoordinatorCompactionConfigsResource
   @POST
   @Path("/global")
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response updateCompactionDynamicConfig(
+  public Response updateClusterCompactionConfig(
       CompactionConfigUpdateRequest updatePayload,
       @Context HttpServletRequest req
   )
@@ -137,7 +137,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    return updateCompactionDynamicConfig(
+    return updateClusterCompactionConfig(
         new CompactionConfigUpdateRequest(
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
@@ -150,7 +150,7 @@ public class CoordinatorCompactionConfigsResource
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response addOrUpdateCompactionConfig(
+  public Response addOrUpdateDatasourceCompactionConfig(
       final DataSourceCompactionConfig newConfig,
       @Context HttpServletRequest req
   )
@@ -181,7 +181,7 @@ public class CoordinatorCompactionConfigsResource
   @GET
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
+  public Response getDatasourceCompactionConfig(@PathParam("dataSource") String dataSource)
   {
     final CoordinatorCompactionConfig current = configManager.getCurrentCompactionConfig();
     final Map<String, DataSourceCompactionConfig> configs = current

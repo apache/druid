@@ -25,6 +25,11 @@ import org.apache.druid.indexer.CompactionEngine;
 
 import javax.annotation.Nullable;
 
+/**
+ * Payload to update the cluster-level compaction config.
+ * All fields of this class must be nullable. A non-value indicates that the
+ * corresponding field is being updated.
+ */
 public class CompactionConfigUpdateRequest
 {
   private final Double compactionTaskSlotRatio;

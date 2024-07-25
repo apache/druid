@@ -99,7 +99,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testGetDefaultClusterConfig()
   {
-    Response response = resource.getCompactionConfig();
+    Response response = resource.getClusterCompactionConfig();
     final CoordinatorCompactionConfig defaultConfig
         = verifyAndGetPayload(response, CoordinatorCompactionConfig.class);
 
@@ -111,16 +111,16 @@ public class CoordinatorCompactionConfigsResourceTest
   }
 
   @Test
-  public void testUpdateClusterConfig()
+  public void testUpdateGlobalConfig()
   {
-    Response response = resource.updateCompactionDynamicConfig(
+    Response response = resource.updateClusterCompactionConfig(
         new CompactionConfigUpdateRequest(0.5, 10, true, CompactionEngine.MSQ),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.OK, response);
 
     final CoordinatorCompactionConfig updatedConfig = verifyAndGetPayload(
-        resource.getCompactionConfig(),
+        resource.getClusterCompactionConfig(),
         CoordinatorCompactionConfig.class
     );
 
@@ -135,13 +135,13 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testSetCompactionTaskLimit()
   {
     final CoordinatorCompactionConfig defaultConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(), CoordinatorCompactionConfig.class);
+        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
 
     Response response = resource.setCompactionTaskLimit(0.5, 9, true, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final CoordinatorCompactionConfig updatedConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(), CoordinatorCompactionConfig.class);
+        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
 
     // Verify that the task slot fields have been updated
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
@@ -156,7 +156,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testGetUnknownDatasourceConfigThrowsNotFound()
   {
-    Response response = resource.getCompactionConfig(DS.WIKI);
+    Response response = resource.getDatasourceCompactionConfig(DS.WIKI);
     verifyStatus(Response.Status.NOT_FOUND, response);
   }
 
@@ -165,15 +165,15 @@ public class CoordinatorCompactionConfigsResourceTest
   {
     final DataSourceCompactionConfig newDatasourceConfig
         = DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).build();
-    Response response = resource.addOrUpdateCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final DataSourceCompactionConfig fetchedDatasourceConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(DS.WIKI), DataSourceCompactionConfig.class);
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(DS.WIKI), DataSourceCompactionConfig.class);
     Assert.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
 
     final CoordinatorCompactionConfig fullCompactionConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(), CoordinatorCompactionConfig.class);
+        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
     Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
     Assert.assertEquals(newDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
@@ -192,7 +192,7 @@ public class CoordinatorCompactionConfigsResourceTest
         .withEngine(CompactionEngine.NATIVE)
         .build();
 
-    Response response = resource.addOrUpdateCompactionConfig(
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(
         originalDatasourceConfig,
         mockHttpServletRequest
     );
@@ -209,15 +209,15 @@ public class CoordinatorCompactionConfigsResourceTest
         .withEngine(CompactionEngine.MSQ)
         .build();
 
-    response = resource.addOrUpdateCompactionConfig(updatedDatasourceConfig, mockHttpServletRequest);
+    response = resource.addOrUpdateDatasourceCompactionConfig(updatedDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     final DataSourceCompactionConfig latestDatasourceConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(DS.WIKI), DataSourceCompactionConfig.class);
+        = verifyAndGetPayload(resource.getDatasourceCompactionConfig(DS.WIKI), DataSourceCompactionConfig.class);
     Assert.assertEquals(updatedDatasourceConfig, latestDatasourceConfig);
 
     final CoordinatorCompactionConfig fullCompactionConfig
-        = verifyAndGetPayload(resource.getCompactionConfig(), CoordinatorCompactionConfig.class);
+        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
     Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
     Assert.assertEquals(updatedDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
@@ -227,13 +227,13 @@ public class CoordinatorCompactionConfigsResourceTest
   {
     final DataSourceCompactionConfig datasourceConfig
         = DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).build();
-    Response response = resource.addOrUpdateCompactionConfig(datasourceConfig, mockHttpServletRequest);
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
     response = resource.deleteCompactionConfig(DS.WIKI, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
-    response = resource.getCompactionConfig(DS.WIKI);
+    response = resource.getDatasourceCompactionConfig(DS.WIKI);
     verifyStatus(Response.Status.NOT_FOUND, response);
   }
 
@@ -249,7 +249,7 @@ public class CoordinatorCompactionConfigsResourceTest
   {
     configManager.configUpdateResult
         = ConfigManager.SetResult.retryableFailure(new Exception("retryable"));
-    resource.addOrUpdateCompactionConfig(
+    resource.addOrUpdateDatasourceCompactionConfig(
         DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).build(),
         mockHttpServletRequest
     );
@@ -265,7 +265,7 @@ public class CoordinatorCompactionConfigsResourceTest
   {
     configManager.configUpdateResult
         = ConfigManager.SetResult.failure(new Exception("not retryable"));
-    resource.addOrUpdateCompactionConfig(
+    resource.addOrUpdateDatasourceCompactionConfig(
         DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).build(),
         mockHttpServletRequest
     );
@@ -280,16 +280,16 @@ public class CoordinatorCompactionConfigsResourceTest
         = DataSourceCompactionConfig.builder().forDataSource(DS.WIKI);
 
     final DataSourceCompactionConfig configV1 = builder.build();
-    resource.addOrUpdateCompactionConfig(configV1, mockHttpServletRequest);
+    resource.addOrUpdateDatasourceCompactionConfig(configV1, mockHttpServletRequest);
 
     final DataSourceCompactionConfig configV2 = builder.withEngine(CompactionEngine.NATIVE).build();
-    resource.addOrUpdateCompactionConfig(configV2, mockHttpServletRequest);
+    resource.addOrUpdateDatasourceCompactionConfig(configV2, mockHttpServletRequest);
 
     final DataSourceCompactionConfig configV3 = builder
         .withEngine(CompactionEngine.MSQ)
         .withSkipOffsetFromLatest(Period.hours(1))
         .build();
-    resource.addOrUpdateCompactionConfig(configV3, mockHttpServletRequest);
+    resource.addOrUpdateDatasourceCompactionConfig(configV3, mockHttpServletRequest);
 
     Response response = resource.getCompactionConfigHistory(DS.WIKI, null, null);
     verifyStatus(Response.Status.OK, response);
@@ -320,7 +320,7 @@ public class CoordinatorCompactionConfigsResourceTest
         .withEngine(CompactionEngine.MSQ)
         .build();
 
-    final Response response = resource.addOrUpdateCompactionConfig(datasourceConfig, mockHttpServletRequest);
+    final Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
