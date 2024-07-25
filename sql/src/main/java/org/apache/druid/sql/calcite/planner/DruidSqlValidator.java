@@ -59,6 +59,7 @@ import org.apache.calcite.util.Util;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -794,6 +795,20 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     super.validateCall(call, scope);
+  }
+
+  @Override
+  protected void validateWindowClause(SqlSelect select)
+  {
+    SqlNodeList windows = select.getWindowList();
+    for (SqlNode sqlNode : windows) {
+      if (SqlUtil.containsAgg(sqlNode)) {
+        throw DruidException.forPersona(DruidException.Persona.USER).ofCategory(DruidException.Category.UNSUPPORTED)
+            .build("Aggregation inside window is currently not supported with syntax WINDOW W AS <DEF>. "
+                   + "Try providing window definition directly without alias");
+      }
+    }
+    super.validateWindowClause(select);
   }
 
   @Override

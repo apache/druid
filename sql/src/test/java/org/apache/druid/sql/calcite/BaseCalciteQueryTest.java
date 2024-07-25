@@ -621,6 +621,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return DruidExceptionMatcher.invalidSqlInput().expectMessageContains(s);
   }
 
+  protected static DruidExceptionMatcher unsupportedSqlContains(String s)
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.USER,
+        DruidException.Category.UNSUPPORTED,
+        "general"
+    ).expectMessageContains(s);
+  }
+
   @RegisterExtension
   static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
 
