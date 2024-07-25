@@ -243,7 +243,7 @@ public class Expressions
       return inputRefToDruidExpression(rowSignature, rexNode);
     } else if (rexNode instanceof RexOver) {
       throw new CannotBuildQueryException(
-          StringUtils.format("Encountered an OVER during Filter translation [%s].", rexNode)
+          StringUtils.format("Unexpected OVER expression during translation [%s]", rexNode)
       );
     } else if (rexNode instanceof RexCall) {
       return rexCallToDruidExpression(plannerContext, rowSignature, rexNode, postAggregatorVisitor);
