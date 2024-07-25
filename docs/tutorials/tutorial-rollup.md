@@ -24,20 +24,20 @@ sidebar_label: Aggregate data with rollup
   -->
 
 
-Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup." [Rollup](../ingestion/rollup.md) is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
+Apache Druid&circledR; can summarize raw data at ingestion time using a process known as "rollup." [Rollup](../multi-stage-query/concepts.md#rollup) is a first-level aggregation operation over a selected set of columns that reduces the size of stored data.
 
-The tutorial demonstrates how to apply rollup at ingestion and shows the effect of rollup at query time. See [ingesting with rollup](https://druid.apache.org/docs/latest/multi-stage-query/concepts/#rollup) to learn more. 
+This tutorial demonstrates how to apply rollup during ingestion and highlights its effects during query execution. The examples in the tutorial use the [multi-stage query (MSQ)](../multi-stage-query/index.md) task engine to executes SQL statements.
 
 ## Prerequisites
 
 Before proceeding, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
-You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
+You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first. 
 
 
 ## Load the example data
 
-For this tutorial, you use a small sample of network flow event data, representing IP traffic.
+For this tutorial, you use a small sample of network flow event data representing IP traffic.
 The data contains packet and byte counts from a source IP address to a destination IP address.
 
 ```json
@@ -77,7 +77,7 @@ PARTITIONED BY DAY
 ```
 
 In the query, you group by dimensions, `timestamp`, `srcIP`, and `dstIP`. Note that the query uses the `FLOOR` function to bucket rows based on MINUTE granularity.
-For the metrics, you apply aggregations to sum the `bytes` and `packets` columns and add a column that counts the number of rows that get rolled up.
+For the metrics, you apply aggregations to sum the `bytes` and `packets` columns and add a column that counts the number of rows that get rolled-up.
 
 After the ingestion completes, you can query the data.
 
@@ -119,7 +119,7 @@ Druid combines the three rows into one during rollup:
 
 Before the grouping occurs, the `FLOOR(TIME_PARSE("timestamp") TO MINUTE)` expression buckets (floors) the timestamp column of the original input by minute.
 
-The input rows are grouped because they have the same values for their dimension columns `{timestamp, srcIP, dstIP}`. The metric columns calculate the sum aggregation of the grouped rows for `packets` and `bytes`. The `count` metric shows how many rows from the original input data contributed to the final "rolled up" row.
+The input rows are grouped because they have the same values for their dimension columns `{timestamp, srcIP, dstIP}`. The metric columns calculate the sum aggregation of the grouped rows for `packets` and `bytes`. The `count` metric shows how many rows from the original input data contributed to the final rolled-up row.
 
 Now, consider the two events in the original input data that occur over the course of minute `2018-01-01T01:02`:
 
