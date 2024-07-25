@@ -122,30 +122,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
-   * string arrays
-   */
-  @MethodSource("data")
-  @ParameterizedTest(name = "{index}:with context {0}")
-  public void testInsertStringArrayWithArrayIngestModeNone(String contextName, Map<String, Object> context)
-  {
-
-    final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "none");
-
-    testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
-                     .setQueryContext(adjustedContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "String arrays can not be ingested when 'arrayIngestMode' is set to 'none'"))
-                     ))
-                     .verifyExecutionError();
-  }
-
-  /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -172,7 +149,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -200,7 +177,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -228,7 +205,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -277,7 +254,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -316,8 +293,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd (default) and the only array type to be
-   * ingested is string array
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to array (default)
    */
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
@@ -325,8 +301,24 @@ public class MSQArraysTest extends MSQTestBase
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
-                                            .add("dim3", ColumnType.STRING)
+                                            .add("dim3", ColumnType.STRING_ARRAY)
                                             .build();
+
+    List<Object[]> expectedRows = new ArrayList<>(
+        ImmutableList.of(
+            new Object[]{0L, null},
+            new Object[]{0L, new Object[]{"a", "b"}}
+        )
+    );
+    if (!useDefault) {
+      expectedRows.add(new Object[]{0L, new Object[]{""}});
+    }
+    expectedRows.addAll(
+        ImmutableList.of(
+            new Object[]{0L, new Object[]{"b", "c"}},
+            new Object[]{0L, new Object[]{"d"}}
+        )
+    );
 
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
@@ -334,7 +326,7 @@ public class MSQArraysTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
-                     .setExpectedResultRows(expectedMultiValueFooRowsToArray())
+                     .setExpectedResultRows(expectedRows)
                      .verifyResults();
   }
 
@@ -601,13 +593,6 @@ public class MSQArraysTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .verifyResults();
-  }
-
-  @MethodSource("data")
-  @ParameterizedTest(name = "{index}:with context {0}")
-  public void testSelectOnArraysWithArrayIngestModeAsNone(String contextName, Map<String, Object> context)
-  {
-    testSelectOnArrays(contextName, context, "none");
   }
 
   @MethodSource("data")
@@ -1127,21 +1112,5 @@ public class MSQArraysTest extends MSQTestBase
                      .setExpectedRowSignature(scanSignature)
                      .setExpectedResultRows(expectedRows)
                      .verifyResults();
-  }
-
-  private List<Object[]> expectedMultiValueFooRowsToArray()
-  {
-    List<Object[]> expectedRows = new ArrayList<>();
-    expectedRows.add(new Object[]{0L, null});
-    if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
-    }
-
-    expectedRows.addAll(ImmutableList.of(
-        new Object[]{0L, ImmutableList.of("a", "b")},
-        new Object[]{0L, ImmutableList.of("b", "c")},
-        new Object[]{0L, "d"}
-    ));
-    return expectedRows;
   }
 }
