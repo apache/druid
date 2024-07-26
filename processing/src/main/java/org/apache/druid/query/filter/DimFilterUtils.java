@@ -20,11 +20,15 @@
 package org.apache.druid.query.filter;
 
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.timeline.partition.ShardSpec;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +61,9 @@ public class DimFilterUtils
   static final byte NULL_CACHE_ID = 0x12;
   static final byte EQUALS_CACHE_ID = 0x13;
   static final byte RANGE_CACHE_ID = 0x14;
+  static final byte IS_FILTER_BOOLEAN_FILTER_CACHE_ID = 0x15;
+  static final byte ARRAY_CONTAINS_CACHE_ID = 0x16;
+  static final byte TYPED_IN_CACHE_ID = 0x17;
 
 
   public static final byte STRING_SEPARATOR = (byte) 0xFF;
@@ -89,31 +96,12 @@ public class DimFilterUtils
    * does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The returned set
    * contains the filtered objects in the same order as they appear in input.
    *
-   * If you plan to call this multiple times with the same dimFilter, consider using
-   * {@link #filterShards(DimFilter, Iterable, Function, Map)} instead with a cached map
-   *
-   * @param dimFilter The filter to use
-   * @param input     The iterable of objects to be filtered
-   * @param converter The function to convert T to ShardSpec that can be filtered by
-   * @param <T>       This can be any type, as long as transform function is provided to convert this to ShardSpec
-   *
-   * @return The set of filtered object, in the same order as input
-   */
-  public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter)
-  {
-    return filterShards(dimFilter, input, converter, new HashMap<>());
-  }
-
-  /**
-   * Filter the given iterable of objects by removing any object whose ShardSpec, obtained from the converter function,
-   * does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The returned set
-   * contains the filtered objects in the same order as they appear in input.
-   *
    * DimensionRangedCache stores the RangeSets of different dimensions for the dimFilter. It should be re-used
    * between calls with the same dimFilter to save redundant calls of {@link DimFilter#getDimensionRangeSet(String)}
    * on same dimensions.
    *
    * @param dimFilter           The filter to use
+   * @param filterFields        Set of fields to consider for pruning, or null to consider all fields
    * @param input               The iterable of objects to be filtered
    * @param converter           The function to convert T to ShardSpec that can be filtered by
    * @param dimensionRangeCache The cache of RangeSets of different dimensions for the dimFilter
@@ -122,27 +110,36 @@ public class DimFilterUtils
    * @return The set of filtered object, in the same order as input
    */
   public static <T> Set<T> filterShards(
-      final DimFilter dimFilter,
+      @Nullable final DimFilter dimFilter,
+      @Nullable final Set<String> filterFields,
       final Iterable<T> input,
       final Function<T, ShardSpec> converter,
       final Map<String, Optional<RangeSet<String>>> dimensionRangeCache
   )
   {
+    if (dimFilter == null) {
+      // ImmutableSet retains order from "input".
+      return ImmutableSet.copyOf(input);
+    }
+
+    // LinkedHashSet retains order from "input".
     Set<T> retSet = new LinkedHashSet<>();
 
     for (T obj : input) {
       ShardSpec shard = converter.apply(obj);
       boolean include = true;
 
-      if (dimFilter != null && shard != null) {
+      if (shard != null) {
         Map<String, RangeSet<String>> filterDomain = new HashMap<>();
         List<String> dimensions = shard.getDomainDimensions();
         for (String dimension : dimensions) {
-          Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
-              .computeIfAbsent(dimension, d -> Optional.ofNullable(dimFilter.getDimensionRangeSet(d)));
+          if (filterFields == null || filterFields.contains(dimension)) {
+            Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache
+                .computeIfAbsent(dimension, d -> Optional.ofNullable(dimFilter.getDimensionRangeSet(d)));
 
-          if (optFilterRangeSet.isPresent()) {
-            filterDomain.put(dimension, optFilterRangeSet.get());
+            if (optFilterRangeSet.isPresent()) {
+              filterDomain.put(dimension, optFilterRangeSet.get());
+            }
           }
         }
         if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
@@ -155,5 +152,27 @@ public class DimFilterUtils
       }
     }
     return retSet;
+  }
+
+  /**
+   * Returns a copy of "fields" only including base fields from {@link DataSourceAnalysis}.
+   *
+   * @param fields             field list, must be nonnull
+   * @param dataSourceAnalysis analyzed datasource
+   */
+  public static Set<String> onlyBaseFields(
+      final Set<String> fields,
+      final DataSourceAnalysis dataSourceAnalysis
+  )
+  {
+    final Set<String> retVal = new HashSet<>();
+
+    for (final String field : fields) {
+      if (dataSourceAnalysis.isBaseColumn(field)) {
+        retVal.add(field);
+      }
+    }
+
+    return retVal;
   }
 }

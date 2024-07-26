@@ -26,8 +26,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
-import org.apache.druid.msq.sql.SqlStatementResourceTest;
 import org.apache.druid.msq.sql.SqlStatementState;
+import org.apache.druid.msq.sql.resources.SqlStatementResourceTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -86,7 +86,7 @@ public class SqlStatementResultTest
         + " createdAt=2023-05-31T12:00:00.000Z,"
         + " sqlRowSignature=[ColumnNameAndTypes{colName='_time', sqlTypeName='TIMESTAMP', nativeTypeName='LONG'}, ColumnNameAndTypes{colName='alias', sqlTypeName='VARCHAR', nativeTypeName='STRING'}, ColumnNameAndTypes{colName='market', sqlTypeName='VARCHAR', nativeTypeName='STRING'}],"
         + " durationInMs=100,"
-        + " resultSetInformation=ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=null, sizeInBytes=1}]},"
+        + " resultSetInformation=ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=null, sizeInBytes=1, worker=null, partition=null}]},"
         + " errorResponse={error=druidException, errorCode=QueryNotSupported, persona=USER, category=UNCATEGORIZED, errorMessage=QueryNotSupported, context={}}}",
         SQL_STATEMENT_RESULT.toString()
     );

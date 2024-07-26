@@ -50,7 +50,6 @@ import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -394,29 +393,6 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
         finalizeExpressionString,
         maxSizeBytes,
         macroTable
-    );
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new ExpressionLambdaAggregatorFactory(
-            name,
-            fields,
-            accumulatorId,
-            initialValueExpressionString,
-            initialCombineValueExpressionString,
-            isNullUnlessAggregated,
-            shouldAggregateNullInputs,
-            shouldCombineAggregateNullInputs,
-            foldExpressionString,
-            combineExpressionString,
-            compareExpressionString,
-            finalizeExpressionString,
-            maxSizeBytes,
-            macroTable
-        )
     );
   }
 

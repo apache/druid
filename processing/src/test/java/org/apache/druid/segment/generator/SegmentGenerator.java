@@ -22,8 +22,10 @@ package org.apache.druid.segment.generator;
 import com.google.common.hash.Hashing;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -37,6 +39,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -52,7 +55,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -156,7 +158,7 @@ public class SegmentGenerator implements Closeable
     if (outDir.exists()) {
       try {
         log.info("Found segment with hash[%s] cached in directory[%s].", dataHash, outDir);
-        return TestHelper.getTestIndexIO().loadIndex(outDir);
+        return TestHelper.getTestIndexIO(ColumnConfig.DEFAULT).loadIndex(outDir);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -183,14 +185,16 @@ public class SegmentGenerator implements Closeable
     final List<QueryableIndex> indexes = new ArrayList<>();
 
     Transformer transformer = transformSpec.toTransformer();
+    InputRowSchema rowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, null),
+        dimensionsSpec,
+        null
+    );
 
     for (int i = 0; i < numRows; i++) {
-      final InputRow row = transformer.transform(dataGenerator.nextRow());
-      Map<String, Object> evaluated = new HashMap<>();
-      for (String dimension : dimensionsSpec.getDimensionNames()) {
-        evaluated.put(dimension, row.getRaw(dimension));
-      }
-      MapBasedInputRow transformedRow = new MapBasedInputRow(row.getTimestamp(), dimensionsSpec.getDimensionNames(), evaluated);
+      Map<String, Object> raw = dataGenerator.nextRaw();
+      InputRow inputRow = MapInputRowParser.parse(rowSchema, raw);
+      InputRow transformedRow = transformer.transform(inputRow);
       rows.add(transformedRow);
 
       if ((i + 1) % 20000 == 0) {
@@ -217,7 +221,7 @@ public class SegmentGenerator implements Closeable
     } else {
       try {
         retVal = TestHelper
-            .getTestIndexIO()
+            .getTestIndexIO(ColumnConfig.DEFAULT)
             .loadIndex(
                 TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                           .mergeQueryableIndex(

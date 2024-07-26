@@ -40,8 +40,9 @@ public class DruidSqlUnparseTest
   {
     String sqlQuery = "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL TIME";
     String prettySqlQuery = "INSERT INTO \"dst\"\n"
-                     + "(SELECT *\n"
-                     + "    FROM \"foo\") PARTITIONED BY ALL TIME";
+                     + "SELECT *\n"
+                     + "    FROM \"foo\"\n"
+                     + "PARTITIONED BY ALL TIME";
 
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
     DruidSqlInsert druidSqlReplace = (DruidSqlInsert) druidSqlParser.DruidSqlInsertEof();
@@ -56,8 +57,8 @@ public class DruidSqlUnparseTest
     String sqlQuery = "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
                             + "OVERWRITE ALL\n"
-                            + "(SELECT *\n"
-                            + "    FROM \"foo\")\n"
+                            + "SELECT *\n"
+                            + "    FROM \"foo\"\n"
                             + "PARTITIONED BY ALL TIME "
                             + "CLUSTERED BY \"dim1\"";
 
@@ -74,8 +75,8 @@ public class DruidSqlUnparseTest
     String sqlQuery = "REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' SELECT * FROM foo PARTITIONED BY DAY CLUSTERED BY dim1";
     String prettySqlQuery = "REPLACE INTO \"dst\"\n"
                             + "OVERWRITE \"__time\" >= TIMESTAMP '2000-01-01 00:00:00' AND \"__time\" < TIMESTAMP '2000-01-02 00:00:00'\n"
-                            + "(SELECT *\n"
-                            + "    FROM \"foo\")\n"
+                            + "SELECT *\n"
+                            + "    FROM \"foo\"\n"
                             + "PARTITIONED BY DAY "
                             + "CLUSTERED BY \"dim1\"";
     DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
@@ -94,5 +95,34 @@ public class DruidSqlUnparseTest
     druidSqlParser.setQuotedCasing(Casing.TO_LOWER);
     druidSqlParser.setIdentifierMaxLength(20);
     return druidSqlParser;
+  }
+
+  @Test
+  public void testUnparseExternalSqlIdentifierReplace() throws ParseException
+  {
+    String sqlQuery = "REPLACE INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV OVERWRITE ALL SELECT dim2 FROM foo";
+    String prettySqlQuery = "REPLACE INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
+                            + "AS csv\n"
+                            + "OVERWRITE ALL\n"
+                            + "SELECT \"dim2\"\n"
+                            + "    FROM \"foo\"\n";
+    DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
+    DruidSqlReplace druidSqlReplace = (DruidSqlReplace) druidSqlParser.DruidSqlReplaceEof();
+    druidSqlReplace.unparse(sqlWriter, 0, 0);
+    assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
+  }
+
+  @Test
+  public void testUnparseExternalSqlIdentifierInsert() throws ParseException
+  {
+    String sqlQuery = "INSERT INTO EXTERN( s3(bucket=>'bucket1',prefix=>'prefix1') ) AS CSV SELECT dim2 FROM foo";
+    String prettySqlQuery = "INSERT INTO EXTERN(S3(bucket => 'bucket1', prefix => 'prefix1'))\n"
+                            + "AS csv\n"
+                            + "SELECT \"dim2\"\n"
+                            + "    FROM \"foo\"\n";
+    DruidSqlParserImpl druidSqlParser = createTestParser(sqlQuery);
+    DruidSqlInsert druidSqlInsert = (DruidSqlInsert) druidSqlParser.DruidSqlInsertEof();
+    druidSqlInsert.unparse(sqlWriter, 0, 0);
+    assertEquals(prettySqlQuery, sqlWriter.toSqlString().getSql());
   }
 }

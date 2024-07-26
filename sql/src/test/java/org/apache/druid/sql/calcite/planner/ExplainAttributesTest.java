@@ -106,11 +106,11 @@ public class ExplainAttributesTest
         "ALL"
     );
     final String expectedAttributes1 = "{"
-        + "\"statementType\":\"REPLACE\","
-        + "\"targetDataSource\":\"foo\","
-        + "\"partitionedBy\":\"HOUR\","
-        + "\"replaceTimeChunks\":\"ALL\""
-        + "}";
+                                       + "\"statementType\":\"REPLACE\","
+                                       + "\"targetDataSource\":\"foo\","
+                                       + "\"partitionedBy\":\"HOUR\","
+                                       + "\"replaceTimeChunks\":\"ALL\""
+                                       + "}";
     Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
 
 
@@ -122,11 +122,11 @@ public class ExplainAttributesTest
         "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
     );
     final String expectedAttributes2 = "{"
-                                      + "\"statementType\":\"REPLACE\","
-                                      + "\"targetDataSource\":\"foo\","
-                                      + "\"partitionedBy\":\"HOUR\","
-                                      + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
-                                      + "}";
+                                       + "\"statementType\":\"REPLACE\","
+                                       + "\"targetDataSource\":\"foo\","
+                                       + "\"partitionedBy\":\"HOUR\","
+                                       + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
+                                       + "}";
     Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
   }
 

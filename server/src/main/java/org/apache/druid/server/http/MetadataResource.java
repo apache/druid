@@ -19,20 +19,27 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
+import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
+import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.server.JettyUtils;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -64,6 +71,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -74,11 +82,13 @@ import java.util.stream.Stream;
 @Path("/druid/coordinator/v1/metadata")
 public class MetadataResource
 {
-  private static final EmittingLogger log = new EmittingLogger(MetadataResource.class);
+  private static final Logger log = new Logger(MetadataResource.class);
+
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final AuthorizerMapper authorizerMapper;
   private final DruidCoordinator coordinator;
+  private final @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
 
   @Inject
   public MetadataResource(
@@ -86,13 +96,14 @@ public class MetadataResource
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator,
-      @Json ObjectMapper jsonMapper
+      @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache
   )
   {
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
     this.authorizerMapper = authorizerMapper;
     this.coordinator = coordinator;
+    this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
   }
 
   @GET
@@ -148,52 +159,67 @@ public class MetadataResource
   public Response getAllUsedSegments(
       @Context final HttpServletRequest req,
       @QueryParam("datasources") final @Nullable Set<String> dataSources,
-      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus
+      @QueryParam("includeOvershadowedStatus") final @Nullable String includeOvershadowedStatus,
+      @QueryParam("includeRealtimeSegments") final @Nullable String includeRealtimeSegments
   )
   {
-    if (includeOvershadowedStatus != null) {
-      return getAllUsedSegmentsWithAdditionalDetails(req, dataSources);
-    }
+    try {
+      // realtime segments can be requested only when includeOverShadowedStatus is set
+      if (includeOvershadowedStatus == null && includeRealtimeSegments != null) {
+        return Response.status(Response.Status.BAD_REQUEST).build();
+      }
 
-    Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
-        segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
-    if (dataSources != null && !dataSources.isEmpty()) {
-      dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+      if (includeOvershadowedStatus != null) {
+        // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
+        // when the feature is disabled we do not want to increase the payload size polled by the Brokers, since they already have this information
+        return getAllUsedSegmentsWithAdditionalDetails(req, dataSources, includeRealtimeSegments);
+      }
+
+      Collection<ImmutableDruidDataSource> dataSourcesWithUsedSegments =
+          segmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments();
+      if (dataSources != null && !dataSources.isEmpty()) {
+        dataSourcesWithUsedSegments = dataSourcesWithUsedSegments
+            .stream()
+            .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
+            .collect(Collectors.toList());
+      }
+      final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
           .stream()
-          .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
-          .collect(Collectors.toList());
+          .flatMap(t -> t.getSegments().stream());
+
+      final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
+          AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
+
+      final Iterable<DataSegment> authorizedSegments =
+          AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
+
+      Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+      return builder.entity(authorizedSegments).build();
     }
-    final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
-
-    final Function<DataSegment, Iterable<ResourceAction>> raGenerator = segment -> Collections.singletonList(
-        AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSource()));
-
-    final Iterable<DataSegment> authorizedSegments =
-        AuthorizationUtils.filterAuthorizedResources(req, usedSegments::iterator, raGenerator, authorizerMapper);
-
-    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
-    return builder.entity(authorizedSegments).build();
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
+    catch (Exception e) {
+      log.error(e, "Error while fetching used segment information.");
+      return Response.serverError().entity(ImmutableMap.of("error", e.toString())).build();
+    }
   }
 
   /**
-   * This endpoint is used by MetadataSegmentView in broker to keep an up-to-date list of segments present in the system
-   *
+   * <p>This endpoint is used by MetadataSegmentView in broker to keep an up-to-date list of segments present in the system
    * This endpoint lists segments present in the system and can also incrementally provide the segments added/dropped
-   * since last response.
-   *
-   * Here is how, this is used.
-   *
-   * (1) Client sends first request /druid/coordinator/v1/metadata/changedSegments?counter=-1
-   * Server responds with list of segments currently present and a <counter,hash> pair.
-   *
-   * (2) Client sends subsequent requests /druid/coordinator/v1/metadata/changedSegments?counter=<counter>&hash=<hash>
+   * since last response.</p>
+   * <br>Flow
+   * <ol>
+   * <li>Client sends first request /druid/coordinator/v1/metadata/changedSegments?counter=-1
+   * Server responds with list of segments currently present and a <counter,hash> pair. </li>
+   * <li>Client sends subsequent requests /druid/coordinator/v1/metadata/changedSegments?counter=<counter>&hash=<hash>
    * Where <counter,hash> values are used from the last response. Server responds with list of segment updates
-   * since given counter.
+   * since given counter.</li>
+   * </ol>
    *
-   * @param req
-   * @param dataSources
+   * @param req request
+   * @param dataSources requested datasources
    * @param counter counter received in last response.
    * @param hash hash received in last response.
    */
@@ -238,22 +264,35 @@ public class MetadataResource
               .getDataSourcesWithAllUsedSegments()
               .stream()
               .flatMap(druidDataSource -> druidDataSource.getSegments().stream())
-              .filter(segment -> requiredDataSources.size() == 0
+              .filter(segment -> requiredDataSources.isEmpty()
                                  || requiredDataSources.contains(segment.getDataSource()))
-              .map(segment ->
-                       new DataSegmentChange(
-                           new SegmentStatusInCluster(
-                               segment,
-                               dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
-                               null,
-                               getHandedOffStateForSegment(
-                                   dataSourcesSnapshot,
-                                   segment.getDataSource(),
-                                   segment.getId()
-                               )
-                           ),
-                           DataSegmentChange.ChangeType.SEGMENT_ADDED
-                       ))
+              .map(segment -> {
+                Long numRows = null;
+                if (coordinatorSegmentMetadataCache != null) {
+                  AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
+                      segment.getDataSource(),
+                      segment.getId()
+                  );
+                  if (null != availableSegmentMetadata) {
+                    numRows = availableSegmentMetadata.getNumRows();
+                  }
+                }
+                return new DataSegmentChange(
+                    new SegmentStatusInCluster(
+                        segment,
+                        dataSourcesSnapshot.getOvershadowedSegments().contains(segment),
+                        null,
+                        numRows,
+                        false, //
+                        getHandedOffStateForSegment(
+                            dataSourcesSnapshot,
+                            segment.getDataSource(),
+                            segment.getId()
+                        )
+                    ),
+                    DataSegmentChange.ChangeType.SEGMENT_ADDED
+                );
+              })
               .collect(Collectors.toList());
       resetCause = changeRequestsSnapshot.getResetCause();
       log.debug("Returning full snapshot. segment count [%d], counter [%d], hash [%d]",
@@ -263,7 +302,7 @@ public class MetadataResource
       dataSegmentChanges = flatRequests;
       dataSegmentChanges = dataSegmentChanges
           .stream()
-          .filter(segment -> requiredDataSources.size() == 0
+          .filter(segment -> requiredDataSources.isEmpty()
                              || requiredDataSources.contains(segment.getSegmentStatusInCluster()
                                                                     .getDataSegment()
                                                                     .getDataSource()))
@@ -273,10 +312,12 @@ public class MetadataResource
       );
     }
 
-    final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator = segment -> Collections
-        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegmentStatusInCluster()
-                                                                                    .getDataSegment()
-                                                                                    .getDataSource()));
+    final Function<DataSegmentChange, Iterable<ResourceAction>> raGenerator =
+        segment -> Collections.singletonList(
+            AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(
+                segment.getSegmentStatusInCluster().getDataSegment().getDataSource()
+            )
+        );
 
     final Iterable<DataSegmentChange> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
@@ -298,7 +339,8 @@ public class MetadataResource
 
   private Response getAllUsedSegmentsWithAdditionalDetails(
       HttpServletRequest req,
-      @Nullable Set<String> dataSources
+      @Nullable Set<String> dataSources,
+      String includeRealtimeSegments
   )
   {
     DataSourcesSnapshot dataSourcesSnapshot = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments();
@@ -310,26 +352,68 @@ public class MetadataResource
           .filter(dataSourceWithUsedSegments -> dataSources.contains(dataSourceWithUsedSegments.getName()))
           .collect(Collectors.toList());
     }
-    final Stream<DataSegment> usedSegments = dataSourcesWithUsedSegments
-        .stream()
-        .flatMap(t -> t.getSegments().stream());
     final Set<DataSegment> overshadowedSegments = dataSourcesSnapshot.getOvershadowedSegments();
+    final Set<SegmentId> segmentAlreadySeen = new HashSet<>();
+    final Stream<SegmentStatusInCluster> segmentStatus = dataSourcesWithUsedSegments
+        .stream()
+        .flatMap(t -> t.getSegments().stream())
+        .map(segment -> {
+          // The replication factor for unloaded segments is 0 as they will be unloaded soon
+          boolean isOvershadowed = overshadowedSegments.contains(segment);
+          Integer replicationFactor = isOvershadowed ? (Integer) 0
+                                                     : coordinator.getReplicationFactor(segment.getId());
 
-    final Stream<SegmentStatusInCluster> segmentStatus = usedSegments.map(segment -> {
-      // The replication factor for unloaded segments is 0 as they will be unloaded soon
-      boolean isOvershadowed = overshadowedSegments.contains(segment);
-      Integer replicationFactor = isOvershadowed ? (Integer) 0
-                                                 : coordinator.getReplicationFactor(segment.getId());
-      boolean handedOffState = getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId());
-      return new SegmentStatusInCluster(segment, isOvershadowed, replicationFactor, handedOffState);
-    });
+          Long numRows = null;
+          if (coordinatorSegmentMetadataCache != null) {
+            AvailableSegmentMetadata availableSegmentMetadata = coordinatorSegmentMetadataCache.getAvailableSegmentMetadata(
+                segment.getDataSource(),
+                segment.getId()
+            );
+            if (null != availableSegmentMetadata) {
+              numRows = availableSegmentMetadata.getNumRows();
+            }
+          }
+          segmentAlreadySeen.add(segment.getId());
+          boolean handedOffState = getHandedOffStateForSegment(dataSourcesSnapshot, segment.getDataSource(), segment.getId());
+          return new SegmentStatusInCluster(
+              segment,
+              isOvershadowed,
+              replicationFactor,
+              numRows,
+              // published segment can't be realtime
+              false,
+              handedOffState
+          );
+        });
 
+    Stream<SegmentStatusInCluster> finalSegments = segmentStatus;
+
+    // conditionally add realtime segments information
+    if (includeRealtimeSegments != null && coordinatorSegmentMetadataCache != null) {
+      final Stream<SegmentStatusInCluster> realtimeSegmentStatus = coordinatorSegmentMetadataCache
+          .getSegmentMetadataSnapshot()
+          .values()
+          .stream()
+          .filter(availableSegmentMetadata ->
+                      !segmentAlreadySeen.contains(availableSegmentMetadata.getSegment().getId()))
+          .map(availableSegmentMetadata ->
+                   new SegmentStatusInCluster(
+                       availableSegmentMetadata.getSegment(),
+                       false,
+                       null, // replication factor is null for unpublished segments
+                       availableSegmentMetadata.getNumRows(),
+                       availableSegmentMetadata.isRealtime() != 0,
+                       false // realtime segments are not handed off yet
+                   ));
+
+      finalSegments = Stream.concat(segmentStatus, realtimeSegmentStatus);
+    }
     final Function<SegmentStatusInCluster, Iterable<ResourceAction>> raGenerator = segment -> Collections
         .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getDataSegment().getDataSource()));
 
     final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils.filterAuthorizedResources(
         req,
-        segmentStatus::iterator,
+        finalSegments::iterator,
         raGenerator,
         authorizerMapper
     );
@@ -416,12 +500,65 @@ public class MetadataResource
   }
 
   @GET
+  @Path("/datasources/{dataSourceName}/unusedSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getUnusedSegmentsInDataSource(
+      @Context final HttpServletRequest req,
+      @PathParam("dataSourceName") final String dataSource,
+      @QueryParam("interval") @Nullable String interval,
+      @QueryParam("limit") @Nullable Integer limit,
+      @QueryParam("lastSegmentId") @Nullable final String lastSegmentId,
+      @QueryParam("sortOrder") @Nullable final String sortOrder
+  )
+  {
+    try {
+      if (dataSource == null || dataSource.isEmpty()) {
+        throw InvalidInput.exception("dataSourceName must be non-empty.");
+      }
+
+      if (limit != null && limit < 0) {
+        throw InvalidInput.exception("Invalid limit[%s] specified. Limit must be > 0.", limit);
+      }
+
+      if (lastSegmentId != null && SegmentId.tryParse(dataSource, lastSegmentId) == null) {
+        throw InvalidInput.exception("Invalid lastSegmentId[%s] specified.", lastSegmentId);
+      }
+
+      final SortOrder theSortOrder = sortOrder == null ? null : SortOrder.fromValue(sortOrder);
+
+      final Interval theInterval = interval != null ? Intervals.of(interval.replace('_', '/')) : null;
+      final Iterable<DataSegmentPlus> unusedSegments = segmentsMetadataManager.iterateAllUnusedSegmentsForDatasource(
+          dataSource,
+          theInterval,
+          limit,
+          lastSegmentId,
+          theSortOrder
+      );
+
+      final List<DataSegmentPlus> retVal = new ArrayList<>();
+      unusedSegments.iterator().forEachRemaining(retVal::add);
+      return Response.status(Response.Status.OK).entity(retVal).build();
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
+    }
+    catch (Exception e) {
+      return Response
+          .serverError()
+          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .build();
+    }
+  }
+
+  @GET
   @Path("/datasources/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
-  public Response isSegmentUsed(
+  public Response getSegment(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId
+      @PathParam("segmentId") String segmentId,
+      @QueryParam("includeUnused") @Nullable Boolean includeUnused
   )
   {
     ImmutableDruidDataSource dataSource = segmentsMetadataManager.getImmutableDataSourceWithUsedSegments(dataSourceName);
@@ -435,6 +572,70 @@ public class MetadataResource
         return Response.status(Response.Status.OK).entity(segment).build();
       }
     }
+    // fallback to db
+    DataSegment segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId, Boolean.TRUE.equals(includeUnused));
+    if (segment != null) {
+      return Response.status(Response.Status.OK).entity(segment).build();
+    }
     return Response.status(Response.Status.NOT_FOUND).build();
+  }
+
+  /**
+   * API to fetch {@link DataSourceInformation} for the specified datasources.
+   *
+   * @param dataSources list of dataSources to be queried
+   * @return information including schema details for the specified datasources
+   */
+  @POST
+  @Path("/dataSourceInformation")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getDataSourceInformation(
+      @Context final HttpServletRequest req,
+      final List<String> dataSources
+  )
+  {
+    // if {@code coordinatorSegmentMetadataCache} is null, implies the feature is disabled. Return NOT_FOUND.
+    if (coordinatorSegmentMetadataCache == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+    Map<String, DataSourceInformation> dataSourceSchemaMap = coordinatorSegmentMetadataCache.getDataSourceInformationMap();
+
+    List<DataSourceInformation> results = new ArrayList<>();
+
+    for (Map.Entry<String, DataSourceInformation> entry : dataSourceSchemaMap.entrySet()) {
+      if (dataSources.contains(entry.getKey())) {
+        results.add(entry.getValue());
+      }
+    }
+
+    final Function<DataSourceInformation, Iterable<ResourceAction>> raGenerator = dataSourceInformation -> Collections
+        .singletonList(AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(dataSourceInformation.getDataSource()));
+
+    final Iterable<DataSourceInformation> authorizedDataSourceInformation = AuthorizationUtils.filterAuthorizedResources(
+        req,
+        results,
+        raGenerator,
+        authorizerMapper
+    );
+    return Response.status(Response.Status.OK).entity(authorizedDataSourceInformation).build();
+  }
+
+  /**
+   * @return all bootstrap segments determined by the coordinator.
+   */
+  @POST
+  @Path("/bootstrapSegments")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
+  public Response getBootstrapSegments()
+  {
+    final Set<DataSegment> broadcastSegments = coordinator.getBroadcastSegments();
+    if (broadcastSegments == null) {
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                     .entity("Bootstrap segments are not initialized yet."
+                         + " Please ensure that the Coordinator duties are running and try again.")
+                     .build();
+    }
+    return Response.status(Response.Status.OK).entity(broadcastSegments).build();
   }
 }

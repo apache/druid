@@ -20,6 +20,7 @@
 package org.apache.druid.common.config;
 
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -27,6 +28,8 @@ import org.junit.Test;
 
 import java.util.Collections;
 
+import static org.apache.druid.common.config.NullHandling.defaultValueForClass;
+import static org.apache.druid.common.config.NullHandling.defaultValueForType;
 import static org.apache.druid.common.config.NullHandling.replaceWithDefault;
 import static org.junit.Assert.assertEquals;
 
@@ -87,6 +90,17 @@ public final class NullHandlingTest extends InitializedNullHandlingTest
   public void test_defaultValueForClass_object()
   {
     Assert.assertNull(NullHandling.defaultValueForClass(Object.class));
+  }
+
+  @Test
+  public void test_defaultValueForType()
+  {
+    assertEquals(defaultValueForClass(Float.class), defaultValueForType(ValueType.FLOAT));
+    assertEquals(defaultValueForClass(Double.class), defaultValueForType(ValueType.DOUBLE));
+    assertEquals(defaultValueForClass(Long.class), defaultValueForType(ValueType.LONG));
+    assertEquals(defaultValueForClass(String.class), defaultValueForType(ValueType.STRING));
+    assertEquals(defaultValueForClass(Object.class), defaultValueForType(ValueType.COMPLEX));
+    assertEquals(defaultValueForClass(Object.class), defaultValueForType(ValueType.ARRAY));
   }
 
   @Test

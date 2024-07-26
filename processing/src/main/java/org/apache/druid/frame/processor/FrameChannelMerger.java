@@ -19,9 +19,7 @@
 
 package org.apache.druid.frame.processor;
 
-import it.unimi.dsi.fastutil.ints.IntHeapPriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -35,7 +33,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 
@@ -65,12 +62,13 @@ public class FrameChannelMerger implements FrameProcessor<Long>
   private final FrameReader frameReader;
   private final List<KeyColumn> sortKey;
   private final ClusterByPartitions partitions;
-  private final IntPriorityQueue priorityQueue;
+  private final TournamentTree tournamentTree;
   private final FrameWriterFactory frameWriterFactory;
   private final FramePlus[] currentFrames;
   private final long rowLimit;
   private long rowsOutput = 0;
   private int currentPartition = 0;
+  private int remainingChannels;
 
   // ColumnSelectorFactory that always reads from the current row in the merged sequence.
   final MultiColumnSelectorFactory mergedColumnSelectorFactory;
@@ -111,13 +109,27 @@ public class FrameChannelMerger implements FrameProcessor<Long>
     this.partitions = partitionsToUse;
     this.rowLimit = rowLimit;
     this.currentFrames = new FramePlus[inputChannels.size()];
-    this.priorityQueue = new IntHeapPriorityQueue(
+    this.remainingChannels = 0;
+    this.tournamentTree = new TournamentTree(
         inputChannels.size(),
-        (k1, k2) -> currentFrames[k1].comparisonWidget.compare(
-            currentFrames[k1].rowNumber,
-            currentFrames[k2].comparisonWidget,
-            currentFrames[k2].rowNumber
-        )
+        (k1, k2) -> {
+          final FramePlus frame1 = currentFrames[k1];
+          final FramePlus frame2 = currentFrames[k2];
+
+          if (frame1 == frame2) {
+            return 0;
+          } else if (frame1 == null) {
+            return 1;
+          } else if (frame2 == null) {
+            return -1;
+          } else {
+            return currentFrames[k1].comparisonWidget.compare(
+                currentFrames[k1].rowNumber,
+                currentFrames[k2].comparisonWidget,
+                currentFrames[k2].rowNumber
+            );
+          }
+        }
     );
 
     final List<Supplier<ColumnSelectorFactory>> frameColumnSelectorFactorySuppliers =
@@ -149,13 +161,13 @@ public class FrameChannelMerger implements FrameProcessor<Long>
   @Override
   public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
   {
-    final IntSet awaitSet = populateCurrentFramesAndPriorityQueue();
+    final IntSet awaitSet = populateCurrentFramesAndTournamentTree();
 
     if (!awaitSet.isEmpty()) {
       return ReturnOrAwait.awaitAll(awaitSet);
     }
 
-    if (priorityQueue.isEmpty()) {
+    if (finished()) {
       // Done!
       return ReturnOrAwait.returnObject(rowsOutput);
     }
@@ -167,7 +179,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
 
   private FrameWithPartition nextFrame()
   {
-    if (priorityQueue.isEmpty()) {
+    if (finished()) {
       throw new NoSuchElementException();
     }
 
@@ -175,8 +187,8 @@ public class FrameChannelMerger implements FrameProcessor<Long>
       int mergedFramePartition = currentPartition;
       RowKey currentPartitionEnd = partitions.get(currentPartition).getEnd();
 
-      while (!priorityQueue.isEmpty()) {
-        final int currentChannel = priorityQueue.firstInt();
+      while (!finished()) {
+        final int currentChannel = tournamentTree.getMin();
         mergedColumnSelectorFactory.setCurrentFactory(currentChannel);
 
         if (currentPartitionEnd != null) {
@@ -206,31 +218,24 @@ public class FrameChannelMerger implements FrameProcessor<Long>
             throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
           }
 
-          // Frame is full. Don't touch the priority queue; instead, return the current frame.
+          // Frame is full. Return the current frame.
           break;
         }
 
         if (rowLimit != UNLIMITED && rowsOutput >= rowLimit) {
           // Limit reached; we're done.
-          priorityQueue.clear();
           Arrays.fill(currentFrames, null);
+          remainingChannels = 0;
         } else {
-          // Continue populating the priority queue.
-          if (currentChannel != priorityQueue.dequeueInt()) {
-            // There's a bug in this function. Nothing sensible we can really include in this error message.
-            throw new ISE("Unexpected channel");
-          }
-
+          // Continue reading the currentChannel.
           final FramePlus channelFramePlus = currentFrames[currentChannel];
           channelFramePlus.advance();
 
-          if (!channelFramePlus.cursor.isDone()) {
-            // Add this channel back to the priority queue, so it pops back out at the right time.
-            priorityQueue.enqueue(currentChannel);
-          } else {
+          if (channelFramePlus.cursor.isDone()) {
             // Done reading current frame from "channel".
             // Clear it and see if there is another one available for immediate loading.
             currentFrames[currentChannel] = null;
+            remainingChannels--;
 
             final ReadableFrameChannel channel = inputChannels.get(currentChannel);
 
@@ -238,7 +243,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
               // Read next frame from this channel.
               final Frame frame = channel.read();
               currentFrames[currentChannel] = new FramePlus(frame, frameReader, sortKey);
-              priorityQueue.enqueue(currentChannel);
+              remainingChannels++;
             } else if (channel.isFinished()) {
               // Done reading this channel. Fall through and continue with other channels.
             } else {
@@ -254,6 +259,11 @@ public class FrameChannelMerger implements FrameProcessor<Long>
     }
   }
 
+  private boolean finished()
+  {
+    return remainingChannels == 0;
+  }
+
   @Override
   public void cleanup() throws IOException
   {
@@ -264,7 +274,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
    * Populates {@link #currentFrames}, wherever necessary, from any readable input channels. Returns the set of
    * channels that are required for population but are not readable.
    */
-  private IntSet populateCurrentFramesAndPriorityQueue()
+  private IntSet populateCurrentFramesAndTournamentTree()
   {
     final IntSet await = new IntOpenHashSet();
 
@@ -275,7 +285,7 @@ public class FrameChannelMerger implements FrameProcessor<Long>
         if (channel.canRead()) {
           final Frame frame = channel.read();
           currentFrames[i] = new FramePlus(frame, frameReader, sortKey);
-          priorityQueue.enqueue(i);
+          remainingChannels++;
         } else if (!channel.isFinished()) {
           await.add(i);
         }

@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.BasicMonitorScheduler;
 import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
+import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
 import org.apache.druid.java.util.metrics.JvmMonitor;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
@@ -90,7 +91,6 @@ public class MetricsModule implements Module
 
     binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
 
-    binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
@@ -110,7 +110,10 @@ public class MetricsModule implements Module
   )
   {
     List<Monitor> monitors = new ArrayList<>();
-
+    // HACK: when ServiceStatusMonitor is the first to be loaded, it introduces a circular dependency between
+    // CliPeon.runTask and CliPeon.getDataSourceFromTask/CliPeon.getTaskIDFromTask. The reason for this is unclear
+    // but by injecting DataSourceTaskIdHolder early this cycle is avoided.
+    injector.getInstance(DataSourceTaskIdHolder.class);
     for (Class<? extends Monitor> monitorClass : Iterables.concat(monitorsConfig.getMonitors(), monitorSet)) {
       monitors.add(injector.getInstance(monitorClass));
     }

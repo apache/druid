@@ -37,15 +37,22 @@ public class TotalWorkerCapacityResponse
    * This can be -1 if it cannot be determined or if auto scaling is not configured.
    */
   private final int maximumCapacityWithAutoScale;
+  /**
+   * Used cluster capacity of the current state of the cluster. This can be -1 if
+   * it cannot be determined.
+   */
+  private final int usedClusterCapacity;
 
   @JsonCreator
   public TotalWorkerCapacityResponse(
       @JsonProperty("currentClusterCapacity") int currentClusterCapacity,
-      @JsonProperty("maximumCapacityWithAutoScale") int maximumCapacityWithAutoScale
+      @JsonProperty("maximumCapacityWithAutoScale") int maximumCapacityWithAutoScale,
+      @JsonProperty("usedClusterCapacity") int usedClusterCapacity
   )
   {
     this.currentClusterCapacity = currentClusterCapacity;
     this.maximumCapacityWithAutoScale = maximumCapacityWithAutoScale;
+    this.usedClusterCapacity = usedClusterCapacity;
   }
 
   @JsonProperty
@@ -58,5 +65,11 @@ public class TotalWorkerCapacityResponse
   public int getMaximumCapacityWithAutoScale()
   {
     return maximumCapacityWithAutoScale;
+  }
+
+  @JsonProperty
+  public int getUsedClusterCapacity()
+  {
+    return usedClusterCapacity;
   }
 }

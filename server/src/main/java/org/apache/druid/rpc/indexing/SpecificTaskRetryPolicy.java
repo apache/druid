@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerResource;
+import org.apache.druid.segment.realtime.ChatHandlerResource;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -75,6 +75,12 @@ public class SpecificTaskRetryPolicy implements ServiceRetryPolicy
   public boolean retryThrowable(final Throwable t)
   {
     return StandardRetryPolicy.unlimited().retryThrowable(t);
+  }
+
+  @Override
+  public boolean retryLoggable()
+  {
+    return baseRetryPolicy.retryLoggable();
   }
 
   @Override

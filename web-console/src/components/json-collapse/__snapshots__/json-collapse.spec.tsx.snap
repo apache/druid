@@ -7,25 +7,29 @@ exports[`JsonCollapse matches snapshot 1`] = `
   <div
     className="collapse-buttons"
   >
-    <Blueprint4.Button
+    <Blueprint5.Button
       active={false}
       minimal={true}
       onClick={[Function]}
       text="test"
     />
   </div>
-  <Blueprint4.Collapse
+  <Blueprint5.Collapse
     component="div"
     isOpen={false}
     keepChildrenMounted={false}
     transitionDuration={200}
   >
-    <Blueprint4.TextArea
+    <Blueprint5.TextArea
+      autoResize={false}
+      fill={false}
+      large={false}
       readOnly={true}
+      small={false}
       value="{
-  \\"name\\": \\"test\\"
+  "name": "test"
 }"
     />
-  </Blueprint4.Collapse>
+  </Blueprint5.Collapse>
 </div>
 `;

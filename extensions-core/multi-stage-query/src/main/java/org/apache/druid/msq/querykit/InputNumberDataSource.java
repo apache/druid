@@ -35,6 +35,15 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
+/**
+ * Represents an input number, i.e., a positional index into
+ * {@link org.apache.druid.msq.kernel.StageDefinition#getInputSpecs()}.
+ *
+ * Used by {@link DataSourcePlan} to note which inputs correspond to which datasources in the query being planned.
+ *
+ * Used by {@link BroadcastJoinSegmentMapFnProcessor} to associate broadcast inputs with the correct datasources in a
+ * join tree.
+ */
 @JsonTypeName("inputNumber")
 public class InputNumberDataSource implements DataSource
 {
@@ -83,14 +92,12 @@ public class InputNumberDataSource implements DataSource
   @Override
   public boolean isConcrete()
   {
+    // InputNumberDataSource represents InputSpecs, which are scannable via Segment adapters.
     return true;
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTimeAcc
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
   {
     return Function.identity();
   }

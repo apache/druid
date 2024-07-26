@@ -202,7 +202,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     Assert.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
-
+    task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runHashPartitionMultiPhaseParallel(toolbox);
 
     Assert.assertTrue(taskStatus.isFailure());
@@ -244,7 +244,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     if (useInputFormatApi) {
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDir, filter),
           inputFormat,
           appendToExisting,
@@ -265,7 +264,6 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     } else {
       Preconditions.checkArgument(inputFormat == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDir, filter),
           createInputFormatFromParseSpec(parseSpec),
           appendToExisting,
@@ -314,7 +312,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
         int succedsBeforeFailing
     )
     {
-      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
+      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context, false);
       this.succeedsBeforeFailing = succedsBeforeFailing;
     }
 

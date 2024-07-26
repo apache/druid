@@ -68,8 +68,8 @@ import static org.junit.Assert.assertTrue;
 public class S3InputSourceDefnTest
 {
   private static final List<ColumnSpec> COLUMNS = Arrays.asList(
-      new ColumnSpec("x", Columns.VARCHAR, null),
-      new ColumnSpec("y", Columns.BIGINT, null)
+      new ColumnSpec("x", Columns.STRING, null),
+      new ColumnSpec("y", Columns.LONG, null)
   );
 
   /**
@@ -110,7 +110,7 @@ public class S3InputSourceDefnTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(ImmutableMap.of("type", S3StorageDruidModule.SCHEME))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -147,6 +147,7 @@ public class S3InputSourceDefnTest
         CatalogUtils.stringListToUriList(prefixes),
         objects,
         objectGlob,
+        null,
         config,
         null,
         null,
@@ -175,7 +176,7 @@ public class S3InputSourceDefnTest
         Collections.singletonList("s3://foo/bar/file.csv"), null, null, null);
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(s3InputSource))
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -214,7 +215,7 @@ public class S3InputSourceDefnTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(s3InputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -227,7 +228,7 @@ public class S3InputSourceDefnTest
         .inputSource(ImmutableMap.of("type", S3StorageDruidModule.SCHEME))
         .inputFormat(CSV_FORMAT)
         .property(S3InputSourceDefn.BUCKET_PROPERTY, "s3://foo.com")
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -242,7 +243,7 @@ public class S3InputSourceDefnTest
         .inputSource(toMap(s3InputSource))
         .inputFormat(CSV_FORMAT)
         .property(S3InputSourceDefn.BUCKET_PROPERTY, "foo.com")
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -261,7 +262,7 @@ public class S3InputSourceDefnTest
         .inputSource(toMap(s3InputSource))
         .inputFormat(CSV_FORMAT)
         .property(S3InputSourceDefn.BUCKET_PROPERTY, "foo.com")
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -280,7 +281,7 @@ public class S3InputSourceDefnTest
         .inputSource(toMap(s3InputSource))
         .inputFormat(CSV_FORMAT)
         .property(S3InputSourceDefn.BUCKET_PROPERTY, "foo.com")
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -297,7 +298,7 @@ public class S3InputSourceDefnTest
             )
         .inputFormat(CSV_FORMAT)
         .property(S3InputSourceDefn.BUCKET_PROPERTY, "foo.com")
-        .column("x", Columns.VARCHAR)
+        .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     assertThrows(IAE.class, () -> resolved.validate());
@@ -563,8 +564,8 @@ public class S3InputSourceDefnTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(s3InputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -601,8 +602,8 @@ public class S3InputSourceDefnTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(s3InputSource))
         .inputFormat(CSV_FORMAT)
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation
@@ -645,8 +646,8 @@ public class S3InputSourceDefnTest
         .inputSource(ImmutableMap.of("type", S3StorageDruidModule.SCHEME))
         .inputFormat(CSV_FORMAT)
         .property(S3InputSourceDefn.BUCKET_PROPERTY, "foo.com")
-        .column("x", Columns.VARCHAR)
-        .column("y", Columns.BIGINT)
+        .column("x", Columns.STRING)
+        .column("y", Columns.LONG)
         .build();
 
     // Check validation

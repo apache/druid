@@ -26,7 +26,6 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
@@ -39,9 +38,6 @@ public class FileUtilsTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testMap() throws IOException
@@ -138,17 +134,27 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testCreateTempDirInLocation() throws IOException
+  {
+    final File baseDir = temporaryFolder.newFolder();
+    File tmp = FileUtils.createTempDirInLocation(baseDir.toPath(), null);
+    Assert.assertTrue(tmp.getName().startsWith("druid"));
+    Assert.assertEquals(
+        baseDir.toPath(),
+        tmp.getParentFile().toPath()
+    );
+  }
+
+  @Test
   public void testCreateTempDirNonexistentBase()
   {
     final String oldJavaTmpDir = System.getProperty("java.io.tmpdir");
-    final String nonExistentDir = oldJavaTmpDir + "/nonexistent";
-
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(StringUtils.format("java.io.tmpdir (%s) does not exist", nonExistentDir));
+    final String nonExistentDir = oldJavaTmpDir + "nonexistent";
 
     try {
       System.setProperty("java.io.tmpdir", nonExistentDir);
-      FileUtils.createTempDir();
+      Throwable e = Assert.assertThrows(IllegalStateException.class, () -> FileUtils.createTempDir());
+      Assert.assertEquals("Path [" + nonExistentDir + "] does not exist", e.getMessage());
     }
     finally {
       System.setProperty("java.io.tmpdir", oldJavaTmpDir);
@@ -159,23 +165,19 @@ public class FileUtilsTest
   public void testCreateTempDirUnwritableBase() throws IOException
   {
     final File baseDir = FileUtils.createTempDir();
+    final String oldJavaTmpDir = System.getProperty("java.io.tmpdir");
     try {
-      expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("java.io.tmpdir (" + baseDir + ") is not writable");
 
-      final String oldJavaTmpDir = System.getProperty("java.io.tmpdir");
-      try {
-        System.setProperty("java.io.tmpdir", baseDir.getPath());
-        baseDir.setWritable(false);
-        FileUtils.createTempDir();
-      }
-      finally {
-        System.setProperty("java.io.tmpdir", oldJavaTmpDir);
-      }
+      System.setProperty("java.io.tmpdir", baseDir.getPath());
+      baseDir.setWritable(false);
+      Throwable e = Assert.assertThrows(IllegalStateException.class, () -> FileUtils.createTempDir());
+
+      Assert.assertEquals("Path [" + baseDir + "] is not writable, check permissions", e.getMessage());
     }
     finally {
       baseDir.setWritable(true);
       Files.delete(baseDir.toPath());
+      System.setProperty("java.io.tmpdir", oldJavaTmpDir);
     }
   }
 
@@ -197,9 +199,11 @@ public class FileUtilsTest
   {
     final File tmpFile = temporaryFolder.newFile();
 
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage("Cannot create directory");
-    FileUtils.mkdirp(tmpFile);
+    Throwable t = Assert.assertThrows(IOException.class, () -> FileUtils.mkdirp(tmpFile));
+    MatcherAssert.assertThat(
+        t,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot create directory"))
+    );
   }
 
   @Test
@@ -208,17 +212,13 @@ public class FileUtilsTest
     final File tmpDir = temporaryFolder.newFolder();
     final File testDirectory = new File(tmpDir, "test");
     tmpDir.setWritable(false);
-    try {
-      final IOException e = Assert.assertThrows(IOException.class, () -> FileUtils.mkdirp(testDirectory));
+    final IOException e = Assert.assertThrows(IOException.class, () -> FileUtils.mkdirp(testDirectory));
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot create directory"))
-      );
-    }
-    finally {
-      tmpDir.setWritable(true);
-    }
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot create directory"))
+    );
+    tmpDir.setWritable(true);
 
     // Now it should work.
     FileUtils.mkdirp(testDirectory);

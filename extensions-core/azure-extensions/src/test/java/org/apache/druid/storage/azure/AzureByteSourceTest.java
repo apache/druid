@@ -19,14 +19,16 @@
 
 package org.apache.druid.storage.azure;
 
-import com.microsoft.azure.storage.StorageException;
+import com.azure.core.http.HttpResponse;
+import com.azure.storage.blob.models.BlobStorageException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AzureByteSourceTest extends EasyMockSupport
 {
@@ -34,14 +36,14 @@ public class AzureByteSourceTest extends EasyMockSupport
   private static final long OFFSET = 10L;
 
   @Test
-  public void test_openStream_withoutOffset_succeeds() throws IOException, URISyntaxException, StorageException
+  public void test_openStream_withoutOffset_succeeds() throws IOException, BlobStorageException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
     AzureStorage azureStorage = createMock(AzureStorage.class);
     InputStream stream = createMock(InputStream.class);
 
-    EasyMock.expect(azureStorage.getBlobInputStream(NO_OFFSET, containerName, blobPath)).andReturn(stream);
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(NO_OFFSET, containerName, blobPath)).andReturn(stream);
 
     replayAll();
 
@@ -53,14 +55,14 @@ public class AzureByteSourceTest extends EasyMockSupport
   }
 
   @Test
-  public void test_openStream_withOffset_succeeds() throws IOException, URISyntaxException, StorageException
+  public void test_openStream_withOffset_succeeds() throws IOException, BlobStorageException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
     AzureStorage azureStorage = createMock(AzureStorage.class);
     InputStream stream = createMock(InputStream.class);
 
-    EasyMock.expect(azureStorage.getBlobInputStream(OFFSET, containerName, blobPath)).andReturn(stream);
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(OFFSET, containerName, blobPath)).andReturn(stream);
 
     replayAll();
 
@@ -71,28 +73,23 @@ public class AzureByteSourceTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = IOException.class)
-  public void openStreamWithRecoverableErrorTest() throws URISyntaxException, StorageException, IOException
+  @Test
+  public void openStreamWithRecoverableErrorTest() throws BlobStorageException
   {
     final String containerName = "container";
     final String blobPath = "/path/to/file";
     AzureStorage azureStorage = createMock(AzureStorage.class);
+    HttpResponse httpResponse = createMock(HttpResponse.class);
+    EasyMock.expect(httpResponse.getStatusCode()).andReturn(500).anyTimes();
+    EasyMock.replay(httpResponse);
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(NO_OFFSET, containerName, blobPath))
+            .andThrow(new BlobStorageException("", httpResponse, null));
 
-    EasyMock.expect(azureStorage.getBlobInputStream(NO_OFFSET, containerName, blobPath)).andThrow(
-        new StorageException(
-            "",
-            "",
-            500,
-            null,
-            null
-        )
-    );
-
-    replayAll();
+    EasyMock.replay(azureStorage);
 
     AzureByteSource byteSource = new AzureByteSource(azureStorage, containerName, blobPath);
 
-    byteSource.openStream();
+    assertThrows(IOException.class, byteSource::openStream);
 
     verifyAll();
   }

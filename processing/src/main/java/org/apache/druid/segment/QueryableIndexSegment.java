@@ -81,6 +81,6 @@ public class QueryableIndexSegment implements Segment
       return (T) new QueryableIndexRowsAndColumns(index);
     }
 
-    return null;
+    return Segment.super.as(clazz);
   }
 }

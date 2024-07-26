@@ -38,6 +38,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -77,8 +78,8 @@ public class HttpServerInventoryViewTest
 
   private static final String EXEC_NAME_PREFIX = "InventoryViewTest";
 
-  private static final String METRIC_SUCCESS = "segment/serverview/sync/healthy";
-  private static final String METRIC_UNSTABLE_TIME = "segment/serverview/sync/unstableTime";
+  private static final String METRIC_SUCCESS = "serverview/sync/healthy";
+  private static final String METRIC_UNSTABLE_TIME = "serverview/sync/unstableTime";
 
   private StubServiceEmitter serviceEmitter;
 
@@ -476,6 +477,12 @@ public class HttpServerInventoryViewTest
           public ServerView.CallbackAction segmentViewInitialized()
           {
             inventoryInitialized.set(true);
+            return ServerView.CallbackAction.CONTINUE;
+          }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+          {
             return ServerView.CallbackAction.CONTINUE;
           }
         }

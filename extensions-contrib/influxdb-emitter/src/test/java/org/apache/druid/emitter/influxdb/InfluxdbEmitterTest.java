@@ -56,7 +56,7 @@ public class InfluxdbEmitterTest
     ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
     builder.setDimension("nonWhiteListedDim", "test");
     builder.setDimension("dataSource", "test_datasource");
-    ServiceEventBuilder eventBuilder = builder.build(date, metric, value);
+    ServiceEventBuilder eventBuilder = builder.setCreatedTime(date).setMetric(metric, value);
     event = (ServiceMetricEvent) eventBuilder.build(serviceDims);
   }
 
@@ -106,7 +106,7 @@ public class InfluxdbEmitterTest
         "0.10.0"
     );
     ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-    ServiceEventBuilder eventBuilder = builder.build(date, metric, value);
+    ServiceEventBuilder eventBuilder = builder.setCreatedTime(date).setMetric(metric, value);
     ServiceMetricEvent event = (ServiceMetricEvent) eventBuilder.build(serviceDims);
     InfluxdbEmitterConfig config = new InfluxdbEmitterConfig(
         "localhost",
@@ -150,7 +150,7 @@ public class InfluxdbEmitterTest
         "0.10.0"
     );
     ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-    ServiceEventBuilder eventBuilder = builder.build(date, metric, value);
+    ServiceEventBuilder eventBuilder = builder.setCreatedTime(date).setMetric(metric, value);
     builder.setDimension("dataSource", "wikipedia");
     builder.setDimension("taskType", "index");
     ServiceMetricEvent event = (ServiceMetricEvent) eventBuilder.build(serviceDims);
@@ -196,7 +196,7 @@ public class InfluxdbEmitterTest
         "0.10.0"
     );
     ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-    ServiceEventBuilder eventBuilder = builder.build(date, metric, value);
+    ServiceEventBuilder eventBuilder = builder.setCreatedTime(date).setMetric(metric, value);
     builder.setDimension("dataSource", "wikipedia");
     builder.setDimension("taskType", "index");
     ServiceMetricEvent event = (ServiceMetricEvent) eventBuilder.build(serviceDims);

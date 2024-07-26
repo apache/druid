@@ -25,6 +25,7 @@ import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.segment.ColumnValueSelector;
 
+import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
@@ -35,7 +36,7 @@ import java.nio.ByteBuffer;
  * Each GroupByColumnSelectorStrategy is associated with a single dimension.
  *
  * Strategies may have internal state, such as the dictionary maintained by
- * {@link DictionaryBuildingStringGroupByColumnSelectorStrategy}. Callers should assume that the internal
+ * {@link DictionaryBuildingGroupByColumnSelectorStrategy}. Callers should assume that the internal
  * state footprint starts out empty (zero bytes) and is also reset to zero on each call to {@link #reset()}. Each call
  * to {@link #initColumnValues} or {@link #writeToKeyBuffer(int, ColumnValueSelector, ByteBuffer)} returns the
  * incremental increase in internal state footprint that happened as a result of that particular call.
@@ -44,6 +45,9 @@ import java.nio.ByteBuffer;
  */
 public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
 {
+  /**
+   * Index to indicate the absence of a key in the dictionary
+   */
   int GROUP_BY_MISSING_VALUE = -1;
 
   /**
@@ -53,7 +57,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    *
    * @return size, in bytes, of this dimension's values in the grouping key.
    */
-  int getGroupingKeySize();
+  int getGroupingKeySizeBytes();
 
   /**
    * Read a value from a grouping key and add it to the group by query result row, using the output name specified
@@ -89,6 +93,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
    * memory did not increase as a result of this operation. Will not be negative.
    */
+  @CheckReturnValue
   int initColumnValues(ColumnValueSelector selector, int columnIndex, Object[] valuess);
 
   /**
@@ -115,7 +120,9 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
   /**
    * If rowValIdx is less than the size of rowObj (haven't handled all of the row values):
    * First, read the value at rowValIdx from a rowObj and write that value to the keyBuffer at keyBufferPosition.
-   * Then return true
+   * Then return true.
+   * This method assumes that the size increase associated with the dictionary building has occurred already when calling
+   * {@link #initColumnValues}
    *
    * Otherwise, return false.
    *
@@ -144,6 +151,7 @@ public interface GroupByColumnSelectorStrategy extends ColumnSelectorStrategy
    * @return estimated increase in internal state footprint, in bytes, as a result of this operation. May be zero if
    * memory did not increase as a result of this operation. Will not be negative.
    */
+  @CheckReturnValue
   int writeToKeyBuffer(int keyBufferPosition, ColumnValueSelector selector, ByteBuffer keyBuffer);
 
   /**

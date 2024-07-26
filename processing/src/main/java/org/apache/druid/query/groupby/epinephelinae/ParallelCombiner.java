@@ -43,7 +43,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.ObjectBasedColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -471,9 +471,9 @@ public class ParallelCombiner<KeyType>
     }
 
     @Override
-    public ColumnValueSelector makeColumnValueSelector(String columnName)
+    public ColumnValueSelector<Object> makeColumnValueSelector(String columnName)
     {
-      return new ObjectColumnSelector()
+      return new ObjectBasedColumnSelector<Object>()
       {
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)
@@ -482,7 +482,7 @@ public class ParallelCombiner<KeyType>
         }
 
         @Override
-        public Class classOfObject()
+        public Class<Object> classOfObject()
         {
           return Object.class;
         }

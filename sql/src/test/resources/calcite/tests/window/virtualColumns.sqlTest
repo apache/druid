@@ -1,0 +1,33 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    '_'||dim1,
+    MIN(cast(42 as double)) OVER (),
+    MIN(cast((cnt||cnt) as bigint)) OVER ()
+  FROM foo
+
+expectedOperators:
+  - type: "scan"
+    limit: -1
+    virtualColumns:
+      - type: "expression"
+        name: "_v0"
+        expression: "42.0"
+        outputType: "DOUBLE"
+  - { type: "naivePartition", partitionColumns: [ ] }
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - { type: "doubleMin", name: "w0", fieldName: "_v0" }
+        - { type: "longMin", name: "w1", fieldName: "v1" }
+
+expectedResults:
+  - ["_",42.0,11]
+  - ["_10.1",42.0,11]
+  - ["_2",42.0,11]
+  - ["_1",42.0,11]
+  - ["_def",42.0,11]
+  - ["_abc",42.0,11]

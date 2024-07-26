@@ -20,6 +20,7 @@
 package org.apache.druid.collections.spatial;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
@@ -47,7 +48,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
+ *
  */
+@SuppressWarnings("CheckReturnValue")
 public class ImmutableRTreeTest
 {
   @Test
@@ -672,5 +675,65 @@ public class ImmutableRTreeTest
     ImmutableRTree deserializedTree = genericIndexed.get(0);
     byte[] bytes2 = deserializedTree.toBytes();
     org.junit.Assert.assertEquals(Bytes.asList(bytes1), Bytes.asList(bytes2));
+  }
+
+  @Test
+  public void testPreciseRadiusBoundFilter()
+  {
+    BitmapFactory bf = new RoaringBitmapFactory();
+    RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
+    float centerLat = 37.4133961f;
+    float centerLong = -122.1224665f;
+    float[][] insidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(centerLat, centerLong, 100, 100, true);
+    for (int i = 0; i < insidePoints.length; i++) {
+      tree.insert(insidePoints[i], i);
+    }
+    float[][] outsidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(centerLat, centerLong, 100, 100, false);
+    for (int i = 0; i < outsidePoints.length; i++) {
+      tree.insert(outsidePoints[i], i);
+    }
+    ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
+    Iterable<ImmutableBitmap> points = searchTree.search(new RadiusBound(
+        new float[]{centerLat, centerLong},
+        100,
+        2,
+        RadiusBound.RadiusUnit.meters
+    ));
+    org.junit.Assert.assertTrue(((FluentIterable) points).toList().size() == 100);
+    ImmutableBitmap finalSet = bf.union(points);
+    Assert.assertTrue(finalSet.size() == 100);
+  }
+
+  @Test
+  public void testForImmutableRTreeImmutability()
+  {
+    BitmapFactory bf = new RoaringBitmapFactory();
+    RTree tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bf), bf);
+    float centerLat = 37.4133961f;
+    float centerLong = -122.1224665f;
+    float[][] insidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(centerLat, centerLong, 100, 100, true);
+    for (int i = 0; i < insidePoints.length; i++) {
+      tree.insert(insidePoints[i], i);
+    }
+    float[][] outsidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(centerLat, centerLong, 100, 100, false);
+    for (int i = 0; i < outsidePoints.length; i++) {
+      tree.insert(outsidePoints[i], i);
+    }
+    final ImmutableRTree searchTree = ImmutableRTree.newImmutableFromMutable(tree);
+    ByteBuffer buffer = ByteBuffer.wrap(searchTree.toBytes());
+    ImmutableRTreeObjectStrategy objectStrategy = new ImmutableRTreeObjectStrategy(bf);
+    ImmutableRTree builtTree = objectStrategy.fromByteBuffer(buffer, searchTree.toBytes().length);
+    buffer.position(10);
+    buffer.limit(100);
+
+    for (float[] insidePoint : insidePoints) {
+      Iterable<ImmutableBitmap> points = builtTree.search(new RadiusBound(
+          new float[]{insidePoint[0], insidePoint[1]},
+          100,
+          2,
+          RadiusBound.RadiusUnit.meters
+      ));
+      bf.union(points);
+    }
   }
 }

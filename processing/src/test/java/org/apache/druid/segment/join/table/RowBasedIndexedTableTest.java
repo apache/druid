@@ -131,7 +131,7 @@ public class RowBasedIndexedTableTest
   {
     final IndexedTable.Index index = regionsTable.columnIndex(INDEX_REGIONS_REGION_ISO_CODE);
 
-    Assert.assertEquals(ImmutableSet.of(), index.find(null));
+    Assert.assertEquals(ImmutableSet.of(21), index.find(null));
     Assert.assertEquals(ImmutableSet.of(0), index.find("11"));
     Assert.assertEquals(ImmutableSet.of(1), index.find(13));
     Assert.assertEquals(ImmutableSet.of(12), index.find("QC"));

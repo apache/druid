@@ -43,6 +43,8 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -550,6 +552,8 @@ public class BrokerServerViewTest extends CuratorTestBase
                 dataSegmentWithIntervalAndVersion(input.lhs, input.rhs),
                 false,
                 null,
+                null,
+                false,
                 true
             ),
             DataSegmentChange.ChangeType.SEGMENT_ADDED)
@@ -569,7 +573,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         null,
         false,
         true);
-    SegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(SegmentMetadataCacheConfig.class);
+    BrokerSegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(BrokerSegmentMetadataCacheConfig.class);
     EasyMock.expect(segmentMetadataCacheConfig.isMetadataSegmentCacheEnable()).andReturn(false);
     EasyMock.expect(segmentMetadataCacheConfig.getMetadataSegmentPollPeriod()).andReturn(60000L);
     EasyMock.replay(druidLeaderClient);
@@ -579,7 +583,8 @@ public class BrokerServerViewTest extends CuratorTestBase
         druidLeaderClient,
         jsonMapper,
         brokerSegmentWatcherConfig,
-        segmentMetadataCacheConfig);
+        segmentMetadataCacheConfig
+    );
 
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(5);
@@ -663,6 +668,8 @@ public class BrokerServerViewTest extends CuratorTestBase
                 dataSegmentWithIntervalAndVersion(input.get(0), input.get(1)),
                 false,
                 null,
+                null,
+                false,
                 true
             ),
             DataSegmentChange.ChangeType.fromString(input.get(3)))
@@ -687,7 +694,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         null,
         false,
         true);
-    SegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(SegmentMetadataCacheConfig.class);
+    BrokerSegmentMetadataCacheConfig segmentMetadataCacheConfig = EasyMock.mock(BrokerSegmentMetadataCacheConfig.class);
     EasyMock.expect(segmentMetadataCacheConfig.isMetadataSegmentCacheEnable()).andReturn(false);
     EasyMock.expect(segmentMetadataCacheConfig.getMetadataSegmentPollPeriod()).andReturn(60000L);
     EasyMock.replay(druidLeaderClient);
@@ -870,7 +877,7 @@ public class BrokerServerViewTest extends CuratorTestBase
       }
 
       @Override
-      public boolean isDetectUnavailableSegments()
+      public boolean detectUnavailableSegments()
       {
         return detectUnavailableSegments;
       }
@@ -880,13 +887,19 @@ public class BrokerServerViewTest extends CuratorTestBase
   private BrokerServerView getBrokerServerView(
       BatchServerInventoryView baseView,
       BrokerSegmentWatcherConfig brokerSegmentWatcherConfig,
-      MetadataSegmentView metadataSegmentView)
+      MetadataSegmentView metadataSegmentView
+  )
   {
-    return new BrokerServerView(
+    DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
+        new NoopServiceEmitter(),
         EasyMock.createMock(QueryToolChestWarehouse.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(HttpClient.class)
+    );
+
+    return new BrokerServerView(
+        druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
@@ -934,6 +947,12 @@ public class BrokerServerViewTest extends CuratorTestBase
                 CallbackAction res = callback.segmentViewInitialized();
                 segmentViewInitLatch.countDown();
                 return res;
+              }
+
+              @Override
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+              {
+                return CallbackAction.CONTINUE;
               }
             }
         );

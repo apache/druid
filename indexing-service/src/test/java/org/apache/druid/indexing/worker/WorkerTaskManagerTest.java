@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -47,9 +48,11 @@ import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -99,7 +102,7 @@ public class WorkerTaskManagerTest
     this.restoreTasksOnRestart = restoreTasksOnRestart;
   }
 
-  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}, useMultipleBaseTaskDirPaths = {1}")
+  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}")
   public static Collection<Object[]> getParameters()
   {
     Object[][] parameters = new Object[][]{{false}, {true}};
@@ -113,7 +116,6 @@ public class WorkerTaskManagerTest
         .setBaseDir(FileUtils.createTempDir().toString())
         .setDefaultRowFlushBoundary(0)
         .setRestoreTasksOnRestart(restoreTasksOnRestart)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -127,6 +129,7 @@ public class WorkerTaskManagerTest
         jsonMapper,
         new TestTaskRunner(
             new TaskToolboxFactory(
+                null,
                 taskConfig,
                 null,
                 taskActionClientFactory,
@@ -142,7 +145,7 @@ public class WorkerTaskManagerTest
                 null,
                 NoopJoinableFactory.INSTANCE,
                 null,
-                new SegmentCacheManagerFactory(jsonMapper),
+                new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper),
                 jsonMapper,
                 indexIO,
                 null,
@@ -160,11 +163,12 @@ public class WorkerTaskManagerTest
                 testUtils.getRowIngestionMetersFactory(),
                 new TestAppenderatorsManager(),
                 overlordClient,
+                new NoopCoordinatorClient(),
                 null,
                 null,
                 null,
-                null,
-                "1"
+                "1",
+                CentralizedDatasourceSchemaConfig.create()
             ),
             taskConfig,
             location
@@ -200,6 +204,8 @@ public class WorkerTaskManagerTest
   @Test(timeout = 60_000L)
   public void testTaskRun() throws Exception
   {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
     Task task1 = createNoopTask("task1-assigned-via-assign-dir");
     Task task2 = createNoopTask("task2-completed-already");
     Task task3 = createNoopTask("task3-assigned-explicitly");
@@ -292,7 +298,7 @@ public class WorkerTaskManagerTest
   @Test(timeout = 30_000L)
   public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
   {
-    Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
     {
       @Override
       public TaskStatus runTask(TaskToolbox toolbox)
@@ -441,7 +447,12 @@ public class WorkerTaskManagerTest
 
   private NoopTask createNoopTask(String id)
   {
-    return new NoopTask(id, null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+  }
+
+  private NoopTask createNoopTask(String id, String dataSource)
+  {
+    return new NoopTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 
   /**
@@ -450,7 +461,10 @@ public class WorkerTaskManagerTest
    */
   private Task setUpCompletedTasksCleanupTest() throws Exception
   {
-    final Task task = new NoopTask("id", null, null, 100, 0, null, null, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    final Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
 
     // Scheduled scheduleCompletedTasksCleanup will not run, because initialDelay is 1 minute, which is longer than
     // the 30-second timeout of this test case.
@@ -468,6 +482,46 @@ public class WorkerTaskManagerTest
     Assert.assertNotNull(announcement);
     Assert.assertEquals(TaskState.SUCCESS, announcement.getStatus());
 
+    EasyMock.reset(overlordClient);
     return task;
+  }
+
+  @Test
+  public void getWorkerTaskStatsTest() throws Exception
+  {
+    EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
+    EasyMock.replay(overlordClient);
+
+    Task task1 = createNoopTask("task1", "wikipedia");
+    Task task2 = createNoopTask("task2", "wikipedia");
+    Task task3 = createNoopTask("task3", "animals");
+
+    workerTaskManager.start();
+    // befor assigning tasks we should get no running tasks
+    Assert.assertEquals(workerTaskManager.getWorkerRunningTasks().size(), 0L);
+
+    workerTaskManager.assignTask(task1);
+    workerTaskManager.assignTask(task2);
+    workerTaskManager.assignTask(task3);
+
+    Thread.sleep(25);
+    //should return all 3 tasks as running
+    Assert.assertEquals(workerTaskManager.getWorkerRunningTasks(), ImmutableMap.of(
+        "wikipedia", 2L,
+        "animals", 1L
+    ));
+
+    Map<String, Long> runningTasks;
+    do {
+      runningTasks = workerTaskManager.getWorkerRunningTasks();
+      Thread.sleep(10);
+    } while (!runningTasks.isEmpty());
+
+    // When running tasks are empty all task should be reported as completed
+    Assert.assertEquals(workerTaskManager.getWorkerCompletedTasks(), ImmutableMap.of(
+        "wikipedia", 2L,
+        "animals", 1L
+    ));
+    Assert.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
   }
 }

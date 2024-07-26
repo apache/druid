@@ -22,10 +22,12 @@ title: "String comparators"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about functions available in SQL, refer to the
-> [SQL documentation](sql-scalar.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes the native
+ language. For information about functions available in SQL, refer to the
+ [SQL documentation](sql-scalar.md).
+:::
 
 These sorting orders are used by the [TopNMetricSpec](./topnmetricspec.md), [SearchQuery](./searchquery.md), GroupByQuery's [LimitSpec](./limitspec.md), and [BoundFilter](./filters.md#bound-filter).
 

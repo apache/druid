@@ -29,7 +29,7 @@ import type { Filter } from 'react-table';
 import type { HeaderActiveTab } from './components';
 import { HeaderBar, Loader } from './components';
 import type { DruidEngine, QueryWithContext } from './druid-models';
-import { Capabilities } from './helpers';
+import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
 import { compact, localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
@@ -122,7 +122,10 @@ export class ConsoleApplication extends React.PureComponent<
 
         return await Capabilities.detectCapacity(capabilities);
       },
-      onStateChange: ({ data, loading }) => {
+      onStateChange: ({ data, loading, error }) => {
+        if (error) {
+          console.error('There was an error retrieving the capabilities', error);
+        }
         this.setState({
           capabilities: data || Capabilities.FULL,
           capabilitiesLoading: loading,
@@ -315,6 +318,7 @@ export class ConsoleApplication extends React.PureComponent<
         queryEngines={queryEngines}
         allowExplain
         goToTask={this.goToTasksWithTaskId}
+        getClusterCapacity={maybeGetClusterCapacity}
       />,
       'thin',
     );
@@ -328,6 +332,8 @@ export class ConsoleApplication extends React.PureComponent<
         capabilities={capabilities}
         goToQuery={this.goToQuery}
         goToTask={this.goToTasksWithTaskId}
+        goToTaskGroup={this.goToTasksWithTaskGroupId}
+        getClusterCapacity={maybeGetClusterCapacity}
       />,
     );
   };

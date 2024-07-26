@@ -74,6 +74,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -92,6 +93,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -113,6 +115,7 @@ public class DataSourceAnalysisTest
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertFalse(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -135,6 +138,7 @@ public class DataSourceAnalysisTest
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertFalse(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -152,6 +156,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -173,6 +178,7 @@ public class DataSourceAnalysisTest
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertFalse(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -190,6 +196,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
 
   @Test
@@ -237,6 +244,10 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
+    Assert.assertFalse(analysis.isBaseColumn("2.foo"));
+    Assert.assertFalse(analysis.isBaseColumn("3.foo"));
   }
 
   @Test
@@ -282,6 +293,10 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
+    Assert.assertFalse(analysis.isBaseColumn("2.foo"));
+    Assert.assertFalse(analysis.isBaseColumn("3.foo"));
   }
 
   @Test
@@ -331,6 +346,10 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertTrue(analysis.isBaseColumn("1.foo"));
+    Assert.assertTrue(analysis.isBaseColumn("2.foo"));
+    Assert.assertFalse(analysis.isBaseColumn("3.foo"));
   }
 
   @Test
@@ -376,6 +395,10 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertTrue(analysis.isBaseColumn("1.foo"));
+    Assert.assertTrue(analysis.isBaseColumn("2.foo"));
+    Assert.assertFalse(analysis.isBaseColumn("3.foo"));
   }
 
   @Test
@@ -405,6 +428,8 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
   }
 
   @Test
@@ -436,6 +461,8 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
   }
 
   @Test
@@ -488,6 +515,8 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertFalse(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
   }
 
   @Test
@@ -518,6 +547,8 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
   }
 
   @Test
@@ -548,6 +579,8 @@ public class DataSourceAnalysisTest
         analysis.getPreJoinableClauses()
     );
     Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
   }
 
   @Test

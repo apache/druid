@@ -107,7 +107,7 @@ export function addOrUpdateFilter(filters: readonly Filter[], filter: Filter): F
   return addOrUpdate(filters, filter, f => f.id);
 }
 
-export function booleanCustomTableFilter(filter: Filter, value: any): boolean {
+export function booleanCustomTableFilter(filter: Filter, value: unknown): boolean {
   if (value == null) return false;
   const modeAndNeedle = parseFilterModeAndNeedle(filter);
   if (!modeAndNeedle) return true;

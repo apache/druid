@@ -26,6 +26,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Coordinator simulation test to verify behaviour of segment balancing.
@@ -227,6 +229,41 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     runCoordinatorCycle();
     Assert.assertTrue(getValue(Metric.MOVED_COUNT, null).intValue() > 0);
+  }
+
+  @Test(timeout = 60000L)
+  public void testMaxSegmentsAreMovedWhenClusterIsSkewed()
+  {
+    // Add 10 historicals of size 1 TB each
+    final long size1TB = 1_000_000;
+    List<DruidServer> historicals
+        = IntStream.range(0, 10)
+                   .mapToObj(i -> createHistorical(i + 1, Tier.T1, size1TB))
+                   .collect(Collectors.toList());
+
+    CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.KOALA_100X100D)
+                             .withServers(historicals)
+                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // Run 1: All segments are assigned to the 10 historicals
+    runCoordinatorCycle();
+    verifyValue(Metric.ASSIGNED_COUNT, 10_000L);
+    verifyNotEmitted(Metric.MOVED_COUNT);
+    verifyValue(Metric.MOVE_SKIPPED, 100L);
+
+    // Run 2: Add 10 more historicals, some segments are moved to them
+    for (int i = 11; i <= 20; ++i) {
+      addServer(createHistorical(i, Tier.T1, size1TB));
+    }
+
+    runCoordinatorCycle();
+    verifyValue(Metric.MOVED_COUNT, 500L);
+    verifyNotEmitted(Metric.MOVE_SKIPPED);
   }
 
 }

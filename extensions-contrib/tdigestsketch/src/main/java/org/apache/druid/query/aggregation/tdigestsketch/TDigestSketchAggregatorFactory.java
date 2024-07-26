@@ -163,18 +163,6 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new TDigestSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            compression
-        )
-    );
-  }
-
-  @Override
   public Object deserialize(Object serializedSketch)
   {
     return TDigestSketchUtils.deserialize(serializedSketch);

@@ -33,8 +33,12 @@ import java.util.Map;
  */
 public class ServiceStatusMonitor extends AbstractMonitor
 {
+  /**
+   * The named binding for tags that should be reported with the `service/heartbeat` metric.
+   */
+  public static final String HEARTBEAT_TAGS_BINDING = "heartbeat";
 
-  @Named("heartbeat")
+  @Named(HEARTBEAT_TAGS_BINDING)
   @Inject(optional = true)
   Supplier<Map<String, Object>> heartbeatTagsSupplier = null;
 
@@ -43,12 +47,10 @@ public class ServiceStatusMonitor extends AbstractMonitor
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     if (heartbeatTagsSupplier != null && heartbeatTagsSupplier.get() != null) {
-      heartbeatTagsSupplier.get().forEach((k, v) -> {
-        builder.setDimension(k, v);
-      });
+      heartbeatTagsSupplier.get().forEach(builder::setDimension);
     }
 
-    emitter.emit(builder.build("service/heartbeat", 1));
+    emitter.emit(builder.setMetric("service/heartbeat", 1));
     return true;
   }
 }

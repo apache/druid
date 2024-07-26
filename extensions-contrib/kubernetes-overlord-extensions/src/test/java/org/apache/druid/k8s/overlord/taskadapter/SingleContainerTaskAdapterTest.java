@@ -19,14 +19,12 @@
 
 package org.apache.druid.k8s.overlord.taskadapter;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -39,6 +37,8 @@ import org.apache.druid.k8s.overlord.common.PeonCommandContext;
 import org.apache.druid.k8s.overlord.common.TestKubernetesClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
+import org.apache.druid.tasklogs.TaskLogs;
+import org.easymock.Mock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,14 +57,13 @@ class SingleContainerTaskAdapterTest
   private DruidNode druidNode;
   private ObjectMapper jsonMapper;
 
+  @Mock private TaskLogs taskLogs;
+
   @BeforeEach
   public void setup()
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
-    for (Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
@@ -96,16 +95,18 @@ class SingleContainerTaskAdapterTest
         taskConfig,
         startupLoggingConfig,
         druidNode,
-        jsonMapper
+        jsonMapper,
+        taskLogs
     );
-    NoopTask task = NoopTask.create("id", 1);
+    NoopTask task = K8sTestUtils.createTask("id", 1);
     Job actual = adapter.createJobFromPodSpec(
         pod.getSpec(),
         task,
         new PeonCommandContext(
             Collections.singletonList("foo && bar"),
             new ArrayList<>(),
-            new File("/tmp")
+            new File("/tmp"),
+            config.getCpuCoreInMicro()
         )
     );
 

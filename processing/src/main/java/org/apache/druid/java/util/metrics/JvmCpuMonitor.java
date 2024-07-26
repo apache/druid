@@ -76,10 +76,10 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
       );
       if (procDiff != null) {
         for (Map.Entry<String, Long> entry : procDiff.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
-      emitter.emit(builder.build("jvm/cpu/percent", procCpu.getPercent()));
+      emitter.emit(builder.setMetric("jvm/cpu/percent", procCpu.getPercent()));
     }
     catch (SigarException e) {
       log.error(e, "Failed to get ProcCpu");

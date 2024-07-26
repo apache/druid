@@ -36,7 +36,11 @@ public abstract class DoubleColumnAccessorBase implements ColumnAccessor
   @Override
   public Object getObject(int rowNum)
   {
-    return getDouble(rowNum);
+    if (isNull(rowNum)) {
+      return null;
+    } else {
+      return getDouble(rowNum);
+    }
   }
 
   @Override

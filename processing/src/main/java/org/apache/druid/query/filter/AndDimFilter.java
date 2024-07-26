@@ -28,6 +28,7 @@ import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.filter.Filters;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -70,12 +71,12 @@ public class AndDimFilter extends AbstractOptimizableDimFilter implements DimFil
   }
 
   @Override
-  public DimFilter optimize()
+  public DimFilter optimize(final boolean mayIncludeUnknown)
   {
     // This method optimizes children, but doesn't do any special AND-related stuff like flattening or duplicate
     // removal. That will happen in "toFilter", which allows us to share code with Filters.and(...).
 
-    final List<DimFilter> newFields = DimFilters.optimize(fields);
+    final List<DimFilter> newFields = DimFilters.optimize(fields, mayIncludeUnknown);
 
     if (newFields.size() == 1) {
       return newFields.get(0);
@@ -87,7 +88,13 @@ public class AndDimFilter extends AbstractOptimizableDimFilter implements DimFil
   @Override
   public Filter toFilter()
   {
-    return Filters.and(Filters.toFilters(fields));
+    final List<Filter> filters = new ArrayList<>(fields.size());
+
+    for (final DimFilter field : fields) {
+      filters.add(field.toFilter());
+    }
+
+    return Filters.and(filters);
   }
 
   @Override

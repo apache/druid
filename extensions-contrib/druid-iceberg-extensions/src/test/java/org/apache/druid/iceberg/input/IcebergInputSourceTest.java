@@ -26,6 +26,7 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Files;
@@ -43,7 +44,9 @@ import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -62,32 +65,39 @@ public class IcebergInputSourceTest
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  IcebergCatalog testCatalog;
+  private IcebergCatalog testCatalog;
+  private TableIdentifier tableIdentifier;
+  private File warehouseDir;
 
-  Schema tableSchema = new Schema(
+  private Schema tableSchema = new Schema(
       Types.NestedField.required(1, "id", Types.StringType.get()),
       Types.NestedField.required(2, "name", Types.StringType.get())
   );
-  Map<String, Object> tableData = ImmutableMap.of("id", "123988", "name", "Foo");
+  private Map<String, Object> tableData = ImmutableMap.of("id", "123988", "name", "Foo");
 
   private static final String NAMESPACE = "default";
   private static final String TABLENAME = "foosTable";
 
+  @Before
+  public void setup() throws IOException
+  {
+    warehouseDir = FileUtils.createTempDir();
+    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), true);
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
+
+    createAndLoadTable(tableIdentifier);
+  }
+
   @Test
   public void testInputSource() throws IOException
   {
-    final File warehouseDir = FileUtils.createTempDir();
-    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
-    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
-
-    createAndLoadTable(tableIdentifier);
-
     IcebergInputSource inputSource = new IcebergInputSource(
         TABLENAME,
         NAMESPACE,
         null,
         testCatalog,
-        new LocalInputSourceFactory()
+        new LocalInputSourceFactory(),
+        null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<File> localInputSourceList = splits.map(inputSource::withSplit)
@@ -111,45 +121,33 @@ public class IcebergInputSourceTest
       Assert.assertEquals(tableData.get("id"), record.get(0));
       Assert.assertEquals(tableData.get("name"), record.get(1));
     }
-    dropTableFromCatalog(tableIdentifier);
   }
 
   @Test
   public void testInputSourceWithEmptySource() throws IOException
   {
-    final File warehouseDir = FileUtils.createTempDir();
-    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
-    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
-
-    createAndLoadTable(tableIdentifier);
-
     IcebergInputSource inputSource = new IcebergInputSource(
         TABLENAME,
         NAMESPACE,
         new IcebergEqualsFilter("id", "0000"),
         testCatalog,
-        new LocalInputSourceFactory()
+        new LocalInputSourceFactory(),
+        null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     Assert.assertEquals(0, splits.count());
-    dropTableFromCatalog(tableIdentifier);
   }
 
   @Test
   public void testInputSourceWithFilter() throws IOException
   {
-    final File warehouseDir = FileUtils.createTempDir();
-    testCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>());
-    TableIdentifier tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), TABLENAME);
-
-    createAndLoadTable(tableIdentifier);
-
     IcebergInputSource inputSource = new IcebergInputSource(
         TABLENAME,
         NAMESPACE,
         new IcebergEqualsFilter("id", "123988"),
         testCatalog,
-        new LocalInputSourceFactory()
+        new LocalInputSourceFactory(),
+        null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<File> localInputSourceList = splits.map(inputSource::withSplit)
@@ -173,6 +171,53 @@ public class IcebergInputSourceTest
       Assert.assertEquals(tableData.get("id"), record.get(0));
       Assert.assertEquals(tableData.get("name"), record.get(1));
     }
+  }
+
+  @Test
+  public void testInputSourceReadFromLatestSnapshot() throws IOException
+  {
+    IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        DateTimes.nowUtc()
+    );
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    Assert.assertEquals(1, splits.count());
+  }
+
+  @Test
+  public void testCaseInsensitiveFiltering() throws IOException
+  {
+    LocalCatalog caseInsensitiveCatalog = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), false);
+    Table icebergTableFromSchema = testCatalog.retrieveCatalog().loadTable(tableIdentifier);
+
+    icebergTableFromSchema.updateSchema().renameColumn("name", "Name").commit();
+    IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("name", "Foo"),
+        caseInsensitiveCatalog,
+        new LocalInputSourceFactory(),
+        null
+    );
+
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    List<File> localInputSourceList = splits.map(inputSource::withSplit)
+                                            .map(inpSource -> (LocalInputSource) inpSource)
+                                            .map(LocalInputSource::getFiles)
+                                            .flatMap(List::stream)
+                                            .collect(Collectors.toList());
+
+    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assert.assertEquals(1, localInputSourceList.size());
+  }
+
+  @After
+  public void tearDown()
+  {
     dropTableFromCatalog(tableIdentifier);
   }
 
@@ -180,7 +225,6 @@ public class IcebergInputSourceTest
   {
     //Setup iceberg table and schema
     Table icebergTableFromSchema = testCatalog.retrieveCatalog().createTable(tableIdentifier, tableSchema);
-
     //Generate an iceberg record and write it to a file
     GenericRecord record = GenericRecord.create(tableSchema);
     ImmutableList.Builder<GenericRecord> builder = ImmutableList.builder();

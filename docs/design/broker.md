@@ -1,6 +1,7 @@
 ---
 id: broker
-title: "Broker"
+title: "Broker service"
+sidebar_label: "Broker"
 ---
 
 <!--
@@ -23,34 +24,31 @@ title: "Broker"
   -->
 
 
-### Configuration
+The Broker service routes queries in a distributed cluster setup. It interprets the metadata published to ZooKeeper about segment distribution across services and routes queries accordingly. Additionally, the Broker service consolidates result sets from individual services.
 
-For Apache Druid Broker Process Configuration, see [Broker Configuration](../configuration/index.md#broker).
+## Configuration
 
-For basic tuning guidance for the Broker process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#broker).
+For Apache Druid Broker service configuration, see [Broker Configuration](../configuration/index.md#broker).
 
-### HTTP endpoints
+For basic tuning guidance for the Broker service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#broker).
+
+## HTTP endpoints
 
 For a list of API endpoints supported by the Broker, see [Broker API](../api-reference/legacy-metadata-api.md#broker).
 
-### Overview
-
-The Broker is the process to route queries to if you want to run a distributed cluster. It understands the metadata published to ZooKeeper about what segments exist on what processes and routes queries such that they hit the right processes. This process also merges the result sets from all of the individual processes together.
-On start up, Historical processes announce themselves and the segments they are serving in Zookeeper.
-
-### Running
+## Running
 
 ```
 org.apache.druid.cli.Main server broker
 ```
 
-### Forwarding queries
+## Forwarding queries
 
-Most Druid queries contain an interval object that indicates a span of time for which data is requested. Likewise, Druid [Segments](../design/segments.md) are partitioned to contain data for some interval of time and segments are distributed across a cluster. Consider a simple datasource with 7 segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple processes, and hence, the query will likely hit multiple processes.
+Most Druid queries contain an interval object that indicates a span of time for which data is requested. Similarly, Druid partitions [segments](../design/segments.md) to contain data for some interval of time and distributes the segments across a cluster. Consider a simple datasource with seven segments where each segment contains data for a given day of the week. Any query issued to the datasource for more than one day of data will hit more than one segment. These segments will likely be distributed across multiple services, and hence, the query will likely hit multiple services.
 
-To determine which processes to forward queries to, the Broker process first builds a view of the world from information in Zookeeper. Zookeeper maintains information about [Historical](../design/historical.md) and streaming ingestion [Peon](../design/peons.md) processes and the segments they are serving. For every datasource in Zookeeper, the Broker process builds a timeline of segments and the processes that serve them. When queries are received for a specific datasource and interval, the Broker process performs a lookup into the timeline associated with the query datasource for the query interval and retrieves the processes that contain data for the query. The Broker process then forwards down the query to the selected processes.
+To determine which services to forward queries to, the Broker service first builds a view of the world from information in ZooKeeper. ZooKeeper maintains information about [Historical](../design/historical.md) and streaming ingestion [Peon](../design/peons.md) services and the segments they are serving. For every datasource in ZooKeeper, the Broker service builds a timeline of segments and the services that serve them. When queries are received for a specific datasource and interval, the Broker service performs a lookup into the timeline associated with the query datasource for the query interval and retrieves the services that contain data for the query. The Broker service then forwards down the query to the selected services.
 
-### Caching
+## Caching
 
-Broker processes employ a cache with an LRU cache invalidation strategy. The Broker cache stores per-segment results. The cache can be local to each Broker process or shared across multiple processes using an external distributed cache such as [memcached](http://memcached.org/). Each time a broker process receives a query, it first maps the query to a set of segments. A subset of these segment results may already exist in the cache and the results can be directly pulled from the cache. For any segment results that do not exist in the cache, the broker process will forward the query to the
-Historical processes. Once the Historical processes return their results, the Broker will store those results in the cache. Real-time segments are never cached and hence requests for real-time data will always be forwarded to real-time processes. Real-time data is perpetually changing and caching the results would be unreliable.
+Broker services employ a cache with an LRU cache invalidation strategy. The Broker cache stores per-segment results. The cache can be local to each Broker service or shared across multiple services using an external distributed cache such as [memcached](http://memcached.org/). Each time a Broker service receives a query, it first maps the query to a set of segments. A subset of these segment results may already exist in the cache and the results can be directly pulled from the cache. For any segment results that do not exist in the cache, the Broker service will forward the query to the
+Historical services. Once the Historical services return their results, the Broker will store those results in the cache. Real-time segments are never cached and hence requests for real-time data will always be forwarded to real-time services. Real-time data is perpetually changing and caching the results would be unreliable.

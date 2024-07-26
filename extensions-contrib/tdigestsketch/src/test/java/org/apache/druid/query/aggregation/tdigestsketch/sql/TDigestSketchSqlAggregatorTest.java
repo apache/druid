@@ -46,68 +46,78 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 
+@SqlTestFrameworkConfig.ComponentSupplier(TDigestSketchSqlAggregatorTest.TDigestComponentSupplier.class)
 public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class TDigestComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new TDigestSketchModule());
-  }
+    public TDigestComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  ) throws IOException
-  {
-    TDigestSketchModule.registerSerde();
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new TDigestSketchModule());
+    }
 
-    final QueryableIndex index =
-        IndexBuilder.create(CalciteTests.getJsonMapper())
-                    .tmpDir(temporaryFolder.newFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt"),
-                                new DoubleSumAggregatorFactory("m1", "m1"),
-                                new TDigestSketchAggregatorFactory(
-                                    "qsketch_m1",
-                                    "m1",
-                                    128
-                                )
-                            )
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(TestDataBuilder.ROWS1)
-                    .buildMMappedIndex();
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      TDigestSketchModule.registerSerde();
 
-    return new SpecificSegmentsQuerySegmentWalker(conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE1)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
+      final QueryableIndex index =
+          IndexBuilder.create(CalciteTests.getJsonMapper())
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt"),
+                                  new DoubleSumAggregatorFactory("m1", "m1"),
+                                  new TDigestSketchAggregatorFactory(
+                                      "qsketch_m1",
+                                      "m1",
+                                      128
+                                  )
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(TestDataBuilder.ROWS1)
+                      .buildMMappedIndex();
+
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(CalciteTests.DATASOURCE1)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   @Test
@@ -125,11 +135,82 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
+                      new TDigestSketchAggregatorFactory("a0", "m1", 200)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
+        ImmutableList.of(
+            new String[]{
+                "\"AAAAAT/wAAAAAAAAQBgAAAAAAABAaQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""
+            }
+        )
+    );
+  }
+
+  @Test
+  public void testCastedQuantileAndCompressionParamForTDigestQuantileAgg()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT\n"
+        + "TDIGEST_QUANTILE(m1, CAST(0.0 AS DOUBLE)), "
+        + "TDIGEST_QUANTILE(m1, CAST(0.5 AS FLOAT), CAST(200 AS INTEGER)), "
+        + "TDIGEST_QUANTILE(m1, CAST(1.0 AS DOUBLE), 300)\n"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new TDigestSketchAggregatorFactory("a0:agg", "m1",
+                                                         TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION
+                      ),
+                      new TDigestSketchAggregatorFactory("a1:agg", "m1",
+                                                         200
+                      ),
+                      new TDigestSketchAggregatorFactory("a2:agg", "m1",
+                                                         300
+                      )
+                  ))
+                  .postAggregators(
+                      new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.0f),
+                      new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.5f),
+                      new TDigestSketchToQuantilePostAggregator("a2", makeFieldAccessPostAgg("a2:agg"), 1.0f)
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ResultMatchMode.EQUALS_EPS,
+        ImmutableList.of(
+            new Object[]{1.0, 3.5, 6.0}
+        )
+    );
+  }
+
+  @Test
+  public void testComputingSketchOnNumericValuesWithCastedCompressionParameter()
+  {
+    cannotVectorize();
+
+    testQuery(
+        "SELECT\n"
+        + "TDIGEST_GENERATE_SKETCH(m1, CAST(200 AS INTEGER))"
+        + "FROM foo",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
+                  .granularity(Granularities.ALL)
+                  .aggregators(ImmutableList.of(
+                      new TDigestSketchAggregatorFactory("a0", "m1", 200)
+                  ))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             new String[]{
                 "\"AAAAAT/wAAAAAAAAQBgAAAAAAABAaQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""
@@ -161,11 +242,12 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "v0", 200)
+                      new TDigestSketchAggregatorFactory("a0", "v0", 200)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new String[]{
@@ -193,11 +275,12 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
+                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             new Object[]{"\"AAAAAT/wAAAAAAAAQBgAAAAAAABAWQAAAAAAAAAAAAY/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQAgAAAAAAAA/8AAAAAAAAEAQAAAAAAAAP/AAAAAAAABAFAAAAAAAAD/wAAAAAAAAQBgAAAAAAAA=\""}
         )
@@ -242,6 +325,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -273,7 +357,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                             .setDimensions(new DefaultDimensionSpec("dim1", "d0"))
                                             .setAggregatorSpecs(
                                                 ImmutableList.of(
-                                                    new TDigestSketchAggregatorFactory("a0:agg", "m1", 200)
+                                                    new TDigestSketchAggregatorFactory("a0", "m1", 200)
                                                 )
                                             )
                                             .setContext(QUERY_CONTEXT_DEFAULT)
@@ -284,7 +368,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             ImmutableList.of(
-                                new TDigestSketchAggregatorFactory("_a0:agg", "a0:agg", 100)
+                                new TDigestSketchAggregatorFactory("_a0:agg", "a0", 100)
                             )
                         )
                         .setPostAggregatorSpecs(
@@ -297,6 +381,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -334,6 +419,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         expectedResults
     );
   }
@@ -370,6 +456,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             new Object[]{1.0, 3.5, 6.0}
         )
@@ -421,6 +508,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             NullHandling.replaceWithDefault()
             ? new Object[]{0.0, 0.5, 10.1}
@@ -446,7 +534,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
                       new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100)
                   ))
                   .postAggregators(
@@ -455,6 +543,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             new Object[]{"\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\"", Double.NaN}
         )
@@ -482,7 +571,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new TDigestSketchAggregatorFactory("a0:agg", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                                    new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
@@ -499,30 +588,11 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
+        ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
             new Object[]{"a", "\"AAAAAX/wAAAAAAAA//AAAAAAAABAWQAAAAAAAAAAAAA=\"", Double.NaN}
         )
     );
-  }
-
-  @Override
-  public void assertResultsEquals(String sql, List<Object[]> expectedResults, List<Object[]> results)
-  {
-    Assert.assertEquals(expectedResults.size(), results.size());
-    for (int i = 0; i < expectedResults.size(); i++) {
-      Object[] expectedResult = expectedResults.get(i);
-      Object[] result = results.get(i);
-      Assert.assertEquals(expectedResult.length, result.length);
-      for (int j = 0; j < expectedResult.length; j++) {
-        if (expectedResult[j] instanceof Float) {
-          Assert.assertEquals((Float) expectedResult[j], (Float) result[j], 0.000001);
-        } else if (expectedResult[j] instanceof Double) {
-          Assert.assertEquals((Double) expectedResult[j], (Double) result[j], 0.000001);
-        } else {
-          Assert.assertEquals(expectedResult[j], result[j]);
-        }
-      }
-    }
   }
 
   private static PostAggregator makeFieldAccessPostAgg(String name)

@@ -25,11 +25,13 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.LookupNodeService;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolboxFactory;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -46,6 +48,7 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -53,8 +56,9 @@ import org.apache.druid.segment.loading.DataSegmentArchiver;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentMover;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -75,6 +79,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
   )
   {
     super(
+        null,
         bob.config,
         bob.taskExecutorNode,
         bob.taskActionClientFactory,
@@ -112,7 +117,8 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
         bob.supervisorTaskClientProvider,
         bob.shuffleClient,
         bob.taskLogPusher,
-        bob.attemptId
+        bob.attemptId,
+        bob.centralizedDatasourceSchemaConfig
     );
   }
 
@@ -135,7 +141,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private Provider<MonitorScheduler> monitorSchedulerProvider;
     private ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
     private IndexIO indexIO = TestHelper.getTestIndexIO();
-    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(jsonMapper);
+    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper);
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;
@@ -150,12 +156,13 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private ChatHandlerProvider chatHandlerProvider;
     private RowIngestionMetersFactory rowIngestionMetersFactory;
     private AppenderatorsManager appenderatorsManager;
-    private OverlordClient overlordClient;
-    private CoordinatorClient coordinatorClient;
+    private OverlordClient overlordClient = new NoopOverlordClient();
+    private CoordinatorClient coordinatorClient = new NoopCoordinatorClient();
     private ParallelIndexSupervisorTaskClientProvider supervisorTaskClientProvider;
     private ShuffleClient shuffleClient;
     private TaskLogPusher taskLogPusher;
     private String attemptId;
+    private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
     public Builder setConfig(TaskConfig config)
     {
@@ -382,6 +389,12 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     public Builder setAttemptId(String attemptId)
     {
       this.attemptId = attemptId;
+      return this;
+    }
+
+    public Builder setCentralizedTableSchemaConfig(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+    {
+      this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
       return this;
     }
   }

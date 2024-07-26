@@ -25,7 +25,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
-import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 @LazySingleton
@@ -34,11 +33,10 @@ public class KinesisIndexTaskClientFactory extends SeekableStreamIndexTaskClient
   @Inject
   public KinesisIndexTaskClientFactory(
       @EscalatedGlobal ServiceClientFactory serviceClientFactory,
-      @EscalatedGlobal HttpClient httpClient,
       @Json ObjectMapper mapper
   )
   {
-    super(serviceClientFactory, httpClient, mapper);
+    super(serviceClientFactory, mapper);
   }
 
   @Override

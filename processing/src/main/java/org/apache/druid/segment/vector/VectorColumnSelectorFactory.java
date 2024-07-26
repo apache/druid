@@ -20,7 +20,11 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -30,7 +34,7 @@ import javax.annotation.Nullable;
  *
  * If you need to write code that adapts to different input types, you should write a
  * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
- * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this class.
+ * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this class.
  *
  * @see org.apache.druid.segment.ColumnSelectorFactory the non-vectorized version.
  */
@@ -61,7 +65,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec);
 
@@ -72,7 +76,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec);
 
@@ -82,13 +86,13 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   VectorValueSelector makeValueSelector(String column);
 
   /**
    * Returns an object selector. Should only be called on columns where {@link #getColumnCapabilities} indicates that
-   * they return STRING or COMPLEX, or on nonexistent columns.
+   * they return STRING, ARRAY, or COMPLEX, or on nonexistent columns.
    *
    * For STRING, this is needed if values are not dictionary encoded, such as computed virtual columns, or can
    * optionally be used in place of {@link SingleValueDimensionVectorSelector} when using the dictionary isn't helpful.
@@ -97,7 +101,7 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
    *
    * If you need to write code that adapts to different input types, you should write a
    * {@link org.apache.druid.segment.VectorColumnProcessorFactory} and use one of the
-   * {@link org.apache.druid.segment.ColumnProcessors#makeVectorProcessor} functions instead of using this method.
+   * {@link ColumnProcessors#makeVectorProcessor} functions instead of using this method.
    */
   VectorObjectSelector makeObjectSelector(String column);
 
@@ -110,4 +114,22 @@ public interface VectorColumnSelectorFactory extends ColumnInspector
   @Override
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
+
+  /**
+   * Returns a group-by selector. Allows columns to control their own grouping behavior.
+   *
+   * @param column                    column name
+   * @param deferExpressionDimensions active value of {@link org.apache.druid.query.groupby.GroupByQueryConfig#CTX_KEY_DEFER_EXPRESSION_DIMENSIONS}
+   */
+  default GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String column,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    return ColumnProcessors.makeVectorProcessor(
+        column,
+        GroupByVectorColumnProcessorFactory.instance(),
+        this
+    );
+  }
 }

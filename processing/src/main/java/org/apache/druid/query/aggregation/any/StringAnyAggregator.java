@@ -24,19 +24,23 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 
+import java.util.List;
+
 public class StringAnyAggregator implements Aggregator
 {
   private final BaseObjectColumnValueSelector valueSelector;
   private final int maxStringBytes;
   private boolean isFound;
   private String foundValue;
+  private final boolean aggregateMultipleValues;
 
-  public StringAnyAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes)
+  public StringAnyAggregator(BaseObjectColumnValueSelector valueSelector, int maxStringBytes, boolean aggregateMultipleValues)
   {
     this.valueSelector = valueSelector;
     this.maxStringBytes = maxStringBytes;
     this.foundValue = null;
     this.isFound = false;
+    this.aggregateMultipleValues = aggregateMultipleValues;
   }
 
   @Override
@@ -44,18 +48,36 @@ public class StringAnyAggregator implements Aggregator
   {
     if (!isFound) {
       final Object object = valueSelector.getObject();
-      foundValue = DimensionHandlerUtils.convertObjectToString(object);
-      if (foundValue != null && foundValue.length() > maxStringBytes) {
-        foundValue = foundValue.substring(0, maxStringBytes);
-      }
+      foundValue = StringUtils.fastLooseChop(readValue(object), maxStringBytes);
       isFound = true;
     }
+  }
+
+  private String readValue(final Object object)
+  {
+    if (object == null) {
+      return null;
+    }
+    if (object instanceof List) {
+      List<Object> objectList = (List) object;
+      if (objectList.size() == 0) {
+        return null;
+      }
+      if (objectList.size() == 1) {
+        return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+      }
+      if (aggregateMultipleValues) {
+        return DimensionHandlerUtils.convertObjectToString(objectList);
+      }
+      return DimensionHandlerUtils.convertObjectToString(objectList.get(0));
+    }
+    return DimensionHandlerUtils.convertObjectToString(object);
   }
 
   @Override
   public Object get()
   {
-    return StringUtils.chop(foundValue, maxStringBytes);
+    return foundValue;
   }
 
   @Override

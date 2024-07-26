@@ -25,6 +25,8 @@ services:
   # Uses the official Zookeeper image
   # See https://hub.docker.com/_/zookeeper
   zookeeper:
+    # Uncomment the following when running on Apple Silicon processors:
+    # platform: linux/x86_64
     image: zookeeper:${ZK_VERSION}
     container_name: zookeeper
     labels:
@@ -44,34 +46,33 @@ services:
   kafka:
     image: bitnami/kafka:${KAFKA_VERSION}
     container_name: kafka
+    # platform: linux/x86_64
     labels:
       druid-int-test: "true"
     ports:
       - 9092:9092
-      - 9093:9093
+      - 9094:9094
     networks:
       druid-it-net:
         ipv4_address: 172.172.172.2
     volumes:
       - ${SHARED_DIR}/kafka:/bitnami/kafka
     environment:
-      # This is the default: making it explicit
-      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Plaintext is disabled by default
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      # Adapted from base-setup.sh and Bitnami docs
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: "INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT"
-      KAFKA_CFG_LISTENERS: "INTERNAL://:9092,EXTERNAL://:9093"
-      KAFKA_CFG_ADVERTISED_LISTENERS: "INTERNAL://kafka:9092,EXTERNAL://localhost:9093"
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
-    depends_on:
-      - zookeeper
+      - KAFKA_CFG_NODE_ID=1001
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1001@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
 
   # Uses the official MySQL image
   # See https://hub.docker.com/_/mysql
   # The image will intialize the user and DB upon first start.
   metadata:
-    # Uncomment the following when running on M1 Macs:
+    # Uncomment the following when running on Apple Silicon processors:
     # platform: linux/x86_64
     image: mysql:$MYSQL_IMAGE_VERSION
     container_name: metadata

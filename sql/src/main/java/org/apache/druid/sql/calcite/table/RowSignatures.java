@@ -41,6 +41,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.calcite.expression.SimpleExtraction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
@@ -96,8 +98,8 @@ public class RowSignatures
   }
 
   /**
-   * Returns a Calcite RelDataType corresponding to a row signature. It will typecast __time column to TIMESTAMP
-   * irrespective of the type present in the row signature
+   * Returns a Calcite {@link RelDataType} corresponding to a {@link RowSignature}. It will typecast __time column to
+   * TIMESTAMP irrespective of the type present in the row signature
    */
   public static RelDataType toRelDataType(final RowSignature rowSignature, final RelDataTypeFactory typeFactory)
   {
@@ -105,8 +107,8 @@ public class RowSignatures
   }
 
   /**
-   * Returns a Calcite RelDataType corresponding to a row signature.
-   * For columns that are named "__time", it automatically casts it to TIMESTAMP if typecastTimeColumn is set to true
+   * Returns a Calcite {@link RelDataType} corresponding to a {@link RowSignature}. For columns that are named
+   * "__time", it automatically casts it to TIMESTAMP if typecastTimeColumn is set to true
    */
   public static RelDataType toRelDataType(
       final RowSignature rowSignature,
@@ -126,47 +128,56 @@ public class RowSignatures
             rowSignature.getColumnType(columnName)
                         .orElseThrow(() -> new ISE("Encountered null type for column[%s]", columnName));
 
-        switch (columnType.getType()) {
-          case STRING:
-            // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
-            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
-            break;
-          case LONG:
-            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
-            break;
-          case FLOAT:
-            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, nullNumeric);
-            break;
-          case DOUBLE:
-            type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
-            break;
-          case ARRAY:
-            switch (columnType.getElementType().getType()) {
-              case STRING:
-                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
-                break;
-              case LONG:
-                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
-                break;
-              case DOUBLE:
-                type = Calcites.createSqlArrayTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
-                break;
-              default:
-                throw new ISE("valueType[%s] not translatable", columnType);
-            }
-            break;
-          case COMPLEX:
-            type = makeComplexType(typeFactory, columnType, true);
-            break;
-          default:
-            throw new ISE("valueType[%s] not translatable", columnType);
-        }
+        type = columnTypeToRelDataType(typeFactory, columnType, nullNumeric);
       }
 
       builder.add(columnName, type);
     }
 
     return builder.build();
+  }
+
+  /**
+   * Returns a Calcite {@link RelDataType} corresponding to a {@link ColumnType}
+   */
+  public static RelDataType columnTypeToRelDataType(
+      RelDataTypeFactory typeFactory,
+      ColumnType columnType,
+      boolean nullNumeric
+  )
+  {
+    final RelDataType type;
+    switch (columnType.getType()) {
+      case STRING:
+        // Note that there is no attempt here to handle multi-value in any special way. Maybe one day...
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, true);
+        break;
+      case LONG:
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.BIGINT, nullNumeric);
+        break;
+      case FLOAT:
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.FLOAT, nullNumeric);
+        break;
+      case DOUBLE:
+        type = Calcites.createSqlTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, nullNumeric);
+        break;
+      case ARRAY:
+        final RelDataType elementType = columnTypeToRelDataType(
+            typeFactory,
+            (ColumnType) columnType.getElementType(),
+            nullNumeric
+        );
+        type = typeFactory.createTypeWithNullability(
+            typeFactory.createArrayType(elementType, -1),
+            true
+        );
+        break;
+      case COMPLEX:
+        type = makeComplexType(typeFactory, columnType, true);
+        break;
+      default:
+        throw new ISE("valueType[%s] not translatable", columnType);
+    } return type;
   }
 
   /**
@@ -213,7 +224,17 @@ public class RowSignatures
     )
     {
       super(typeName, isNullable, null);
-      this.columnType = columnType;
+      // homogenize complex type names to common name
+      final ComplexMetricSerde serde = columnType.getComplexTypeName() != null
+          ?
+          ComplexMetrics.getSerdeForType(columnType.getComplexTypeName())
+          : null;
+
+      if (serde != null) {
+        this.columnType = ColumnType.ofComplex(serde.getTypeName());
+      } else {
+        this.columnType = columnType;
+      }
       this.computeDigest();
     }
 

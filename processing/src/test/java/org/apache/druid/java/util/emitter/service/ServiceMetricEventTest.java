@@ -48,7 +48,7 @@ public class ServiceMetricEventTest
         .setDimension("user8", "h")
         .setDimension("user9", "i")
         .setDimension("user10", "j")
-        .build("test-metric", 1234)
+        .setMetric("test-metric", 1234)
         .build("test", "localhost");
     Assert.assertEquals(
         ImmutableMap.<String, Object>builder()
@@ -84,7 +84,7 @@ public class ServiceMetricEventTest
         .setDimension("user8", "h")
         .setDimension("user9", "i")
         .setDimension("user10", "j")
-        .build("test-metric", 1234)
+        .setMetric("test-metric", 1234)
         .build("test", "localhost");
 
     Assert.assertEquals(
@@ -120,7 +120,7 @@ public class ServiceMetricEventTest
         .setDimension("user8", new String[]{"h"})
         .setDimension("user9", new String[]{"i"})
         .setDimension("user10", new String[]{"j"})
-        .build("test-metric", 1234)
+        .setMetric("test-metric", 1234)
         .build("test", "localhost");
 
     Assert.assertEquals(
@@ -156,7 +156,7 @@ public class ServiceMetricEventTest
             .setDimension("user8", "h")
             .setDimension("user9", "i")
             .setDimension("user10", "j")
-            .build(null, "test-metric", 1234)
+            .setMetric("test-metric", 1234)
             .build("test", "localhost")
             .getCreatedTime()
     );
@@ -173,7 +173,7 @@ public class ServiceMetricEventTest
                           .setDimension("user8", new String[]{"h"})
                           .setDimension("user9", new String[]{"i"})
                           .setDimension("user10", new String[]{"j"})
-                          .build("test-metric", 1234)
+                          .setMetric("test-metric", 1234)
                           .build("test", "localhost")
                           .getCreatedTime()
     );
@@ -208,7 +208,8 @@ public class ServiceMetricEventTest
             .setDimension("user8", "h")
             .setDimension("user9", "i")
             .setDimension("user10", "j")
-            .build(DateTimes.utc(42), "test-metric", 1234)
+            .setCreatedTime(DateTimes.utc(42))
+            .setMetric("test-metric", 1234)
             .build("test", "localhost")
             .toMap()
     );
@@ -243,7 +244,8 @@ public class ServiceMetricEventTest
                           .setDimension("user8", new String[]{"h"})
                           .setDimension("user9", new String[]{"i"})
                           .setDimension("user10", new String[]{"j"})
-                          .build(DateTimes.utc(42), "test-metric", 1234)
+                          .setCreatedTime(DateTimes.utc(42))
+                          .setMetric("test-metric", 1234)
                           .build("test", "localhost")
                           .toMap()
     );
@@ -262,7 +264,8 @@ public class ServiceMetricEventTest
         ServiceMetricEvent.builder()
                           .setDimension("foo", "bar")
                           .setDimension("baz", new String[]{"foo", "qux"})
-                          .build(DateTimes.utc(42), "test-metric", 1234)
+                          .setCreatedTime(DateTimes.utc(42))
+                          .setMetric("test-metric", 1234)
                           .build("test", "localhost")
                           .toMap()
     );
@@ -271,26 +274,26 @@ public class ServiceMetricEventTest
   @Test(expected = IllegalStateException.class)
   public void testInfinite()
   {
-    ServiceMetricEvent.builder().build("foo", 1 / 0d);
+    ServiceMetricEvent.builder().setMetric("foo", 1 / 0d);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testInfinite2()
   {
-    ServiceMetricEvent.builder().build("foo", 1 / 0f);
+    ServiceMetricEvent.builder().setMetric("foo", 1 / 0f);
   }
 
 
   @Test(expected = IllegalStateException.class)
   public void testNaN()
   {
-    ServiceMetricEvent.builder().build("foo", 0 / 0d);
+    ServiceMetricEvent.builder().setMetric("foo", 0 / 0d);
   }
 
   @Test(expected = IllegalStateException.class)
   public void testNaN2()
   {
-    ServiceMetricEvent.builder().build("foo", 0 / 0f);
+    ServiceMetricEvent.builder().setMetric("foo", 0 / 0f);
   }
 
   @Test
@@ -299,7 +302,7 @@ public class ServiceMetricEventTest
     Map<String, String> userDimMap = ImmutableMap.of("k1", "v1", "k2", "v2");
     ServiceMetricEvent target = ServiceMetricEvent.builder()
                                                   .setDimensionIfNotNull("userDimMap", userDimMap)
-                                                  .build("foo", 1)
+                                                  .setMetric("foo", 1)
                                                   .build("service", "host");
     Assert.assertEquals(userDimMap, target.getUserDims().get("userDimMap"));
   }
@@ -309,7 +312,7 @@ public class ServiceMetricEventTest
   {
     ServiceMetricEvent target = ServiceMetricEvent.builder()
                                                   .setDimensionIfNotNull("userDimMap", null)
-                                                  .build("foo", 1)
+                                                  .setMetric("foo", 1)
                                                   .build("service", "host");
     Assert.assertTrue(target.getUserDims().isEmpty());
     Assert.assertNull(target.getUserDims().get("userDimMap"));

@@ -19,8 +19,7 @@
 
 package org.apache.druid.sql.calcite.external;
 
-import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.adapter.enumerable.RexToLixTranslator;
+import org.apache.calcite.adapter.enumerable.EnumUtils;
 import org.apache.calcite.linq4j.tree.BlockBuilder;
 import org.apache.calcite.linq4j.tree.Expression;
 import org.apache.calcite.linq4j.tree.Expressions;
@@ -32,20 +31,16 @@ import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
-import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.SqlUtil;
+import org.apache.calcite.sql.SqlOperatorBinding;
 import org.apache.calcite.sql.type.ArraySqlType;
-import org.apache.calcite.sql.type.SqlOperandTypeChecker;
+import org.apache.calcite.sql.type.SqlOperandMetadata;
 import org.apache.calcite.sql.type.SqlOperandTypeInference;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.validate.SqlUserDefinedTableMacro;
-import org.apache.calcite.util.ImmutableNullableList;
 import org.apache.calcite.util.NlsString;
-import org.apache.calcite.util.Pair;
+import org.apache.druid.java.util.common.IAE;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,98 +56,83 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
 {
   protected final TableMacro macro;
 
-  public BaseUserDefinedTableMacro(SqlIdentifier opName, SqlReturnTypeInference returnTypeInference,
-      SqlOperandTypeInference operandTypeInference, SqlOperandTypeChecker operandTypeChecker,
-      List<RelDataType> paramTypes, TableMacro tableMacro)
+  public BaseUserDefinedTableMacro(
+      final SqlIdentifier opName,
+      final SqlReturnTypeInference returnTypeInference,
+      final SqlOperandTypeInference operandTypeInference,
+      final SqlOperandMetadata operandMetadata,
+      final TableMacro tableMacro
+  )
   {
-    super(opName, returnTypeInference, operandTypeInference, operandTypeChecker, paramTypes, tableMacro);
+    super(opName, SqlKind.OTHER_FUNCTION, returnTypeInference, operandTypeInference, operandMetadata, tableMacro);
 
     // Because Calcite's copy of the macro is private
     this.macro = tableMacro;
   }
 
-  // Copy of Calcite method to add array handling
+  /**
+   * Copy of Calcite method {@link SqlUserDefinedTableMacro#getTable} to add array and named parameter handling.
+   */
   @Override
-  public TranslatableTable getTable(
-      RelDataTypeFactory typeFactory,
-      List<SqlNode> operandList
-  )
+  public TranslatableTable getTable(SqlOperatorBinding callBinding)
   {
-    List<Object> arguments = convertArguments(typeFactory, operandList,
-        macro, getNameAsId(), true);
+    List<Object> arguments = convertArguments(callBinding, macro, getNameAsId(), true);
     return macro.apply(arguments);
   }
 
-  // Copy of Calcite method to add array handling
+  /**
+   * Similar to Calcite method {@link SqlUserDefinedTableMacro#convertArguments}, but with array and
+   * named parameter handling.
+   */
   public static List<Object> convertArguments(
-      RelDataTypeFactory typeFactory,
-      List<SqlNode> operandList,
+      SqlOperatorBinding callBinding,
       Function function,
       SqlIdentifier opName,
       boolean failOnNonLiteral
   )
   {
-    List<Object> arguments = new ArrayList<>(operandList.size());
-    // Construct a list of arguments, if they are all constants.
-    for (Pair<FunctionParameter, SqlNode> pair
-        : Pair.zip(function.getParameters(), operandList)) {
+    final RelDataTypeFactory typeFactory = callBinding.getTypeFactory();
+    final List<FunctionParameter> parameters = function.getParameters();
+    final List<Object> arguments = new ArrayList<>(callBinding.getOperandCount());
+
+    for (int i = 0; i < parameters.size(); i++) {
+      final FunctionParameter parameter = parameters.get(i);
+      final RelDataType type = parameter.getType(typeFactory);
       try {
-        final Object o = getValue(pair.right);
-        final Object o2 = coerce(o, pair.left.getType(typeFactory));
+        final Object o;
+
+        if (callBinding.isOperandLiteral(i, true)) {
+          o = callBinding.getOperandLiteralValue(i, Object.class);
+        } else {
+          throw new NonLiteralException();
+        }
+
+        final Object o2 = coerce(o, type);
         arguments.add(o2);
       }
       catch (NonLiteralException e) {
         if (failOnNonLiteral) {
-          throw new IllegalArgumentException("All arguments of call to macro "
-              + opName + " should be literal of the correct type. Actual argument #"
-              + pair.left.getOrdinal() + " (" + pair.left.getName()
-              + ") is not literal: " + pair.right);
+          throw new IAE(
+              "All arguments of call to macro %s should be literal. Actual argument #%d (%s) is not literal",
+              opName,
+              parameter.getOrdinal(),
+              parameter.getName()
+          );
         }
-        final RelDataType type = pair.left.getType(typeFactory);
+
         final Object value;
         if (type.isNullable()) {
           value = null;
         } else {
+          // Odd default, given that we don't know the type is numeric. But this is what Calcite does upstream
+          // in SqlUserDefinedTableMacro.
           value = 0L;
         }
         arguments.add(value);
       }
     }
-    return arguments;
-  }
 
-  // Copy of Calcite method to add array handling
-  private static Object getValue(SqlNode right) throws NonLiteralException
-  {
-    switch (right.getKind()) {
-      case ARRAY_VALUE_CONSTRUCTOR:
-        final List<Object> list = new ArrayList<>();
-        for (SqlNode o : ((SqlCall) right).getOperandList()) {
-          list.add(getValue(o));
-        }
-        return ImmutableNullableList.copyOf(list);
-      case MAP_VALUE_CONSTRUCTOR:
-        final ImmutableMap.Builder<Object, Object> builder2 =
-            ImmutableMap.builder();
-        final List<SqlNode> operands = ((SqlCall) right).getOperandList();
-        for (int i = 0; i < operands.size(); i += 2) {
-          final SqlNode key = operands.get(i);
-          final SqlNode value = operands.get(i + 1);
-          builder2.put(getValue(key), getValue(value));
-        }
-        return builder2.build();
-      default:
-        if (SqlUtil.isNullLiteral(right, true)) {
-          return null;
-        }
-        if (SqlUtil.isLiteral(right)) {
-          return ((SqlLiteral) right).getValue();
-        }
-        if (right.getKind() == SqlKind.DEFAULT) {
-          return null; // currently NULL is the only default value
-        }
-        throw new NonLiteralException();
-    }
+    return arguments;
   }
 
   // Copy of Calcite method with Druid-specific code added
@@ -207,15 +187,17 @@ public class BaseUserDefinedTableMacro extends SqlUserDefinedTableMacro
     // expressions.
     BlockBuilder bb = new BlockBuilder();
     final Expression expr =
-        RexToLixTranslator.convert(Expressions.constant(o), clazz);
+        EnumUtils.convert(Expressions.constant(o), clazz);
     bb.add(Expressions.return_(null, expr));
     final FunctionExpression<?> convert =
         Expressions.lambda(bb.toBlock(), Collections.emptyList());
     return convert.compile().dynamicInvoke();
   }
 
-  /** Thrown when a non-literal occurs in an argument to a user-defined
-   * table macro. */
+  /**
+   * Thrown when a non-literal occurs in an argument to a user-defined
+   * table macro.
+   */
   private static class NonLiteralException extends Exception
   {
   }

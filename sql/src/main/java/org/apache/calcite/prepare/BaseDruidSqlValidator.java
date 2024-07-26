@@ -23,7 +23,6 @@ package org.apache.calcite.prepare;
 
 import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.sql.SqlOperatorTable;
-import org.apache.calcite.sql.validate.SqlConformance;
 
 /**
  * Extend the Java-focused {@link CalciteSqlValidator} to make it visible
@@ -36,8 +35,9 @@ public class BaseDruidSqlValidator extends CalciteSqlValidator
       SqlOperatorTable opTab,
       CalciteCatalogReader catalogReader,
       JavaTypeFactory typeFactory,
-      SqlConformance conformance)
+      Config validatorConfig
+  )
   {
-    super(opTab, catalogReader, typeFactory, conformance);
+    super(opTab, catalogReader, typeFactory, validatorConfig);
   }
 }

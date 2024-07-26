@@ -247,11 +247,14 @@ public class DataSourcesSnapshot
         .stream()
         .flatMap(t -> t.getSegments().stream());
 
+    // numRows and realtime status will be set in MetadataResource#
     return usedSegments
         .map(segment -> new SegmentStatusInCluster(
                  segment,
                  overshadowedSegments.contains(segment),
                  null,
+                 null,
+                 false,
                  getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId())
              )
         )

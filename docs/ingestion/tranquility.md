@@ -22,15 +22,9 @@ title: "Tranquility"
   ~ under the License.
   -->
 
-[Tranquility](https://github.com/druid-io/tranquility/) is a separately distributed package for pushing
-streams to Druid in real-time. 
-
-Tranquility has not been built against a version of Druid later than Druid 0.9.2
-release. It may still work with the latest Druid servers, but not all features and functionality will be available
-due to limitations of older Druid APIs on the Tranquility side.
+[Tranquility](https://github.com/druid-io/tranquility/) was a separately distributed package for pushing
+streams to Druid in real-time. It is not compatible with recent versions of Druid.
 
 For new projects that require streaming ingestion, we recommend using Druid's native support for
-[Apache Kafka](../development/extensions-core/kafka-ingestion.md) or
-[Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md).
-
-For more details, check out the [Tranquility GitHub page](https://github.com/druid-io/tranquility/).
+[Apache Kafka](../ingestion/kafka-ingestion.md) or
+[Amazon Kinesis](../ingestion/kinesis-ingestion.md).

@@ -20,10 +20,11 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.SegmentWrangler;
@@ -38,17 +39,20 @@ public class IndexerFrameContext implements FrameContext
   private final IndexIO indexIO;
   private final DataSegmentProvider dataSegmentProvider;
   private final WorkerMemoryParameters memoryParameters;
+  private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
 
   public IndexerFrameContext(
       IndexerWorkerContext context,
       IndexIO indexIO,
       DataSegmentProvider dataSegmentProvider,
+      DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
       WorkerMemoryParameters memoryParameters
   )
   {
     this.context = context;
     this.indexIO = indexIO;
     this.dataSegmentProvider = dataSegmentProvider;
+    this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.memoryParameters = memoryParameters;
   }
 
@@ -59,9 +63,9 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public GroupByStrategySelector groupByStrategySelector()
+  public GroupingEngine groupingEngine()
   {
-    return context.injector().getInstance(GroupByStrategySelector.class);
+    return context.injector().getInstance(GroupingEngine.class);
   }
 
   @Override
@@ -75,6 +79,13 @@ public class IndexerFrameContext implements FrameContext
   {
     return dataSegmentProvider;
   }
+
+  @Override
+  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
+  {
+    return dataServerQueryHandlerFactory;
+  }
+
 
   @Override
   public File tempDir()

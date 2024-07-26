@@ -24,7 +24,7 @@ title: "Data updates"
 
 ## Overwrite
 
-Apache Druid stores data [partitioned by time chunk](../design/architecture.md#datasources-and-segments) and supports
+Apache Druid stores data [partitioned by time chunk](../design/storage.md) and supports
 overwriting existing data using time ranges. Data outside the replacement time range is not touched. Overwriting of
 existing data is done using the same mechanisms as [batch ingestion](../ingestion/index.md#batch).
 
@@ -43,7 +43,9 @@ is ongoing for a particular time range of a datasource, new ingestions for that 
 other time ranges proceed as normal. Read-only queries also proceed as normal, using the pre-existing version of the
 data.
 
-> Druid does not support single-record updates by primary key.
+:::info
+ Druid does not support single-record updates by primary key.
+:::
 
 ## Reindex
 

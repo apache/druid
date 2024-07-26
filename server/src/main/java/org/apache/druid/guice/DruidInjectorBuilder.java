@@ -117,7 +117,7 @@ public class DruidInjectorBuilder
     return this;
   }
 
-  public DruidInjectorBuilder addAll(List<? extends Object> inputs)
+  public DruidInjectorBuilder addAll(Iterable<? extends Object> inputs)
   {
     for (Object o : inputs) {
       addInput(o);
@@ -159,7 +159,7 @@ public class DruidInjectorBuilder
 
   public DruidInjectorBuilder addClass(Class<?> input)
   {
-    if (!acceptModule((Class<?>) input)) {
+    if (!acceptModule(input)) {
       return this;
     }
     if (DruidModule.class.isAssignableFrom(input)) {

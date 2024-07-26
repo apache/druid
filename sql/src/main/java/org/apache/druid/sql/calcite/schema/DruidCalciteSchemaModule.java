@@ -49,8 +49,9 @@ public class DruidCalciteSchemaModule implements Module
           .toProvider(RootSchemaProvider.class)
           .in(Scopes.SINGLETON);
 
-    // SegmentMetadataCache needs to listen to changes for incoming segments
-    LifecycleModule.register(binder, SegmentMetadataCache.class);
+    // BrokerSegmentMetadataCache needs to listen to changes for incoming segments
+    LifecycleModule.register(binder, BrokerSegmentMetadataCache.class);
+
     binder.bind(DruidSchema.class).in(Scopes.SINGLETON);
     binder.bind(SystemSchema.class).in(Scopes.SINGLETON);
     binder.bind(InformationSchema.class).in(Scopes.SINGLETON);

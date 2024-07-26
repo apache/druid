@@ -67,7 +67,7 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
   public Object compute(final Map<String, Object> combinedAggregators)
   {
     final DoublesSketch sketch = (DoublesSketch) field.compute(combinedAggregators);
-    final int numBins = splitPoints != null ? splitPoints.length + 1 :
+    final int numBins = this.splitPoints != null ? this.splitPoints.length + 1 :
         (this.numBins != null ? this.numBins.intValue() : DEFAULT_NUM_BINS);
     if (numBins < 2) {
       throw new IAE("at least 2 bins expected");
@@ -77,8 +77,23 @@ public class DoublesSketchToHistogramPostAggregator implements PostAggregator
       Arrays.fill(histogram, Double.NaN);
       return histogram;
     }
-    final double[] histogram = sketch.getPMF(splitPoints != null ? splitPoints :
-      equallySpacedPoints(numBins, sketch.getMinItem(), sketch.getMaxItem()));
+    final double[] splitPoints;
+    if (this.splitPoints != null) {
+      splitPoints = this.splitPoints;
+    } else {
+      final double min = sketch.getMinItem();
+      final double max = sketch.getMaxItem();
+      if (min == max) {
+        // if min is equal to max, we can't create an array of equally spaced points.
+        // all values would go into the first bucket anyway, and the remaining
+        // buckets are left as zero.
+        final double[] histogram = new double[numBins];
+        histogram[0] = sketch.getN();
+        return histogram;
+      }
+      splitPoints = equallySpacedPoints(numBins, min, max);
+    }
+    final double[] histogram = sketch.getPMF(splitPoints);
     for (int i = 0; i < histogram.length; i++) {
       histogram[i] *= sketch.getN(); // scale fractions to counts
     }

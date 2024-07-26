@@ -280,6 +280,7 @@ public class PeriodLoadRuleTest
   {
     EqualsVerifier.forClass(PeriodLoadRule.class)
                   .withNonnullFields("tieredReplicants")
+                  .withIgnoredFields("shouldSegmentBeLoaded")
                   .usingGetClass()
                   .verify();
   }

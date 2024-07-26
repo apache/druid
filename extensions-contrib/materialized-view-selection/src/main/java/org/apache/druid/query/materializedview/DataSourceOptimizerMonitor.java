@@ -45,20 +45,20 @@ public class DataSourceOptimizerMonitor extends AbstractMonitor
     for (DataSourceOptimizerStats stat : stats) {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       builder.setDimension("dataSource", stat.getBase());
-      emitter.emit(builder.build("/materialized/view/query/totalNum", stat.getTotalcount()));
-      emitter.emit(builder.build("/materialized/view/query/hits", stat.getHitcount()));
-      emitter.emit(builder.build("/materialized/view/query/hitRate", stat.getHitRate()));
-      emitter.emit(builder.build("/materialized/view/select/avgCostMS", stat.getOptimizerCost()));
+      emitter.emit(builder.setMetric("/materialized/view/query/totalNum", stat.getTotalcount()));
+      emitter.emit(builder.setMetric("/materialized/view/query/hits", stat.getHitcount()));
+      emitter.emit(builder.setMetric("/materialized/view/query/hitRate", stat.getHitRate()));
+      emitter.emit(builder.setMetric("/materialized/view/select/avgCostMS", stat.getOptimizerCost()));
       Map<String, Long> derivativesStats = stat.getDerivativesHitCount();
       for (Map.Entry<String, Long> derivative : derivativesStats.entrySet()) {
         builder.setDimension("derivative", derivative.getKey());
-        emitter.emit(builder.build("/materialized/view/derivative/numSelected", derivative.getValue()));
+        emitter.emit(builder.setMetric("/materialized/view/derivative/numSelected", derivative.getValue()));
       }
       final ServiceMetricEvent.Builder builder2 = new ServiceMetricEvent.Builder();
       builder2.setDimension("dataSource", stat.getBase());
       for (Set<String> fields : stat.getMissFields().keySet()) {
         builder2.setDimension("fields", fields.toString());
-        emitter.emit(builder2.build("/materialized/view/missNum", stat.getMissFields().get(fields).get()));
+        emitter.emit(builder2.setMetric("/materialized/view/missNum", stat.getMissFields().get(fields).get()));
       }
     }
     return true;

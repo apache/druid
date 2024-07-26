@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
-import org.apache.datasketches.common.ArrayOfItemsSerDe;
 import org.apache.datasketches.common.ArrayOfStringsSerDe;
 import org.apache.datasketches.common.Util;
 import org.apache.datasketches.memory.Memory;
@@ -35,7 +34,7 @@ import java.nio.charset.StandardCharsets;
  * The implementation is the same as {@link ArrayOfStringsSerDe}, except this
  * class handles null String values as well.
  */
-public class ArrayOfStringsNullSafeSerde extends ArrayOfItemsSerDe<String>
+public class ArrayOfStringsNullSafeSerde extends ArrayOfStringsSerDe
 {
 
   private static final int NULL_STRING_LENGTH = -1;
@@ -106,5 +105,14 @@ public class ArrayOfStringsNullSafeSerde extends ArrayOfItemsSerDe<String>
     return array;
   }
 
+  @Override
+  public int sizeOf(String item)
+  {
+    if (item == null) {
+      return Integer.BYTES;
+    } else {
+      return super.sizeOf(item);
+    }
+  }
 }
 

@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -59,25 +60,23 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      String queryId,
-      int stageNumber
+      StageId stageId
   )
   {
-    return wrap(workerTaskId, client, c -> c.fetchClusterByStatisticsSnapshot(workerTaskId, queryId, stageNumber));
+    return wrap(workerTaskId, client, c -> c.fetchClusterByStatisticsSnapshot(workerTaskId, stageId));
   }
 
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
-      String queryId,
-      int stageNumber,
+      StageId stageId,
       long timeChunk
   )
   {
     return wrap(
         workerTaskId,
         client,
-        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, queryId, stageNumber, timeChunk)
+        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, stageId, timeChunk)
     );
   }
 
@@ -158,7 +157,8 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
           {
             retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId)));
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
 
     return retVal;

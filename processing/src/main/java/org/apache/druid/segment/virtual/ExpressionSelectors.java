@@ -195,7 +195,10 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -243,7 +246,10 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final ExpressionPlan plan = ExpressionPlanner.plan(columnSelectorFactory, expression);
+    final ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
@@ -344,11 +350,16 @@ public class ExpressionSelectors
       final boolean homogenizeNullMultiValueStringArrays =
           plan.is(ExpressionPlan.Trait.NEEDS_APPLIED) || ExpressionProcessing.isHomogenizeNullMultiValueStringArrays();
 
-      if (capabilities == null || capabilities.isArray() || useObjectSupplierForMultiValueStringArray) {
-        // Unknown type, array type, or output array uses an Object selector and see if that gives anything useful
+      if (capabilities == null || useObjectSupplierForMultiValueStringArray) {
+        // Unknown type, or implicitly mapped mvd, use Object selector and see if that gives anything useful
         supplier = supplierFromObjectSelector(
             columnSelectorFactory.makeColumnValueSelector(columnName),
             homogenizeNullMultiValueStringArrays
+        );
+      } else if (capabilities.isArray()) {
+        supplier = supplierFromObjectSelector(
+            columnSelectorFactory.makeColumnValueSelector(columnName),
+            false
         );
       } else if (capabilities.is(ValueType.FLOAT)) {
         ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(columnName);
@@ -430,17 +441,17 @@ public class ExpressionSelectors
       if (row.size() == 1 && !coerceArray) {
         return selector.lookupName(row.get(0));
       } else {
+        final int size = row.size();
         // column selector factories hate you and use [] and [null] interchangeably for nullish data
-        if (row.size() == 0 || (row.size() == 1 && selector.getObject() == null)) {
+        if (size == 0 || (size == 1 && selector.getObject() == null)) {
           if (homogenize) {
             return new Object[]{null};
           } else {
             return null;
           }
         }
-        final Object[] strings = new Object[row.size()];
-        // noinspection SSBasedInspection
-        for (int i = 0; i < row.size(); i++) {
+        final Object[] strings = new Object[size];
+        for (int i = 0; i < size; i++) {
           strings[i] = selector.lookupName(row.get(i));
         }
         return strings;
@@ -464,15 +475,15 @@ public class ExpressionSelectors
     }
 
     final Class<?> clazz = selector.classOfObject();
-    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
-      // Number, String supported as-is.
+    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz) || Object[].class.isAssignableFrom(clazz)) {
+      // Number, String, Arrays supported as-is.
       return selector::getObject;
     } else if (clazz.isAssignableFrom(Number.class) || clazz.isAssignableFrom(String.class)) {
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof List) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
@@ -485,7 +496,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }

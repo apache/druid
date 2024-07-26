@@ -35,12 +35,15 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
@@ -184,7 +187,7 @@ public class OverlordClientImplTest
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/indexer/v1/tasks?state=RUNNING&datasource=foo%3F&maxCompletedTasks=0"
+            "/druid/indexer/v1/tasks?state=RUNNING&datasource=foo%3F&max=0"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -203,7 +206,7 @@ public class OverlordClientImplTest
     serviceClient.expectAndRespond(
         new RequestBuilder(
             HttpMethod.GET,
-            "/druid/indexer/v1/tasks?maxCompletedTasks=0"
+            "/druid/indexer/v1/tasks?max=0"
         ),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
@@ -219,13 +222,15 @@ public class OverlordClientImplTest
   @Test
   public void test_findLockedIntervals() throws Exception
   {
-    final Map<String, Integer> priorityMap = ImmutableMap.of("foo", 3);
     final Map<String, List<Interval>> lockMap =
         ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null)
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
-            .jsonContent(jsonMapper, priorityMap),
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
+            .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(lockMap)
@@ -233,18 +238,20 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         lockMap,
-        overlordClient.findLockedIntervals(priorityMap).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
   @Test
   public void test_findLockedIntervals_nullReturn() throws Exception
   {
-    final Map<String, Integer> priorityMap = ImmutableMap.of("foo", 3);
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null)
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
-            .jsonContent(jsonMapper, priorityMap),
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
+            .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(null)
@@ -252,7 +259,7 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         Collections.emptyMap(),
-        overlordClient.findLockedIntervals(priorityMap).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
@@ -284,7 +291,7 @@ public class OverlordClientImplTest
   public void test_taskReportAsMap() throws Exception
   {
     final String taskId = "testTaskId";
-    final Map<String, Object> response = ImmutableMap.of("test", "value");
+    final TaskReport.ReportMap response = TaskReport.buildTaskReports(new KillTaskReport("taskId", null));
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/testTaskId/reports"),
@@ -293,7 +300,7 @@ public class OverlordClientImplTest
         jsonMapper.writeValueAsBytes(response)
     );
 
-    final ListenableFuture<Map<String, Object>> future = overlordClient.taskReportAsMap(taskId);
+    final ListenableFuture<TaskReport.ReportMap> future = overlordClient.taskReportAsMap(taskId);
     Assert.assertEquals(response, future.get());
   }
 
@@ -314,7 +321,7 @@ public class OverlordClientImplTest
         )
     );
 
-    final ListenableFuture<Map<String, Object>> future = overlordClient.taskReportAsMap(taskId);
+    final ListenableFuture<TaskReport.ReportMap> future = overlordClient.taskReportAsMap(taskId);
 
     final ExecutionException e = Assert.assertThrows(
         ExecutionException.class,
@@ -340,7 +347,7 @@ public class OverlordClientImplTest
         StringUtils.toUtf8("{}")
     );
 
-    final Map<String, Object> actualResponse =
+    final TaskReport.ReportMap actualResponse =
         FutureUtils.getUnchecked(overlordClient.taskReportAsMap(taskID), true);
     Assert.assertEquals(Collections.emptyMap(), actualResponse);
   }
@@ -422,7 +429,15 @@ public class OverlordClientImplTest
   public void test_taskPayload() throws ExecutionException, InterruptedException, JsonProcessingException
   {
     final String taskID = "taskId_1";
-    final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(taskID, "test", null, null);
+    final ClientTaskQuery clientTaskQuery = new ClientKillUnusedSegmentsTaskQuery(
+        taskID,
+        "test",
+        null,
+        null,
+        null,
+        null,
+        null
+    );
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/" + taskID),

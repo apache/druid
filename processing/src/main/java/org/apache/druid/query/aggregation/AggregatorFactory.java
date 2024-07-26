@@ -194,17 +194,15 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * Used by {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV1} when running nested groupBys, to
-   * "transfer" values from this aggreagtor to an incremental index that the outer query will run on. This method
-   * only exists due to the design of GroupByStrategyV1, and should probably not be used for anything else. If you are
-   * here because you are looking for a way to get the input fields required by this aggregator, and thought
-   * "getRequiredColumns" sounded right, please use {@link #requiredFields()} instead.
-   *
-   * @return AggregatorFactories that can be used to "transfer" values from this aggregator into an incremental index
-   *
-   * @see #requiredFields() a similarly-named method that is perhaps the one you want instead.
+   * This was previously used by group-by v1 and will be removed in a future release
    */
-  public abstract List<AggregatorFactory> getRequiredColumns();
+  @Deprecated
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    throw new UnsupportedOperationException(
+        "Do not call or implement this method, it is deprecated and will be removed in a future releases."
+    );
+  }
 
   /**
    * A method that knows how to "deserialize" the object from whatever form it might have been put into

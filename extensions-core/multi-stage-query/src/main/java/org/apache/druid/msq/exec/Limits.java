@@ -86,9 +86,22 @@ public class Limits
   public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
 
   /**
-   * Max number of rows in the query reports of the SELECT queries run by MSQ. This ensures that the reports donot blow
-   * up for queries operating on larger datasets. The full result of the select query should be available once the
-   * MSQ is able to run async queries
+   * Max number of rows in the query reports of SELECT queries run by MSQ when using
+   * {@link org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination}. Reports in this mode contain a
+   * preview of actual query results, but not the full resultset.This ensures that the reports do not blow up in
+   * size for queries operating on larger datasets.
    */
   public static final long MAX_SELECT_RESULT_ROWS = 3_000;
+
+  /**
+   * Max number of partition buckets for ingestion queries.
+   */
+  public static final int MAX_PARTITION_BUCKETS = 5_000;
+
+  /**
+   * Max number of rows with the same key in a window. This acts as a guardrail for
+   * data distribution with high cardinality
+   */
+  public static final int MAX_ROWS_MATERIALIZED_IN_WINDOW = 100_000;
+
 }

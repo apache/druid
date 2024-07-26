@@ -46,7 +46,6 @@ import javax.naming.directory.InitialDirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapName;
-
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -60,6 +59,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
   private static final ReentrantLock LOCK = new ReentrantLock();
 
   private final LruBlockCache cache;
+  private final PasswordHashGenerator hashGenerator = new PasswordHashGenerator();
 
   private final BasicAuthLDAPConfig ldapConfig;
   // Custom overrides that can be passed via tests
@@ -153,14 +153,13 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       char[] password
   )
   {
-    SearchResult userResult;
-    LdapName userDn;
-    Map<String, Object> contextMap = new HashMap<>();
+    final SearchResult userResult;
+    final LdapName userDn;
+    final Map<String, Object> contextMap = new HashMap<>();
+    final LdapUserPrincipal principal = this.cache.getOrExpire(username);
 
-    LdapUserPrincipal principal = this.cache.getOrExpire(username);
-    if (principal != null && principal.hasSameCredentials(password)) {
+    if (principal != null && principal.hasSameCredentials(password, hashGenerator)) {
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, principal.getSearchResult());
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     } else {
       ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
       try {
@@ -199,7 +198,7 @@ public class LDAPCredentialsValidator implements CredentialsValidator
       }
 
       byte[] salt = BasicAuthUtils.generateSalt();
-      byte[] hash = BasicAuthUtils.hashPassword(password, salt, this.ldapConfig.getCredentialIterations());
+      byte[] hash = hashGenerator.getOrComputePasswordHash(password, salt, this.ldapConfig.getCredentialIterations());
       LdapUserPrincipal newPrincipal = new LdapUserPrincipal(
           username,
           new BasicAuthenticatorCredentials(salt, hash, this.ldapConfig.getCredentialIterations()),
@@ -208,8 +207,8 @@ public class LDAPCredentialsValidator implements CredentialsValidator
 
       this.cache.put(username, newPrincipal);
       contextMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userResult);
-      return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
     }
+    return new AuthenticationResult(username, authorizerName, authenticatorName, contextMap);
   }
 
   /**

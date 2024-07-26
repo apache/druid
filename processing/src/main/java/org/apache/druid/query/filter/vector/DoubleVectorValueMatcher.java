@@ -42,27 +42,28 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
     if (value == null) {
-      return makeNullValueMatcher(selector);
+      // special case for selector filter, which behaves as both '=' and 'is null'
+      return VectorValueMatcher.nullMatcher(selector);
     }
 
     final Double matchVal = DimensionHandlerUtils.convertObjectToDouble(value);
 
     if (matchVal == null) {
-      return BooleanVectorValueMatcher.of(selector, false);
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
 
     return makeDoubleMatcher(matchVal);
   }
 
   @Override
-  public VectorValueMatcher makeMatcher(Object value, ColumnType type)
+  public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
-    ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(type), value);
-    ExprEval<?> cast = eval.castTo(ExpressionType.DOUBLE);
-    if (cast.isNumericNull()) {
-      return makeNullValueMatcher(selector);
+    final ExprEval<?> eval = ExprEval.ofType(ExpressionType.fromColumnType(matchValueType), matchValue);
+    final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(eval, ExpressionType.DOUBLE);
+    if (castForComparison == null || castForComparison.isNumericNull()) {
+      return VectorValueMatcher.allFalseValueMatcher(selector);
     }
-    return makeDoubleMatcher(cast.asDouble());
+    return makeDoubleMatcher(castForComparison.asDouble());
   }
 
   private BaseVectorValueMatcher makeDoubleMatcher(double matchValDouble)
@@ -72,7 +73,7 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final double[] vector = selector.getDoubleVector();
         final int[] selection = match.getSelection();
@@ -83,9 +84,10 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            continue;
-          }
-          if (vector[rowNum] == matchValDouble) {
+            if (includeUnknown) {
+              selection[numRows++] = rowNum;
+            }
+          } else if (vector[rowNum] == matchValDouble) {
             selection[numRows++] = rowNum;
           }
         }
@@ -107,7 +109,7 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final double[] vector = selector.getDoubleVector();
         final int[] selection = match.getSelection();
@@ -119,10 +121,10 @@ public class DoubleVectorValueMatcher implements VectorValueMatcherFactory
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
           if (hasNulls && nulls[rowNum]) {
-            if (predicate.applyNull()) {
+            if (predicate.applyNull().matches(includeUnknown)) {
               selection[numRows++] = rowNum;
             }
-          } else if (predicate.applyDouble(vector[rowNum])) {
+          } else if (predicate.applyDouble(vector[rowNum]).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }

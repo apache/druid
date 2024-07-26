@@ -298,7 +298,7 @@ public class FrameBasedIndexedTable implements IndexedTable
           "Type for column [%s]",
           rowSignature.getColumnName(columnNumber)
       );
-      columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
+      columnReaders.add(FrameColumnReaders.create(rowSignature.getColumnName(columnNumber), columnNumber, columnType));
     }
 
     return columnReaders;

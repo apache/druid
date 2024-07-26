@@ -20,58 +20,75 @@
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.sql.SqlAggFunction;
+import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlFunctionCategory;
+import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorBinding;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
+import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.util.SqlVisitor;
+import org.apache.calcite.sql.validate.SqlValidator;
+import org.apache.calcite.sql.validate.SqlValidatorException;
 import org.apache.calcite.util.Optionality;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongDoubleComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetricSerde;
+import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.FloatFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.LongFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
+import org.apache.druid.sql.calcite.expression.DefaultOperandTypeChecker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class EarliestLatestAnySqlAggregator implements SqlAggregator
 {
-  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(AggregatorType.EARLIEST);
-  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(AggregatorType.LATEST);
-  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE);
+  public static final SqlAggregator EARLIEST = new EarliestLatestAnySqlAggregator(
+      AggregatorType.EARLIEST,
+      EarliestLatestBySqlAggregator.EARLIEST_BY.calciteFunction()
+  );
+  public static final SqlAggregator LATEST = new EarliestLatestAnySqlAggregator(
+      AggregatorType.LATEST,
+      EarliestLatestBySqlAggregator.LATEST_BY.calciteFunction()
+  );
+  public static final SqlAggregator ANY_VALUE = new EarliestLatestAnySqlAggregator(AggregatorType.ANY_VALUE, null);
 
   enum AggregatorType
   {
@@ -82,7 +99,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          int maxStringBytes
+          Integer maxStringBytes,
+          Boolean aggregateMultipleValues
       )
       {
         switch (type.getType()) {
@@ -108,7 +126,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          int maxStringBytes
+          Integer maxStringBytes,
+          Boolean aggregateMultipleValues
       )
       {
         switch (type.getType()) {
@@ -134,7 +153,8 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           String fieldName,
           String timeColumn,
           ColumnType type,
-          int maxStringBytes
+          Integer maxStringBytes,
+          Boolean aggregateMultipleValues
       )
       {
         switch (type.getType()) {
@@ -145,7 +165,7 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           case DOUBLE:
             return new DoubleAnyAggregatorFactory(name, fieldName);
           case STRING:
-            return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes);
+            return new StringAnyAggregatorFactory(name, fieldName, maxStringBytes, aggregateMultipleValues);
           default:
             throw SimpleSqlAggregator.badTypeException(fieldName, "ANY", type);
         }
@@ -157,17 +177,18 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
         String fieldName,
         String timeColumn,
         ColumnType outputType,
-        int maxStringBytes
+        Integer maxStringBytes,
+        Boolean aggregateMultipleValues
     );
   }
 
   private final AggregatorType aggregatorType;
   private final SqlAggFunction function;
 
-  private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType)
+  private EarliestLatestAnySqlAggregator(final AggregatorType aggregatorType, final SqlAggFunction replacementAggFunc)
   {
     this.aggregatorType = aggregatorType;
-    this.function = new EarliestLatestSqlAggFunction(aggregatorType);
+    this.function = new EarliestLatestSqlAggFunction(aggregatorType, replacementAggFunc);
   }
 
   @Override
@@ -180,23 +201,17 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   @Override
   public Aggregation toDruidAggregation(
       final PlannerContext plannerContext,
-      final RowSignature rowSignature,
       final VirtualColumnRegistry virtualColumnRegistry,
-      final RexBuilder rexBuilder,
       final String name,
       final AggregateCall aggregateCall,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final boolean finalizeAggregations
   )
   {
-    final List<RexNode> rexNodes = aggregateCall
-        .getArgList()
-        .stream()
-        .map(i -> Expressions.fromFieldAccess(rexBuilder.getTypeFactory(), rowSignature, project, i))
-        .collect(Collectors.toList());
+    final List<RexNode> rexNodes = inputAccessor.getFields(aggregateCall.getArgList());
 
-    final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, rowSignature, rexNodes);
+    final List<DruidExpression> args = Expressions.toDruidExpressions(plannerContext, inputAccessor.getInputRowSignature(), rexNodes);
 
     if (args == null) {
       return null;
@@ -214,9 +229,10 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
                           );
     }
 
-    final String fieldName = getColumnName(plannerContext, virtualColumnRegistry, args.get(0), rexNodes.get(0));
+    final String fieldName = getColumnName(virtualColumnRegistry, args.get(0), rexNodes.get(0));
 
-    if (!rowSignature.contains(ColumnHolder.TIME_COLUMN_NAME) && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
+    if (!inputAccessor.getInputRowSignature().contains(ColumnHolder.TIME_COLUMN_NAME)
+        && (aggregatorType == AggregatorType.LATEST || aggregatorType == AggregatorType.EARLIEST)) {
       // This code is being run as part of the exploratory volcano planner, currently, the definition of these
       // aggregators does not tell Calcite that they depend on a __time column being in existence, instead we are
       // allowing the volcano planner to explore paths that put projections which eliminate the time column in between
@@ -236,37 +252,38 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     final AggregatorFactory theAggFactory;
     switch (args.size()) {
       case 1:
-        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, -1);
+        theAggFactory = aggregatorType.createAggregatorFactory(aggregatorName, fieldName, null, outputType, null, true);
         break;
       case 2:
-        int maxStringBytes;
-        try {
-          maxStringBytes = RexLiteral.intValue(rexNodes.get(1));
-        }
-        catch (AssertionError ae) {
-          plannerContext.setPlanningError(
-              "The second argument '%s' to function '%s' is not a number",
-              rexNodes.get(1),
-              aggregateCall.getName()
-          );
-          return null;
-        }
+        Integer maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function
         theAggFactory = aggregatorType.createAggregatorFactory(
             aggregatorName,
             fieldName,
             null,
             outputType,
-            maxStringBytes
+            maxStringBytes.intValue(),
+            true
+        );
+        break;
+      case 3:
+        maxStringBytes = RexLiteral.intValue(rexNodes.get(1)); // added not null check at the function for rexNode 1,2
+        boolean aggregateMultipleValues = RexLiteral.booleanValue(rexNodes.get(2));
+        theAggFactory = aggregatorType.createAggregatorFactory(
+            aggregatorName,
+            fieldName,
+            null,
+            outputType,
+            maxStringBytes,
+            aggregateMultipleValues
         );
         break;
       default:
         throw InvalidSqlInput.exception(
-            "Function [%s] expects 1 or 2 arguments but found [%s]",
+            "Function [%s] expects 1 or 2 or 3 arguments but found [%s]",
             aggregateCall.getName(),
             args.size()
         );
     }
-
     return Aggregation.create(
         Collections.singletonList(theAggFactory),
         finalizeAggregations ? new FinalizingFieldAccessPostAggregator(name, aggregatorName) : null
@@ -274,7 +291,6 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
   }
 
   static String getColumnName(
-      PlannerContext plannerContext,
       VirtualColumnRegistry virtualColumnRegistry,
       DruidExpression arg,
       RexNode rexNode
@@ -303,6 +319,25 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     public RelDataType inferReturnType(SqlOperatorBinding sqlOperatorBinding)
     {
       RelDataType type = sqlOperatorBinding.getOperandType(this.ordinal);
+
+      // If complex and of type SerializablePairLong*, return scalar type
+      if (type instanceof RowSignatures.ComplexSqlType) {
+        ColumnType complexColumnType = ((RowSignatures.ComplexSqlType) type).getColumnType();
+        String complexTypeName = complexColumnType.getComplexTypeName();
+        if (complexTypeName != null) {
+          switch (complexTypeName) {
+            case SerializablePairLongLongComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.BIGINT);
+            case SerializablePairLongFloatComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.FLOAT);
+            case SerializablePairLongDoubleComplexMetricSerde.TYPE_NAME:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.DOUBLE);
+            default:
+              return sqlOperatorBinding.getTypeFactory().createSqlType(SqlTypeName.VARCHAR);
+          }
+        }
+      }
+
       // For non-number and non-string type, which is COMPLEX type, we set the return type to VARCHAR.
       if (!SqlTypeUtil.isNumeric(type) &&
           !SqlTypeUtil.isString(type)) {
@@ -313,12 +348,50 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
     }
   }
 
+  private static class TimeColIdentifer extends SqlIdentifier
+  {
+
+    public TimeColIdentifer()
+    {
+      super("__time", SqlParserPos.ZERO);
+    }
+
+    @Override
+    public <R> R accept(SqlVisitor<R> visitor)
+    {
+      // We overridde the "accept()" method, because the __time column's presence is determined when Calcite is converting
+      // the identifiers to the fully qualified column names with prefixes. This is where the validation exception can
+      // trigger
+      try {
+        return super.accept(visitor);
+      }
+      catch (CalciteContextException e) {
+        if (e.getCause() instanceof SqlValidatorException) {
+          throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                              .ofCategory(DruidException.Category.INVALID_INPUT)
+                              .build(
+                                  e,
+                                  "Query could not be planned. A possible reason is [%s]",
+                                  "LATEST and EARLIEST aggregators implicitly depend on the __time column, but the "
+                                  + "table queried doesn't contain a __time column.  Please use LATEST_BY or EARLIEST_BY "
+                                  + "and specify the column explicitly."
+                              );
+
+        } else {
+          throw e;
+        }
+      }
+    }
+  }
+
   private static class EarliestLatestSqlAggFunction extends SqlAggFunction
   {
     private static final EarliestLatestReturnTypeInference EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE =
         new EarliestLatestReturnTypeInference(0);
 
-    EarliestLatestSqlAggFunction(AggregatorType aggregatorType)
+    private final SqlAggFunction replacementAggFunc;
+
+    EarliestLatestSqlAggFunction(AggregatorType aggregatorType, SqlAggFunction replacementAggFunc)
     {
       super(
           aggregatorType.name(),
@@ -326,20 +399,59 @@ public class EarliestLatestAnySqlAggregator implements SqlAggregator
           SqlKind.OTHER_FUNCTION,
           EARLIEST_LATEST_ARG0_RETURN_TYPE_INFERENCE,
           InferTypes.RETURN_TYPE,
-          OperandTypes.or(
-              OperandTypes.NUMERIC,
-              OperandTypes.BOOLEAN,
-              OperandTypes.sequence(
-                  "'" + aggregatorType.name() + "(expr, maxBytesPerString)'",
-                  OperandTypes.ANY,
-                  OperandTypes.and(OperandTypes.NUMERIC, OperandTypes.LITERAL)
-              )
-          ),
+          DefaultOperandTypeChecker
+              .builder()
+              .operandNames("expr", "maxBytesPerStringInt", "aggregateMultipleValuesBoolean")
+              .operandTypes(SqlTypeFamily.ANY, SqlTypeFamily.NUMERIC, SqlTypeFamily.BOOLEAN)
+              .requiredOperandCount(1)
+              .literalOperands(1, 2)
+              .notNullOperands(1, 2)
+              .build(),
           SqlFunctionCategory.USER_DEFINED_FUNCTION,
           false,
           false,
           Optionality.FORBIDDEN
       );
+      this.replacementAggFunc = replacementAggFunc;
+    }
+
+    @Override
+    public SqlNode rewriteCall(
+        SqlValidator validator,
+        SqlCall call
+    )
+    {
+      // Rewrite EARLIEST/LATEST to EARLIEST_BY/LATEST_BY to make
+      // reference to __time column explicit so that Calcite tracks it
+
+      if (replacementAggFunc == null) {
+        return call;
+      }
+
+      List<SqlNode> operands = call.getOperandList();
+
+      SqlParserPos pos = call.getParserPosition();
+
+      if (operands.isEmpty() || operands.size() > 3) {
+        throw InvalidSqlInput.exception(
+            "Function [%s] expects 1 or 2 or 3 arguments but found [%s]",
+            getName(),
+            operands.size()
+        );
+      }
+
+      List<SqlNode> newOperands = new ArrayList<>();
+      newOperands.add(operands.get(0));
+      newOperands.add(new TimeColIdentifer());
+
+      if (operands.size() == 2) {
+        newOperands.add(operands.get(1));
+      }
+      if (operands.size() == 3) {
+        newOperands.add(operands.get(2));
+      }
+
+      return replacementAggFunc.createCall(pos, newOperands);
     }
   }
 }

@@ -147,6 +147,22 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetSegmentForQuerySwappedWithNull()
+  {
+    ReferenceCountingSegment incrementalSegmentReference = hydrant.getHydrantSegment();
+    hydrant.swapSegment(null);
+    ReferenceCountingSegment queryableSegmentReference = hydrant.getHydrantSegment();
+    Assert.assertEquals(0, incrementalSegmentReference.getNumReferences());
+    Assert.assertNull(queryableSegmentReference);
+
+    Optional<Pair<SegmentReference, Closeable>> maybeSegmentAndCloseable = hydrant.getSegmentForQuery(
+        Function.identity()
+    );
+    Assert.assertEquals(0, incrementalSegmentReference.getNumReferences());
+    Assert.assertFalse(maybeSegmentAndCloseable.isPresent());
+  }
+
+  @Test
   public void testGetSegmentForQueryButNotAbleToAcquireReferences()
   {
     ReferenceCountingSegment incrementalSegmentReference = hydrant.getHydrantSegment();

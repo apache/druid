@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata;
 
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
@@ -34,7 +33,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.audit.AuditSerdeHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
@@ -63,9 +62,7 @@ public class SQLMetadataRuleManagerTest
   private MetadataRuleManagerConfig managerConfig;
   private SQLMetadataRuleManager ruleManager;
   private AuditManager auditManager;
-  private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  private final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
   @Before
   public void setUp()
@@ -73,23 +70,22 @@ public class SQLMetadataRuleManagerTest
     connector = derbyConnectorRule.getConnector();
     tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     connector.createAuditTable();
+
+    final SQLAuditManagerConfig auditManagerConfig = new SQLAuditManagerConfig(null, null, null, null, null);
     auditManager = new SQLAuditManager(
+        auditManagerConfig,
+        new AuditSerdeHelper(auditManagerConfig, null, mapper, mapper),
         connector,
         Suppliers.ofInstance(tablesConfig),
         new NoopServiceEmitter(),
-        mapper,
-        new SQLAuditManagerConfig()
+        mapper
     );
 
     connector.createRulesTable();
     managerConfig = new MetadataRuleManagerConfig();
     ruleManager = new SQLMetadataRuleManager(mapper, managerConfig, tablesConfig, connector, auditManager);
+    connector.createSegmentSchemasTable();
     connector.createSegmentTable();
-    publisher = new SQLMetadataSegmentPublisher(
-        jsonMapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
   }
 
   @Test
@@ -190,7 +186,7 @@ public class SQLMetadataRuleManagerTest
 
     Assert.assertEquals(
         rules,
-        mapper.readValue(entry.getPayload(), new TypeReference<List<Rule>>() {})
+        mapper.readValue(entry.getPayload().serialized(), new TypeReference<List<Rule>>() {})
     );
     Assert.assertEquals(auditInfo, entry.getAuditInfo());
     Assert.assertEquals(DATASOURCE, entry.getKey());
@@ -223,7 +219,7 @@ public class SQLMetadataRuleManagerTest
     for (AuditEntry entry : auditEntries) {
       Assert.assertEquals(
           rules,
-          mapper.readValue(entry.getPayload(), new TypeReference<List<Rule>>() {})
+          mapper.readValue(entry.getPayload().serialized(), new TypeReference<List<Rule>>() {})
       );
       Assert.assertEquals(auditInfo, entry.getAuditInfo());
     }
@@ -319,7 +315,7 @@ public class SQLMetadataRuleManagerTest
         1,
         1234L
     );
-    publisher.publishSegment(dataSegment);
+    SqlSegmentsMetadataManagerTestBase.publishSegment(connector, tablesConfig, mapper, dataSegment);
 
     // This will not delete the rule as the datasource has segment in the segment metadata table
     ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
@@ -367,7 +363,7 @@ public class SQLMetadataRuleManagerTest
 
   private AuditInfo createAuditInfo(String comment)
   {
-    return new AuditInfo("test", comment, "127.0.0.1");
+    return new AuditInfo("test", "id", comment, "127.0.0.1");
   }
 
 }

@@ -28,8 +28,7 @@ import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Nested field writer for mixed type scalar or array columns of {@link NestedDataColumnSerializerV4} and
- * {@link NestedDataColumnSerializer}.
+ * Nested field writer for mixed type scalar or array columns of {@link NestedDataColumnSerializer}.
  */
 public final class VariantFieldColumnWriter extends GlobalDictionaryEncodedFieldColumnWriter<Object>
 {

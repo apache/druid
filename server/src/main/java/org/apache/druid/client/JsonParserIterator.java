@@ -86,6 +86,16 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
     this.hasTimeout = timeoutAt > -1;
   }
 
+  /**
+   * Bypasses Jackson serialization to prevent materialization of results from the {@code future} in memory at once.
+   * A shortened version of {@link #JsonParserIterator(JavaType, Future, String, Query, String, ObjectMapper)}
+   * where the URL and host parameters, used solely for logging/errors, are not known.
+   */
+  public JsonParserIterator(JavaType typeRef, Future<InputStream> future, ObjectMapper objectMapper)
+  {
+    this(typeRef, future, "", null, "", objectMapper);
+  }
+
   @Override
   public boolean hasNext()
   {
@@ -185,8 +195,17 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
         } else if (nextToken == JsonToken.START_OBJECT) {
           throw convertException(jp.getCodec().readValue(jp, QueryException.class));
         } else {
+          String errMsg = jp.getValueAsString();
+          if (errMsg != null) {
+            errMsg = errMsg.substring(0, Math.min(errMsg.length(), 192));
+          }
           throw convertException(
-              new IAE("Next token wasn't a START_ARRAY, was[%s] from url[%s]", jp.getCurrentToken(), url)
+              new IAE(
+                  "Next token wasn't a START_ARRAY, was[%s] from url[%s] with value[%s]",
+                  jp.getCurrentToken(),
+                  url,
+                  errMsg
+              )
           );
         }
       }

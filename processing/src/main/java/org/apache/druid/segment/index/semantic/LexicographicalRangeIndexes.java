@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.index.semantic;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
@@ -65,6 +65,6 @@ public interface LexicographicalRangeIndexes
       boolean startStrict,
       @Nullable String endValue,
       boolean endStrict,
-      Predicate<String> matcher
+      DruidObjectPredicate<String> matcher
   );
 }

@@ -23,9 +23,15 @@ title: "Deep storage"
   -->
 
 
-Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data, as long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
+Deep storage is where segments are stored.  It is a storage mechanism that Apache Druid does not provide.  This deep storage infrastructure defines the level of durability of your data. As long as Druid processes can see this storage infrastructure and get at the segments stored on it, you will not lose data no matter how many Druid nodes you lose.  If segments disappear from this storage layer, then you will lose whatever data those segments represented.
 
-## Local
+In addition to being the backing store for segments, you can use [query from deep storage](#querying-from-deep-storage) and run queries against segments stored primarily in deep storage. The [load rules](../operations/rule-configuration.md#load-rules) you configure determine whether segments exist primarily in deep storage or in a combination of deep storage and Historical processes.
+
+## Deep storage options
+
+Druid supports multiple options for deep storage, including blob storage from major cloud providers. Select the one that fits your environment.
+
+### Local
 
 Local storage is intended for use in the following situations:
 
@@ -55,22 +61,28 @@ druid.storage.storageDirectory=/tmp/druid/localStorage
 The `druid.storage.storageDirectory` must be set to a different path than `druid.segmentCache.locations` or
 `druid.segmentCache.infoDir`.
 
-## Amazon S3 or S3-compatible
+### Amazon S3 or S3-compatible
 
 See [`druid-s3-extensions`](../development/extensions-core/s3.md).
 
-## Google Cloud Storage
+### Google Cloud Storage
 
 See [`druid-google-extensions`](../development/extensions-core/google.md).
 
-## Azure Blob Storage
+### Azure Blob Storage
 
 See [`druid-azure-extensions`](../development/extensions-core/azure.md).
 
-## HDFS
+### HDFS
 
 See [druid-hdfs-storage extension documentation](../development/extensions-core/hdfs.md).
 
-## Additional options
+### Additional options
 
 For additional deep storage options, please see our [extensions list](../configuration/extensions.md).
+
+## Querying from deep storage
+
+Although not as performant as querying segments stored on disk for Historical processes, you can query from deep storage to access segments that you may not need frequently or with the extreme low latency Druid queries traditionally provide. You trade some performance for a total lower storage cost because you can access more of your data without the need to increase the number or capacity of your Historical processes.
+
+For information about how to run queries, see [Query from deep storage](../querying/query-from-deep-storage.md).

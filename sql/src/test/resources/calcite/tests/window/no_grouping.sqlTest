@@ -1,0 +1,29 @@
+type: "failingTest"
+
+sql: |
+  SELECT
+    m1,
+    COUNT(m1) OVER () cc
+  FROM druid.foo
+
+expectedOperators:
+  - type: "naivePartition"
+    partitionColumns: []
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
+      aggregations:
+        - type: "filtered"
+          aggregator: {"type":"count","name":"w0"}
+          filter:
+            type: not
+            field: {"type":"null","column":"m1"}
+          name: null
+expectedResults:
+  - [1.0,6]
+  - [2.0,6]
+  - [3.0,6]
+  - [4.0,6]
+  - [5.0,6]
+  - [6.0,6]

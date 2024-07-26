@@ -58,6 +58,7 @@
   "segment/loadQueue/failed": [],
   "segment/loadQueue/size": [],
   "segment/scan/pending": [],
+  "segment/scan/active": [],
   "segment/size": [
     "dataSource"
   ],

@@ -22,22 +22,23 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 public class NaiveSortOperatorFactory implements OperatorFactory
 {
-  private final ArrayList<ColumnWithDirection> sortColumns;
+  private final List<ColumnWithDirection> sortColumns;
 
   @JsonCreator
   public NaiveSortOperatorFactory(
-      @JsonProperty("columns") ArrayList<ColumnWithDirection> sortColumns
+      @JsonProperty("columns") List<ColumnWithDirection> sortColumns
   )
   {
     this.sortColumns = sortColumns;
   }
 
   @JsonProperty("columns")
-  public ArrayList<ColumnWithDirection> getSortColumns()
+  public List<ColumnWithDirection> getSortColumns()
   {
     return sortColumns;
   }
@@ -55,5 +56,30 @@ public class NaiveSortOperatorFactory implements OperatorFactory
       return sortColumns.equals(((NaiveSortOperatorFactory) other).getSortColumns());
     }
     return false;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(sortColumns);
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    NaiveSortOperatorFactory other = (NaiveSortOperatorFactory) obj;
+    return Objects.equals(sortColumns, other.sortColumns);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "NaiveSortOperatorFactory{sortColumns=" + sortColumns + "}";
   }
 }

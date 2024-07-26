@@ -275,7 +275,7 @@ public abstract class BaseInputSourceDefn implements InputSourceDefn
       return columns;
     } else if (!CollectionUtils.isNullOrEmpty(columns)) {
       throw new IAE(
-          "Catalog definition for the %s input source already contains column definitions",
+          "Catalog definition for the [%s] input source already contains column definitions",
           typeValue()
       );
     } else {

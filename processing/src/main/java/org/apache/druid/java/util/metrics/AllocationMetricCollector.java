@@ -52,7 +52,7 @@ class AllocationMetricCollector
    * Tests show the call to getThreadAllocatedBytes for a single thread ID out of 500 threads running takes around
    * 9000 ns (in the worst case), which for 500 IDs should take 500*9000/1000/1000 = 4.5 ms to the max.
    * AllocationMetricCollector takes linear time to calculate delta, for 500 threads it's negligible.
-   * See the default emitting period {@link MonitorSchedulerConfig#getEmitterPeriod}.
+   * See the default emitting period {@link DruidMonitorSchedulerConfig#getEmissionDuration}.
    *
    * @return all threads summed allocated bytes delta
    */

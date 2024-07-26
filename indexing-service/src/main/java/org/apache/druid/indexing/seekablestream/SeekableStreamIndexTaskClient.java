@@ -21,6 +21,7 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.joda.time.DateTime;
 
@@ -152,6 +153,20 @@ public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetTy
    * @param id task id
    */
   ListenableFuture<SeekableStreamIndexTaskRunner.Status> getStatusAsync(String id);
+
+  /**
+   * Update the task state to redirect queries for later versions to the root pending segment.
+   * The task also announces that it is serving the segments belonging to the subsequent versions.
+   * The update is processed only if the task is serving the original pending segment.
+   *
+   * @param taskId               - task id
+   * @param pendingSegmentRecord - the ids belonging to the versions to which the root segment needs to be updated
+   * @return true if the update succeeds
+   */
+  ListenableFuture<Boolean> registerNewVersionOfPendingSegmentAsync(
+      String taskId,
+      PendingSegmentRecord pendingSegmentRecord
+  );
 
   Class<PartitionIdType> getPartitionType();
 

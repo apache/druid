@@ -34,6 +34,7 @@ import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
 import com.sun.jersey.guice.JerseyServletModule;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
@@ -83,7 +84,10 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.cert.CRL;
 import java.util.ArrayList;
@@ -339,6 +343,7 @@ public class JettyServerModule extends JerseyServletModule
       // workaround suggested in -
       // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
       connector.setAcceptorPriorityDelta(-1);
+      connector.setAcceptQueueSize(getTCPAcceptQueueSize());
 
       List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
       for (ConnectionFactory cf : connector.getConnectionFactories()) {
@@ -491,6 +496,23 @@ public class JettyServerModule extends JerseyServletModule
     return numServerConnector * 8;
   }
 
+  private static int getTCPAcceptQueueSize()
+  {
+    if (SystemUtils.IS_OS_LINUX) {
+      try {
+        BufferedReader in = Files.newBufferedReader(Paths.get("/proc/sys/net/core/somaxconn"));
+        String acceptQueueSize = in.readLine();
+        if (acceptQueueSize != null) {
+          return Integer.parseInt(acceptQueueSize);
+        }
+      }
+      catch (Exception e) {
+        log.warn("Unable to read /proc/sys/net/core/somaxconn, falling back to default value for TCP accept queue size");
+      }
+    }
+    return 128; // Default value of net.core.somaxconn
+  }
+
   @Provides
   @LazySingleton
   public JettyMonitor getJettyMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder)
@@ -512,15 +534,15 @@ public class JettyServerModule extends JerseyServletModule
     {
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-      emitter.emit(builder.build("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
+      emitter.emit(builder.setMetric("jetty/numOpenConnections", ACTIVE_CONNECTIONS.get()));
       if (jettyServerThreadPool != null) {
-        emitter.emit(builder.build("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
-        emitter.emit(builder.build("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
-        emitter.emit(builder.build("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
-        emitter.emit(builder.build("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
-        emitter.emit(builder.build("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
-        emitter.emit(builder.build("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
-        emitter.emit(builder.build("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/total", jettyServerThreadPool.getThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/idle", jettyServerThreadPool.getIdleThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/isLowOnThreads", jettyServerThreadPool.isLowOnThreads() ? 1 : 0));
+        emitter.emit(builder.setMetric("jetty/threadPool/min", jettyServerThreadPool.getMinThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/max", jettyServerThreadPool.getMaxThreads()));
+        emitter.emit(builder.setMetric("jetty/threadPool/queueSize", jettyServerThreadPool.getQueueSize()));
+        emitter.emit(builder.setMetric("jetty/threadPool/busy", jettyServerThreadPool.getBusyThreads()));
       }
 
       return true;

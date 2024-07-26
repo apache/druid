@@ -53,6 +53,9 @@ public class TypeStrategies
   @Nullable
   public static TypeStrategy<?> getComplex(String typeName)
   {
+    if (typeName == null) {
+      return null;
+    }
     return COMPLEX_STRATEGIES.get(typeName);
   }
 
@@ -255,6 +258,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean groupable()
+    {
+      return true;
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
@@ -277,6 +286,24 @@ public class TypeStrategies
     public int compare(Object o1, Object o2)
     {
       return Longs.compare(((Number) o1).longValue(), ((Number) o2).longValue());
+    }
+
+    @Override
+    public int hashCode(Long o)
+    {
+      return o.hashCode();
+    }
+
+    @Override
+    public boolean equals(Long a, Long b)
+    {
+      return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Long.class;
     }
   }
 
@@ -306,6 +333,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean groupable()
+    {
+      return true;
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
@@ -328,6 +361,24 @@ public class TypeStrategies
     public int compare(Object o1, Object o2)
     {
       return Floats.compare(((Number) o1).floatValue(), ((Number) o2).floatValue());
+    }
+
+    @Override
+    public int hashCode(Float o)
+    {
+      return o.hashCode();
+    }
+
+    @Override
+    public boolean equals(Float a, Float b)
+    {
+      return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Float.class;
     }
   }
 
@@ -358,6 +409,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean groupable()
+    {
+      return true;
+    }
+
+    @Override
     public boolean readRetainsBufferReference()
     {
       return false;
@@ -380,6 +437,24 @@ public class TypeStrategies
     public int compare(Object o1, Object o2)
     {
       return Double.compare(((Number) o1).doubleValue(), ((Number) o2).doubleValue());
+    }
+
+    @Override
+    public int hashCode(Double o)
+    {
+      return o.hashCode();
+    }
+
+    @Override
+    public boolean equals(Double a, Double b)
+    {
+      return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Double.class;
     }
   }
 
@@ -432,6 +507,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean groupable()
+    {
+      return true;
+    }
+
+    @Override
     public int compare(Object s, Object s2)
     {
       // copy of lexicographical string comparator in druid processing
@@ -443,6 +524,24 @@ public class TypeStrategies
       }
 
       return ORDERING.compare((String) s, (String) s2);
+    }
+
+    @Override
+    public int hashCode(String o)
+    {
+      return o.hashCode();
+    }
+
+    @Override
+    public boolean equals(String a, String b)
+    {
+      return a.equals(b);
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return String.class;
     }
   }
 
@@ -516,6 +615,12 @@ public class TypeStrategies
     }
 
     @Override
+    public boolean groupable()
+    {
+      return elementStrategy.groupable();
+    }
+
+    @Override
     public int compare(@Nullable Object o1Obj, @Nullable Object o2Obj)
     {
       Object[] o1 = (Object[]) o1Obj;
@@ -540,6 +645,54 @@ public class TypeStrategies
         return cmp;
       }
       return Integer.compare(o1.length, o2.length);
+    }
+
+    /**
+     * Implements {@link Arrays#hashCode(Object[])} but the element hashing uses the element's type strategy
+     */
+    @Override
+    public int hashCode(Object[] o)
+    {
+      if (o == null) {
+        return 0;
+      } else {
+        int result = 1;
+        for (Object element : o) {
+          result = 31 * result + (element == null ? 0 : elementStrategy.hashCode(element));
+        }
+        return result;
+      }
+    }
+    /**
+     * Implements {@link Arrays#equals} but the element equality uses the element's type strategy
+     */
+    @Override
+    public boolean equals(@Nullable Object[] a, @Nullable Object[] b)
+    {
+      //noinspection ArrayEquality
+      if (a == b) {
+        return true;
+      } else if (a != null && b != null) {
+        int length = a.length;
+        if (b.length != length) {
+          return false;
+        } else {
+          for (int i = 0; i < length; ++i) {
+            if (!elementStrategy.equals(a[i], b[i])) {
+              return false;
+            }
+          }
+          return true;
+        }
+      } else {
+        return false;
+      }
+    }
+
+    @Override
+    public Class<?> getClazz()
+    {
+      return Object[].class;
     }
   }
 }

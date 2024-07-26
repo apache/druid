@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 
 import java.util.List;
@@ -52,7 +53,7 @@ public interface MetricsVerifier
   default void verifyEmitted(String metricName, Map<String, Object> dimensionFilters, int times)
   {
     Assert.assertEquals(
-        "Metric was emitted unexpected number of times.",
+        StringUtils.format("Metric [%s] was emitted unexpected number of times.", metricName),
         times,
         getMetricValues(metricName, dimensionFilters).size()
     );

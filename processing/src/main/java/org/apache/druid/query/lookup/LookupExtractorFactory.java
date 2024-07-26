@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Supplier;
 
 import javax.annotation.Nullable;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Users of Lookup Extraction need to implement a {@link LookupExtractorFactory} supplier of type {@link LookupExtractor}.
@@ -79,4 +80,14 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    */
   @Nullable
   LookupIntrospectHandler getIntrospectHandler();
+
+  /**
+   * awaitToInitialise blocks and wait for the cache to initialize fully.
+   */
+  void awaitInitialization() throws InterruptedException, TimeoutException;
+
+  /**
+   * @return true if cache is loaded and lookup is queryable else returns false
+   */
+  boolean isInitialized();
 }

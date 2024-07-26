@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.AnnotationIntrospector;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,8 +41,6 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -68,9 +67,14 @@ public class TestHelper
     return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory, true);
   }
 
+  public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, ColumnConfig columnConfig)
+  {
+    return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(columnConfig), segmentWriteOutMediumFactory, true);
+  }
+
   public static IndexIO getTestIndexIO()
   {
-    return getTestIndexIO(ColumnConfig.ALWAYS_USE_INDEXES);
+    return getTestIndexIO(ColumnConfig.SELECTION_SIZE);
   }
 
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)
@@ -85,7 +89,7 @@ public class TestHelper
     return new GuiceAnnotationIntrospector()
     {
       @Override
-      public Object findInjectableValueId(AnnotatedMember m)
+      public JacksonInject.Value findInjectableValue(AnnotatedMember m)
       {
         return null;
       }
@@ -261,7 +265,7 @@ public class TestHelper
       final Object next = resultsIter.next();
       final Object next2 = resultsIter2.next();
 
-      String failMsg = msg + "-" + index++;
+      String failMsg = msg + "[" + index++ + "]";
       String failMsg2 = StringUtils.format(
           "%s: Second iterator bad, multiple calls to iterator() should be safe",
           failMsg
@@ -366,9 +370,14 @@ public class TestHelper
     final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
     final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();
 
-    Assert.assertEquals(StringUtils.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
     for (final String key : expectedMap.keySet()) {
       final Object expectedValue = expectedMap.get(key);
+      if (!actualMap.containsKey(key)) {
+        Assert.fail(
+            StringUtils.format("%s: Expected key [%s] to exist, but it did not [%s]", msg, key, actualMap.keySet())
+        );
+      }
+
       final Object actualValue = actualMap.get(key);
 
       if (expectedValue != null && expectedValue.getClass().isArray()) {
@@ -388,6 +397,9 @@ public class TestHelper
         );
       }
     }
+    // Given that we iterated through all of the keys in one, checking that the key exists in the other, then if they
+    // have the same size, they must have the same keyset.
+    Assert.assertEquals(expectedMap.size(), actualMap.size());
   }
 
   public static void assertRow(String msg, ResultRow expected, ResultRow actual)
@@ -425,16 +437,6 @@ public class TestHelper
             ((Number) expectedValue).doubleValue(),
             ((Number) actualValue).doubleValue(),
             Math.abs(((Number) expectedValue).doubleValue() * 1e-6)
-        );
-      } else if (expectedValue instanceof ComparableStringArray && actualValue instanceof List) {
-        Assert.assertArrayEquals(
-            ((ComparableStringArray) expectedValue).getDelegate(),
-            ExprEval.coerceListToArray((List) actualValue, true).rhs
-        );
-      } else if (expectedValue instanceof ComparableList && actualValue instanceof List) {
-        Assert.assertArrayEquals(
-            ((ComparableList) expectedValue).getDelegate().toArray(new Object[0]),
-            ExprEval.coerceListToArray((List) actualValue, true).rhs
         );
       } else {
         Assert.assertEquals(

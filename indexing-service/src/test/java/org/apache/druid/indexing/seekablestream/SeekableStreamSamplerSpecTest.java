@@ -347,7 +347,8 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           earlyMessageRejectionPeriod,
           autoScalerConfig,
           lateMessageRejectionStartDateTime,
-          idleConfig
+          idleConfig,
+          null
       );
     }
   }

@@ -21,9 +21,8 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.write.FrameWriterUtils;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
-
-import java.util.List;
 
 /**
  * Like {@link StringFieldWriter}, but reads arrays from a {@link ColumnValueSelector} instead of reading from
@@ -33,11 +32,13 @@ import java.util.List;
  */
 public class StringArrayFieldWriter implements FieldWriter
 {
-  private final ColumnValueSelector<List<String>> selector;
+  private final BaseObjectColumnValueSelector<?> selector;
+  private final boolean removeNullBytes;
 
-  public StringArrayFieldWriter(final ColumnValueSelector<List<String>> selector)
+  public StringArrayFieldWriter(final BaseObjectColumnValueSelector<?> selector, final boolean removeNullBytes)
   {
     this.selector = selector;
+    this.removeNullBytes = removeNullBytes;
   }
 
   @Override
@@ -47,7 +48,8 @@ public class StringArrayFieldWriter implements FieldWriter
         memory,
         position,
         maxSize,
-        FrameWriterUtils.getUtf8ByteBuffersFromStringArraySelector(selector)
+        FrameWriterUtils.getUtf8ByteBuffersFromStringArraySelector(selector),
+        removeNullBytes
     );
   }
 

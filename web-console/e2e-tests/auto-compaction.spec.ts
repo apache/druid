@@ -55,7 +55,7 @@ describe('Auto-compaction', () => {
   });
 
   it('Compacts segments from dynamic to hash partitions', async () => {
-    const testName = 'autocompaction-dynamic-to-hash-';
+    const testName = 'autocompaction-dynamic-to-hash';
     const datasourceName = testName + new Date().toISOString();
     loadInitialData(datasourceName);
 

@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Metadata
 {
   // container is used for arbitrary key-value pairs in segment metadata e.g.
-  // kafka firehose uses it to store commit offset
+  // kafka input reader uses it to store commit offset
   private final Map<String, Object> container;
   @Nullable
   private final AggregatorFactory[] aggregators;
@@ -106,11 +106,6 @@ public class Metadata
       container.putAll(other);
     }
     return this;
-  }
-
-  public Object get(String key)
-  {
-    return container.get(key);
   }
 
   // arbitrary key-value pairs from the metadata just follow the semantics of last one wins if same

@@ -28,6 +28,7 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Comparator;
 import java.util.Map;
 
 public class SeekableStreamEndSequenceNumbersTest
@@ -94,5 +95,41 @@ public class SeekableStreamEndSequenceNumbersTest
         new SeekableStreamStartSequenceNumbers<>(stream, offsetMap, ImmutableSet.of()),
         endSequenceNumbers.asStartPartitions(true)
     );
+  }
+
+  @Test
+  public void testCompareToWithTrueResult()
+  {
+    final String stream = "theStream";
+    final Map<Integer, Long> offsetMap1 = ImmutableMap.of(1, 5L, 2, 6L);
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions1 = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap1
+    );
+
+    final Map<Integer, Long> offsetMap2 = ImmutableMap.of(1, 4L, 2, 4L);
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions2 = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap2
+    );
+    Assert.assertEquals(1, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
+  }
+
+  @Test
+  public void testCompareToWithFalseResult()
+  {
+    final String stream = "theStream";
+    final Map<Integer, Long> offsetMap1 = ImmutableMap.of(1, 3L, 2, 2L);
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions1 = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap1
+    );
+
+    final Map<Integer, Long> offsetMap2 = ImmutableMap.of(1, 4L, 2, 4L);
+    final SeekableStreamEndSequenceNumbers<Integer, Long> partitions2 = new SeekableStreamEndSequenceNumbers<>(
+        stream,
+        offsetMap2
+    );
+    Assert.assertEquals(0, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
   }
 }

@@ -123,4 +123,34 @@ public class DateTimesTest
         DateTimes.of("2000").withZone(DateTimes.inferTzFromString("America/Los_Angeles")))
     );
   }
+
+  @Test
+  public void testEarlierOf()
+  {
+    Assert.assertNull(DateTimes.earlierOf(null, null));
+
+    final DateTime jan14 = DateTimes.of("2013-01-14");
+    Assert.assertEquals(jan14, DateTimes.earlierOf(null, jan14));
+    Assert.assertEquals(jan14, DateTimes.earlierOf(jan14, null));
+    Assert.assertEquals(jan14, DateTimes.earlierOf(jan14, jan14));
+
+    final DateTime jan15 = DateTimes.of("2013-01-15");
+    Assert.assertEquals(jan14, DateTimes.earlierOf(jan15, jan14));
+    Assert.assertEquals(jan14, DateTimes.earlierOf(jan14, jan15));
+  }
+
+  @Test
+  public void testLaterOf()
+  {
+    Assert.assertNull(DateTimes.laterOf(null, null));
+
+    final DateTime jan14 = DateTimes.of("2013-01-14");
+    Assert.assertEquals(jan14, DateTimes.laterOf(null, jan14));
+    Assert.assertEquals(jan14, DateTimes.laterOf(jan14, null));
+    Assert.assertEquals(jan14, DateTimes.laterOf(jan14, jan14));
+
+    final DateTime jan15 = DateTimes.of("2013-01-15");
+    Assert.assertEquals(jan15, DateTimes.laterOf(jan15, jan14));
+    Assert.assertEquals(jan15, DateTimes.laterOf(jan14, jan15));
+  }
 }

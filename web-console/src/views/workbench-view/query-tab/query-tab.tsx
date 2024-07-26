@@ -16,24 +16,21 @@
  * limitations under the License.
  */
 
-import { Button, Code, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { QueryResult } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import classNames from 'classnames';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
-import type { DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
+import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import { Execution, WorkbenchQuery } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
-  maybeGetClusterCapacity,
   reattachTaskExecution,
   submitTaskQuery,
 } from '../../../helpers';
@@ -43,9 +40,10 @@ import { ExecutionStateCache } from '../../../singletons/execution-state-cache';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
 import type { WorkbenchRunningPromise } from '../../../singletons/workbench-running-promises';
 import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
-import type { ColumnMetadata, QueryAction, RowColumn } from '../../../utils';
+import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
   DruidError,
+  findAllSqlQueriesInText,
   localStorageGet,
   LocalStorageKeys,
   localStorageSet,
@@ -59,7 +57,6 @@ import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-p
 import { ExecutionSummaryPanel } from '../execution-summary-panel/execution-summary-panel';
 import { ExecutionTimerPanel } from '../execution-timer-panel/execution-timer-panel';
 import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input';
-import { HelperQuery } from '../helper-query/helper-query';
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
 import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
@@ -74,6 +71,7 @@ const queryRunner = new QueryRunner({
 
 export interface QueryTabProps {
   query: WorkbenchQuery;
+  id: string;
   mandatoryQueryContext: QueryContext | undefined;
   columnMetadata: readonly ColumnMetadata[] | undefined;
   onQueryChange(newQuery: WorkbenchQuery): void;
@@ -83,11 +81,16 @@ export interface QueryTabProps {
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
   goToTask(taskId: string): void;
+  getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  maxTaskMenuHeader?: JSX.Element;
+  enginesLabelFn?: ComponentProps<typeof RunPanel>['enginesLabelFn'];
+  maxTaskLabelFn?: ComponentProps<typeof RunPanel>['maxTaskLabelFn'];
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const {
     query,
+    id,
     columnMetadata,
     mandatoryQueryContext,
     onQueryChange,
@@ -97,6 +100,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     runMoreMenu,
     clusterCapacity,
     goToTask,
+    getClusterCapacity,
+    maxTaskMenuHeader,
+    enginesLabelFn,
+    maxTaskLabelFn,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -123,15 +130,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     onQueryChange(query.changeQueryString(queryString));
   });
 
-  const parsedQuery = query.getParsedQuery();
-  const handleQueryAction = usePermanentCallback((queryAction: QueryAction) => {
-    if (!(parsedQuery instanceof SqlQuery)) return;
-    onQueryChange(query.changeQueryString(parsedQuery.apply(queryAction).toString()));
+  const handleQueryAction = usePermanentCallback(
+    (queryAction: QueryAction, sliceIndex: number | undefined) => {
+      let newQueryString: string;
+      if (typeof sliceIndex === 'number') {
+        const { queryString } = query;
+        const foundQuery = findAllSqlQueriesInText(queryString)[sliceIndex];
+        if (!foundQuery) return;
+        const parsedQuery = SqlQuery.maybeParse(foundQuery.sql);
+        if (!parsedQuery) return;
+        newQueryString =
+          queryString.slice(0, foundQuery.startOffset) +
+          parsedQuery.apply(queryAction) +
+          queryString.slice(foundQuery.endOffset);
+      } else {
+        const parsedQuery = query.getParsedQuery();
+        if (!(parsedQuery instanceof SqlQuery)) return;
+        newQueryString = parsedQuery.apply(queryAction).toString();
+      }
+      onQueryChange(query.changeQueryString(newQueryString));
 
-    if (shouldAutoRun()) {
-      setTimeout(() => void handleRun(false), 20);
-    }
-  });
+      if (shouldAutoRun()) {
+        setTimeout(() => {
+          if (typeof sliceIndex === 'number') {
+            const slice = findAllSqlQueriesInText(newQueryString)[sliceIndex];
+            if (slice) {
+              void handleRun(false, slice);
+            }
+          } else {
+            void handleRun(false);
+          }
+        }, 20);
+      }
+    },
+  );
 
   function shouldAutoRun(): boolean {
     if (query.getEffectiveEngine() !== 'sql-native') return false;
@@ -145,27 +177,26 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
   const queryInputRef = useRef<FlexibleQueryInput | null>(null);
 
-  const id = query.getId();
+  const cachedExecutionState = ExecutionStateCache.getState(id);
+  const currentRunningPromise = WorkbenchRunningPromises.getPromise(id);
   const [executionState, queryManager] = useQueryManager<
     WorkbenchQuery | WorkbenchRunningPromise | LastExecution,
     Execution,
     Execution,
     DruidError
   >({
-    initQuery: ExecutionStateCache.getState(id)
-      ? undefined
-      : WorkbenchRunningPromises.getPromise(id) || query.getLastExecution(),
-    initState: ExecutionStateCache.getState(id),
+    initQuery: cachedExecutionState ? undefined : currentRunningPromise || query.getLastExecution(),
+    initState: cachedExecutionState,
     processQuery: async (q, cancelToken) => {
       if (q instanceof WorkbenchQuery) {
         ExecutionStateCache.deleteState(id);
-        const { engine, query, sqlPrefixLines, cancelQueryId } = q.getApiQuery();
+        const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
 
         switch (engine) {
           case 'sql-msq-task':
             return await submitTaskQuery({
               query,
-              prefixLines: sqlPrefixLines,
+              prefixLines,
               cancelToken,
               preserveOnTermination: true,
               onSubmitted: id => {
@@ -190,6 +221,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
+            const startTime = new Date();
             let result: QueryResult;
             try {
               const resultPromise = queryRunner.runQuery({
@@ -199,13 +231,19 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
               });
-              WorkbenchRunningPromises.storePromise(id, { promise: resultPromise, sqlPrefixLines });
+              WorkbenchRunningPromises.storePromise(id, {
+                promise: resultPromise,
+                prefixLines,
+                startTime,
+              });
 
               result = await resultPromise;
               nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
               nativeQueryCancelFnRef.current = undefined;
-              throw new DruidError(e, sqlPrefixLines);
+              const druidError = new DruidError(e, prefixLines);
+              druidError.queryDuration = Date.now() - startTime.valueOf();
+              throw druidError;
             }
 
             return Execution.fromResult(engine, result);
@@ -216,11 +254,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         try {
           result = await q.promise;
         } catch (e) {
-          WorkbenchRunningPromises.deletePromise(id);
-          throw new DruidError(e, q.sqlPrefixLines);
+          throw new DruidError(e, q.prefixLines);
         }
 
-        WorkbenchRunningPromises.deletePromise(id);
         return Execution.fromResult('sql-native', result);
       } else {
         switch (q.engine) {
@@ -241,9 +277,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   });
 
   useEffect(() => {
-    if (!executionState.data) return;
+    if (!executionState.data && !executionState.error) return;
+    WorkbenchRunningPromises.deletePromise(id);
     ExecutionStateCache.storeState(id, executionState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
   const incrementWorkVersion = useStore(
@@ -262,11 +298,11 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     useCallback(state => state.increment, []),
   );
   useEffect(() => {
-    if (execution?.isSuccessfulInsert()) {
+    if (execution?.isSuccessfulIngest()) {
       incrementMetadataVersion();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Boolean(execution?.isSuccessfulInsert())]);
+  }, [Boolean(execution?.isSuccessfulIngest())]);
 
   function moveToPosition(position: RowColumn) {
     const currentQueryInput = queryInputRef.current;
@@ -274,7 +310,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     currentQueryInput.goToPosition(position);
   }
 
-  const handleRun = usePermanentCallback(async (preview: boolean) => {
+  const handleRun = usePermanentCallback(async (preview: boolean, querySlice?: QuerySlice) => {
     const queryIssue = query.getIssue();
     if (queryIssue) {
       const position = WorkbenchQuery.getRowColumnFromIssue(queryIssue);
@@ -294,41 +330,44 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       return;
     }
 
-    if (query.getEffectiveEngine() !== 'sql-msq-task') {
-      WorkbenchHistory.addQueryToHistory(query);
-      queryManager.runQuery(query);
-      return;
+    let effectiveQuery = query;
+    if (querySlice) {
+      effectiveQuery = effectiveQuery
+        .changeQueryString(querySlice.sql)
+        .changeQueryContext({ ...effectiveQuery.queryContext, sliceIndex: querySlice.index })
+        .changePrefixLines(querySlice.startRowColumn.row);
     }
 
-    const effectiveQuery = preview
-      ? query.makePreview()
-      : query.setMaxNumTasksIfUnset(clusterCapacity);
+    if (effectiveQuery.getEffectiveEngine() === 'sql-msq-task') {
+      effectiveQuery = preview
+        ? effectiveQuery.makePreview()
+        : effectiveQuery.setMaxNumTasksIfUnset(clusterCapacity);
 
-    const capacityInfo = await maybeGetClusterCapacity();
+      const capacityInfo = await getClusterCapacity?.();
 
-    const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
-    if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
-      setAlertElement(
-        <CapacityAlert
-          maxNumTasks={effectiveMaxNumTasks}
-          capacityInfo={capacityInfo}
-          onRun={() => {
-            queryManager.runQuery(effectiveQuery);
-          }}
-          onClose={() => {
-            setAlertElement(undefined);
-          }}
-        />,
-      );
+      const effectiveMaxNumTasks = effectiveQuery.queryContext.maxNumTasks ?? 2;
+      if (capacityInfo && capacityInfo.availableTaskSlots < effectiveMaxNumTasks) {
+        setAlertElement(
+          <CapacityAlert
+            maxNumTasks={effectiveMaxNumTasks}
+            capacityInfo={capacityInfo}
+            onRun={() => {
+              queryManager.runQuery(effectiveQuery);
+            }}
+            onClose={() => {
+              setAlertElement(undefined);
+            }}
+          />,
+        );
+        return;
+      }
     } else {
-      queryManager.runQuery(effectiveQuery);
+      WorkbenchHistory.addQueryToHistory(effectiveQuery);
     }
+    queryManager.runQuery(effectiveQuery);
   });
 
   const statsTaskId: string | undefined = execution?.id;
-
-  const queryPrefixes = query.getPrefixQueries();
-  const extractedCtes = query.extractCteHelpers();
 
   const onUserCancel = (message?: string) => {
     queryManager.cancelCurrent(message);
@@ -347,94 +386,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       >
         <div className="top-section">
           <div className="query-section">
-            {queryPrefixes.map((queryPrefix, i) => (
-              <HelperQuery
-                key={queryPrefix.getId()}
-                query={queryPrefix}
-                mandatoryQueryContext={mandatoryQueryContext}
-                columnMetadata={columnMetadata}
-                onQueryChange={newQuery => {
-                  onQueryChange(query.applyUpdate(newQuery, i));
-                }}
-                onQueryTab={onQueryTab}
-                onDelete={() => {
-                  onQueryChange(query.remove(i));
-                }}
-                onDetails={onDetails}
-                queryEngines={queryEngines}
-                clusterCapacity={clusterCapacity}
-                goToTask={goToTask}
-              />
-            ))}
-            <div className={classNames('main-query', queryPrefixes.length ? 'multi' : 'single')}>
-              <FlexibleQueryInput
-                ref={queryInputRef}
-                autoHeight={Boolean(queryPrefixes.length)}
-                minRows={10}
-                queryString={query.getQueryString()}
-                onQueryStringChange={handleQueryStringChange}
-                columnMetadata={
-                  columnMetadata ? columnMetadata.concat(query.getInlineMetadata()) : undefined
-                }
-                editorStateId={query.getId()}
-              />
-              <div className="corner">
-                <Popover2
-                  content={
-                    <Menu>
-                      <MenuItem
-                        icon={IconNames.ARROW_UP}
-                        text="Save as helper query"
-                        onClick={() => {
-                          onQueryChange(query.addBlank());
-                        }}
-                      />
-                      {extractedCtes !== query && (
-                        <MenuItem
-                          icon={IconNames.DOCUMENT_SHARE}
-                          text="Extract WITH clauses into helper queries"
-                          onClick={() => onQueryChange(extractedCtes)}
-                        />
-                      )}
-                      {query.hasHelperQueries() && (
-                        <MenuItem
-                          icon={IconNames.DOCUMENT_OPEN}
-                          text="Materialize helper queries"
-                          onClick={() => onQueryChange(query.materializeHelpers())}
-                        />
-                      )}
-                      <MenuItem
-                        icon={IconNames.DUPLICATE}
-                        text="Duplicate as helper query"
-                        onClick={() => onQueryChange(query.duplicateLast())}
-                      />
-                    </Menu>
-                  }
-                >
-                  <Button icon={IconNames.LIST} minimal />
-                </Popover2>
-              </div>
-            </div>
+            <FlexibleQueryInput
+              ref={queryInputRef}
+              queryString={query.getQueryString()}
+              onQueryStringChange={handleQueryStringChange}
+              runQuerySlice={slice => void handleRun(false, slice)}
+              running={executionState.loading}
+              columnMetadata={columnMetadata}
+              editorStateId={id}
+            />
           </div>
           <div className="run-bar">
             <RunPanel
               query={query}
               onQueryChange={onQueryChange}
               onRun={handleRun}
-              loading={executionState.loading}
+              running={executionState.loading}
               queryEngines={queryEngines}
               clusterCapacity={clusterCapacity}
               moreMenu={runMoreMenu}
+              maxTaskMenuHeader={maxTaskMenuHeader}
+              enginesLabelFn={enginesLabelFn}
+              maxTaskLabelFn={maxTaskLabelFn}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel
                 execution={executionState.intermediate}
+                startTime={currentRunningPromise?.startTime}
                 onCancel={() => queryManager.cancelCurrent()}
               />
             )}
             {(execution || executionState.error) && (
               <ExecutionSummaryPanel
                 execution={execution}
+                queryErrorDuration={executionState.error?.queryDuration}
                 onExecutionDetail={() => onDetails(statsTaskId!)}
                 onReset={() => {
                   queryManager.reset();
@@ -466,12 +451,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 queryResult={execution.result}
                 onQueryAction={handleQueryAction}
               />
-            ) : execution.isSuccessfulInsert() ? (
-              <IngestSuccessPane
-                execution={execution}
-                onDetails={onDetails}
-                onQueryTab={onQueryTab}
-              />
             ) : execution.error ? (
               <div className="error-container">
                 <ExecutionErrorPane execution={execution} />
@@ -484,8 +463,24 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   />
                 )}
               </div>
+            ) : execution.isSuccessfulIngest() ? (
+              <IngestSuccessPane
+                execution={execution}
+                onDetails={onDetails}
+                onQueryTab={onQueryTab}
+              />
             ) : (
-              <div>Unknown query execution state</div>
+              <div className="generic-status-container">
+                <div className="generic-status-container-info">
+                  {`Execution completed with status: ${execution.status}`}
+                </div>
+                <ExecutionStagesPane
+                  execution={execution}
+                  onErrorClick={() => onDetails(statsTaskId!, 'error')}
+                  onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                  goToTask={goToTask}
+                />
+              </div>
             ))}
           {executionState.error && (
             <QueryErrorPane

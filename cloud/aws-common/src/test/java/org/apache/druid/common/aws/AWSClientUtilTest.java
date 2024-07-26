@@ -21,6 +21,8 @@ package org.apache.druid.common.aws;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.google.common.collect.ImmutableList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -79,6 +81,20 @@ public class AWSClientUtilTest
   {
     AmazonServiceException ex = new AmazonServiceException(null);
     ex.setErrorCode("RequestExpired");
+    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_MultiObjectDeleteException()
+  {
+    MultiObjectDeleteException.DeleteError retryableError = new MultiObjectDeleteException.DeleteError();
+    retryableError.setCode("RequestLimitExceeded");
+    MultiObjectDeleteException.DeleteError nonRetryableError = new MultiObjectDeleteException.DeleteError();
+    nonRetryableError.setCode("nonRetryableError");
+    MultiObjectDeleteException ex = new MultiObjectDeleteException(
+        ImmutableList.of(retryableError, nonRetryableError),
+        ImmutableList.of()
+    );
     Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 

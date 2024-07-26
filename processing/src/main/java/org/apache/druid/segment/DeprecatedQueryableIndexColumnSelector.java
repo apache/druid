@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * It likely looks weird that we are creating a new instance of ColumnSelector here that begins its life deprecated
@@ -49,12 +48,6 @@ public class DeprecatedQueryableIndexColumnSelector implements ColumnSelector
   public DeprecatedQueryableIndexColumnSelector(QueryableIndex index)
   {
     this.index = index;
-  }
-
-  @Override
-  public List<String> getColumnNames()
-  {
-    return index.getColumnNames();
   }
 
   @Nullable

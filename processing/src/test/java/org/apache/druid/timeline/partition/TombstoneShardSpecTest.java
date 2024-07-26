@@ -60,7 +60,7 @@ public class TombstoneShardSpecTest
   @Test
   public void getNumCorePartitions()
   {
-    assertEquals(1, tombstoneShardSpec.getNumCorePartitions());
+    assertEquals(0, tombstoneShardSpec.getNumCorePartitions());
   }
 
   @Test

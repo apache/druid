@@ -40,6 +40,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -57,8 +58,6 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;
@@ -68,7 +67,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
@@ -92,8 +90,6 @@ public class SqlStatementTest
   private static Closer resourceCloser;
   @ClassRule
   public static TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
-  public QueryLogHook queryLogHook = QueryLogHook.create();
   private TestRequestLogger testRequestLogger;
   private ListeningExecutorService executorService;
   private SqlStatementFactory sqlStatementFactory;
@@ -294,7 +290,7 @@ public class SqlStatementTest
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
-              .expectMessageContains("Received an unexpected token [AS <EOF>]")
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
       );
     }
   }
@@ -383,7 +379,7 @@ public class SqlStatementTest
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
-              .expectMessageContains("Received an unexpected token [AS <EOF>]")
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
       );
     }
   }
@@ -476,7 +472,7 @@ public class SqlStatementTest
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
-              .expectMessageContains("Received an unexpected token [AS <EOF>]")
+              .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
       );
     }
   }

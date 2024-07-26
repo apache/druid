@@ -22,6 +22,7 @@ package org.apache.druid.security.ranger.authorizer;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.ranger.admin.client.AbstractRangerAdminClient;
 import org.apache.ranger.plugin.util.ServicePolicies;
 
@@ -39,9 +40,9 @@ public class RangerAdminClientImpl extends AbstractRangerAdminClient
   protected Gson gson;
 
   @Override
-  public void init(String serviceName, String appId, String configPropertyPrefix)
+  public void init(String serviceName, String appId, String configPropertyPrefix, Configuration config)
   {
-    super.init(serviceName, appId, configPropertyPrefix);
+    super.init(serviceName, appId, configPropertyPrefix, config);
 
     try {
       gson = new GsonBuilder().setDateFormat("yyyyMMdd-HH:mm:ss.SSS-Z").setPrettyPrinting().create();
@@ -52,7 +53,8 @@ public class RangerAdminClientImpl extends AbstractRangerAdminClient
   }
 
   @Override
-  public ServicePolicies getServicePoliciesIfUpdated(long lastKnownVersion, long lastActivationTimeInMillis) throws Exception
+  public ServicePolicies getServicePoliciesIfUpdated(long lastKnownVersion, long lastActivationTimeInMillis)
+      throws Exception
   {
 
     String basedir = System.getProperty("basedir");

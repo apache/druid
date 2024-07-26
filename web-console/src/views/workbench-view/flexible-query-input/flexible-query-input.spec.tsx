@@ -24,24 +24,10 @@ import { FlexibleQueryInput } from './flexible-query-input';
 describe('FlexibleQueryInput', () => {
   it('matches snapshot', () => {
     const sqlControl = (
-      <FlexibleQueryInput
-        queryString="hello world"
-        autoHeight={false}
-        onQueryStringChange={() => {}}
-      />
+      <FlexibleQueryInput queryString="hello world" onQueryStringChange={() => {}} />
     );
 
     const { container } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('correctly formats helper HTML', () => {
-    expect(
-      FlexibleQueryInput.makeDocHtml({
-        name: 'COUNT',
-        syntax: 'COUNT(*)',
-        description: 'Counts the number of things',
-      }),
-    ).toMatchSnapshot();
   });
 });

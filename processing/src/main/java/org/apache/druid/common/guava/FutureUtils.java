@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
@@ -107,11 +108,11 @@ public class FutureUtils
    */
   public static <T, R> ListenableFuture<R> transform(final ListenableFuture<T> future, final Function<T, R> fn)
   {
-    return Futures.transform(future, fn::apply);
+    return Futures.transform(future, fn::apply, MoreExecutors.directExecutor());
   }
 
   /**
-   * Like {@link Futures#transform(ListenableFuture, AsyncFunction)}, but works better with lambdas due to not having
+   * Like {@link Futures#transformAsync(ListenableFuture, AsyncFunction, java.util.concurrent.Executor)}, but works better with lambdas due to not having
    * overloads.
    *
    * One can write {@code FutureUtils.transformAsync(future, v -> ...)} instead of
@@ -119,7 +120,7 @@ public class FutureUtils
    */
   public static <T, R> ListenableFuture<R> transformAsync(final ListenableFuture<T> future, final AsyncFunction<T, R> fn)
   {
-    return Futures.transform(future, fn);
+    return Futures.transformAsync(future, fn, MoreExecutors.directExecutor());
   }
 
   /**
@@ -200,7 +201,8 @@ public class FutureUtils
 
             retVal.setException(e);
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
 
     return retVal;

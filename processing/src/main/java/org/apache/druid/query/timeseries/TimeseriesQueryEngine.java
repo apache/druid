@@ -37,6 +37,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.SegmentMissingException;
@@ -103,7 +104,7 @@ public class TimeseriesQueryEngine
     final boolean doVectorize = query.context().getVectorize().shouldVectorize(
         adapter.canVectorize(filter, query.getVirtualColumns(), descending)
         && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-        && query.getAggregatorSpecs().stream().allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector))
+        && VectorGroupByEngine.canVectorizeAggregators(inspector, query.getAggregatorSpecs())
     );
 
     final Sequence<Result<TimeseriesResultValue>> result;
@@ -164,9 +165,9 @@ public class TimeseriesQueryEngine
       }
 
       final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-      final AggregatorAdapters aggregators = closer.register(
-          AggregatorAdapters.factorizeVector(columnSelectorFactory, query.getAggregatorSpecs())
-      );
+      final AggregatorAdapters aggregators =
+          AggregatorAdapters.factorizeVector(columnSelectorFactory, query.getAggregatorSpecs());
+      closer.register(aggregators::reset);
 
       final ResourceHolder<ByteBuffer> bufferHolder = closer.register(bufferPool.take());
 

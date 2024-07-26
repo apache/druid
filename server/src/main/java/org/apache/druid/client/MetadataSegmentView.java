@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.timeline.DataSegment;
@@ -63,8 +64,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * This class polls the Coordinator in background to keep the latest published segments.
- * Provides {@link #getPublishedSegments()} for others to get segments in metadata store.
+ * This class polls the Coordinator in background to keep the latest segments.
+ * Provides {@link #getSegments()} for others to get the segments.
  *
  * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
  * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
@@ -81,7 +82,7 @@ public class MetadataSegmentView
   private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private final boolean isCacheEnabled;
-  private final boolean isDetectUnavailableSegmentsEnabled;
+  private final boolean detectUnavailableSegments;
 
   /**
    * Use {@link ImmutableSortedSet} so that the order of segments is deterministic and
@@ -114,10 +115,10 @@ public class MetadataSegmentView
       final @Coordinator DruidLeaderClient druidLeaderClient,
       final ObjectMapper jsonMapper,
       final BrokerSegmentWatcherConfig segmentWatcherConfig,
-      final SegmentMetadataCacheConfig config
+      final BrokerSegmentMetadataCacheConfig config
   )
   {
-    Preconditions.checkNotNull(config, "SegmentMetadataCacheConfig");
+    Preconditions.checkNotNull(config, "BrokerSegmentMetadataCacheConfig");
     this.coordinatorDruidLeaderClient = druidLeaderClient;
     this.jsonMapper = jsonMapper;
     this.segmentWatcherConfig = segmentWatcherConfig;
@@ -127,7 +128,7 @@ public class MetadataSegmentView
     this.segmentIdToReplicationFactor = CacheBuilder.newBuilder()
                                                     .expireAfterAccess(10, TimeUnit.MINUTES)
                                                     .build();
-    this.isDetectUnavailableSegmentsEnabled = segmentWatcherConfig.isDetectUnavailableSegments();
+    this.detectUnavailableSegments = segmentWatcherConfig.detectUnavailableSegments();
   }
 
   @LifecycleStart
@@ -137,11 +138,11 @@ public class MetadataSegmentView
       throw new ISE("can't start.");
     }
     try {
-      if (isCacheEnabled || isDetectUnavailableSegmentsEnabled) {
+      if (isCacheEnabled || detectUnavailableSegments) {
         scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
       }
       lifecycleLock.started();
-      log.info("MetadataSegmentView Started.");
+      log.info("MetadataSegmentView is started.");
     }
     finally {
       lifecycleLock.exitStart();
@@ -158,12 +159,12 @@ public class MetadataSegmentView
     if (isCacheEnabled) {
       scheduledExec.shutdown();
     }
-    log.info("MetadataSegmentView Stopped.");
+    log.info("MetadataSegmentView is stopped.");
   }
 
   private void poll()
   {
-    log.info("polling published segments from coordinator");
+    log.info("Polling segments from coordinator");
     final JsonParserIterator<SegmentStatusInCluster> metadataSegments = getMetadataSegments(
         coordinatorDruidLeaderClient,
         jsonMapper,
@@ -172,12 +173,96 @@ public class MetadataSegmentView
 
     final ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
     while (metadataSegments.hasNext()) {
-      final SegmentStatusInCluster segmentStatusInCluster = convert(metadataSegments.next());
+      final SegmentStatusInCluster segmentStatusInCluster =
+          internAndUpdateReplicationFactor(metadataSegments.next());
       builder.add(segmentStatusInCluster);
     }
 
     publishedSegments = builder.build();
     cachePopulated.countDown();
+  }
+
+  private SegmentStatusInCluster internAndUpdateReplicationFactor(SegmentStatusInCluster segment)
+  {
+    final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
+    Integer replicationFactor = segment.getReplicationFactor();
+    if (replicationFactor == null) {
+      replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
+    } else {
+      segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
+    }
+    return new SegmentStatusInCluster(
+        interned,
+        segment.isOvershadowed(),
+        replicationFactor,
+        segment.getNumRows(),
+        segment.isRealtime(),
+        segment.isHandedOff()
+    );
+  }
+
+  public void registerSegmentCallback(
+      Executor exec,
+      ServerView.HandedOffSegmentCallback segmentCallback
+  )
+  {
+    segmentCallbacks.put(segmentCallback, exec);
+  }
+
+  private void runSegmentCallbacks(
+      final Consumer<ServerView.HandedOffSegmentCallback> fn
+  )
+  {
+    for (final Map.Entry<ServerView.HandedOffSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
+      entry.getValue().execute(
+          () -> fn.accept(entry.getKey())
+      );
+    }
+  }
+
+  public Iterator<SegmentStatusInCluster> getSegments()
+  {
+    if (isCacheEnabled) {
+      Uninterruptibles.awaitUninterruptibly(cachePopulated);
+      return publishedSegments.iterator();
+    } else {
+      return getMetadataSegments(
+          coordinatorDruidLeaderClient,
+          jsonMapper,
+          segmentWatcherConfig.getWatchedDataSources()
+      );
+    }
+  }
+
+  // Note that coordinator must be up to get segments
+  private JsonParserIterator<SegmentStatusInCluster> getMetadataSegments(
+      DruidLeaderClient coordinatorClient,
+      ObjectMapper jsonMapper,
+      Set<String> watchedDataSources
+  )
+  {
+    // includeRealtimeSegments flag would additionally request realtime segments
+    // note that realtime segments are returned only when druid.centralizedDatasourceSchema.enabled is set on the Coordinator
+    StringBuilder queryBuilder = new StringBuilder("/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments");
+    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
+      log.debug(
+          "Filtering datasources in segments based on broker's watchedDataSources[%s]", watchedDataSources);
+      final StringBuilder sb = new StringBuilder();
+      for (String ds : watchedDataSources) {
+        sb.append("datasources=").append(ds).append("&");
+      }
+      sb.setLength(sb.length() - 1);
+      queryBuilder.append("&");
+      queryBuilder.append(sb);
+    }
+
+    return coordinatorClient.getThingsFromLeaderNode(
+        queryBuilder.toString(),
+        new TypeReference<SegmentStatusInCluster>()
+        {
+        },
+        jsonMapper
+    );
   }
 
   protected void pollChangedSegments()
@@ -207,7 +292,7 @@ public class MetadataSegmentView
             .stream()
             .map(dataSegmentChange ->
                      new DataSegmentChange(
-                         convert(dataSegmentChange.getSegmentStatusInCluster()),
+                         internAndUpdateReplicationFactor(dataSegmentChange.getSegmentStatusInCluster()),
                          dataSegmentChange.getChangeType()
                      ))
             .collect(Collectors.toList());
@@ -270,84 +355,6 @@ public class MetadataSegmentView
     }
   }
 
-  private SegmentStatusInCluster convert(SegmentStatusInCluster segment)
-  {
-    final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-    Integer replicationFactor = segment.getReplicationFactor();
-    if (replicationFactor == null) {
-      replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
-    } else {
-      segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
-    }
-    return new SegmentStatusInCluster(
-        interned,
-        segment.isOvershadowed(),
-        replicationFactor,
-        segment.isHandedOff()
-    );
-  }
-
-  public void registerSegmentCallback(
-      Executor exec,
-      ServerView.HandedOffSegmentCallback segmentCallback
-  )
-  {
-    segmentCallbacks.put(segmentCallback, exec);
-  }
-
-  private void runSegmentCallbacks(
-      final Consumer<ServerView.HandedOffSegmentCallback> fn
-  )
-  {
-    for (final Map.Entry<ServerView.HandedOffSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
-      entry.getValue().execute(
-          () -> fn.accept(entry.getKey())
-      );
-    }
-  }
-
-  public Iterator<SegmentStatusInCluster> getPublishedSegments()
-  {
-    if (isCacheEnabled) {
-      Uninterruptibles.awaitUninterruptibly(cachePopulated);
-      return publishedSegments.iterator();
-    } else {
-      return getMetadataSegments(
-          coordinatorDruidLeaderClient,
-          jsonMapper,
-          segmentWatcherConfig.getWatchedDataSources()
-      );
-    }
-  }
-
-  // Note that coordinator must be up to get segments
-  private JsonParserIterator<SegmentStatusInCluster> getMetadataSegments(
-      DruidLeaderClient coordinatorClient,
-      ObjectMapper jsonMapper,
-      Set<String> watchedDataSources
-  )
-  {
-    String query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus";
-    if (watchedDataSources != null && !watchedDataSources.isEmpty()) {
-      log.debug(
-          "filtering datasources in published segments based on broker's watchedDataSources[%s]", watchedDataSources);
-      final StringBuilder sb = new StringBuilder();
-      for (String ds : watchedDataSources) {
-        sb.append("datasources=").append(ds).append("&");
-      }
-      sb.setLength(sb.length() - 1);
-      query = "/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&" + sb;
-    }
-
-    return coordinatorClient.getThingsFromLeaderNode(
-        query,
-        new TypeReference<SegmentStatusInCluster>()
-        {
-        },
-        jsonMapper
-    );
-  }
-
   @Nullable
   private ChangeRequestsSnapshot<DataSegmentChange> getChangedSegments(
       DruidLeaderClient coordinatorClient,
@@ -394,7 +401,7 @@ public class MetadataSegmentView
       long delayMS = pollPeriodInMS;
       try {
         final long pollStartTime = System.nanoTime();
-        if (isDetectUnavailableSegmentsEnabled) {
+        if (detectUnavailableSegments) {
           pollChangedSegments();
         } else {
           poll();
@@ -414,5 +421,4 @@ public class MetadataSegmentView
       }
     }
   }
-
 }

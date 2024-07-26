@@ -24,20 +24,29 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Position,
+  Tag,
   useHotkeys,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import { MenuCheckbox, MenuTristate } from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
 import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
-import type { DruidEngine, IndexSpec, QueryContext, WorkbenchQuery } from '../../../druid-models';
+import type {
+  ArrayIngestMode,
+  DruidEngine,
+  IndexSpec,
+  QueryContext,
+  WorkbenchQuery,
+} from '../../../druid-models';
 import {
+  changeArrayIngestMode,
   changeDurableShuffleStorage,
+  changeFailOnEmptyInsert,
   changeFinalizeAggregations,
   changeGroupByEnableMultiValueUnnesting,
   changeMaxParseExceptions,
@@ -45,7 +54,10 @@ import {
   changeUseApproximateCountDistinct,
   changeUseApproximateTopN,
   changeUseCache,
+  changeWaitUntilSegmentsLoad,
+  getArrayIngestMode,
   getDurableShuffleStorage,
+  getFailOnEmptyInsert,
   getFinalizeAggregations,
   getGroupByEnableMultiValueUnnesting,
   getMaxParseExceptions,
@@ -53,10 +65,13 @@ import {
   getUseApproximateCountDistinct,
   getUseApproximateTopN,
   getUseCache,
+  getWaitUntilSegmentsLoad,
   summarizeIndexSpec,
 } from '../../../druid-models';
+import { getLink } from '../../../links';
 import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
+import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
 
 import './run-panel.scss';
 
@@ -82,21 +97,58 @@ const NAMED_TIMEZONES: string[] = [
   'Australia/Sydney', // +11.0
 ];
 
+const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
+  array: (
+    <>
+      array: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid{' '}
+      <Tag minimal>ARRAY&lt;STRING&gt;</Tag>
+    </>
+  ),
+  mvd: (
+    <>
+      mvd: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid multi-value <Tag minimal>STRING</Tag>
+    </>
+  ),
+};
+
+const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
+  if (!engine) return { text: 'auto' };
+  return {
+    text: engine,
+    label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
+  };
+};
+
 export interface RunPanelProps {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
-  loading: boolean;
+  running: boolean;
   small?: boolean;
   onRun(preview: boolean): void | Promise<void>;
   queryEngines: DruidEngine[];
   clusterCapacity: number | undefined;
   moreMenu?: JSX.Element;
+  maxTaskMenuHeader?: JSX.Element;
+  enginesLabelFn?: (engine: DruidEngine | undefined) => { text: string; label?: string };
+  maxTaskLabelFn?: ComponentProps<typeof MaxTasksButton>['maxNumLabelFn'];
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, loading, small, queryEngines, clusterCapacity } =
-    props;
+  const {
+    query,
+    onQueryChange,
+    onRun,
+    moreMenu,
+    running,
+    small,
+    queryEngines,
+    clusterCapacity,
+    maxTaskMenuHeader,
+    maxTaskLabelFn,
+    enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
+  } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
+  const [editParametersDialogOpen, setEditParametersDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
   const [indexSpecDialogSpec, setIndexSpecDialogSpec] = useState<IndexSpec | undefined>();
 
@@ -104,11 +156,16 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const ingestMode = query.isIngestQuery();
   const queryContext = query.queryContext;
   const numContextKeys = Object.keys(queryContext).length;
+  const queryParameters = query.queryParameters;
 
+  const arrayIngestMode = getArrayIngestMode(queryContext);
   const maxParseExceptions = getMaxParseExceptions(queryContext);
+  const failOnEmptyInsert = getFailOnEmptyInsert(queryContext);
   const finalizeAggregations = getFinalizeAggregations(queryContext);
+  const waitUntilSegmentsLoad = getWaitUntilSegmentsLoad(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
+  const selectDestination = queryContext.selectDestination ?? 'taskReport';
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -151,24 +208,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   useHotkeys(hotkeys);
 
   const queryEngine = query.engine;
-  function renderQueryEngineMenuItem(e: DruidEngine | undefined) {
-    return (
-      <MenuItem
-        key={String(e)}
-        icon={tickIcon(e === queryEngine)}
-        text={typeof e === 'undefined' ? 'auto' : e}
-        label={e === 'sql-msq-task' ? 'multi-stage-query' : undefined}
-        onClick={() => onQueryChange(query.changeEngine(e))}
-        shouldDismissPopover={false}
-      />
-    );
-  }
 
   function changeQueryContext(queryContext: QueryContext) {
     onQueryChange(query.changeQueryContext(queryContext));
   }
-
-  const availableEngines = ([undefined] as (DruidEngine | undefined)[]).concat(queryEngines);
 
   function offsetOptions(): JSX.Element[] {
     const items: JSX.Element[] = [];
@@ -189,12 +232,21 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     return items;
   }
 
+  const overloadWarning =
+    query.unlimited &&
+    (queryEngine === 'sql-native' ||
+      (queryEngine === 'sql-msq-task' && selectDestination === 'taskReport'));
+  const intent = overloadWarning ? Intent.WARNING : undefined;
+
   const effectiveEngine = query.getEffectiveEngine();
+
+  const autoEngineLabel = enginesLabelFn(undefined);
+
   return (
     <div className="run-panel">
       <Button
         className={effectiveEngine === 'native' ? 'rune-button' : undefined}
-        disabled={loading}
+        disabled={running}
         icon={IconNames.CARET_RIGHT}
         onClick={() => void onRun(false)}
         text="Run"
@@ -204,7 +256,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       />
       {ingestMode && (
         <Button
-          disabled={loading}
+          disabled={running}
           icon={IconNames.EYE_OPEN}
           onClick={() => void onRun(true)}
           text="Preview"
@@ -214,14 +266,36 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {!small && onQueryChange && (
         <ButtonGroup>
-          <Popover2
+          <Popover
             position={Position.BOTTOM_LEFT}
             content={
               <Menu>
                 {queryEngines.length > 1 && (
                   <>
                     <MenuDivider title="Select engine" />
-                    {availableEngines.map(renderQueryEngineMenuItem)}
+                    <MenuItem
+                      key="auto"
+                      icon={tickIcon(queryEngine === undefined)}
+                      text={autoEngineLabel.text}
+                      label={autoEngineLabel.label}
+                      onClick={() => onQueryChange(query.changeEngine(undefined))}
+                      shouldDismissPopover={false}
+                    />
+                    {queryEngines.map(engine => {
+                      const { text, label } = enginesLabelFn(engine);
+
+                      return (
+                        <MenuItem
+                          key={String(engine)}
+                          icon={tickIcon(engine === queryEngine)}
+                          text={text}
+                          label={label}
+                          onClick={() => onQueryChange(query.changeEngine(engine))}
+                          shouldDismissPopover={false}
+                        />
+                      );
+                    })}
+
                     <MenuDivider />
                   </>
                 )}
@@ -230,6 +304,12 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   text="Edit context"
                   onClick={() => setEditContextDialogOpen(true)}
                   label={pluralIfNeeded(numContextKeys, 'key')}
+                />
+                <MenuItem
+                  icon={IconNames.HELP}
+                  text="Define parameters"
+                  onClick={() => setEditParametersDialogOpen(true)}
+                  label={queryParameters ? pluralIfNeeded(queryParameters.length, 'parameter') : ''}
                 />
                 {effectiveEngine !== 'native' && (
                   <MenuItem
@@ -287,12 +367,30 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       ))}
                     </MenuItem>
                     <MenuTristate
+                      icon={IconNames.DISABLE}
+                      text="Fail on empty insert"
+                      value={failOnEmptyInsert}
+                      undefinedEffectiveValue={false}
+                      onValueChange={v =>
+                        changeQueryContext(changeFailOnEmptyInsert(queryContext, v))
+                      }
+                    />
+                    <MenuTristate
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
                       value={finalizeAggregations}
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={v =>
                         changeQueryContext(changeFinalizeAggregations(queryContext, v))
+                      }
+                    />
+                    <MenuTristate
+                      icon={IconNames.STOPWATCH}
+                      text="Wait until segments have loaded"
+                      value={waitUntilSegmentsLoad}
+                      undefinedEffectiveValue={ingestMode}
+                      onValueChange={v =>
+                        changeQueryContext(changeWaitUntilSegmentsLoad(queryContext, v))
                       }
                     />
                     <MenuTristate
@@ -322,14 +420,36 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       ))}
                     </MenuItem>
                     <MenuItem
-                      icon={IconNames.TH_DERIVED}
-                      text="Edit index spec"
-                      label={summarizeIndexSpec(indexSpec)}
-                      shouldDismissPopover={false}
-                      onClick={() => {
-                        setIndexSpecDialogSpec(indexSpec || {});
-                      }}
-                    />
+                      icon={IconNames.MANUALLY_ENTERED_DATA}
+                      text="SELECT destination"
+                      label={selectDestination}
+                      intent={intent}
+                    >
+                      {['taskReport', 'durableStorage'].map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(selectDestination === o)}
+                          text={o}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext(deepSet(queryContext, 'selectDestination', o))
+                          }
+                        />
+                      ))}
+                      <MenuDivider />
+                      <MenuCheckbox
+                        checked={selectDestination === 'taskReport' ? !query.unlimited : false}
+                        intent={intent}
+                        disabled={selectDestination !== 'taskReport'}
+                        text="Limit SELECT results in taskReport"
+                        labelElement={
+                          query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
+                        }
+                        onChange={() => {
+                          onQueryChange(query.toggleUnlimited());
+                        }}
+                      />
+                    </MenuItem>
                     <MenuCheckbox
                       checked={durableShuffleStorage}
                       text="Durable shuffle storage"
@@ -338,6 +458,15 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           changeDurableShuffleStorage(queryContext, !durableShuffleStorage),
                         )
                       }
+                    />
+                    <MenuItem
+                      icon={IconNames.TH_DERIVED}
+                      text="Edit index spec"
+                      label={summarizeIndexSpec(indexSpec)}
+                      shouldDismissPopover={false}
+                      onClick={() => {
+                        setIndexSpecDialogSpec(indexSpec || {});
+                      }}
                     />
                   </>
                 ) : (
@@ -372,46 +501,91 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     }
                   />
                 )}
-                <MenuCheckbox
-                  checked={!query.unlimited}
-                  intent={query.unlimited ? Intent.WARNING : undefined}
-                  text="Limit inline results"
-                  labelElement={
-                    query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
-                  }
-                  onChange={() => {
-                    onQueryChange(query.toggleUnlimited());
-                  }}
-                />
+                {effectiveEngine === 'sql-native' && (
+                  <MenuCheckbox
+                    checked={!query.unlimited}
+                    intent={query.unlimited ? Intent.WARNING : undefined}
+                    text="Limit inline results"
+                    labelElement={
+                      query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
+                    }
+                    onChange={() => {
+                      onQueryChange(query.toggleUnlimited());
+                    }}
+                  />
+                )}
               </Menu>
             }
           >
             <Button
-              text={`Engine: ${queryEngine || `auto (${effectiveEngine})`}`}
+              text={`Engine: ${
+                (enginesLabelFn ? enginesLabelFn(queryEngine).text : queryEngine) ||
+                `auto (${enginesLabelFn ? enginesLabelFn(effectiveEngine) : effectiveEngine})`
+              }`}
               rightIcon={IconNames.CARET_DOWN}
-              intent={query.unlimited ? Intent.WARNING : undefined}
+              intent={intent}
             />
-          </Popover2>
+          </Popover>
           {effectiveEngine === 'sql-msq-task' && (
             <MaxTasksButton
               clusterCapacity={clusterCapacity}
               queryContext={queryContext}
               changeQueryContext={changeQueryContext}
+              menuHeader={maxTaskMenuHeader}
+              maxNumLabelFn={maxTaskLabelFn}
             />
+          )}
+          {ingestMode && (
+            <Popover
+              position={Position.BOTTOM_LEFT}
+              content={
+                <Menu>
+                  {([undefined, 'array', 'mvd'] as (ArrayIngestMode | undefined)[]).map((m, i) => (
+                    <MenuItem
+                      key={i}
+                      icon={tickIcon(m === arrayIngestMode)}
+                      text={m ? ARRAY_INGEST_MODE_DESCRIPTION[m] : '(server default)'}
+                      onClick={() => changeQueryContext(changeArrayIngestMode(queryContext, m))}
+                    />
+                  ))}
+                  <MenuDivider />
+                  <MenuItem
+                    icon={IconNames.HELP}
+                    text="Documentation"
+                    href={`${getLink('DOCS')}/querying/arrays#arrayingestmode`}
+                    target="_blank"
+                  />
+                </Menu>
+              }
+            >
+              <Button
+                text={`Array ingest mode: ${arrayIngestMode ?? '(server default)'}`}
+                rightIcon={IconNames.CARET_DOWN}
+              />
+            </Popover>
           )}
         </ButtonGroup>
       )}
       {moreMenu && (
-        <Popover2 position={Position.BOTTOM_LEFT} content={moreMenu}>
+        <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
           <Button small={small} minimal={small} rightIcon={IconNames.MORE} />
-        </Popover2>
+        </Popover>
       )}
       {editContextDialogOpen && (
         <EditContextDialog
-          queryContext={queryContext}
+          initQueryContext={queryContext}
           onQueryContextChange={changeQueryContext}
           onClose={() => {
             setEditContextDialogOpen(false);
+          }}
+        />
+      )}
+      {editParametersDialogOpen && (
+        <QueryParametersDialog
+          queryParameters={queryParameters}
+          onQueryParametersChange={p => onQueryChange(query.changeQueryParameters(p))}
+          onClose={() => {
+            setEditParametersDialogOpen(false);
           }}
         />
       )}

@@ -181,6 +181,23 @@ public class ServerHolder implements Comparable<ServerHolder>
     return server.getMaxSize();
   }
 
+  /**
+   * Total projected disk usage of this server in bytes.
+   * <p>
+   * The total size:
+   * <ol>
+   * <li>INCLUDES segments loaded on this server</li>
+   * <li>INCLUDES segments loading on this server (actions: LOAD/REPLICATE)</li>
+   * <li>INCLUDES segments moving to this server (action: MOVE_TO)</li>
+   * <li>INCLUDES segments moving from this server (action: MOVE_FROM). This is
+   * because these segments have only been <i>marked</i> for drop. We include
+   * the size of these segments to avoid over-assigning the server in case the
+   * corresponding MOVE_TO operation gets delayed or fails.</li>
+   * <li>EXCLUDES segments dropping from this server (action: DROP). Excluding
+   * these segments cannot result in over-assignment because drops are always
+   * processed before loads.</li>
+   * </ol>
+   */
   public long getSizeUsed()
   {
     return server.getCurrSize() + sizeOfLoadingSegments - sizeOfDroppingSegments;
@@ -194,6 +211,11 @@ public class ServerHolder implements Comparable<ServerHolder>
   public boolean isDecommissioning()
   {
     return isDecommissioning;
+  }
+
+  public boolean isLoadQueueFull()
+  {
+    return totalAssignmentsInRun >= maxAssignmentsInRun;
   }
 
   public long getAvailableSize()
@@ -312,6 +334,11 @@ public class ServerHolder implements Comparable<ServerHolder>
     return loadingReplicaCount;
   }
 
+  public int getNumQueuedSegments()
+  {
+    return queuedSegments.size();
+  }
+
   public boolean startOperation(SegmentAction action, DataSegment segment)
   {
     if (queuedSegments.containsKey(segment)) {
@@ -344,7 +371,7 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
   }
 
-  public boolean hasSegmentLoaded(SegmentId segmentId)
+  private boolean hasSegmentLoaded(SegmentId segmentId)
   {
     return server.getSegment(segmentId) != null;
   }

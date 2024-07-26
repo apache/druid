@@ -155,7 +155,7 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
     if (index == 0 && hasNulls) {
       return null;
     }
-    int startOffset = index * width;
+    int startOffset = (hasNulls ? index - 1 : index) * width;
     readBuffer.clear();
     valuesOut.readFully(startOffset, readBuffer);
     readBuffer.clear();
@@ -197,14 +197,14 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
       {
         iteratorBuffer.clear();
         try {
-          if (totalCount - pos < PAGE_SIZE) {
-            int size = (totalCount - pos) * width;
+          if (numWritten - (pos - startPos) < PAGE_SIZE) {
+            int size = (numWritten - (pos - startPos)) * width;
             iteratorBuffer.limit(size);
-            valuesOut.readFully((long) pos * width, iteratorBuffer);
+            valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
           } else {
-            valuesOut.readFully((long) pos * width, iteratorBuffer);
+            valuesOut.readFully((long) (pos - startPos) * width, iteratorBuffer);
           }
-          iteratorBuffer.flip();
+          iteratorBuffer.clear();
         }
         catch (IOException e) {
           throw new RuntimeException(e);

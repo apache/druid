@@ -11,25 +11,24 @@ exports[`LookupsView matches snapshot 1`] = `
       localStorageKey="lookups-refresh-rate"
       onRefresh={[Function]}
     />
-    <Blueprint4.Button
+    <Blueprint5.Button
       icon="plus"
       onClick={[Function]}
       text="Add lookup"
     />
     <Memo(TableColumnSelector)
       columns={
-        Array [
+        [
           "Lookup name",
           "Lookup tier",
           "Type",
           "Version",
           "Poll period",
           "Summary",
-          "Actions",
         ]
       }
       onChange={[Function]}
-      tableColumnsHidden={Array []}
+      tableColumnsHidden={[]}
     />
   </Memo(ViewControlBar)>
   <ReactTable
@@ -56,7 +55,7 @@ exports[`LookupsView matches snapshot 1`] = `
     collapseOnPageChange={true}
     collapseOnSortingChange={true}
     column={
-      Object {
+      {
         "Aggregated": undefined,
         "Cell": undefined,
         "Expander": undefined,
@@ -72,24 +71,24 @@ exports[`LookupsView matches snapshot 1`] = `
         "filterMethod": undefined,
         "filterable": undefined,
         "footerClassName": "",
-        "footerStyle": Object {},
+        "footerStyle": {},
         "getFooterProps": [Function],
         "getHeaderProps": [Function],
         "getProps": [Function],
         "headerClassName": "",
-        "headerStyle": Object {},
+        "headerStyle": {},
         "minResizeWidth": 11,
         "minWidth": 100,
         "resizable": undefined,
         "show": true,
         "sortMethod": undefined,
         "sortable": undefined,
-        "style": Object {},
+        "style": {},
       }
     }
     columns={
-      Array [
-        Object {
+      [
+        {
           "Cell": [Function],
           "Header": "Lookup name",
           "accessor": "id",
@@ -98,7 +97,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "show": true,
           "width": 200,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Lookup tier",
           "accessor": "tier",
@@ -107,7 +106,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "show": true,
           "width": 100,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Type",
           "accessor": "spec.type",
@@ -116,7 +115,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "show": true,
           "width": 150,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Version",
           "accessor": "version",
@@ -125,7 +124,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "show": true,
           "width": 190,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Poll period",
           "accessor": [Function],
@@ -134,7 +133,7 @@ exports[`LookupsView matches snapshot 1`] = `
           "show": true,
           "width": 150,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Summary",
           "accessor": [Function],
@@ -142,36 +141,36 @@ exports[`LookupsView matches snapshot 1`] = `
           "show": true,
           "width": 600,
         },
-        Object {
+        {
           "Cell": [Function],
           "Header": "Actions",
           "accessor": "id",
           "filterable": false,
           "id": "actions",
-          "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]
     }
-    data={Array []}
-    defaultExpanded={Object {}}
+    data={[]}
+    defaultExpanded={{}}
     defaultFilterMethod={[Function]}
-    defaultFiltered={Array []}
+    defaultFiltered={[]}
     defaultPage={0}
     defaultPageSize={50}
-    defaultResized={Array []}
+    defaultResized={[]}
     defaultSortDesc={false}
     defaultSortMethod={[Function]}
     defaultSorted={
-      Array [
-        Object {
+      [
+        {
           "desc": false,
           "id": "lookup_name",
         },
       ]
     }
     expanderDefaults={
-      Object {
+      {
         "filterable": false,
         "resizable": false,
         "sortable": false,
@@ -179,7 +178,7 @@ exports[`LookupsView matches snapshot 1`] = `
       }
     }
     filterable={true}
-    filtered={Array []}
+    filtered={[]}
     freezeWhenExpanded={false}
     getLoadingProps={[Function]}
     getNoDataProps={[Function]}
@@ -217,14 +216,14 @@ exports[`LookupsView matches snapshot 1`] = `
     originalKey="_original"
     pageJumpText="jump to page"
     pageSizeOptions={
-      Array [
+      [
         50,
         100,
         200,
       ]
     }
     pageText="Page"
-    pivotDefaults={Object {}}
+    pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
     previousText="Previous"
@@ -238,7 +237,7 @@ exports[`LookupsView matches snapshot 1`] = `
     showPaginationBottom={true}
     showPaginationTop={false}
     sortable={true}
-    style={Object {}}
+    style={{}}
     subRowsKey="_subRows"
   />
 </div>

@@ -65,13 +65,15 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
 
 /*
 REPLACE INTO "k" OVERWRITE ALL
-WITH "ext" AS (SELECT *
-FROM TABLE(
-  EXTERN(
-    '{"type":"local","filter":"blah.json_","baseDir":"/"}',
-    '{"type":"json"}'
-  )
-) EXTEND ("timestamp" VARCHAR, "session" VARCHAR))
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"local","filter":"blah.json_","baseDir":"/"}',
+      '{"type":"json"}'
+    )
+  ) EXTEND ("timestamp" VARCHAR, "session" VARCHAR)
+)
 SELECT
   TIME_PARSE("timestamp") AS "__time",
   "session"

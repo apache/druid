@@ -285,6 +285,10 @@ SOURCE/JAVA-CORE
     This product contains test cases adapted from Test Framework for Apache Drill (https://github.com/apache/drill-test-framework).
       * sql/src/test/resources/drill/window
 
+    This product contains the class copied from https://github.com/FasterXML/jackson-databind
+      * extensions-core/s3-extensions/src/main/java/com/fasterxml/jackson/databind/PropertyNamingStrategies.java
+
+
 
 MIT License
 ================================

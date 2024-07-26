@@ -21,8 +21,8 @@ package org.apache.druid.msq.indexing.error;
 
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.msq.statistics.TooManyBucketsException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
 import org.junit.Assert;

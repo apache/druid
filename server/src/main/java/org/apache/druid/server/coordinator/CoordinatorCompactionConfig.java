@@ -21,30 +21,28 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.indexer.CompactionEngine;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class CoordinatorCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
   private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
-  private static final int DEFAILT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
+  private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
   private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
+  private static final CompactionEngine DEFAULT_COMPACTION_ENGINE = CompactionEngine.NATIVE;
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
+  private final CompactionEngine compactionEngine;
 
   public static CoordinatorCompactionConfig from(
       CoordinatorCompactionConfig baseConfig,
@@ -55,7 +53,8 @@ public class CoordinatorCompactionConfig
         compactionConfigs,
         baseConfig.compactionTaskSlotRatio,
         baseConfig.maxCompactionTaskSlots,
-        baseConfig.useAutoScaleSlots
+        baseConfig.useAutoScaleSlots,
+        null
     );
   }
 
@@ -70,48 +69,19 @@ public class CoordinatorCompactionConfig
         baseConfig.compactionConfigs,
         compactionTaskSlotRatio == null ? baseConfig.compactionTaskSlotRatio : compactionTaskSlotRatio,
         maxCompactionTaskSlots == null ? baseConfig.maxCompactionTaskSlots : maxCompactionTaskSlots,
-        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots
+        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots,
+        null
     );
   }
 
   public static CoordinatorCompactionConfig from(List<DataSourceCompactionConfig> compactionConfigs)
   {
-    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null);
+    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null, null);
   }
 
   public static CoordinatorCompactionConfig empty()
   {
-    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null);
-  }
-
-  public static AtomicReference<CoordinatorCompactionConfig> watch(final JacksonConfigManager configManager)
-  {
-    return configManager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
-    );
-  }
-
-  public static byte[] getConfigInByteFromDb(final MetadataStorageConnector connector, MetadataStorageTablesConfig config)
-  {
-    return connector.lookup(
-        config.getConfigTable(),
-        "name",
-        "payload",
-        CoordinatorCompactionConfig.CONFIG_KEY
-    );
-  }
-
-  public static CoordinatorCompactionConfig convertByteToConfig(final JacksonConfigManager configManager, byte[] configInByte)
-  {
-    return configManager.convertByteToConfig(configInByte, CoordinatorCompactionConfig.class, CoordinatorCompactionConfig.empty());
-  }
-
-  @Nonnull
-  public static CoordinatorCompactionConfig current(final JacksonConfigManager configManager)
-  {
-    return Preconditions.checkNotNull(watch(configManager).get(), "Got null config from watcher?!");
+    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null, null);
   }
 
   @JsonCreator
@@ -119,19 +89,15 @@ public class CoordinatorCompactionConfig
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
-      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots
+      @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
+      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine
   )
   {
     this.compactionConfigs = compactionConfigs;
-    this.compactionTaskSlotRatio = compactionTaskSlotRatio == null ?
-                                   DEFAULT_COMPACTION_TASK_RATIO :
-                                   compactionTaskSlotRatio;
-    this.maxCompactionTaskSlots = maxCompactionTaskSlots == null ?
-                                  DEFAILT_MAX_COMPACTION_TASK_SLOTS :
-                                  maxCompactionTaskSlots;
-    this.useAutoScaleSlots = useAutoScaleSlots == null ?
-                             DEFAULT_USE_AUTO_SCALE_SLOTS :
-                             useAutoScaleSlots;
+    this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, DEFAULT_COMPACTION_TASK_RATIO);
+    this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, DEFAULT_MAX_COMPACTION_TASK_SLOTS);
+    this.useAutoScaleSlots = Configs.valueOrDefault(useAutoScaleSlots, DEFAULT_USE_AUTO_SCALE_SLOTS);
+    this.compactionEngine = Configs.valueOrDefault(compactionEngine, DEFAULT_COMPACTION_ENGINE);
   }
 
   @JsonProperty
@@ -158,6 +124,12 @@ public class CoordinatorCompactionConfig
     return useAutoScaleSlots;
   }
 
+  @JsonProperty
+  public CompactionEngine getEngine()
+  {
+    return compactionEngine;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -171,13 +143,20 @@ public class CoordinatorCompactionConfig
     return Double.compare(that.compactionTaskSlotRatio, compactionTaskSlotRatio) == 0 &&
            maxCompactionTaskSlots == that.maxCompactionTaskSlots &&
            useAutoScaleSlots == that.useAutoScaleSlots &&
+           compactionEngine == that.compactionEngine &&
            Objects.equals(compactionConfigs, that.compactionConfigs);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(compactionConfigs, compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots);
+    return Objects.hash(
+        compactionConfigs,
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        useAutoScaleSlots,
+        compactionEngine
+    );
   }
 
   @Override
@@ -188,6 +167,7 @@ public class CoordinatorCompactionConfig
            ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            ", useAutoScaleSlots=" + useAutoScaleSlots +
+           ", compactionEngine=" + compactionEngine +
            '}';
   }
 }

@@ -23,6 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.IsFalseDimFilter;
+import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 
@@ -86,6 +88,22 @@ public abstract class BottomUpTransform implements Function<Filtration, Filtrati
       final DimFilter newFilter = apply0(oldFilter);
       if (!oldFilter.equals(newFilter)) {
         return checkedProcess(new NotDimFilter(newFilter));
+      } else {
+        return checkedProcess(filter);
+      }
+    } else if (filter instanceof IsTrueDimFilter) {
+      final DimFilter oldFilter = ((IsTrueDimFilter) filter).getField();
+      final DimFilter newFilter = apply0(oldFilter);
+      if (!oldFilter.equals(newFilter)) {
+        return checkedProcess(new IsTrueDimFilter(newFilter));
+      } else {
+        return checkedProcess(filter);
+      }
+    } else if (filter instanceof IsFalseDimFilter) {
+      final DimFilter oldFilter = ((IsFalseDimFilter) filter).getField();
+      final DimFilter newFilter = apply0(oldFilter);
+      if (!oldFilter.equals(newFilter)) {
+        return checkedProcess(new IsFalseDimFilter(newFilter));
       } else {
         return checkedProcess(filter);
       }

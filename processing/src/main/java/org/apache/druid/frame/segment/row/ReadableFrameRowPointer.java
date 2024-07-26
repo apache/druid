@@ -30,7 +30,13 @@ import org.apache.druid.frame.write.RowBasedFrameWriter;
  */
 public interface ReadableFrameRowPointer
 {
+  /**
+   * Position of the start of the row relative to the start of the Frame
+   */
   long position();
 
+  /**
+   * Length of the row (in bytes)
+   */
   long length();
 }

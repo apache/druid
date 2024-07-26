@@ -75,6 +75,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  */
+@SuppressWarnings("DoNotMock")
 public class DruidLeaderClientTest extends BaseJettyTest
 {
   @Rule
@@ -159,7 +160,9 @@ public class DruidLeaderClientTest extends BaseJettyTest
     druidLeaderClient.start();
 
     expectedException.expect(IOException.class);
-    expectedException.expectMessage("No known server");
+    expectedException.expectMessage(
+        "A leader node could not be found for [PEON] service. "
+        + "Check logs of service [PEON] to confirm it is healthy.");
     druidLeaderClient.makeRequest(HttpMethod.POST, "/simple/direct");
   }
 
@@ -278,7 +281,7 @@ public class DruidLeaderClientTest extends BaseJettyTest
     Assert.assertEquals("http://localhost:1234/", druidLeaderClient.findCurrentLeader());
   }
 
-  private static class TestJettyServerInitializer implements JettyServerInitializer
+  static class TestJettyServerInitializer implements JettyServerInitializer
   {
     @Override
     public void initialize(Server server, Injector injector)

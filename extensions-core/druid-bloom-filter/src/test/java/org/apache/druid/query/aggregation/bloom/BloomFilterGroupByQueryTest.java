@@ -34,7 +34,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -65,7 +64,6 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   }
 
   private AggregationTestHelper helper;
-  private boolean isV2;
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
@@ -77,7 +75,6 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
         config,
         tempFolder
     );
-    isV2 = config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2);
   }
 
   @Parameterized.Parameters(name = "{0}")
@@ -123,10 +120,6 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testNestedQuery() throws Exception
   {
-    if (!isV2) {
-      return;
-    }
-
     String query = "{"
                    + "\"queryType\": \"groupBy\","
                    + "\"dataSource\": {"
@@ -160,10 +153,6 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   @Test
   public void testNestedQueryComplex() throws Exception
   {
-    if (!isV2) {
-      return;
-    }
-
     String query = "{"
                    + "\"queryType\": \"groupBy\","
                    + "\"dataSource\": {"

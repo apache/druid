@@ -21,16 +21,12 @@ package org.apache.druid.sql.calcite.rule;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
-import org.apache.calcite.adapter.enumerable.EnumerableConvention;
-import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelOptRuleOperand;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.core.JoinRelType;
-import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.rules.FilterJoinRule;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
@@ -39,7 +35,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
-import org.apache.calcite.tools.RelBuilderFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 
@@ -49,7 +44,8 @@ import java.util.Objects;
 
 /**
  * This class is a copy (with modification) of {@link FilterJoinRule}. Specifically, this class contains a
- * subset of code from {@link FilterJoinRule} for the codepath involving {@link FilterJoinRule#FILTER_ON_JOIN}
+ * subset of code from {@link FilterJoinRule} for the codepath involving
+ * {@link org.apache.calcite.rel.rules.CoreRules#FILTER_INTO_JOIN}
  * Everything has been keep as-is from {@link FilterJoinRule} except for :
  * 1. the modification of {@link #classifyFilters(List, JoinRelType, boolean, List)} method called in the
  * {@link #perform(RelOptRuleCall, Filter, Join)} method of this class.
@@ -63,41 +59,25 @@ import java.util.Objects;
  * default Rule provided in Calcite's {@link FilterJoinRule} when https://github.com/apache/druid/issues/9843 is resolved.
  */
 
-public abstract class FilterJoinExcludePushToChildRule extends FilterJoinRule
+public abstract class FilterJoinExcludePushToChildRule<C extends FilterJoinRule.Config> extends FilterJoinRule<C>
 {
-  /** Copied from {@link FilterJoinRule#NOT_ENUMERABLE} */
-  private static final Predicate NOT_ENUMERABLE = (join, joinType, exp) ->
-      join.getConvention() != EnumerableConvention.INSTANCE;
+  public static final FilterJoinRule<FilterIntoJoinRule.FilterIntoJoinRuleConfig> FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD =
+      new FilterIntoJoinExcludePushToChildRule(FilterIntoJoinRule.FilterIntoJoinRuleConfig.DEFAULT);
 
-  /**
-   * Rule that pushes predicates from a Filter into the Join below them.
-   * Similar to {@link FilterJoinRule#FILTER_ON_JOIN} but does not push predicate to the child
-   */
-  public static final FilterJoinRule FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD =
-      new FilterIntoJoinExcludePushToChildRule(RelFactories.LOGICAL_BUILDER, NOT_ENUMERABLE);
-
-  FilterJoinExcludePushToChildRule(RelOptRuleOperand operand,
-                                   String id,
-                                   boolean smart,
-                                   RelBuilderFactory relBuilderFactory,
-                                   Predicate predicate)
+  FilterJoinExcludePushToChildRule(C config)
   {
-    super(operand, id, smart, relBuilderFactory, predicate);
+    super(config);
   }
 
   /**
    * Rule that tries to push filter expressions into a join
    * condition. Exlucde pushing into the inputs (child) of the join.
    */
-  public static class FilterIntoJoinExcludePushToChildRule extends FilterJoinExcludePushToChildRule
+  public static class FilterIntoJoinExcludePushToChildRule extends FilterJoinExcludePushToChildRule<FilterIntoJoinRule.FilterIntoJoinRuleConfig>
   {
-    public FilterIntoJoinExcludePushToChildRule(RelBuilderFactory relBuilderFactory, Predicate predicate)
+    public FilterIntoJoinExcludePushToChildRule(FilterIntoJoinRule.FilterIntoJoinRuleConfig config)
     {
-      super(
-          operand(Filter.class,
-                  operand(Join.class, RelOptRule.any())),
-          "FilterJoinExcludePushToChildRule:filter", true, relBuilderFactory,
-          predicate);
+      super(config);
     }
 
     @Override

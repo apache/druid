@@ -634,6 +634,44 @@ public class SegmentMetadataQueryQueryToolChestTest
         )
     );
 
+    // Simulate multi-level lenient merge (unmerged first)
+    Assert.assertEquals(
+        new SegmentAnalysis(
+            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
+            null,
+            new LinkedHashMap<>(),
+            0,
+            0,
+            expectedLenient,
+            null,
+            null,
+            null
+        ),
+        mergeLenient(
+            analysis1,
+            mergeLenient(analysis1, analysis2)
+        )
+    );
+
+    // Simulate multi-level lenient merge (unmerged second)
+    Assert.assertEquals(
+        new SegmentAnalysis(
+            "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",
+            null,
+            new LinkedHashMap<>(),
+            0,
+            0,
+            expectedLenient,
+            null,
+            null,
+            null
+        ),
+        mergeLenient(
+            mergeLenient(analysis1, analysis2),
+            analysis1
+        )
+    );
+
     Assert.assertEquals(
         new SegmentAnalysis(
             "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged",

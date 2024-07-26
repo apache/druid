@@ -50,22 +50,25 @@ export const IndexSpecDialog = React.memo(function IndexSpecDialog(props: IndexS
       canOutsideClickClose={false}
       title={title ?? 'Index spec'}
     >
-      <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+      <FormJsonSelector
+        tab={currentTab}
+        onChange={t => {
+          setJsonError(undefined);
+          setCurrentTab(t);
+        }}
+      />
       <div className="content">
         {currentTab === 'form' ? (
           <AutoForm
             fields={INDEX_SPEC_FIELDS}
             model={currentIndexSpec}
-            onChange={m => setCurrentIndexSpec(m)}
+            onChange={setCurrentIndexSpec}
           />
         ) : (
           <JsonInput
             value={currentIndexSpec}
-            onChange={v => {
-              setCurrentIndexSpec(v);
-              setJsonError(undefined);
-            }}
-            onError={setJsonError}
+            onChange={setCurrentIndexSpec}
+            setError={setJsonError}
             issueWithValue={value => AutoForm.issueWithModel(value, INDEX_SPEC_FIELDS)}
             height="100%"
           />

@@ -107,14 +107,18 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
           <p>
             Edit the overlord dynamic configuration at runtime. For more information please refer to
             the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#overlord-dynamic-configuration`}>
               documentation
             </ExternalLink>
             .
           </p>
-          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          <FormJsonSelector
+            tab={currentTab}
+            onChange={t => {
+              setJsonError(undefined);
+              setCurrentTab(t);
+            }}
+          />
           {currentTab === 'form' ? (
             <AutoForm
               fields={OVERLORD_DYNAMIC_CONFIG_FIELDS}
@@ -125,11 +129,8 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
             <JsonInput
               value={dynamicConfig}
               height="50vh"
-              onChange={v => {
-                setDynamicConfig(v);
-                setJsonError(undefined);
-              }}
-              onError={setJsonError}
+              onChange={setDynamicConfig}
+              setError={setJsonError}
             />
           )}
         </>

@@ -56,7 +56,7 @@ export const TRANSFORM_FIELDS: Field<Transform>[] = [
     info: (
       <>
         A valid Druid{' '}
-        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>.
+        <ExternalLink href={`${getLink('DOCS')}/misc/math-expr`}>expression</ExternalLink>.
       </>
     ),
   },
@@ -83,8 +83,8 @@ export function getTimestampExpressionFields(transforms: Transform[]): Field<Tra
       info: (
         <>
           A valid Druid{' '}
-          <ExternalLink href={`${getLink('DOCS')}/misc/math-expr.html`}>expression</ExternalLink>{' '}
-          that should output a millis timestamp. You most likely want to use the{' '}
+          <ExternalLink href={`${getLink('DOCS')}/misc/math-expr`}>expression</ExternalLink> that
+          should output a millis timestamp. You most likely want to use the{' '}
           <Code>timestamp_parse</Code> function at the outer level.
         </>
       ),

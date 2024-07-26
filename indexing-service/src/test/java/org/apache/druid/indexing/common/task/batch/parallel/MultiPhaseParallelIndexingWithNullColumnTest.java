@@ -39,12 +39,14 @@ import org.apache.druid.data.input.impl.InputEntityIteratingReader;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -138,7 +140,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 JSON_FORMAT,
                 false,
@@ -155,7 +156,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     for (DataSegment segment : segments) {
       Assert.assertEquals(dimensionSchemas.size(), segment.getDimensions().size());
@@ -189,7 +190,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 new JsonInputFormat(
                     new JSONPathSpec(true, null),
@@ -212,7 +212,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     final List<String> expectedExplicitDimensions = ImmutableList.of("ts", "unknownDim", "dim1");
     final Set<String> expectedImplicitDimensions = ImmutableSet.of("dim2", "dim3");
@@ -250,7 +250,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 new JsonInputFormat(
                     new JSONPathSpec(
@@ -279,7 +278,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
 
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     final List<String> expectedExplicitDimensions = ImmutableList.of("dim1", "k");
     final Set<String> expectedImplicitDimensions = ImmutableSet.of("dim2", "dim3");
@@ -319,7 +318,6 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 getInputSource(),
                 JSON_FORMAT,
                 false,
@@ -337,7 +335,7 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
     task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
     Assert.assertEquals(TaskState.SUCCESS, getIndexingServiceClient().runAndWait(task).getStatusCode());
 
-    Set<DataSegment> segments = getIndexingServiceClient().getPublishedSegments(task);
+    Set<DataSegment> segments = getIndexingServiceClient().getSegmentAndSchemas(task).getSegments();
     Assert.assertFalse(segments.isEmpty());
     final List<DimensionSchema> expectedDimensions = DimensionsSpec.getDefaultSchemas(
         Collections.singletonList("ts")
@@ -431,7 +429,10 @@ public class MultiPhaseParallelIndexingWithNullColumnTest extends AbstractMultiP
       return new InputEntityIteratingReader(
           inputRowSchema,
           inputFormat,
-          data.stream().map(str -> new ByteEntity(StringUtils.toUtf8(str))).iterator(),
+          CloseableIterators.withEmptyBaggage(
+              data.stream().map(str -> new ByteEntity(StringUtils.toUtf8(str))).iterator()
+          ),
+          SystemFieldDecoratorFactory.NONE,
           temporaryDirectory
       );
     }

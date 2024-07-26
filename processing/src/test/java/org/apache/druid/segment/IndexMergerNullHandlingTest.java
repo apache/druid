@@ -205,7 +205,8 @@ public class IndexMergerNullHandlingTest
                                                                   new DefaultBitmapResultFactory(
                                                                       indexSpec.getBitmapSerdeFactory()
                                                                                .getBitmapFactory()
-                                                                  )
+                                                                  ),
+                                                                  false
                                                               );
               final List<Integer> actualNullRows = new ArrayList<>();
               final IntIterator iterator = nullBitmap.iterator();

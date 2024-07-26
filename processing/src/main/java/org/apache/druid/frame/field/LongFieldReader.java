@@ -21,75 +21,61 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
-
-import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
  *
- * Values are sortable as bytes without decoding.
- *
- * Format:
- *
- * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
- * - 8 bytes: encoded long: big-endian order, with sign flipped
+ * @see LongFieldWriter
+ * @see NumericFieldWriter for the details of the byte-format that it expects for reading
  */
-public class LongFieldReader implements FieldReader
+public class LongFieldReader extends NumericFieldReader
 {
-  LongFieldReader()
+
+  public static LongFieldReader forPrimitive()
   {
+    return new LongFieldReader(false);
+  }
+
+  public static LongFieldReader forArray()
+  {
+    return new LongFieldReader(true);
+  }
+
+  private LongFieldReader(final boolean forArray)
+  {
+    super(forArray);
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
+  public ValueType getValueType()
   {
-    return new Selector(memory, fieldPointer);
+    return ValueType.LONG;
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(
-      Memory memory,
-      ReadableFieldPointer fieldPointer,
-      @Nullable ExtractionFn extractionFn
+  public ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
   )
   {
-    return ValueTypes.makeNumericWrappingDimensionSelector(
-        ValueType.LONG,
-        makeColumnValueSelector(memory, fieldPointer),
-        extractionFn
-    );
+    return new LongFieldSelector(memory, fieldPointer, nullIndicatorByte);
   }
 
-  @Override
-  public boolean isNull(Memory memory, long position)
+  private static class LongFieldSelector extends NumericFieldReader.Selector implements LongColumnSelector
   {
-    return memory.getByte(position) == LongFieldWriter.NULL_BYTE;
-  }
 
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
+    final Memory dataRegion;
+    final ReadableFieldPointer fieldPointer;
 
-  /**
-   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
-   */
-  private static class Selector implements LongColumnSelector
-  {
-    private final Memory memory;
-    private final ReadableFieldPointer fieldPointer;
-
-    private Selector(final Memory memory, final ReadableFieldPointer fieldPointer)
+    public LongFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
     {
-      this.memory = memory;
+      super(dataRegion, fieldPointer, nullIndicatorByte);
+      this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
     }
 
@@ -97,20 +83,20 @@ public class LongFieldReader implements FieldReader
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      final long bits = memory.getLong(fieldPointer.position() + Byte.BYTES);
-      return LongFieldWriter.detransform(bits);
+      final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
+      return TransformUtils.detransformToLong(bits);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
     }
 
     @Override
     public boolean isNull()
     {
-      return memory.getByte(fieldPointer.position()) == LongFieldWriter.NULL_BYTE;
-    }
-
-    @Override
-    public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
-    {
-      // Do nothing.
+      return super._isNull();
     }
   }
 }

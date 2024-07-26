@@ -19,18 +19,24 @@
 
 package org.apache.druid.query.operator;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -108,10 +114,29 @@ public class WindowOperatorQueryTest
   }
 
   @Test
+  public void withQuerySpec()
+  {
+    QuerySegmentSpec spec = new MultipleIntervalSegmentSpec(Collections.emptyList());
+    Assert.assertSame(spec, ((WindowOperatorQuery) query.withQuerySegmentSpec(spec)).getQuerySegmentSpec());
+  }
+
+  @Test
+  public void withOperators()
+  {
+    List<OperatorFactory> operators = ImmutableList.<OperatorFactory>builder()
+        .add(new NaivePartitioningOperatorFactory(Collections.singletonList("some")))
+        .build();
+    Assert.assertSame(operators, ((WindowOperatorQuery) query.withOperators(operators)).getOperators());
+  }
+
+  @Test
   public void testEquals()
   {
-    Assert.assertEquals(query, query);
-    Assert.assertEquals(query, query.withDataSource(query.getDataSource()));
+    EqualsVerifier.simple().forClass(WindowOperatorQuery.class)
+        .withNonnullFields("duration", "querySegmentSpec")
+        .usingGetClass()
+        .verify();
+
     Assert.assertNotEquals(query, query.toString());
   }
 }

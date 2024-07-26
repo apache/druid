@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join;
 
-import org.apache.druid.query.BaseQuery;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -39,7 +39,7 @@ public class PostJoinCursor implements Cursor
   private final ColumnSelectorFactory columnSelectorFactory;
 
   @Nullable
-  private final ValueMatcher valueMatcher;
+  private ValueMatcher valueMatcher;
 
   @Nullable
   private final Filter postJoinFilter;
@@ -69,10 +69,31 @@ public class PostJoinCursor implements Cursor
     return postJoinCursor;
   }
 
+  @VisibleForTesting
+  public void setValueMatcher(@Nullable ValueMatcher valueMatcher)
+  {
+    this.valueMatcher = valueMatcher;
+  }
+
   private void advanceToMatch()
   {
     if (valueMatcher != null) {
-      while (!isDone() && !valueMatcher.matches()) {
+      while (!isDone() && !valueMatcher.matches(false)) {
+        baseCursor.advance();
+      }
+    }
+  }
+
+  /**
+   * Matches tuples coming out of a join to a post-join condition uninterruptibly, and hence can be a long-running call.
+   * For this reason, {@link PostJoinCursor#advance()} instead calls {@link PostJoinCursor#advanceToMatch()} (unlike
+   * other cursors) that allows interruptions, thereby resolving issues where the
+   * <a href="https://github.com/apache/druid/issues/14514">CPU thread running PostJoinCursor cannot be terminated</a>
+   */
+  private void advanceToMatchUninterruptibly()
+  {
+    if (valueMatcher != null) {
+      while (!isDone() && !valueMatcher.matches(false)) {
         baseCursor.advanceUninterruptibly();
       }
     }
@@ -99,15 +120,17 @@ public class PostJoinCursor implements Cursor
   @Override
   public void advance()
   {
-    advanceUninterruptibly();
-    BaseQuery.checkInterrupted();
+    baseCursor.advance();
+    // Relies on baseCursor.advance() call inside this for BaseQuery.checkInterrupted() checks -- unlike other cursors
+    // which call advanceInterruptibly() and hence have to explicitly provision for interrupts.
+    advanceToMatch();
   }
 
   @Override
   public void advanceUninterruptibly()
   {
     baseCursor.advanceUninterruptibly();
-    advanceToMatch();
+    advanceToMatchUninterruptibly();
   }
 
   @Override

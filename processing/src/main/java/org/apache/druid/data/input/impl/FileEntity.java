@@ -62,6 +62,11 @@ public class FileEntity implements InputEntity
     return file.toURI();
   }
 
+  public File getFile()
+  {
+    return file;
+  }
+
   @Override
   public InputStream open() throws IOException
   {

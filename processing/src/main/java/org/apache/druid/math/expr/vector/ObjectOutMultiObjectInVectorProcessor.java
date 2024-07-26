@@ -61,7 +61,7 @@ public abstract class ObjectOutMultiObjectInVectorProcessor implements ExprVecto
     for (int i = 0; i < currentSize; i++) {
       processIndex(in, i);
     }
-    return new ExprEvalObjectVector(outValues);
+    return new ExprEvalObjectVector(outValues, expressionType);
   }
 
   abstract void processIndex(Object[][] in, int i);

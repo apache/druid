@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
@@ -38,7 +37,6 @@ import java.util.stream.Collectors;
 
 public class SegmentNukeAction implements TaskAction<Void>
 {
-  @JsonIgnore
   private final Set<DataSegment> segments;
 
   @JsonCreator
@@ -71,7 +69,7 @@ public class SegmentNukeAction implements TaskAction<Void>
     try {
       toolbox.getTaskLockbox().doInCriticalSection(
           task,
-          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList()),
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.builder()
                         .onValidLocks(
                             () -> {
@@ -97,16 +95,10 @@ public class SegmentNukeAction implements TaskAction<Void>
 
     for (DataSegment segment : segments) {
       metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/nuked/bytes", segment.getSize()));
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/nuked/bytes", segment.getSize()));
     }
 
     return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

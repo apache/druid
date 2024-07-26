@@ -19,14 +19,17 @@
 
 package org.apache.druid.data.input;
 
-import com.google.common.base.Strings;
 import org.apache.druid.data.input.impl.FastLineIterator;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.CloseableIteratorWithMetadata;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.ParserUtils;
+import org.apache.druid.segment.column.RowSignature;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,12 +38,12 @@ import java.util.Map;
 /**
  * Abstract {@link InputEntityReader} for text format readers such as CSV or JSON.
  */
-public abstract class TextReader extends IntermediateRowParsingReader<String>
+public abstract class TextReader<T> extends IntermediateRowParsingReader<T>
 {
   private final InputRowSchema inputRowSchema;
   private final InputEntity source;
 
-  public TextReader(InputRowSchema inputRowSchema, InputEntity source)
+  protected TextReader(InputRowSchema inputRowSchema, InputEntity source)
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
@@ -52,9 +55,9 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   }
 
   @Override
-  public CloseableIteratorWithMetadata<String> intermediateRowIteratorWithMetadata() throws IOException
+  public CloseableIteratorWithMetadata<T> intermediateRowIteratorWithMetadata() throws IOException
   {
-    final CloseableIterator<String> delegate = new FastLineIterator(source.open());
+    final CloseableIterator<T> delegate = makeSourceIterator(source.open());
     final int numHeaderLines = getNumHeaderLinesToSkip();
     for (int i = 0; i < numHeaderLines && delegate.hasNext(); i++) {
       delegate.next(); // skip lines
@@ -63,7 +66,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       processHeaderLine(delegate.next());
     }
 
-    return new CloseableIteratorWithMetadata<String>()
+    return new CloseableIteratorWithMetadata<T>()
     {
       private static final String LINE_KEY = "Line";
       private long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);
@@ -81,7 +84,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
       }
 
       @Override
-      public String next()
+      public T next()
       {
         currentLineNumber++;
         return delegate.next();
@@ -108,7 +111,7 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
    * This method will be called after {@link #getNumHeaderLinesToSkip()} and {@link #processHeaderLine}.
    */
   @Override
-  public abstract List<InputRow> parseInputRows(String intermediateRow) throws IOException, ParseException;
+  public abstract List<InputRow> parseInputRows(T intermediateRow) throws IOException, ParseException;
 
   /**
    * Returns the number of header lines to skip.
@@ -125,23 +128,61 @@ public abstract class TextReader extends IntermediateRowParsingReader<String>
   /**
    * Processes a header line. This will be called if {@link #needsToProcessHeaderLine()} = true.
    */
-  public abstract void processHeaderLine(String line) throws IOException;
+  public abstract void processHeaderLine(T line) throws IOException;
 
-  public static List<String> findOrCreateColumnNames(List<String> parsedLine)
+  protected abstract CloseableIterator<T> makeSourceIterator(InputStream in);
+
+  public static RowSignature findOrCreateInputRowSignature(List<String> parsedLine)
   {
     final List<String> columns = new ArrayList<>(parsedLine.size());
     for (int i = 0; i < parsedLine.size(); i++) {
-      if (Strings.isNullOrEmpty(parsedLine.get(i))) {
+      if (com.google.common.base.Strings.isNullOrEmpty(parsedLine.get(i))) {
         columns.add(ParserUtils.getDefaultColumnName(i));
       } else {
         columns.add(parsedLine.get(i));
       }
     }
-    if (columns.isEmpty()) {
-      return ParserUtils.generateFieldNames(parsedLine.size());
-    } else {
-      ParserUtils.validateFields(columns);
-      return columns;
+
+    ParserUtils.validateFields(columns);
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      builder.add(column, null);
+    }
+    return builder.build();
+  }
+
+  public abstract static class Strings extends TextReader<String>
+  {
+    protected Strings(InputRowSchema inputRowSchema, InputEntity source)
+    {
+      super(inputRowSchema, source);
+    }
+
+    @Override
+    protected CloseableIterator<String> makeSourceIterator(InputStream in)
+    {
+      return new FastLineIterator.Strings(in);
+    }
+  }
+
+  public abstract static class Bytes extends TextReader<byte[]>
+  {
+    protected Bytes(InputRowSchema inputRowSchema, InputEntity source)
+    {
+      super(inputRowSchema, source);
+    }
+
+    @Override
+    protected CloseableIterator<byte[]> makeSourceIterator(InputStream in)
+    {
+      return new FastLineIterator.Bytes(in);
+    }
+
+    @Override
+    protected String intermediateRowAsString(@Nullable byte[] row)
+    {
+      // Like String.valueOf, but for UTF-8 bytes. Keeps error messages consistent between String and Bytes.
+      return row == null ? "null" : StringUtils.fromUtf8(row);
     }
   }
 }

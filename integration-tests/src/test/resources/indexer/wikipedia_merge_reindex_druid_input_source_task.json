@@ -56,6 +56,36 @@
                     "type": "stringLast",
                     "name": "last_user",
                     "fieldName": "last_user"
+                },
+                {
+                    "type": "doubleFirst",
+                    "name": "double_first_delta",
+                    "fieldName": "double_first_delta"
+                },
+                {
+                    "type": "doubleLast",
+                    "name": "double_last_delta",
+                    "fieldName": "double_last_delta"
+                },
+                {
+                    "type": "longFirst",
+                    "name": "long_first_delta",
+                    "fieldName": "long_first_delta"
+                },
+                {
+                    "type": "longLast",
+                    "name": "long_last_delta",
+                    "fieldName": "long_last_delta"
+                },
+                {
+                    "type": "floatFirst",
+                    "name": "float_first_delta",
+                    "fieldName": "float_first_delta"
+                },
+                {
+                    "type": "floatLast",
+                    "name": "float_last_delta",
+                    "fieldName": "float_last_delta"
                 }
             ]
         }

@@ -24,9 +24,7 @@ import junitparams.Parameters;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,7 +47,6 @@ public class WhiteListBasedConverterTest
       null,
       new DefaultObjectMapper()
   );
-  private final DateTime createdTime = DateTimes.nowUtc();
   private final String hostname = "testHost.yahoo.com:8080";
   private final String serviceName = "historical";
   private final String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);
@@ -81,7 +78,7 @@ public class WhiteListBasedConverterTest
   {
     ServiceMetricEvent event = ServiceMetricEvent
         .builder()
-        .build(createdTime, key, 10)
+        .setMetric(key, 10)
         .build(serviceName, hostname);
 
     boolean isIn = defaultWhiteListBasedConverter.druidEventToGraphite(event) != null;
@@ -124,7 +121,7 @@ public class WhiteListBasedConverterTest
 
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[]{"g1"})
-        .build(createdTime, "jvm/gc/cpu", 10)
+        .setMetric("jvm/gc/cpu", 10)
         .build(serviceName, hostname);
 
     GraphiteEvent graphiteEvent = converter.druidEventToGraphite(event);
@@ -142,14 +139,14 @@ public class WhiteListBasedConverterTest
                                             .setDimension("status", "some_status")
                                             .setDimension("numDimensions", "1")
                                             .setDimension("segment", "dummy_segment")
-                                            .build(createdTime, "query/segment/time/balabla/more", 10)
+                                            .setMetric("query/segment/time/balabla/more", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".query/segment/time/balabla/more"
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "some_data_source")
                                             .setDimension("tier", "_default_tier")
-                                            .build(createdTime, "segment/max", 10)
+                                            .setMetric("segment/max", 10)
                 .build(serviceName, hostname),
             null
         },
@@ -164,7 +161,7 @@ public class WhiteListBasedConverterTest
                                             .setDimension("remoteAddress", "194.0.90.2")
                                             .setDimension("id", "ID")
                                             .setDimension("context", "{context}")
-                                            .build(createdTime, "query/time", 10)
+                                            .setMetric("query/time", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".data-source.groupBy.query/time"
         },
@@ -172,7 +169,7 @@ public class WhiteListBasedConverterTest
             new ServiceMetricEvent.Builder().setDimension("dataSource", "data-source")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .build(createdTime, "ingest/persists/count", 10)
+                                            .setMetric("ingest/persists/count", 10)
                 .build(serviceName, hostname),
             defaultNamespace + ".ingest/persists/count"
         },
@@ -180,7 +177,7 @@ public class WhiteListBasedConverterTest
             new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
                                             .setDimension("type", "groupBy")
                                             .setDimension("some_random_dim1", "random_dim_value1")
-                                            .build(createdTime, "jvm/bufferpool/capacity", 10)
+                                            .setMetric("jvm/bufferpool/capacity", 10)
                 .build(serviceName, hostname),
             null
         }

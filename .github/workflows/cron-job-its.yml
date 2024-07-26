@@ -32,14 +32,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup java
-        run: export JAVA_HOME=$JAVA_HOME_8_X64
+      - name: setup java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'zulu'
 
       - name: Cache Maven m2 repository
         id: maven
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: maven-${{ runner.os }}-8-${{ github.sha }}
@@ -111,15 +114,13 @@ jobs:
     name: security vulnerabilities
     strategy:
       fail-fast: false
-      matrix:
-        HADOOP_PROFILE: [ '', '-Phadoop2' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: setup java
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '8'
           distribution: 'zulu'
@@ -129,10 +130,8 @@ jobs:
         run: mvn clean install dependency:go-offline -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
       - name: security vulnerabilities check
-        env:
-          HADOOP_PROFILE: ${{ matrix.HADOOP_PROFILE }}
         run: |
-          mvn dependency-check:purge dependency-check:check ${HADOOP_PROFILE} || { echo "
+          mvn dependency-check:purge dependency-check:check || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`

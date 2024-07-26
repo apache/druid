@@ -70,7 +70,7 @@ public class BrokerSegmentWatcherConfig
     return awaitInitializationOnStart;
   }
 
-  public boolean isDetectUnavailableSegments()
+  public boolean detectUnavailableSegments()
   {
     return detectUnavailableSegments;
   }

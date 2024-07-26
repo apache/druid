@@ -22,8 +22,10 @@ title: "Spatial filters"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
-> This document describes a feature that is only available in the native language.
+:::info
+ Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
+ This document describes a feature that is only available in the native language.
+:::
 
 Apache Druid supports filtering spatially indexed columns based on an origin and a bound.
 
@@ -140,8 +142,9 @@ The `radius` bound has the following elements:
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|`coords`|Origin coordinates in the form [x, y]|yes|
-|`radius`|The float radius value|yes|
+|`coords`|Center coordinates in the form [x, y]|yes|
+|`radius`|The float radius value according to specified unit|yes|
+|`radiusUnit`|String value of radius unit in lowercase, default value is 'euclidean'. Allowed units are euclidean, meters, miles, kilometers.|no|
 
 #### Polygon
 

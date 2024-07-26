@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -175,7 +175,7 @@ public class ReservoirSegmentSamplerTest
             .addDataSegment(segments.get(2))
             .addDataSegment(segments.get(3))
             .toImmutableDruidServer(),
-        new LoadQueuePeonTester()
+        new TestLoadQueuePeon()
     );
 
     // Try to pick all the segments on the servers
@@ -380,6 +380,6 @@ public class ReservoirSegmentSamplerTest
     for (DataSegment segment : loadedSegments) {
       server.addDataSegment(segment);
     }
-    return new ServerHolder(server.toImmutableDruidServer(), new LoadQueuePeonTester());
+    return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon());
   }
 }

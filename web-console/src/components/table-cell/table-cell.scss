@@ -20,6 +20,7 @@
 
 .table-cell {
   padding: $table-cell-v-padding $table-cell-h-padding;
+  white-space: pre;
 
   &.null,
   &.empty {

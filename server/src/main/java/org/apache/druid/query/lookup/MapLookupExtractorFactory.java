@@ -88,6 +88,17 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
+  public void awaitInitialization()
+  {
+
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return true;
+  }
+  @Override
   public LookupExtractor get()
   {
     return lookupExtractor;

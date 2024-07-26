@@ -547,12 +547,6 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public List<AggregatorFactory> getRequiredColumns()
-    {
-      return null;
-    }
-
-    @Override
     public Object deserialize(Object object)
     {
       return null;

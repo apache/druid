@@ -42,13 +42,14 @@ public class KubernetesPeonLifecycleFactory implements PeonLifecycleFactory
   }
 
   @Override
-  public KubernetesPeonLifecycle build(Task task)
+  public KubernetesPeonLifecycle build(Task task, KubernetesPeonLifecycle.TaskStateListener stateListener)
   {
     return new KubernetesPeonLifecycle(
         task,
         client,
         taskLogs,
-        mapper
+        mapper,
+        stateListener
     );
   }
 }

@@ -19,19 +19,25 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class BuiltInExprMacros
 {
   public static class ComplexDecodeBase64ExprMacro implements ExprMacroTable.ExprMacro
   {
     public static final String NAME = "complex_decode_base64";
+    public static final String ALIAS = "decode_base64_complex";
 
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
     @Override
     public String name()
     {
@@ -51,7 +57,7 @@ public class BuiltInExprMacros
 
       public ComplexDecodeBase64Expression(List<Expr> args)
       {
-        super(NAME, args);
+        super(ComplexDecodeBase64ExprMacro.this, args);
         validationHelperCheckArgumentCount(args, 2);
         final Expr arg0 = args.get(0);
 
@@ -110,13 +116,6 @@ public class BuiltInExprMacros
         return ExprEval.ofComplex(complexType, typeStrategy.fromBytes(base64));
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        List<Expr> newArgs = args.stream().map(x -> x.visit(shuttle)).collect(Collectors.toList());
-        return shuttle.visit(new ComplexDecodeBase64Expression(newArgs));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -144,4 +143,75 @@ public class BuiltInExprMacros
       }
     }
   }
+
+  public static class StringDecodeBase64UTFExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "decode_base64_utf8";
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      validationHelperCheckArgumentCount(args, 1);
+      return new StringDecodeBase64UTFExpression(this, args);
+    }
+
+    /**
+     * use name() in closure scope to allow Alias macro to override it with alias.
+     *
+     * @return String
+     */
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    static final class StringDecodeBase64UTFExpression extends ExprMacroTable.BaseScalarMacroFunctionExpr
+    {
+      private final Expr arg;
+
+      public StringDecodeBase64UTFExpression(StringDecodeBase64UTFExprMacro macro, List<Expr> args)
+      {
+        super(macro, args);
+        this.arg = Iterables.getOnlyElement(args);
+      }
+
+      @Override
+      public ExprEval eval(ObjectBinding bindings)
+      {
+        ExprEval<?> toDecode = arg.eval(bindings);
+        if (toDecode.value() == null) {
+          return ExprEval.of(null);
+        }
+        return new StringExpr(StringUtils.fromUtf8(StringUtils.decodeBase64String(toDecode.asString()))).eval(bindings);
+      }
+
+      @Nullable
+      @Override
+      public ExpressionType getOutputType(InputBindingInspector inspector)
+      {
+        return ExpressionType.STRING;
+      }
+
+      @Override
+      public boolean isLiteral()
+      {
+        return arg.isLiteral();
+      }
+
+      @Override
+      public boolean isNullLiteral()
+      {
+        return arg.isNullLiteral();
+      }
+
+      @Nullable
+      @Override
+      public Object getLiteralValue()
+      {
+        return eval(InputBindings.nilBindings()).value();
+      }
+    }
+  }
+
 }

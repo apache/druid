@@ -34,11 +34,11 @@ import java.util.Optional;
 /**
  * Delegates to some other kind of {@link KeyCollector} at first, until its {@link #downSample()} fails to downsample.
  * At that point, the delegate collector is nulled out and this collector starts tracking the min key instead.
- *
+ * <br>
  * This is useful because it allows us to wrap any {@link KeyCollector} and enable downsampling to a single key, even
  * if the original collector does not support that. For example, {@link QuantilesSketchKeyCollector} cannot downsample
  * below K = 2, which retains more than one key.
- *
+ * <br>
  * Created by {@link DelegateOrMinKeyCollectorFactory}.
  */
 public class DelegateOrMinKeyCollector<TDelegate extends KeyCollector<TDelegate>>
@@ -176,5 +176,20 @@ public class DelegateOrMinKeyCollector<TDelegate extends KeyCollector<TDelegate>
     } else {
       return ClusterByPartitions.oneUniversalPartition();
     }
+  }
+
+  @Override
+  public int sketchAccuracyFactor()
+  {
+    return delegate == null ? Integer.MIN_VALUE : delegate.sketchAccuracyFactor();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "DelegateOrMinKeyCollector{" +
+           "delegate=" + delegate +
+           ", minKey=" + minKey +
+           '}';
   }
 }

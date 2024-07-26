@@ -81,6 +81,22 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
+  public void postDoneReadingInput(StageId stageId, int workerNumber) throws IOException
+  {
+    final String path = StringUtils.format(
+        "/doneReadingInput/%s/%d/%d",
+        StringUtils.urlEncode(stageId.getQueryId()),
+        stageId.getStageNumber(),
+        workerNumber
+    );
+
+    doRequest(
+        new RequestBuilder(HttpMethod.POST, path),
+        IgnoreHttpResponseHandler.INSTANCE
+    );
+  }
+
+  @Override
   public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree) throws IOException
   {
     final String path = StringUtils.format("/counters/%s", StringUtils.urlEncode(workerId));

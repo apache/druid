@@ -45,7 +45,7 @@ public class ParquetGroupFlattenerMaker implements ObjectFlatteners.FlattenerMak
 
   public ParquetGroupFlattenerMaker(boolean binaryAsString, boolean discoverNestedFields)
   {
-    this.converter = new ParquetGroupConverter(binaryAsString);
+    this.converter = new ParquetGroupConverter(binaryAsString, false);
     this.parquetJsonProvider = new ParquetGroupJsonProvider(converter);
     this.jsonPathConfiguration = Configuration.builder()
                                               .jsonProvider(parquetJsonProvider)

@@ -18,25 +18,30 @@
 
 import './modules';
 
-import { Menu, MenuItem } from '@blueprintjs/core';
+import { Intent, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlTable } from '@druid-toolkit/query';
-import { C, L, sql, SqlLiteral, SqlQuery, T } from '@druid-toolkit/query';
+import type { SqlExpression } from '@druid-toolkit/query';
+import { C, L, sql, SqlLiteral, SqlQuery, SqlTable, T } from '@druid-toolkit/query';
 import type { ExpressionMeta, TransferValue } from '@druid-toolkit/visuals-core';
 import {
   useModuleContainer,
   useParameterValues,
   useSingleHost,
 } from '@druid-toolkit/visuals-react';
+import copy from 'copy-to-clipboard';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useLocalStorageState, useQueryManager } from '../../hooks';
+import { AppToaster } from '../../singletons';
 import { deepGet, filterMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
 
 import { ControlPane } from './control-pane/control-pane';
 import { DroppableContainer } from './droppable-container/droppable-container';
 import { FilterPane } from './filter-pane/filter-pane';
+import { HighlightBubble } from './highlight-bubble/highlight-bubble';
+import { highlightStore } from './highlight-store/highlight-store';
 import BarChartEcharts from './modules/bar-chart-echarts-module';
 import MultiAxisChartEcharts from './modules/multi-axis-chart-echarts-module';
 import PieChartEcharts from './modules/pie-chart-echarts-module';
@@ -145,8 +150,11 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
     query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
   });
 
-  const maxTime = new Date(deepGet(d, '0.maxTime'));
+  let maxTime = new Date(deepGet(d, '0.maxTime'));
   if (isNaN(maxTime.valueOf())) return;
+
+  // Add 1ms to the maxTime date so as to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
+  maxTime = new Date(maxTime.valueOf() + 1);
 
   // micro-cache set
   lastMaxTimeTable = tableName;
@@ -156,10 +164,22 @@ async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> 
   return maxTime;
 }
 
+function getFirstTableName(q: SqlQuery): string | undefined {
+  let tableName: string | undefined;
+  q.walk(ex => {
+    if (ex instanceof SqlTable) {
+      tableName = ex.getName();
+      return;
+    }
+    return ex;
+  });
+  return tableName;
+}
+
 async function extendedQueryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
   if (sqlQueryPayload.query.includes('MAX_DATA_TIME()')) {
     const parsed = SqlQuery.parse(sqlQueryPayload.query);
-    const tableName = parsed.getFirstTableName();
+    const tableName = getFirstTableName(parsed);
     if (tableName) {
       const maxTime = await getMaxTimeForTable(tableName);
       if (maxTime) {
@@ -186,6 +206,10 @@ export const ExploreView = React.memo(function ExploreView() {
     VISUAL_MODULES[0].moduleName,
   );
 
+  const { dropHighlight } = useStore(highlightStore);
+
+  const [timezone] = useState('Etc/UTC');
+
   const [columns, setColumns] = useState<ExpressionMeta[]>([]);
 
   const { host, where, table, visualModule, updateWhere, updateTable } = useSingleHost({
@@ -199,6 +223,10 @@ export const ExploreView = React.memo(function ExploreView() {
       where: SqlLiteral.TRUE,
     },
   });
+
+  useEffect(() => {
+    host.store.setState({ context: { timezone } });
+  }, [timezone, host.store]);
 
   const { parameterValues, updateParameterValues, resetParameterValues } = useParameterValues({
     host,
@@ -236,135 +264,151 @@ export const ExploreView = React.memo(function ExploreView() {
   const [containerRef] = useModuleContainer({ host, selectedModule: moduleName, columns });
 
   return (
-    <div className="explore-view">
-      <SourcePane
-        selectedTableName={table ? (table as SqlTable).getName() : '-'}
-        onSelectedTableNameChange={t => updateTable(T(t))}
-        disabled={Boolean(dataset && datasetState.loading)}
-      />
-      <FilterPane
-        ref={filterPane}
-        dataset={dataset}
-        filter={where}
-        onFilterChange={updateWhere}
-        queryDruidSql={extendedQueryDruidSql}
-      />
-      <TilePicker<ModuleType>
-        modules={VISUAL_MODULES}
-        selectedTileName={moduleName}
-        onSelectedTileNameChange={m => {
-          const currentParameterDefinitions = visualModule?.parameterDefinitions || {};
-          const valuesToTransfer: TransferValue[] = filterMap(
-            VISUAL_MODULES.find(vm => vm.moduleName === visualModule?.moduleName)?.transfer || [],
-            paramName => {
-              const parameterDefinition = currentParameterDefinitions[paramName];
-              if (!parameterDefinition) return;
-              const parameterValue = parameterValues[paramName];
-              if (typeof parameterValue === 'undefined') return;
-              return [parameterDefinition.type, parameterValue];
-            },
-          );
-
-          setModuleName(m);
-          resetParameterValues();
-
-          const newModuleDef = VISUAL_MODULES.find(vm => vm.moduleName === m);
-          if (newModuleDef) {
-            const newParameters: any = newModuleDef.module?.parameters || {};
-            const transferParameterValues: [name: string, value: any][] = filterMap(
-              newModuleDef.transfer || [],
-              t => {
-                const p = newParameters[t];
-                if (!p) return;
-                const normalizedTargetType = normalizeType(p.type);
-                const transferSource = valuesToTransfer.find(
-                  ([t]) => normalizeType(t) === normalizedTargetType,
-                );
-                if (!transferSource) return;
-                const targetValue = adjustTransferValue(
-                  transferSource[1],
-                  transferSource[0],
-                  p.type,
-                );
-                if (typeof targetValue === 'undefined') return;
-                return [t, targetValue];
+    <>
+      <div className="explore-view">
+        <SourcePane
+          selectedTableName={table ? (table as SqlTable).getName() : '-'}
+          onSelectedTableNameChange={t => updateTable(T(t))}
+          disabled={Boolean(dataset && datasetState.loading)}
+        />
+        <FilterPane
+          ref={filterPane}
+          dataset={dataset}
+          filter={where}
+          onFilterChange={updateWhere}
+          queryDruidSql={extendedQueryDruidSql}
+        />
+        <TilePicker<ModuleType>
+          modules={VISUAL_MODULES}
+          selectedTileName={moduleName}
+          onSelectedTileNameChange={m => {
+            const currentParameterDefinitions = visualModule?.parameterDefinitions || {};
+            const valuesToTransfer: TransferValue[] = filterMap(
+              VISUAL_MODULES.find(vm => vm.moduleName === visualModule?.moduleName)?.transfer || [],
+              paramName => {
+                const parameterDefinition = currentParameterDefinitions[paramName];
+                if (!parameterDefinition) return;
+                const parameterValue = parameterValues[paramName];
+                if (typeof parameterValue === 'undefined') return;
+                return [parameterDefinition.type, parameterValue];
               },
             );
 
-            if (transferParameterValues.length) {
-              updateParameterValues(Object.fromEntries(transferParameterValues));
-            }
-          }
-        }}
-        moreMenu={
-          <Menu>
-            <MenuItem
-              icon={IconNames.HISTORY}
-              text="Show query history"
-              onClick={() => {
-                setShownText(getFormattedQueryHistory());
-              }}
-            />
-            <MenuItem
-              icon={IconNames.RESET}
-              text="Reset visualization state"
-              onClick={() => {
-                resetParameterValues();
-              }}
-            />
-          </Menu>
-        }
-      />
-      <div className="resource-pane-cnt">
-        {!dataset && datasetState.loading && 'Loading...'}
-        {dataset && (
-          <ResourcePane
-            dataset={dataset}
-            onFilter={c => {
-              filterPane.current?.filterOn(c);
-            }}
-            onShow={onShow}
-          />
-        )}
-      </div>
-      <DroppableContainer
-        ref={containerRef}
-        onDropColumn={column => {
-          let nextModuleName: ModuleType;
-          if (column.sqlType === 'TIMESTAMP') {
-            nextModuleName = 'time_chart_echarts';
-          } else {
-            nextModuleName = 'table_react';
-          }
-
-          setModuleName(nextModuleName);
-
-          if (column.sqlType === 'TIMESTAMP') {
+            dropHighlight();
+            setModuleName(m);
             resetParameterValues();
-          } else {
-            updateParameterValues({ splitColumns: [column] });
+
+            const newModuleDef = VISUAL_MODULES.find(vm => vm.moduleName === m);
+            if (newModuleDef) {
+              const newParameters: any = newModuleDef.module?.parameters || {};
+              const transferParameterValues: [name: string, value: any][] = filterMap(
+                newModuleDef.transfer || [],
+                t => {
+                  const p = newParameters[t];
+                  if (!p) return;
+                  const normalizedTargetType = normalizeType(p.type);
+                  const transferSource = valuesToTransfer.find(
+                    ([t]) => normalizeType(t) === normalizedTargetType,
+                  );
+                  if (!transferSource) return;
+                  const targetValue = adjustTransferValue(
+                    transferSource[1],
+                    transferSource[0],
+                    p.type,
+                  );
+                  if (typeof targetValue === 'undefined') return;
+                  return [t, targetValue];
+                },
+              );
+
+              if (transferParameterValues.length) {
+                updateParameterValues(Object.fromEntries(transferParameterValues));
+              }
+            }
+          }}
+          moreMenu={
+            <Menu>
+              <MenuItem
+                icon={IconNames.DUPLICATE}
+                text="Copy last query"
+                disabled={!QUERY_HISTORY.length}
+                onClick={() => {
+                  copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
+                  AppToaster.show({
+                    message: `Copied query to clipboard`,
+                    intent: Intent.SUCCESS,
+                  });
+                }}
+              />
+              <MenuItem
+                icon={IconNames.HISTORY}
+                text="Show query history"
+                onClick={() => {
+                  setShownText(getFormattedQueryHistory());
+                }}
+              />
+              <MenuItem
+                icon={IconNames.RESET}
+                text="Reset visualization state"
+                onClick={() => {
+                  resetParameterValues();
+                }}
+              />
+            </Menu>
           }
-        }}
-      />
-      <div className="control-pane-cnt">
-        {dataset && visualModule?.parameterDefinitions && (
-          <ControlPane
-            columns={dataset.columns}
-            onUpdateParameterValues={updateParameterValues}
-            parameterValues={parameterValues}
-            visualModule={visualModule}
-          />
-        )}
-      </div>
-      {shownText && (
-        <ShowValueDialog
-          title="Query history"
-          str={shownText}
-          onClose={() => {
-            setShownText(undefined);
+        />
+        <div className="resource-pane-cnt">
+          {!dataset && datasetState.loading && 'Loading...'}
+          {dataset && (
+            <ResourcePane
+              dataset={dataset}
+              onFilter={c => {
+                filterPane.current?.filterOn(c);
+              }}
+              onShow={onShow}
+            />
+          )}
+        </div>
+        <DroppableContainer
+          ref={containerRef}
+          onDropColumn={column => {
+            let nextModuleName: ModuleType;
+            if (column.sqlType === 'TIMESTAMP') {
+              nextModuleName = 'time_chart_echarts';
+            } else {
+              nextModuleName = 'table_react';
+            }
+
+            setModuleName(nextModuleName);
+
+            if (column.sqlType === 'TIMESTAMP') {
+              resetParameterValues();
+            } else {
+              updateParameterValues({ splitColumns: [column] });
+            }
           }}
         />
-      )}
-    </div>
+        <div className="control-pane-cnt">
+          {dataset && visualModule?.parameterDefinitions && (
+            <ControlPane
+              columns={dataset.columns}
+              onUpdateParameterValues={updateParameterValues}
+              parameterValues={parameterValues}
+              visualModule={visualModule}
+            />
+          )}
+        </div>
+        {shownText && (
+          <ShowValueDialog
+            title="Query history"
+            str={shownText}
+            onClose={() => {
+              setShownText(undefined);
+            }}
+          />
+        )}
+      </div>
+      <HighlightBubble referenceContainer={containerRef.current} />
+    </>
   );
 });

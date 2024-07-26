@@ -22,6 +22,7 @@ package org.apache.druid.msq.input.external;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.segment.TestHelper;
@@ -43,7 +44,8 @@ public class ExternalInputSpecTest
         new LocalInputSource(
             null,
             null,
-            Collections.singletonList(new File("/nonexistent/file"))
+            Collections.singletonList(new File("/nonexistent/file")),
+            SystemFields.none()
         ),
         ExternalInputSpecSlicerTest.INPUT_FORMAT,
         ExternalInputSpecSlicerTest.SIGNATURE

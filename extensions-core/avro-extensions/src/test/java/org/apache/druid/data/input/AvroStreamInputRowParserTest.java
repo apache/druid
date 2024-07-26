@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.avro.AvroRuntimeException;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
@@ -43,6 +44,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -297,6 +299,45 @@ public class AvroStreamInputRowParserTest
 
       assertInputRowCorrect(inputRow, DIMENSIONS_SCHEMALESS, false);
     }
+  }
+
+  @Test
+  public void testParseInvalidData() throws IOException, SchemaValidationException
+  {
+    Repository repository = new InMemoryRepository(null);
+    SchemaRepoBasedAvroBytesDecoder<String, Integer> decoder = new SchemaRepoBasedAvroBytesDecoder<>(
+        new Avro1124SubjectAndIdConverter(TOPIC),
+        repository
+    );
+
+    // prepare data
+    GenericRecord someAvroDatum = buildSomeAvroDatum();
+
+    // encode schema id
+    Avro1124SubjectAndIdConverter converter = new Avro1124SubjectAndIdConverter(TOPIC);
+    TypedSchemaRepository<Integer, Schema, String> repositoryClient = new TypedSchemaRepository<>(
+        repository,
+        new IntegerConverter(),
+        new AvroSchemaConverter(),
+        new IdentityConverter()
+    );
+    Integer id = repositoryClient.registerSchema(TOPIC, SomeAvroDatum.getClassSchema());
+    ByteBuffer byteBuffer = ByteBuffer.allocate(20);
+    converter.putSubjectAndId(id, byteBuffer);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    out.write(new byte[0]);
+    out.write(byteBuffer.array());
+
+    DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(someAvroDatum.getSchema());
+    // write avro datum to bytes
+    writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
+
+    ParseException parseException = Assert.assertThrows(
+        ParseException.class,
+        () -> decoder.parse(ByteBuffer.wrap(out.toByteArray()))
+    );
+    Assert.assertTrue(parseException.getCause() instanceof AvroRuntimeException);
+    Assert.assertTrue(parseException.getMessage().contains("Failed to read Avro message"));
   }
 
   static void assertInputRowCorrect(InputRow inputRow, List<String> expectedDimensions, boolean isFromPigAvro)

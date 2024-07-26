@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.ServerHolder;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -57,7 +57,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     // Create 10 servers with current size being 3K & max size being 10K
     // Each having having 100 segments
     for (int i = 0; i < serverCount; i++) {
-      LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
+      TestLoadQueuePeon fromPeon = new TestLoadQueuePeon();
 
       List<DataSegment> segments = IntStream
           .range(0, maxSegments)
@@ -78,7 +78,7 @@ public class DiskNormalizedCostBalancerStrategyTest
     }
 
     // The best server to be available for next segment assignment has greater max Size
-    LoadQueuePeonTester fromPeon = new LoadQueuePeonTester();
+    TestLoadQueuePeon fromPeon = new TestLoadQueuePeon();
     ImmutableDruidServer druidServer = EasyMock.createMock(ImmutableDruidServer.class);
     EasyMock.expect(druidServer.getName()).andReturn("BEST_SERVER").anyTimes();
     EasyMock.expect(druidServer.getCurrSize()).andReturn(3000L).anyTimes();

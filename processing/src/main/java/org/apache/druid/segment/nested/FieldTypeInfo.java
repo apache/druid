@@ -151,35 +151,7 @@ public class FieldTypeInfo
 
     public MutableTypeSet add(ColumnType type)
     {
-      switch (type.getType()) {
-        case STRING:
-          types |= STRING_MASK;
-          break;
-        case LONG:
-          types |= LONG_MASK;
-          break;
-        case DOUBLE:
-          types |= DOUBLE_MASK;
-          break;
-        case ARRAY:
-          Preconditions.checkNotNull(type.getElementType(), "ElementType must not be null");
-          switch (type.getElementType().getType()) {
-            case STRING:
-              types |= STRING_ARRAY_MASK;
-              break;
-            case LONG:
-              types |= LONG_ARRAY_MASK;
-              break;
-            case DOUBLE:
-              types |= DOUBLE_ARRAY_MASK;
-              break;
-            default:
-              throw new ISE("Unsupported nested array type: [%s]", type.asTypeString());
-          }
-          break;
-        default:
-          throw new ISE("Unsupported nested type: [%s]", type.asTypeString());
-      }
+      types = FieldTypeInfo.add(types, type);
       return this;
     }
 
@@ -207,7 +179,15 @@ public class FieldTypeInfo
     @Nullable
     public ColumnType getSingleType()
     {
-      return FieldTypeInfo.getSingleType(types);
+      final ColumnType columnType = FieldTypeInfo.getSingleType(types);
+      if (hasEmptyArray && columnType != null && !columnType.isArray()) {
+        return null;
+      }
+      // if column only has empty arrays, call it long array
+      if (types == 0x00 && hasEmptyArray) {
+        return ColumnType.LONG_ARRAY;
+      }
+      return columnType;
     }
 
     public boolean isEmpty()
@@ -218,6 +198,10 @@ public class FieldTypeInfo
 
     public byte getByteValue()
     {
+      final ColumnType singleType = FieldTypeInfo.getSingleType(types);
+      if (hasEmptyArray && singleType != null && !singleType.isArray()) {
+        return FieldTypeInfo.add(types, ColumnType.ofArray(singleType));
+      }
       return types;
     }
 
@@ -266,7 +250,21 @@ public class FieldTypeInfo
 
     public void write(MutableTypeSet types) throws IOException
     {
-      valuesOut.write(types.getByteValue());
+      byte typeByte = types.getByteValue();
+      // adjust for empty array if needed
+      if (types.hasUntypedArray()) {
+        Set<ColumnType> columnTypes = FieldTypeInfo.convertToSet(types.getByteValue());
+        ColumnType leastRestrictive = null;
+        for (ColumnType type : columnTypes) {
+          leastRestrictive = ColumnType.leastRestrictiveType(leastRestrictive, type);
+        }
+        if (leastRestrictive == null) {
+          typeByte = add(typeByte, ColumnType.LONG_ARRAY);
+        } else if (!leastRestrictive.isArray()) {
+          typeByte = add(typeByte, ColumnType.ofArray(leastRestrictive));
+        }
+      }
+      valuesOut.write(typeByte);
       numWritten++;
     }
 
@@ -291,6 +289,40 @@ public class FieldTypeInfo
     } else {
       return null;
     }
+  }
+
+  public static byte add(byte types, ColumnType type)
+  {
+    switch (type.getType()) {
+      case STRING:
+        types |= STRING_MASK;
+        break;
+      case LONG:
+        types |= LONG_MASK;
+        break;
+      case DOUBLE:
+        types |= DOUBLE_MASK;
+        break;
+      case ARRAY:
+        Preconditions.checkNotNull(type.getElementType(), "ElementType must not be null");
+        switch (type.getElementType().getType()) {
+          case STRING:
+            types |= STRING_ARRAY_MASK;
+            break;
+          case LONG:
+            types |= LONG_ARRAY_MASK;
+            break;
+          case DOUBLE:
+            types |= DOUBLE_ARRAY_MASK;
+            break;
+          default:
+            throw new ISE("Unsupported nested array type: [%s]", type.asTypeString());
+        }
+        break;
+      default:
+        throw new ISE("Unsupported nested type: [%s]", type.asTypeString());
+    }
+    return types;
   }
 
   public static Set<ColumnType> convertToSet(byte types)

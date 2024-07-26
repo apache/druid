@@ -20,8 +20,9 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.join.Equality;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -73,27 +74,52 @@ public class ExprsTest
   @Test
   public void test_decomposeEquals_notAnEquals()
   {
-    final Optional<Pair<Expr, Expr>> optionalPair = Exprs.decomposeEquals(new IdentifierExpr("foo"));
-    Assert.assertFalse(optionalPair.isPresent());
+    final Optional<Equality> result = Exprs.decomposeEquals(new IdentifierExpr("foo"), "j.");
+    Assert.assertFalse(result.isPresent());
   }
 
   @Test
   public void test_decomposeEquals_basic()
   {
-    final Optional<Pair<Expr, Expr>> optionalPair = Exprs.decomposeEquals(
+    final Optional<Equality> result = Exprs.decomposeEquals(
         new BinEqExpr(
             "==",
             new IdentifierExpr("foo"),
-            new IdentifierExpr("bar")
-        )
+            new IdentifierExpr("j.bar")
+        ),
+        "j."
     );
 
-    Assert.assertTrue(optionalPair.isPresent());
+    Assert.assertTrue(result.isPresent());
 
-    final Pair<Expr, Expr> pair = optionalPair.get();
-    Assert.assertThat(pair.lhs, CoreMatchers.instanceOf(IdentifierExpr.class));
-    Assert.assertThat(pair.rhs, CoreMatchers.instanceOf(IdentifierExpr.class));
-    Assert.assertEquals("foo", ((IdentifierExpr) pair.lhs).getIdentifier());
-    Assert.assertEquals("bar", ((IdentifierExpr) pair.rhs).getIdentifier());
+    final Equality equality = result.get();
+    MatcherAssert.assertThat(equality.getLeftExpr(), CoreMatchers.instanceOf(IdentifierExpr.class));
+    Assert.assertEquals("foo", ((IdentifierExpr) equality.getLeftExpr()).getIdentifier());
+    Assert.assertEquals("bar", equality.getRightColumn());
+    Assert.assertFalse(equality.isIncludeNull());
+  }
+
+  @Test
+  public void test_decomposeEquals_notDistinctFrom()
+  {
+    final Optional<Equality> result = Exprs.decomposeEquals(
+        new FunctionExpr(
+            new Function.IsNotDistinctFromFunc(),
+            "notdistinctfrom",
+            ImmutableList.of(
+                new IdentifierExpr("foo"),
+                new IdentifierExpr("j.bar")
+            )
+        ),
+        "j."
+    );
+
+    Assert.assertTrue(result.isPresent());
+
+    final Equality equality = result.get();
+    MatcherAssert.assertThat(equality.getLeftExpr(), CoreMatchers.instanceOf(IdentifierExpr.class));
+    Assert.assertEquals("foo", ((IdentifierExpr) equality.getLeftExpr()).getIdentifier());
+    Assert.assertEquals("bar", equality.getRightColumn());
+    Assert.assertTrue(equality.isIncludeNull());
   }
 }

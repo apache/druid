@@ -27,6 +27,8 @@ public class SegmentWithDescriptorTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(SegmentWithDescriptor.class).usingGetClass().verify();
+    EqualsVerifier.forClass(SegmentWithDescriptor.class)
+                  .usingGetClass()
+                  .verify();
   }
 }

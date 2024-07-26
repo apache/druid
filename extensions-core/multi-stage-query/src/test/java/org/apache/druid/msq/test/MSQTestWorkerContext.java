@@ -22,13 +22,14 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.indexing.common.TaskReport;
-import org.apache.druid.indexing.common.TaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -43,7 +44,7 @@ import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
@@ -119,22 +120,10 @@ public class MSQTestWorkerContext implements WorkerContext
     IndexMergerV9 indexMerger = new IndexMergerV9(
         mapper,
         indexIO,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        true
     );
-    final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
-    {
-      @Override
-      public void write(String taskId, Map<String, TaskReport> reports)
-      {
-
-      }
-
-      @Override
-      public void setObjectMapper(ObjectMapper objectMapper)
-      {
-
-      }
-    };
+    final TaskReportFileWriter reportFileWriter = new NoopTestTaskReportFileWriter();
 
     return new IndexerFrameContext(
         new IndexerWorkerContext(
@@ -153,10 +142,12 @@ public class MSQTestWorkerContext implements WorkerContext
             injector,
             indexIO,
             null,
+            null,
             null
         ),
         indexIO,
         injector.getInstance(DataSegmentProvider.class),
+        injector.getInstance(DataServerQueryHandlerFactory.class),
         workerMemoryParameters
     );
   }
@@ -177,5 +168,11 @@ public class MSQTestWorkerContext implements WorkerContext
   public Bouncer processorBouncer()
   {
     return injector.getInstance(Bouncer.class);
+  }
+
+  @Override
+  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
+  {
+    return injector.getInstance(DataServerQueryHandlerFactory.class);
   }
 }

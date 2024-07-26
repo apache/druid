@@ -27,7 +27,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.BalancerSegmentHolder;
 import org.apache.druid.server.coordinator.balancer.ReservoirSegmentSampler;
-import org.apache.druid.server.coordinator.loading.LoadQueuePeonTester;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -105,7 +105,7 @@ public class BalancerStrategyBenchmark
                   ImmutableMap.of("test", new ImmutableDruidDataSource("test", Collections.emptyMap(), segments)),
                   segments.size()
               ),
-              new LoadQueuePeonTester()
+              new TestLoadQueuePeon()
           )
       );
     }

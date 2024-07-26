@@ -79,6 +79,7 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -275,6 +276,10 @@ public class IndexIO
           if (((List) vals2).size() != 1 || !Objects.equals(((List) vals2).get(0), vals1)) {
             throw notEqualValidationException(dim1Name, vals1, vals2);
           }
+        }
+      } else if (vals1 instanceof Object[]) {
+        if (!Arrays.deepEquals((Object[]) vals1, (Object[]) vals2)) {
+          throw notEqualValidationException(dim1Name, vals1, vals2);
         }
       } else {
         if (!Objects.equals(vals1, vals2)) {

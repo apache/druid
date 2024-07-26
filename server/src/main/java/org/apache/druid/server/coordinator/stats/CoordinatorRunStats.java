@@ -26,10 +26,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -224,37 +222,14 @@ public class CoordinatorRunStats
   }
 
   /**
-   * Creates a new {@code CoordinatorRunStats} which represents the snapshot of
-   * the stats collected so far in this instance.
-   * <p>
-   * While this method is in progress, any updates made to the stats of this
-   * instance by another thread are not guaranteed to be present in the snapshot.
-   * But the snapshots are consistent, i.e. stats present in the snapshot created
-   * in one invocation of this method are permanently removed from this instance
-   * and will not be present in subsequent snapshots.
-   *
-   * @return Snapshot of the current state of this {@code CoordinatorRunStats}.
-   */
-  public CoordinatorRunStats getSnapshotAndReset()
-  {
-    final CoordinatorRunStats snapshot = new CoordinatorRunStats(debugDimensions);
-
-    // Get a snapshot of all the keys, remove and copy each of them atomically
-    final Set<RowKey> keys = new HashSet<>(allStats.keySet());
-    for (RowKey key : keys) {
-      snapshot.allStats.put(key, allStats.remove(key));
-    }
-
-    return snapshot;
-  }
-
-  /**
    * Checks if the given rowKey has any of the debug dimensions.
    */
   private boolean hasDebugDimension(RowKey rowKey)
   {
     if (debugDimensions.isEmpty()) {
       return false;
+    } else if (rowKey.getValues().isEmpty()) {
+      return true;
     }
 
     for (Map.Entry<Dimension, String> entry : rowKey.getValues().entrySet()) {

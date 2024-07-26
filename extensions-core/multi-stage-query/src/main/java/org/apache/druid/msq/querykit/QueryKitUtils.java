@@ -60,8 +60,9 @@ import java.util.stream.Collectors;
 public class QueryKitUtils
 {
   /**
-   * Field in frames that stores the partition "boosting" value. Typically used as the last element of a partitioning
-   * key when generating segments. This is an incrementing number that helps split up otherwise too-large partitions.
+   * Field in frames that stores the partition "boosting" value. Typically, it is used as the last element of a
+   * partitioning key when generating segments. This is an incrementing number that helps split up otherwise too-large
+   * partitions.
    */
   public static final String PARTITION_BOOST_COLUMN = "__boost";
 

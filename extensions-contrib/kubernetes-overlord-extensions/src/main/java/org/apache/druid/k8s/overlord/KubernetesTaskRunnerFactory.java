@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -28,9 +29,11 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
@@ -54,8 +57,9 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final TaskConfig taskConfig;
   private final Properties properties;
   private final DruidKubernetesClient druidKubernetesClient;
+  private final ServiceEmitter emitter;
+  private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
   private KubernetesTaskRunner runner;
-
 
   @Inject
   public KubernetesTaskRunnerFactory(
@@ -67,7 +71,9 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
       @Self DruidNode druidNode,
       TaskConfig taskConfig,
       Properties properties,
-      DruidKubernetesClient druidKubernetesClient
+      DruidKubernetesClient druidKubernetesClient,
+      ServiceEmitter emitter,
+      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef
   )
   {
     this.smileMapper = smileMapper;
@@ -79,6 +85,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     this.taskConfig = taskConfig;
     this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
+    this.emitter = emitter;
+    this.dynamicConfigRef = dynamicConfigRef;
   }
 
   @Override
@@ -88,7 +96,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
-        kubernetesTaskRunnerConfig.isDebugJobs()
+        kubernetesTaskRunnerConfig.isDebugJobs(),
+        emitter
     );
 
     runner = new KubernetesTaskRunner(
@@ -96,7 +105,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
-        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper)
+        new KubernetesPeonLifecycleFactory(peonClient, taskLogs, smileMapper),
+        emitter
     );
     return runner;
   }
@@ -131,7 +141,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           startupLoggingConfig,
           druidNode,
-          smileMapper
+          smileMapper,
+          taskLogs
       );
     } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
       return new PodTemplateTaskAdapter(
@@ -139,7 +150,9 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           druidNode,
           smileMapper,
-          properties
+          properties,
+          taskLogs,
+          dynamicConfigRef
       );
     } else {
       return new SingleContainerTaskAdapter(
@@ -148,7 +161,8 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
           taskConfig,
           startupLoggingConfig,
           druidNode,
-          smileMapper
+          smileMapper,
+          taskLogs
       );
     }
   }

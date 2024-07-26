@@ -23,10 +23,12 @@ sidebar_label: "SegmentMetadata"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes a query
-> type that is only available in the native language. However, Druid SQL contains similar functionality in
-> its [metadata tables](sql-metadata-tables.md).
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes a query
+ type that is only available in the native language. However, Druid SQL contains similar functionality in
+ its [metadata tables](sql-metadata-tables.md).
+:::
 
 Segment metadata queries return per-segment information about:
 

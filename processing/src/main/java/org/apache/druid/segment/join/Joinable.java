@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ReferenceCountedObject;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -86,26 +87,29 @@ public interface Joinable extends ReferenceCountedObject
   );
 
   /**
-   * Returns all non-null values from a particular column along with a flag to tell if they are all unique in the column.
-   * If the non-null values are greater than "maxNumValues" or if the column doesn't exists or doesn't supports this
+   * Returns all matchable values from a particular column along with a flag to tell if they are all unique in the column.
+   * If the matchable values are greater than "maxNumValues" or if the column doesn't exists or doesn't supports this
    * operation, returns an object with empty set for column values and false for uniqueness flag.
-   * The uniqueness flag will only be true if we've collected all non-null values in the column and found that they're
+   * The uniqueness flag will only be true if we've collected all matchable values in the column and found that they're
    * all unique. In all other cases it will be false.
    *
-   * The returned set may be passed to {@link org.apache.druid.query.filter.InDimFilter}. For efficiency,
+   * The returned set may be passed to {@link InDimFilter}. For efficiency,
    * implementations should prefer creating the returned set with
    * {@code new TreeSet<String>(Comparators.naturalNullsFirst()}}. This avoids a copy in the filter's constructor.
    *
    * @param columnName   name of the column
-   * @param maxNumValues maximum number of values to return
+   * @param includeNull  whether null should be considered a matchable value. If true, this method returns all values
+   *                     that are present in the column. If false, this method returns all non-null values.
+   * @param maxNumValues maximum number of values to return. If exceeded, returns an empty set with the "allUnique"
+   *                     flag set to false.
    */
-  ColumnValuesWithUniqueFlag getNonNullColumnValues(String columnName, int maxNumValues);
+  ColumnValuesWithUniqueFlag getMatchableColumnValues(String columnName, boolean includeNull, int maxNumValues);
 
   /**
    * Searches a column from this Joinable for a particular value, finds rows that match,
    * and returns values of a second column for those rows.
    *
-   * The returned set may be passed to {@link org.apache.druid.query.filter.InDimFilter}. For efficiency,
+   * The returned set may be passed to {@link InDimFilter}. For efficiency,
    * implementations should prefer creating the returned set with
    * {@code new TreeSet<String>(Comparators.naturalNullsFirst()}}. This avoids a copy in the filter's constructor.
    *
@@ -121,7 +125,7 @@ public interface Joinable extends ReferenceCountedObject
    *
    * In case either the search or retrieval column names are not found, this will return absent.
    */
-  Optional<Set<String>> getCorrelatedColumnValues(
+  Optional<InDimFilter.ValuesSet> getCorrelatedColumnValues(
       String searchColumnName,
       String searchColumnValue,
       String retrievalColumnName,

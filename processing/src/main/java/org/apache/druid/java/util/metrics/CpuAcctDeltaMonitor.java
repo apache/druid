@@ -102,20 +102,18 @@ public class CpuAcctDeltaMonitor extends FeedDefiningMonitor
           .setDimension("cpuTime", "sys");
       MonitorUtils.addDimensionsToBuilder(builderUsr, dimensions);
       MonitorUtils.addDimensionsToBuilder(builderSys, dimensions);
-      emitter.emit(builderUsr.build(
-          dateTime,
+      emitter.emit(builderUsr.setCreatedTime(dateTime).setMetric(
           "cgroup/cpu_time_delta_ns",
           snapshot.usrTime(i) - priorSnapshotHolder.metric.usrTime(i)
       ));
-      emitter.emit(builderSys.build(
-          dateTime,
+      emitter.emit(builderSys.setCreatedTime(dateTime).setMetric(
           "cgroup/cpu_time_delta_ns",
           snapshot.sysTime(i) - priorSnapshotHolder.metric.sysTime(i)
       ));
     }
     if (snapshot.cpuCount() > 0) {
       // Don't bother emitting metrics if there aren't actually any cpus (usually from error)
-      emitter.emit(builder().build(dateTime, "cgroup/cpu_time_delta_ns_elapsed", elapsedNs));
+      emitter.emit(builder().setCreatedTime(dateTime).setMetric("cgroup/cpu_time_delta_ns_elapsed", elapsedNs));
     }
     return true;
   }

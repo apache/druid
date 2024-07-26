@@ -1,1 +1,1 @@
-SELECT col_vchar_52, col_int, ROW_NUMBER () OVER (PARTITION BY col_vchar_52 order by col_int) row_numbr FROM "smlTbl.parquet" WHERE col_vchar_52 = "DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF"
+SELECT col_vchar_52, col_int, ROW_NUMBER () OVER (PARTITION BY col_vchar_52 order by col_int) row_numbr FROM "smlTbl.parquet" WHERE col_vchar_52 = 'DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF'

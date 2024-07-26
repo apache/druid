@@ -277,6 +277,22 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
       });
       return tables;
     }
+
+    /**
+     * Populate the cache by asking the catalog source for all tables for
+     * this schema.
+     */
+    public synchronized void resync(CatalogSource source)
+    {
+      List<TableMetadata> tables = source.tablesForSchema(schema.name());
+      cache.clear();
+      for (TableMetadata table : tables) {
+        cache.compute(
+            table.id().name(),
+            (k, v) -> computeCreate(v, table)
+        );
+      }
+    }
   }
 
   private final ConcurrentHashMap<String, SchemaEntry> schemaCache = new ConcurrentHashMap<>();
@@ -326,6 +342,12 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
     }
   }
 
+  /**
+   * Get the list of table names <i>in the cache</i>. Does not attempt to
+   * lazy load the list since doing so is costly: we don't know when it
+   * might be out of date. Rely on priming the cache, and update notifications
+   * to keep the list accurate.
+   */
   @Override
   public Set<String> tableNames(String schemaName)
   {
@@ -333,8 +355,13 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
     return schemaEntry == null ? Collections.emptySet() : schemaEntry.tableNames();
   }
 
+  /**
+   * Clear the cache. Primarily for testing.
+   */
+  @Override
   public void flush()
   {
+    LOG.info("Flush requested");
     schemaCache.clear();
   }
 
@@ -346,5 +373,19 @@ public class CachedMetadataCatalog implements MetadataCatalog, CatalogUpdateList
           SchemaSpec schema = schemaRegistry.schema(k);
           return schema == null ? null : new SchemaEntry(schema);
         });
+  }
+
+  /**
+   * Discard any existing cached tables and reload directly from the
+   * catalog source. Manages the two schemas which the catalog manages.
+   * If the catalog were to manage others, add those here as well.
+   * Done both at Broker startup, and on demand for testing.
+   */
+  @Override
+  public void resync()
+  {
+    LOG.info("Resync requested");
+    entryFor(TableId.DRUID_SCHEMA).resync(base);
+    entryFor(TableId.EXTERNAL_SCHEMA).resync(base);
   }
 }

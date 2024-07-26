@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.FilePerSplitHintSpec;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFileAttribute;
 import org.apache.druid.data.input.InputFormat;
@@ -33,6 +34,11 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 
@@ -46,24 +52,28 @@ import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public abstract class CloudObjectInputSource extends AbstractInputSource
-    implements SplittableInputSource<List<CloudObjectLocation>>
+public abstract class CloudObjectInputSource
+    extends AbstractInputSource
+    implements SplittableInputSource<List<CloudObjectLocation>>, SystemFieldInputSource
 {
   private final String scheme;
   private final List<URI> uris;
   private final List<URI> prefixes;
   private final List<CloudObjectLocation> objects;
   private final String objectGlob;
+  protected final SystemFields systemFields;
 
   public CloudObjectInputSource(
       String scheme,
       @Nullable List<URI> uris,
       @Nullable List<URI> prefixes,
       @Nullable List<CloudObjectLocation> objects,
-      @Nullable String objectGlob
+      @Nullable String objectGlob,
+      @Nullable SystemFields systemFields
   )
   {
     this.scheme = scheme;
@@ -71,6 +81,7 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     this.prefixes = prefixes;
     this.objects = objects;
     this.objectGlob = objectGlob;
+    this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
 
     illegalArgsChecker();
   }
@@ -103,6 +114,12 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
   public String getObjectGlob()
   {
     return objectGlob;
+  }
+
+  @Override
+  public Set<SystemField> getConfiguredSystemFields()
+  {
+    return systemFields.getFields();
   }
 
   /**
@@ -173,9 +190,25 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).flatMap(split -> split.get().stream()).map(this::createEntity).iterator(),
+        CloseableIterators.withEmptyBaggage(getInputEntities(inputFormat)),
+        SystemFieldDecoratorFactory.fromInputSource(this),
         temporaryDirectory
     );
+  }
+
+  /**
+   * Return an iterator of {@link InputEntity} corresponding to the objects represented by this input source, as read
+   * by the provided {@link InputFormat}.
+   */
+  Iterator<InputEntity> getInputEntities(final InputFormat inputFormat)
+  {
+    // Use createSplits with FilePerSplitHintSpec.INSTANCE as a way of getting the list of objects to read
+    // out of either "prefixes", "objects", or "uris". The specific splits don't matter because we are going
+    // to flatten them anyway.
+    return createSplits(inputFormat, FilePerSplitHintSpec.INSTANCE)
+        .flatMap(split -> split.get().stream())
+        .map(this::createEntity)
+        .iterator();
   }
 
   @Override
@@ -192,13 +225,14 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
            Objects.equals(uris, that.uris) &&
            Objects.equals(prefixes, that.prefixes) &&
            Objects.equals(objects, that.objects) &&
-           Objects.equals(objectGlob, that.objectGlob);
+           Objects.equals(objectGlob, that.objectGlob) &&
+           Objects.equals(systemFields, that.systemFields);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(scheme, uris, prefixes, objects, objectGlob);
+    return Objects.hash(scheme, uris, prefixes, objects, objectGlob, systemFields);
   }
 
   private void illegalArgsChecker() throws IllegalArgumentException
@@ -311,7 +345,8 @@ public abstract class CloudObjectInputSource extends AbstractInputSource
                   long size = splitWidget.getObjectSize(o.getLocation());
                   return new InputFileAttribute(
                       size,
-                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size);
+                      inputFormat != null ? inputFormat.getWeightedSize(o.getLocation().getPath(), size) : size
+                  );
                 } else {
                   return new InputFileAttribute(
                       o.getSize(),

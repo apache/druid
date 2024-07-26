@@ -30,6 +30,7 @@ import javax.annotation.Nullable;
 /**
  *
  */
+@SuppressWarnings("Immutable")
 public class ColumnCapabilitiesImpl implements ColumnCapabilities
 {
   public static final CoercionLogic ALL_FALSE = new CoercionLogic()
@@ -290,7 +291,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
 
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
-    this.hasMultipleValues = Capable.of(hasMultipleValues);
+    return setHasMultipleValues(Capable.of(hasMultipleValues));
+  }
+
+  public ColumnCapabilitiesImpl setHasMultipleValues(Capable hasMultipleValues)
+  {
+    this.hasMultipleValues = hasMultipleValues;
     return this;
   }
 

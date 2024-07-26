@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
@@ -41,22 +42,23 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.rpc.CoordinatorServiceClient;
-import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -141,15 +143,20 @@ public class TaskDataSegmentProviderTest
     }
 
     cacheDir = temporaryFolder.newFolder();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
+        ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
+    );
+    final List<StorageLocation> locations = loaderConfig.toStorageLocations();
     cacheManager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig().withLocations(
-            ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
-        ),
+        locations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(locations),
+        TestIndex.INDEX_IO,
         jsonMapper
     );
 
     provider = new TaskDataSegmentProvider(
-        new TestCoordinatorServiceClientImpl(),
+        new TestCoordinatorClientImpl(),
         cacheManager,
         indexIO
     );
@@ -180,7 +187,7 @@ public class TaskDataSegmentProviderTest
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
       final ListenableFuture<Supplier<ResourceHolder<Segment>>> f =
-          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters()));
+          exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters(), false));
 
       testFutures.add(
           FutureUtils.transform(
@@ -229,10 +236,10 @@ public class TaskDataSegmentProviderTest
     Assert.assertArrayEquals(new String[]{}, cacheDir.list());
   }
 
-  private class TestCoordinatorServiceClientImpl implements CoordinatorServiceClient
+  private class TestCoordinatorClientImpl extends NoopCoordinatorClient
   {
     @Override
-    public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+    public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
     {
       for (final DataSegment segment : segments) {
         if (segment.getDataSource().equals(dataSource) && segment.getId().toString().equals(segmentId)) {
@@ -241,12 +248,6 @@ public class TaskDataSegmentProviderTest
       }
 
       return Futures.immediateFailedFuture(new ISE("No such segment[%s] for dataSource[%s]", segmentId, dataSource));
-    }
-
-    @Override
-    public CoordinatorServiceClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
-    {
-      return this;
     }
   }
 

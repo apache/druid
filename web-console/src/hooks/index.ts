@@ -24,3 +24,4 @@ export * from './use-last-defined';
 export * from './use-local-storage-state';
 export * from './use-permanent-callback';
 export * from './use-query-manager';
+export * from './use-resize-observer';

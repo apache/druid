@@ -18,9 +18,11 @@
 
 import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
 
+import { maybeGetClusterCapacity } from '../../helpers';
 import {
   deepGet,
   deleteKeys,
+  formatDuration,
   formatInteger,
   nonEmptyArray,
   oneOf,
@@ -34,8 +36,8 @@ import { Stages } from '../stages/stages';
 import type {
   MsqTaskPayloadResponse,
   MsqTaskReportResponse,
+  SegmentLoadWaiterStatus,
   TaskStatus,
-  TaskStatusResponse,
 } from '../task/task';
 
 const IGNORE_CONTEXT_KEYS = [
@@ -70,12 +72,19 @@ export interface ExecutionError {
   exceptionStackTrace?: string;
 }
 
-type ExecutionDestination =
+export type ExecutionDestination =
   | {
       type: 'taskReport';
+      numTotalRows?: number;
     }
-  | { type: 'dataSource'; dataSource: string; numRows?: number; loaded?: boolean }
-  | { type: 'download' };
+  | { type: 'durableStorage'; numTotalRows?: number }
+  | { type: 'dataSource'; dataSource: string; numTotalRows?: number };
+
+export interface ExecutionDestinationPage {
+  id: number;
+  numRows: number;
+  sizeInBytes: number;
+}
 
 export type ExecutionStatus = 'RUNNING' | 'FAILED' | 'SUCCESS';
 
@@ -174,15 +183,22 @@ export interface ExecutionValue {
   usageInfo?: UsageInfo;
   stages?: Stages;
   destination?: ExecutionDestination;
+  destinationPages?: ExecutionDestinationPage[];
   result?: QueryResult;
   error?: ExecutionError;
   warnings?: ExecutionError[];
   capacityInfo?: CapacityInfo;
   _payload?: MsqTaskPayloadResponse;
+  segmentStatus?: SegmentLoadWaiterStatus;
 }
 
 export class Execution {
+  static USE_TASK_PAYLOAD = true;
+  static USE_TASK_REPORTS = true;
   static INLINE_DATASOURCE_MARKER = '__query_select';
+
+  static getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined =
+    maybeGetClusterCapacity;
 
   static validAsyncState(status: string | undefined): status is AsyncState {
     return oneOf(status, 'ACCEPTED', 'RUNNING', 'FINISHED', 'FAILED');
@@ -212,38 +228,6 @@ export class Execution {
       default:
         return 'RUNNING';
     }
-  }
-
-  static fromTaskSubmit(
-    taskSubmitResult: { state: any; taskId: string; error: any },
-    sqlQuery?: string,
-    queryContext?: QueryContext,
-  ): Execution {
-    const status = Execution.normalizeTaskStatus(taskSubmitResult.state);
-    return new Execution({
-      engine: 'sql-msq-task',
-      id: taskSubmitResult.taskId,
-      status: taskSubmitResult.error ? 'FAILED' : status,
-      sqlQuery,
-      queryContext,
-      error: taskSubmitResult.error
-        ? {
-            error: {
-              errorCode: 'AsyncError',
-              errorMessage: JSON.stringify(taskSubmitResult.error),
-            },
-          }
-        : status === 'FAILED'
-        ? {
-            error: {
-              errorCode: 'UnknownError',
-              errorMessage:
-                'Execution failed, there is no detail information, and there is no error in the status response',
-            },
-          }
-        : undefined,
-      destination: undefined,
-    });
   }
 
   static fromAsyncStatus(
@@ -286,46 +270,15 @@ export class Execution {
             ? {
                 type: 'dataSource',
                 dataSource: result.dataSource,
-                numRows: result.numTotalRows,
+                numTotalRows: result.numTotalRows,
               }
             : {
                 type: 'taskReport',
+                numTotalRows: result.numTotalRows,
               }
           : undefined,
+      destinationPages: result?.pages,
       result: queryResult,
-    });
-  }
-
-  static fromTaskStatus(
-    taskStatus: TaskStatusResponse,
-    sqlQuery?: string,
-    queryContext?: QueryContext,
-  ): Execution {
-    const status = Execution.normalizeTaskStatus(taskStatus.status.status);
-    return new Execution({
-      engine: 'sql-msq-task',
-      id: taskStatus.task,
-      status: taskStatus.status.error ? 'FAILED' : status,
-      usageInfo: getUsageInfoFromStatusPayload(taskStatus.status),
-      sqlQuery,
-      queryContext,
-      error: taskStatus.status.error
-        ? {
-            error: {
-              errorCode: 'AsyncError',
-              errorMessage: JSON.stringify(taskStatus.status.error),
-            },
-          }
-        : status === 'FAILED'
-        ? {
-            error: {
-              errorCode: 'UnknownError',
-              errorMessage:
-                'Execution failed, there is no detail information, and there is no error in the status response',
-            },
-          }
-        : undefined,
-      destination: undefined,
     });
   }
 
@@ -352,6 +305,11 @@ export class Execution {
     const startTime = new Date(deepGet(taskReport, 'multiStageQuery.payload.status.startTime'));
     const durationMs = deepGet(taskReport, 'multiStageQuery.payload.status.durationMs');
 
+    const segmentLoaderStatus: SegmentLoadWaiterStatus = deepGet(
+      taskReport,
+      'multiStageQuery.payload.status.segmentLoadWaiterStatus',
+    );
+
     let result: QueryResult | undefined;
     const resultsPayload: {
       signature: { name: string; type: string }[];
@@ -373,6 +331,7 @@ export class Execution {
       engine: 'sql-msq-task',
       id,
       status: Execution.normalizeTaskStatus(status),
+      segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
       duration: typeof durationMs === 'number' ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
@@ -424,10 +383,12 @@ export class Execution {
   public readonly usageInfo?: UsageInfo;
   public readonly stages?: Stages;
   public readonly destination?: ExecutionDestination;
+  public readonly destinationPages?: ExecutionDestinationPage[];
   public readonly result?: QueryResult;
   public readonly error?: ExecutionError;
   public readonly warnings?: ExecutionError[];
   public readonly capacityInfo?: CapacityInfo;
+  public readonly segmentStatus?: SegmentLoadWaiterStatus;
 
   public readonly _payload?: { payload: any; task: string };
 
@@ -444,10 +405,12 @@ export class Execution {
     this.usageInfo = value.usageInfo;
     this.stages = value.stages;
     this.destination = value.destination;
+    this.destinationPages = value.destinationPages;
     this.result = value.result;
     this.error = value.error;
     this.warnings = nonEmptyArray(value.warnings) ? value.warnings : undefined;
     this.capacityInfo = value.capacityInfo;
+    this.segmentStatus = value.segmentStatus;
 
     this._payload = value._payload;
   }
@@ -465,10 +428,12 @@ export class Execution {
       usageInfo: this.usageInfo,
       stages: this.stages,
       destination: this.destination,
+      destinationPages: this.destinationPages,
       result: this.result,
       error: this.error,
       warnings: this.warnings,
       capacityInfo: this.capacityInfo,
+      segmentStatus: this.segmentStatus,
 
       _payload: this._payload,
     };
@@ -481,7 +446,10 @@ export class Execution {
     value.queryContext = queryContext;
     const parsedQuery = parseSqlQuery(sqlQuery);
     if (value.result && (parsedQuery || queryContext)) {
-      value.result = value.result.attachQuery({ context: queryContext }, parsedQuery);
+      value.result = value.result.attachQuery(
+        { ...this.nativeQuery, context: queryContext },
+        parsedQuery,
+      );
     }
 
     return new Execution(value);
@@ -494,10 +462,20 @@ export class Execution {
     });
   }
 
+  public changeDestinationPages(destinationPages: ExecutionDestinationPage[]): Execution {
+    return new Execution({
+      ...this.valueOf(),
+      destinationPages,
+    });
+  }
+
   public changeResult(result: QueryResult): Execution {
     return new Execution({
       ...this.valueOf(),
-      result: result.attachQuery({}, this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined),
+      result: result.attachQuery(
+        this.nativeQuery,
+        this.sqlQuery ? parseSqlQuery(this.sqlQuery) : undefined,
+      ),
     });
   }
 
@@ -514,7 +492,7 @@ export class Execution {
     value._payload = taskPayload;
     value.destination = {
       ...value.destination,
-      ...(deepGet(taskPayload, 'payload.spec.destination') || {}),
+      ...deepGet(taskPayload, 'payload.spec.destination'),
     };
     value.nativeQuery = deepGet(taskPayload, 'payload.spec.query');
 
@@ -530,31 +508,23 @@ export class Execution {
     return ret;
   }
 
-  public attachErrorFromStatus(status: any): Execution {
-    const errorMsg = deepGet(status, 'status.errorMsg');
+  public updateWithAsyncStatus(statusPayload: AsyncStatusResponse): Execution {
+    const value = this.valueOf();
 
-    return new Execution({
-      ...this.valueOf(),
-      error: {
-        error: {
-          errorCode: 'UnknownError',
-          errorMessage: errorMsg,
-        },
-      },
-    });
-  }
+    const { pages, numTotalRows } = statusPayload.result || {};
 
-  public markDestinationDatasourceLoaded(): Execution {
-    const { destination } = this;
-    if (destination?.type !== 'dataSource') return this;
+    if (!value.destinationPages && pages) {
+      value.destinationPages = pages;
+    }
 
-    return new Execution({
-      ...this.valueOf(),
-      destination: {
-        ...destination,
-        loaded: true,
-      },
-    });
+    if (typeof value.destination?.numTotalRows !== 'number' && typeof numTotalRows === 'number') {
+      value.destination = {
+        ...(value.destination || { type: 'taskReport' }),
+        numTotalRows,
+      };
+    }
+
+    return new Execution(value);
   }
 
   public isProcessingData(): boolean {
@@ -571,15 +541,32 @@ export class Execution {
     return status !== 'SUCCESS' && status !== 'FAILED';
   }
 
-  public isFullyComplete(): boolean {
-    if (this.isWaitingForQuery()) return false;
+  public getSegmentStatusDescription() {
+    const { segmentStatus } = this;
 
-    const { status, destination } = this;
-    if (status === 'SUCCESS' && destination?.type === 'dataSource') {
-      return Boolean(destination.loaded);
+    let label = '';
+
+    switch (segmentStatus?.state) {
+      case 'INIT':
+        label = 'Waiting for segment loading to start...';
+        break;
+
+      case 'WAITING':
+        label = 'Waiting for segment loading to complete...';
+        break;
+
+      case 'SUCCESS':
+        label = `Segments loaded successfully in ${formatDuration(segmentStatus.duration)}`;
+        break;
+
+      default:
+        break;
     }
 
-    return true;
+    return {
+      label,
+      ...segmentStatus,
+    };
   }
 
   public getIngestDatasource(): string | undefined {
@@ -588,26 +575,12 @@ export class Execution {
     return destination.dataSource;
   }
 
-  public getIngestNumRows(): number | undefined {
-    const { destination, stages } = this;
-
-    if (destination?.type === 'dataSource' && typeof destination.numRows === 'number') {
-      return destination.numRows;
-    }
-
-    const lastStage = stages?.getLastStage();
-    if (stages && lastStage && lastStage.definition.processor.type === 'segmentGenerator') {
-      // Assume input0 since we know the segmentGenerator will only ever have one stage input
-      return stages.getTotalCounterForStage(lastStage, 'input0', 'rows');
-    }
-
-    return;
+  public getOutputNumTotalRows(): number | undefined {
+    return this.destination?.numTotalRows;
   }
 
-  public isSuccessfulInsert(): boolean {
-    return Boolean(
-      this.isFullyComplete() && this.getIngestDatasource() && this.status === 'SUCCESS',
-    );
+  public isSuccessfulIngest(): boolean {
+    return Boolean(this.status === 'SUCCESS' && this.getIngestDatasource());
   }
 
   public getErrorMessage(): string | undefined {

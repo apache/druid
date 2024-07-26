@@ -94,10 +94,15 @@ public class JettyBindings
     @Override
     public Map<String, String> getInitParameters()
     {
-      if (timeoutMs >= 0) {
-        return ImmutableMap.of("maxRequests", String.valueOf(maxRequests), "suspendMs", String.valueOf(timeoutMs));
+      if (timeoutMs < 0) {
+        return ImmutableMap.of("maxRequests", String.valueOf(maxRequests));
       }
-      return ImmutableMap.of("maxRequests", String.valueOf(maxRequests));
+      if (timeoutMs > Integer.MAX_VALUE) {
+        // QoSFilter tries to parse the suspendMs parameter as an int, so we can't set it to more than Integer
+        // .MAX_VALUE.
+        return ImmutableMap.of("maxRequests", String.valueOf(maxRequests), "suspendMs", String.valueOf(Integer.MAX_VALUE));
+      }
+      return ImmutableMap.of("maxRequests", String.valueOf(maxRequests), "suspendMs", String.valueOf(timeoutMs));
     }
 
     @Override

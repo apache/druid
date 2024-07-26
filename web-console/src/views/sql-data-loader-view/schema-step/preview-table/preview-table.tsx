@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Icon } from '@blueprintjs/core';
+import { Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { Column, QueryResult, SqlQuery } from '@druid-toolkit/query';
-import { SqlAlias, SqlStar } from '@druid-toolkit/query';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 import type { RowRenderProps } from 'react-table';
@@ -44,7 +43,13 @@ function isDate(v: any): v is Date {
   return Boolean(v && typeof v.toISOString === 'function');
 }
 
-function getExpressionIfAlias(query: SqlQuery, selectIndex: number): string {
+function isWrappedInArrayToMv(ex: SqlExpression | undefined) {
+  if (!ex) return false;
+  ex = ex.getUnderlyingExpression();
+  return ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'ARRAY_TO_MV';
+}
+
+function formatFormulaAtIndex(query: SqlQuery, selectIndex: number): string {
   const ex = query.getSelectExpressionForIndex(selectIndex);
 
   if (query.isRealOutputColumnAtSelectIndex(selectIndex)) {
@@ -97,7 +102,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     );
   }
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, undefined);
   return (
     <div className="preview-table">
       <ReactTable
@@ -123,7 +128,10 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                 column.isTimeColumn() ? 'timestamp' : 'dimension',
                 `column${i}`,
                 column.sqlType?.toLowerCase(),
-                { selected },
+                {
+                  selected,
+                  'multi-value': isWrappedInArrayToMv(parsedQuery.getSelectExpressionForIndex(i)),
+                },
               );
 
           return {
@@ -137,7 +145,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                       <Icon className="filter-icon" icon={IconNames.FILTER} size={14} />
                     )}
                   </div>
-                  <div className="formula">{getExpressionIfAlias(parsedQuery, i)}</div>
+                  <div className="formula">{formatFormulaAtIndex(parsedQuery, i)}</div>
                 </div>
               );
             },
@@ -149,7 +157,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
               const value = row.value;
               return (
                 <div>
-                  <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                  <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                     {numericColumnBraces[i] ? (
                       <BracedText
                         className="table-padding"
@@ -160,7 +168,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover2>
+                  </Popover>
                 </div>
               );
             },

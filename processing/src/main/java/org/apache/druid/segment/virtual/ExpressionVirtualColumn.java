@@ -34,6 +34,9 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -41,6 +44,7 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -238,6 +242,38 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
 
     return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+  }
+
+  @Nullable
+  @Override
+  public GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String columnName,
+      VectorColumnSelectorFactory factory,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    if (isDirectAccess(factory)) {
+      return factory.makeGroupByVectorColumnSelector(
+          parsedExpression.get().getBindingIfIdentifier(),
+          deferExpressionDimensions
+      );
+    }
+
+    return ExpressionVectorSelectors.makeGroupByVectorColumnSelector(
+        factory,
+        parsedExpression.get(),
+        deferExpressionDimensions
+    );
+  }
+
+  @Nullable
+  @Override
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector columnIndexSelector
+  )
+  {
+    return getParsedExpression().get().asColumnIndexSupplier(columnIndexSelector, outputType);
   }
 
   @Override

@@ -22,10 +22,13 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,7 +52,8 @@ public class MSQFaultSerdeTest
   @Test
   public void testFaultSerde() throws IOException
   {
-    assertFaultSerde(new BroadcastTablesTooLargeFault(10));
+    assertFaultSerde(new BroadcastTablesTooLargeFault(10, null));
+    assertFaultSerde(new BroadcastTablesTooLargeFault(10, JoinAlgorithm.SORT_MERGE));
     assertFaultSerde(CanceledFault.INSTANCE);
     assertFaultSerde(new CannotParseExternalDataFault("the message"));
     assertFaultSerde(new ColumnTypeNotSupportedFault("the column", null));
@@ -69,6 +73,7 @@ public class MSQFaultSerdeTest
         Collections.singletonList(Intervals.of("2000/2001"))
     ));
     assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
+    assertFaultSerde(new InvalidFieldFault("the source", "the column", 1, "the error", "the log msg"));
     assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new QueryRuntimeFault("new error", "base error"));
@@ -81,6 +86,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
     assertFaultSerde(new TooManyRowsWithSameKeyFault(Arrays.asList("foo", 123), 1, 2));
+    assertFaultSerde(new TooManySegmentsInTimeChunkFault(DateTimes.nowUtc(), 10, 1, Granularities.ALL));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));
     assertFaultSerde(new TooManyWorkersFault(10, 5));
     assertFaultSerde(new TooManyAttemptsForWorker(2, "taskId", 1, "rootError"));

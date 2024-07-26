@@ -13,7 +13,13 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: false, uppOffset: 0 }
+      frame:
+          peerType: "RANGE"
+          lowUnbounded: true
+          lowOffset: 0
+          uppUnbounded: false
+          uppOffset: 0
+          orderBy: [ {column: "d0", direction: ASC} ]
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }
 

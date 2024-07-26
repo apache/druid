@@ -18,6 +18,8 @@
 
 import { deepDelete, deepSet } from '../../utils';
 
+export type ArrayIngestMode = 'array' | 'mvd';
+
 export interface QueryContext {
   useCache?: boolean;
   populateCache?: boolean;
@@ -28,9 +30,11 @@ export interface QueryContext {
   // Multi-stage query
   maxNumTasks?: number;
   finalizeAggregations?: boolean;
+  selectDestination?: string;
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
+  arrayIngestMode?: ArrayIngestMode;
 
   [key: string]: any;
 }
@@ -145,6 +149,22 @@ export function changeTaskAssigment(
     : deepDelete(context, 'taskAssignment');
 }
 
+// failOnEmptyInsert
+
+export function getFailOnEmptyInsert(context: QueryContext): boolean | undefined {
+  const { failOnEmptyInsert } = context;
+  return typeof failOnEmptyInsert === 'boolean' ? failOnEmptyInsert : undefined;
+}
+
+export function changeFailOnEmptyInsert(
+  context: QueryContext,
+  failOnEmptyInsert: boolean | undefined,
+): QueryContext {
+  return typeof failOnEmptyInsert === 'boolean'
+    ? deepSet(context, 'failOnEmptyInsert', failOnEmptyInsert)
+    : deepDelete(context, 'failOnEmptyInsert');
+}
+
 // finalizeAggregations
 
 export function getFinalizeAggregations(context: QueryContext): boolean | undefined {
@@ -161,7 +181,23 @@ export function changeFinalizeAggregations(
     : deepDelete(context, 'finalizeAggregations');
 }
 
-// finalizeAggregations
+// waitUntilSegmentsLoad
+
+export function getWaitUntilSegmentsLoad(context: QueryContext): boolean | undefined {
+  const { waitUntilSegmentsLoad } = context;
+  return typeof waitUntilSegmentsLoad === 'boolean' ? waitUntilSegmentsLoad : undefined;
+}
+
+export function changeWaitUntilSegmentsLoad(
+  context: QueryContext,
+  waitUntilSegmentsLoad: boolean | undefined,
+): QueryContext {
+  return typeof waitUntilSegmentsLoad === 'boolean'
+    ? deepSet(context, 'waitUntilSegmentsLoad', waitUntilSegmentsLoad)
+    : deepDelete(context, 'waitUntilSegmentsLoad');
+}
+
+// groupByEnableMultiValueUnnesting
 
 export function getGroupByEnableMultiValueUnnesting(context: QueryContext): boolean | undefined {
   const { groupByEnableMultiValueUnnesting } = context;
@@ -212,5 +248,22 @@ export function changeMaxParseExceptions(
     return deepSet(context, 'maxParseExceptions', maxParseExceptions);
   } else {
     return deepDelete(context, 'maxParseExceptions');
+  }
+}
+
+// arrayIngestMode
+
+export function getArrayIngestMode(context: QueryContext): ArrayIngestMode | undefined {
+  return context.arrayIngestMode;
+}
+
+export function changeArrayIngestMode(
+  context: QueryContext,
+  arrayIngestMode: ArrayIngestMode | undefined,
+): QueryContext {
+  if (arrayIngestMode) {
+    return deepSet(context, 'arrayIngestMode', arrayIngestMode);
+  } else {
+    return deepDelete(context, 'arrayIngestMode');
   }
 }

@@ -23,20 +23,23 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
-import org.apache.druid.segment.NestedDataDimensionHandler;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.NestedDataColumnHandlerV4;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
@@ -157,6 +160,29 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     };
   }
 
+  @Override
+  public <T extends Comparable<T>> TypeStrategy<T> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(
+        getObjectStrategy(),
+        ColumnType.ofComplex(TYPE_NAME),
+        new Hash.Strategy<Object>()
+        {
+          @Override
+          public int hashCode(Object o)
+          {
+            return StructuredData.wrap(o).equalityHash();
+          }
+
+          @Override
+          public boolean equals(Object a, Object b)
+          {
+            return StructuredData.wrap(a).compareTo(StructuredData.wrap(b)) == 0;
+          }
+        }
+    );
+  }
+
   public static class NestedColumnFormatV4 implements ColumnFormat
   {
     @Override
@@ -168,13 +194,13 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedDataDimensionHandler(columnName);
+      return new NestedDataColumnHandlerV4(columnName);
     }
 
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new NestedDataDimensionSchema(columnName);
+      return new NestedDataColumnSchema(columnName, 4);
     }
 
     @Override

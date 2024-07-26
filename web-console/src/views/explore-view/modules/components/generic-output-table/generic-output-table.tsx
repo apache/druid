@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { SqlColumn, SqlLiteral, trimString } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -31,7 +30,7 @@ import ReactTable from 'react-table';
 import { BracedText, Deferred, TableCell } from '../../../../../components';
 import { possibleDruidFormatForValues, TIME_COLUMN } from '../../../../../druid-models';
 import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../../../react-table';
-import type { Pagination, QueryAction } from '../../../../../utils';
+import type { ColumnHint, Pagination, QueryAction } from '../../../../../utils';
 import {
   columnToIcon,
   columnToWidth,
@@ -60,30 +59,34 @@ function isComparable(x: unknown): boolean {
   return x !== null && x !== '';
 }
 
-function columnNester(columns: TableColumn[], groupHints: string[] | undefined): TableColumn[] {
-  if (!groupHints) return columns;
+function columnNester(
+  tableColumns: TableColumn[],
+  resultColumns: readonly Column[],
+  columnHints: Map<string, ColumnHint> | undefined,
+): TableColumn[] {
+  if (!columnHints) return tableColumns;
 
   const ret: TableColumn[] = [];
-  let currentGroupHint: string | null = null;
+  let currentGroupName: string | null = null;
   let currentColumnGroup: TableColumn | null = null;
-  for (let i = 0; i < columns.length; i++) {
-    const column = columns[i];
-    const groupHint = groupHints[i];
-    if (groupHint) {
-      if (currentGroupHint === groupHint) {
-        currentColumnGroup!.columns!.push(column);
+  for (let i = 0; i < tableColumns.length; i++) {
+    const tableColumn = tableColumns[i];
+    const group = columnHints.get(resultColumns[i].name)?.group;
+    if (group) {
+      if (currentGroupName === group) {
+        currentColumnGroup!.columns!.push(tableColumn);
       } else {
-        currentGroupHint = groupHint;
+        currentGroupName = group;
         ret.push(
           (currentColumnGroup = {
-            Header: <div className="group-cell">{currentGroupHint}</div>,
-            columns: [column],
+            Header: <div className="group-cell">{currentGroupName}</div>,
+            columns: [tableColumn],
           }),
         );
       }
     } else {
-      ret.push(column);
-      currentGroupHint = null;
+      ret.push(tableColumn);
+      currentGroupName = null;
       currentColumnGroup = null;
     }
   }
@@ -94,12 +97,12 @@ function columnNester(columns: TableColumn[], groupHints: string[] | undefined):
 export interface GenericOutputTableProps {
   queryResult: QueryResult;
   onQueryAction(action: QueryAction): void;
-  onOrderByChange?(columnIndex: number, desc: boolean): void;
+  onOrderByChange?(columnName: string, desc: boolean): void;
   onExport?(): void;
   runeMode: boolean;
   showTypeIcons: boolean;
   initPageSize?: number;
-  groupHints?: string[];
+  columnHints?: Map<string, ColumnHint>;
 }
 
 export const GenericOutputTable = React.memo(function GenericOutputTable(
@@ -113,7 +116,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
     runeMode,
     showTypeIcons,
     initPageSize,
-    groupHints,
+    columnHints,
   } = props;
   const parsedQuery = queryResult.sqlQuery;
   const [pagination, setPagination] = useState<Pagination>({
@@ -159,7 +162,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               icon={reverseOrderByDirection === 'ASC' ? IconNames.SORT_ASC : IconNames.SORT_DESC}
               text={`Order ${reverseOrderByDirection === 'ASC' ? 'ascending' : 'descending'}`}
               onClick={() => {
-                onOrderByChange(headerIndex, reverseOrderByDirection !== 'ASC');
+                onOrderByChange(header, reverseOrderByDirection !== 'ASC');
               }}
             />,
           );
@@ -170,7 +173,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               icon={IconNames.SORT_DESC}
               text="Order descending"
               onClick={() => {
-                onOrderByChange(headerIndex, true);
+                onOrderByChange(header, true);
               }}
             />,
             <MenuItem
@@ -178,7 +181,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               icon={IconNames.SORT_ASC}
               text="Order ascending"
               onClick={() => {
-                onOrderByChange(headerIndex, false);
+                onOrderByChange(header, false);
               }}
             />,
           );
@@ -426,7 +429,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
   const finalPage =
     hasMoreResults && Math.floor(queryResult.rows.length / pagination.pageSize) === pagination.page; // on the last page
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, pagination);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, columnHints, pagination);
   return (
     <div className={classNames('generic-output-table', { 'more-results': hasMoreResults })}>
       {finalPage ? (
@@ -475,37 +478,36 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               return {
                 Header() {
                   return (
-                    <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                    <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                       <div className="clickable-cell">
                         <div className="output-name">
                           {icon && <Icon className="type-icon" icon={icon} size={12} />}
-                          {h}
+                          {columnHints?.get(h)?.displayName ?? h}
                           {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
                       </div>
-                    </Popover2>
+                    </Popover>
                   );
                 },
                 headerClassName: getHeaderClassName(h),
                 accessor: String(i),
                 Cell(row) {
                   const value = row.value;
+                  const formatter = columnHints?.get(h)?.formatter || formatNumber;
                   return (
                     <div>
-                      <Popover2
-                        content={<Deferred content={() => getCellMenu(column, i, value)} />}
-                      >
+                      <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                         {numericColumnBraces[i] ? (
                           <BracedText
                             className="table-padding"
-                            text={formatNumber(value)}
+                            text={formatter(value)}
                             braces={numericColumnBraces[i]}
                             padFractionalPart
                           />
                         ) : (
                           <TableCell value={value} unlimited />
                         )}
-                      </Popover2>
+                      </Popover>
                     </div>
                   );
                 },
@@ -516,7 +518,8 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                     : undefined,
               };
             }),
-            groupHints,
+            queryResult.header,
+            columnHints,
           )}
         />
       )}

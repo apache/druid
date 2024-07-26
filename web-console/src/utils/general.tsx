@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Classes, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
-import hasOwnProp from 'has-own-prop';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import type { JSX } from 'react';
@@ -33,6 +32,11 @@ export const EMPTY_OBJECT: any = {};
 export const EMPTY_ARRAY: any[] = [];
 
 export type NumberLike = number | bigint;
+
+export function isNumberLike(x: unknown): x is NumberLike {
+  const t = typeof x;
+  return t === 'number' || t === 'bigint';
+}
 
 export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
@@ -84,6 +88,10 @@ export function addOrUpdate<T>(xs: readonly T[], x: T, keyFn: (x: T) => string |
 }
 
 // ----------------------------
+
+export function caseInsensitiveEquals(str1: string | undefined, str2: string | undefined): boolean {
+  return str1?.toLowerCase() === str2?.toLowerCase();
+}
 
 export function caseInsensitiveContains(testString: string, searchString: string): boolean {
   if (!searchString) return true;
@@ -156,7 +164,7 @@ function identity<T>(x: T): T {
 
 export function lookupBy<T, Q = T>(
   array: readonly T[],
-  keyFn: (x: T, index: number) => string = String,
+  keyFn: (x: T, index: number) => string | number = String,
   valueFn?: (x: T, index: number) => Q,
 ): Record<string, Q> {
   if (!valueFn) valueFn = identity as any;
@@ -216,7 +224,7 @@ export function groupByAsMap<T, Q>(
 export function uniq(array: readonly string[]): string[] {
   const seen: Record<string, boolean> = {};
   return array.filter(s => {
-    if (hasOwnProp(seen, s)) {
+    if (Object.hasOwn(seen, s)) {
       return false;
     } else {
       seen[s] = true;
@@ -232,15 +240,27 @@ export function formatInteger(n: NumberLike): string {
 }
 
 export function formatNumber(n: NumberLike): string {
-  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
+}
+
+export function formatRate(n: NumberLike) {
+  return numeral(n).format('0,0.0') + '/s';
 }
 
 export function formatBytes(n: NumberLike): string {
   return numeral(n).format('0.00 b');
 }
 
+export function formatByteRate(n: NumberLike): string {
+  return numeral(n).format('0.00 b') + '/s';
+}
+
 export function formatBytesCompact(n: NumberLike): string {
   return numeral(n).format('0.00b');
+}
+
+export function formatByteRateCompact(n: NumberLike): string {
+  return numeral(n).format('0.00b') + '/s';
 }
 
 export function formatMegabytes(n: NumberLike): string {
@@ -259,6 +279,18 @@ export function formatMillions(n: NumberLike): string {
   const s = (Number(n) / 1e6).toFixed(3);
   if (s === '0.000') return String(Math.round(Number(n)));
   return s + ' M';
+}
+
+export function forceSignInNumberFormatter(
+  formatter: (n: NumberLike) => string,
+): (n: NumberLike) => string {
+  return (n: NumberLike) => {
+    if (n > 0) {
+      return '+' + formatter(n);
+    } else {
+      return formatter(n);
+    }
+  };
 }
 
 function pad2(str: string | number): string {
@@ -302,20 +334,40 @@ export function formatDurationHybrid(ms: NumberLike): string {
   }
 }
 
+function pluralize(word: string): string {
+  // Ignoring irregular plurals.
+  if (/(s|x|z|ch|sh)$/.test(word)) {
+    return word + 'es';
+  } else if (/([^aeiou])y$/.test(word)) {
+    return word.slice(0, -1) + 'ies';
+  } else if (/(f|fe)$/.test(word)) {
+    return word.replace(/fe?$/, 'ves');
+  } else {
+    return word + 's';
+  }
+}
+
 export function pluralIfNeeded(n: NumberLike, singular: string, plural?: string): string {
-  if (!plural) plural = singular + 's';
+  if (!plural) plural = pluralize(singular);
   return `${formatInteger(n)} ${n === 1 ? singular : plural}`;
 }
 
 // ----------------------------
 
-export function validJson(json: string): boolean {
-  try {
-    JSONBig.parse(json);
-    return true;
-  } catch (e) {
-    return false;
+export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): [T[], T[]] {
+  const match: T[] = [];
+  const nonMatch: T[] = [];
+
+  for (let i = 0; i < xs.length; i++) {
+    const x = xs[i];
+    if (predicate(x, i)) {
+      match.push(x);
+    } else {
+      nonMatch.push(x);
+    }
   }
+
+  return [match, nonMatch];
 }
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
@@ -502,7 +554,7 @@ export function objectHash(obj: any): string {
 }
 
 export function hasPopoverOpen(): boolean {
-  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+  return Boolean(document.querySelector(`${Classes.PORTAL} ${Classes.OVERLAY} ${Classes.POPOVER}`));
 }
 
 export function checkedCircleIcon(checked: boolean): IconName {
@@ -517,17 +569,19 @@ export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
 
-export function offsetToRowColumn(
-  str: string,
-  offset: number,
-): { row: number; column: number } | undefined {
+export interface RowColumn {
+  row: number;
+  column: number;
+}
+
+export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
   // Ensure offset is within the string length
   if (offset < 0 || offset > str.length) return;
 
   const lines = str.split('\n');
   for (let row = 0; row < lines.length; row++) {
     const line = lines[row];
-    if (offset < line.length) {
+    if (offset <= line.length) {
       return {
         row,
         column: offset,

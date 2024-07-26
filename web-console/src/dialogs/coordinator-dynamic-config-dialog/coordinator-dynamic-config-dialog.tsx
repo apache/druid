@@ -107,14 +107,18 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
           <p>
             Edit the coordinator dynamic configuration on the fly. For more information please refer
             to the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#dynamic-configuration`}>
               documentation
             </ExternalLink>
             .
           </p>
-          <FormJsonSelector tab={currentTab} onChange={setCurrentTab} />
+          <FormJsonSelector
+            tab={currentTab}
+            onChange={t => {
+              setJsonError(undefined);
+              setCurrentTab(t);
+            }}
+          />
           {currentTab === 'form' ? (
             <AutoForm
               fields={COORDINATOR_DYNAMIC_CONFIG_FIELDS}
@@ -125,11 +129,8 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
             <JsonInput
               value={dynamicConfig}
               height="50vh"
-              onChange={v => {
-                setDynamicConfig(v);
-                setJsonError(undefined);
-              }}
-              onError={setJsonError}
+              onChange={setDynamicConfig}
+              setError={setJsonError}
             />
           )}
         </>

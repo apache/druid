@@ -382,7 +382,7 @@ public class DetermineRangePartitionsJobTest
                 null,
                 null,
                 null,
-                false,
+                false, false,
                 false,
                 false,
                 false,
@@ -397,7 +397,8 @@ public class DetermineRangePartitionsJobTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

@@ -144,7 +144,7 @@ public class SysMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
     }
@@ -195,7 +195,7 @@ public class SysMonitor extends FeedDefiningMonitor
         final ServiceMetricEvent.Builder builder = builder();
         MonitorUtils.addDimensionsToBuilder(builder, dimensions);
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
 
         this.prevPageIn = currPageIn;
@@ -235,7 +235,7 @@ public class SysMonitor extends FeedDefiningMonitor
               .setDimension("fsDirName", dir); // fsDirName because FsStats uses fsDirName
           MonitorUtils.addDimensionsToBuilder(builder, dimensions);
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
-            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+            emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
           }
         }
       }
@@ -281,7 +281,7 @@ public class SysMonitor extends FeedDefiningMonitor
                   .setDimension("fsOptions", fs.getOptions().split(","));
               MonitorUtils.addDimensionsToBuilder(builder, dimensions);
               for (Map.Entry<String, Long> entry : stats.entrySet()) {
-                emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+                emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
               }
             }
           } else {
@@ -342,7 +342,7 @@ public class SysMonitor extends FeedDefiningMonitor
                     .setDimension("fsOptions", fs.getOptions().split(","));
                 MonitorUtils.addDimensionsToBuilder(builder, dimensions);
                 for (Map.Entry<String, Long> entry : stats.entrySet()) {
-                  emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+                  emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
                 }
               }
             }
@@ -412,7 +412,7 @@ public class SysMonitor extends FeedDefiningMonitor
                       .setDimension("netHwaddr", netconf.getHwaddr());
                   MonitorUtils.addDimensionsToBuilder(builder, dimensions);
                   for (Map.Entry<String, Long> entry : stats.entrySet()) {
-                    emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+                    emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
                   }
                 }
               }
@@ -464,7 +464,7 @@ public class SysMonitor extends FeedDefiningMonitor
                   .setDimension("cpuName", name)
                   .setDimension("cpuTime", entry.getKey());
               MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-              emitter.emit(builder.build("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
+              emitter.emit(builder.setMetric("sys/cpu", entry.getValue() * 100 / total)); // [0,100]
             }
           }
         }
@@ -501,7 +501,7 @@ public class SysMonitor extends FeedDefiningMonitor
             "sys/uptime", Double.valueOf(uptime.getUptime()).longValue()
         );
         for (Map.Entry<String, Number> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
 
@@ -512,7 +512,7 @@ public class SysMonitor extends FeedDefiningMonitor
             "sys/la/15", la[2]
         );
         for (Map.Entry<String, Number> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
     }
@@ -552,7 +552,7 @@ public class SysMonitor extends FeedDefiningMonitor
         );
         if (stats != null) {
           for (Map.Entry<String, Long> entry : stats.entrySet()) {
-            emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+            emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
           }
         }
       }
@@ -588,7 +588,7 @@ public class SysMonitor extends FeedDefiningMonitor
             .put("sys/tcp/state/bound", (long) netStat.getTcpBound())
             .build();
         for (Map.Entry<String, Long> entry : stats.entrySet()) {
-          emitter.emit(builder.build(entry.getKey(), entry.getValue()));
+          emitter.emit(builder.setMetric(entry.getKey(), entry.getValue()));
         }
       }
     }

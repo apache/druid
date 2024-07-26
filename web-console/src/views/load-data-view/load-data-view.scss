@@ -273,6 +273,7 @@ $actual-icon-height: 400px;
   }
 
   .control {
+    position: relative;
     grid-area: ctrl;
     overflow: auto;
     padding: 0 5px;
@@ -319,5 +320,11 @@ $actual-icon-height: 400px;
 
   .parse-metadata {
     border-top: 1px solid $gray1;
+  }
+
+  .suspended-switch {
+    position: absolute;
+    bottom: 0;
+    right: 5px;
   }
 }

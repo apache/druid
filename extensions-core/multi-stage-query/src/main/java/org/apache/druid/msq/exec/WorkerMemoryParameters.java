@@ -32,6 +32,7 @@ import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.querykit.BroadcastJoinSegmentMapFnProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -130,11 +131,11 @@ public class WorkerMemoryParameters
   private static final long SMALL_WORKER_CAPACITY_THRESHOLD_BYTES = 256_000_000;
 
   /**
-   * Fraction of free memory per bundle that can be used by {@link org.apache.druid.msq.querykit.BroadcastJoinHelper}
-   * to store broadcast data on-heap. This is used to limit the total size of input frames, which we expect to
-   * expand on-heap. Expansion can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are
-   * UTF-16 on-heap, which is a 2x expansion, and object and index overhead must be considered on top of that. So
-   * we use a value somewhat lower than 0.5.
+   * Fraction of free memory per bundle that can be used by {@link BroadcastJoinSegmentMapFnProcessor} to store broadcast
+   * data on-heap. This is used to limit the total size of input frames, which we expect to expand on-heap. Expansion
+   * can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are UTF-16 on-heap, which is
+   * a 2x expansion, and object and index overhead must be considered on top of that. So we use a value somewhat
+   * lower than 0.5.
    */
   static final double BROADCAST_JOIN_MEMORY_FRACTION = 0.3;
 
@@ -473,6 +474,16 @@ public class WorkerMemoryParameters
   }
 
   /**
+   * Computes the amount of memory needed to read a single partition from a given number of workers.
+   */
+  static long memoryNeededForInputChannels(final int numInputWorkers)
+  {
+    // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
+    // Requirement: one input frame per worker, one buffered output frame.
+    return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
+  }
+
+  /**
    * Maximum number of workers that may exist in the current JVM.
    */
   private static int computeNumWorkersInJvm(final Injector injector)
@@ -560,13 +571,6 @@ public class WorkerMemoryParameters
     // Currently, we only add the partition stats overhead since it will be the single largest overhead per worker.
     final long estimateStatOverHeadPerWorker = PARTITION_STATS_MEMORY_MAX_BYTES;
     return estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
-  }
-
-  private static long memoryNeededForInputChannels(final int numInputWorkers)
-  {
-    // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
-    // Requirement: one input frame per worker, one buffered output frame.
-    return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
   }
 
   private static long memoryNeededForHashPartitioning(final int numOutputPartitions)

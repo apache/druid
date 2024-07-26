@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeseries;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -31,13 +32,13 @@ import com.google.inject.Inject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -61,10 +62,11 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -276,6 +278,16 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> getCacheStrategy(final TimeseriesQuery query)
   {
+    return getCacheStrategy(query, null);
+  }
+
+
+  @Override
+  public CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery> getCacheStrategy(
+      final TimeseriesQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
+  {
     return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
@@ -426,14 +438,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    rowSignatureBuilder.addTimeColumn();
-    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
-      rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
-    }
-    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN);
-    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
-    return rowSignatureBuilder.build();
+    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -473,23 +478,29 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = resultArraySignature(query);
-    final Cursor cursor = IterableRowsCursorHelper.getCursorFromSequence(
+    final RowSignature rowSignature =
+        query.getResultSignature(
+            query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
+        );
+    final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );
+    final Cursor cursor = cursorAndCloseable.lhs;
+    final Closeable closeable = cursorAndCloseable.rhs;
 
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
         memoryAllocatorFactory,
         modifiedRowSignature,
         new ArrayList<>()
     );
 
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFrames(cursor, frameWriterFactory);
+    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeable);
 
     // All frames are generated with the same signature therefore we can attach the row signature
     return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));

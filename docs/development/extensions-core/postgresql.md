@@ -27,6 +27,8 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 
 ## Setting up PostgreSQL
 
+To avoid issues with upgrades that require schema changes to a large metadata table, consider a PostgreSQL version that supports instant ADD COLUMN semantics.
+
 1. Install PostgreSQL
 
   Use your favorite package manager to install PostgreSQL, e.g.:
@@ -85,7 +87,7 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 | `druid.metadata.postgres.ssl.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
 | `druid.metadata.postgres.dbTableSchema` | druid meta table schema | `public` | no |
 
-### PostgreSQL Firehose
+### PostgreSQL InputSource
 
 The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/input-sources.md) which can be used to ingest data into Druid from a PostgreSQL database.
 

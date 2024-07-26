@@ -1,0 +1,89 @@
+# testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim@all_disabled case-crc:ace8ed41
+# quidem testcase reason: EQUIV_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite false
+!set enableJoinFilterRewriteValueColumnFilters false
+!set enableRewriteJoinToFilter false
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT druid.broadcast.dim4, COUNT(*)
+FROM druid.numfoo
+INNER JOIN druid.broadcast ON numfoo.dim4 = broadcast.dim4
+GROUP BY 1 ORDER BY 1 DESC LIMIT 4;
++------+--------+
+| dim4 | EXPR$1 |
++------+--------+
+| b    |      9 |
+| a    |      9 |
++------+--------+
+(2 rows)
+
+!ok
+LogicalSort(sort0=[$0], dir0=[DESC], fetch=[4])
+  LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
+    LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+      LogicalProject(dim4=[$4])
+        LogicalTableScan(table=[[druid, numfoo]])
+      LogicalProject(dim4=[$4])
+        LogicalTableScan(table=[[druid, broadcast]])
+
+!logicalPlan
+DruidSort(sort0=[$0], dir0=[DESC], fetch=[4], druid=[logical])
+  DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
+    DruidJoin(condition=[=($0, $1)], joinType=[inner])
+      DruidProject(dim4=[$4], druid=[logical])
+        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+      DruidProject(dim4=[$4], druid=[logical])
+        DruidTableScan(table=[[druid, broadcast]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "numfoo"
+    },
+    "right" : {
+      "type" : "globalTable",
+      "name" : "broadcast"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim4\" == \"j0.dim4\")",
+    "joinType" : "INNER"
+  },
+  "dimension" : {
+    "type" : "default",
+    "dimension" : "j0.dim4",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  },
+  "metric" : {
+    "type" : "inverted",
+    "metric" : {
+      "type" : "dimension",
+      "ordering" : {
+        "type" : "lexicographic"
+      }
+    }
+  },
+  "threshold" : 4,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ]
+}
+!nativePlan

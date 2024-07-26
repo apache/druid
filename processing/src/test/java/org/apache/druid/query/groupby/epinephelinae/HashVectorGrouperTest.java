@@ -45,7 +45,7 @@ public class HashVectorGrouperTest
     );
     grouper.initVectorized(512);
     grouper.close();
-    Mockito.verify(aggregatorAdapters, Mockito.times(1)).close();
+    Mockito.verify(aggregatorAdapters, Mockito.times(2)).reset();
   }
 
   @Test

@@ -21,9 +21,9 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -51,6 +51,7 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -60,7 +61,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.IOException;
 import java.util.List;
 
-public class NestedFieldColumnSelectorsTest
+public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
 {
   private static final String NESTED_LONG_FIELD = "long";
   private static final String NESTED_DOUBLE_FIELD = "double";
@@ -179,8 +180,12 @@ public class NestedFieldColumnSelectorsTest
     Assert.assertNotNull(doubleValueSelector);
     Assert.assertTrue(doubleValueSelector instanceof BaseDoubleVectorValueSelector);
 
-    Assert.assertThrows(UOE.class, () -> factory.makeValueSelector(NESTED_MIXED_NUMERIC_FIELD));
-    Assert.assertThrows(UOE.class, () -> factory.makeValueSelector(NESTED_MIXED_FIELD));
+    Assert.assertThrows(DruidException.class, () -> factory.makeValueSelector(NESTED_MIXED_FIELD));
+
+    VectorValueSelector mixedNumericValueSelector = factory.makeValueSelector(
+        NESTED_MIXED_NUMERIC_FIELD
+    );
+    Assert.assertTrue(mixedNumericValueSelector instanceof BaseDoubleVectorValueSelector);
 
     // can also make single value dimension selectors for all nested column types
     SingleValueDimensionVectorSelector longDimensionSelector = factory.makeSingleValueDimensionSelector(
@@ -193,10 +198,10 @@ public class NestedFieldColumnSelectorsTest
     );
     Assert.assertNotNull(doubleDimensionSelector);
 
-    SingleValueDimensionVectorSelector mixedNumericValueSelector = factory.makeSingleValueDimensionSelector(
+    SingleValueDimensionVectorSelector mixedNumericDimensionValueSelector = factory.makeSingleValueDimensionSelector(
         DefaultDimensionSpec.of(NESTED_MIXED_NUMERIC_FIELD)
     );
-    Assert.assertNotNull(mixedNumericValueSelector);
+    Assert.assertNotNull(mixedNumericDimensionValueSelector);
 
     SingleValueDimensionVectorSelector mixedValueSelector = factory.makeSingleValueDimensionSelector(
         DefaultDimensionSpec.of(NESTED_MIXED_FIELD)

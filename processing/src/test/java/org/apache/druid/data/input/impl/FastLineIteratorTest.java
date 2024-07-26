@@ -47,14 +47,14 @@ public class FastLineIteratorTest
   {
     expectedException.expect(NullPointerException.class);
     //noinspection ResultOfObjectAllocationIgnored
-    new FastLineIterator(null);
+    new FastLineIterator.Strings(null);
   }
 
   @Test
   public void testEmptyInput()
   {
     byte[] input = new byte[0];
-    FastLineIterator iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    FastLineIterator<String> iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertFalse(iterator.hasNext());
 
@@ -66,12 +66,12 @@ public class FastLineIteratorTest
   public void testSoloCr()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     // a single \r
     // it is expected that this emits a complete line with \r since a return on its own is not a line break
     input = "\r".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("\r", iterator.next());
@@ -82,12 +82,12 @@ public class FastLineIteratorTest
   public void testSoloLf()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     // a single \n
     // should emit a single complete 'line' as "", and no trailing line (since EOF)
     input = "\n".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("", iterator.next());
@@ -98,13 +98,13 @@ public class FastLineIteratorTest
   public void testBackwardsLfCr()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     // should emit two lines:
     // first one is an empty line for before the \n,
     // second is the \r alone
     input = "\n\r".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("", iterator.next());
@@ -117,11 +117,11 @@ public class FastLineIteratorTest
   public void testForwardsSoloCrLf()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     // should emit one (empty) line
     input = "\r\n".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("", iterator.next());
@@ -132,11 +132,11 @@ public class FastLineIteratorTest
   public void testSingleLine()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     // without an end
     input = "abcd".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("abcd", iterator.next());
@@ -144,7 +144,7 @@ public class FastLineIteratorTest
 
     // with an end
     input = "abcd\n".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("abcd", iterator.next());
@@ -152,7 +152,7 @@ public class FastLineIteratorTest
 
     // with an end
     input = "abcd\r\n".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("abcd", iterator.next());
@@ -163,10 +163,10 @@ public class FastLineIteratorTest
   public void testMultipleLines()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     input = "abcd\ndefg\nhijk".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("abcd", iterator.next());
@@ -179,10 +179,10 @@ public class FastLineIteratorTest
   public void testEmptyMiddleLine()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     input = "abcd\n\nhijk\n".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("abcd", iterator.next());
@@ -195,10 +195,10 @@ public class FastLineIteratorTest
   public void testEmptyLastLine()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     input = "abcd\ndefg\nhijk\n".getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals("abcd", iterator.next());
@@ -211,14 +211,14 @@ public class FastLineIteratorTest
   public void testOverlappingBuffer()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
-    String line1 = RandomStringUtils.random(FastLineIterator.BUFFER_SIZE - 20);
-    String line2 = RandomStringUtils.random(40);
-    String line3 = RandomStringUtils.random(20);
+    String line1 = randomString(FastLineIterator.BUFFER_SIZE - 20);
+    String line2 = randomString(40);
+    String line3 = randomString(20);
 
     input = (line1 + "\n" + line2 + "\n" + line3 + "\n").getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(line1, iterator.next());
@@ -231,20 +231,30 @@ public class FastLineIteratorTest
   public void testLineLargerThanBufferSize()
   {
     byte[] input;
-    FastLineIterator iterator;
+    FastLineIterator<String> iterator;
 
     // random lengths that force multiple buffer trips
-    String line1 = RandomStringUtils.random(FastLineIterator.BUFFER_SIZE * 3 + 10);
-    String line2 = RandomStringUtils.random(FastLineIterator.BUFFER_SIZE * 2 + 15);
-    String line3 = RandomStringUtils.random(FastLineIterator.BUFFER_SIZE + 9);
+    String line1 = randomString(FastLineIterator.BUFFER_SIZE * 3 + 10);
+    String line2 = randomString(FastLineIterator.BUFFER_SIZE * 2 + 15);
+    String line3 = randomString(FastLineIterator.BUFFER_SIZE + 9);
 
     input = (line1 + "\r\n" + line2 + "\r\n" + line3 + "\r\n").getBytes(StandardCharsets.UTF_8);
-    iterator = new FastLineIterator(new ByteArrayInputStream(input));
+    iterator = new FastLineIterator.Strings(new ByteArrayInputStream(input));
 
     Assert.assertTrue(iterator.hasNext());
     Assert.assertEquals(line1, iterator.next());
     Assert.assertEquals(line2, iterator.next());
     Assert.assertEquals(line3, iterator.next());
     Assert.assertFalse(iterator.hasNext());
+  }
+
+  /**
+   * Random string that does not contain \r or \n.
+   */
+  private static String randomString(final int length)
+  {
+    return RandomStringUtils.random(length)
+                            .replace('\r', '?')
+                            .replace('\n', '?');
   }
 }

@@ -30,6 +30,7 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.input.ReadableInput;
@@ -100,7 +101,7 @@ public class QueryResultsFrameProcessorTest extends InitializedNullHandlingTest
             stagePartition
         ).getChannel(), outputChannel.writable());
 
-    ListenableFuture<Long> retVal = exec.runFully(processor, null);
+    ListenableFuture<Object> retVal = exec.runFully(processor, null);
     final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
         outputChannel.readable(),
         FrameReader.create(signature)
@@ -109,7 +110,7 @@ public class QueryResultsFrameProcessorTest extends InitializedNullHandlingTest
         FrameTestUtil.readRowsFromAdapter(adapter, signature, false),
         rowsFromProcessor
     );
-    Assert.assertEquals(adapter.getNumRows(), (long) retVal.get());
+    Assert.assertEquals(Unit.instance(), retVal.get());
   }
 
 }

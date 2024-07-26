@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.Pair;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -39,6 +38,7 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
+import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
@@ -51,6 +51,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
@@ -62,6 +64,10 @@ import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.destination.ExportDestination;
+import org.apache.druid.sql.destination.IngestDestination;
+import org.apache.druid.sql.destination.TableDestination;
+import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -71,6 +77,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -80,19 +87,19 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
-  private final String targetDataSource;
+  private final IngestDestination targetDataSource;
   private final OverlordClient overlordClient;
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
-  private final List<Pair<Integer, String>> fieldMapping;
+  private final List<Entry<Integer, String>> fieldMapping;
 
 
   MSQTaskQueryMaker(
-      @Nullable final String targetDataSource,
+      @Nullable final IngestDestination targetDataSource,
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Pair<Integer, String>> fieldMapping
+      final List<Entry<Integer, String>> fieldMapping
   )
   {
     this.targetDataSource = targetDataSource;
@@ -155,6 +162,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final int maxNumWorkers = maxNumTasks - 1;
     final int rowsPerSegment = MultiStageQueryContext.getRowsPerSegment(sqlQueryContext);
     final int maxRowsInMemory = MultiStageQueryContext.getRowsInMemory(sqlQueryContext);
+    final Integer maxNumSegments = MultiStageQueryContext.getMaxNumSegments(sqlQueryContext);
     final IndexSpec indexSpec = MultiStageQueryContext.getIndexSpec(sqlQueryContext, jsonMapper);
     final boolean finalizeAggregations = MultiStageQueryContext.isFinalizeAggregations(sqlQueryContext);
 
@@ -186,7 +194,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final List<ColumnType> columnTypeList = new ArrayList<>();
     final List<ColumnMapping> columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery);
 
-    for (final Pair<Integer, String> entry : fieldMapping) {
+    for (final Entry<Integer, String> entry : fieldMapping) {
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
 
       final SqlTypeName sqlTypeName;
@@ -203,7 +211,15 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final MSQDestination destination;
 
-    if (targetDataSource != null) {
+    if (targetDataSource instanceof ExportDestination) {
+      ExportDestination exportDestination = ((ExportDestination) targetDataSource);
+      ResultFormat format = ResultFormat.fromString(sqlQueryContext.getString(DruidSqlIngest.SQL_EXPORT_FILE_FORMAT));
+
+      destination = new ExportMSQDestination(
+          exportDestination.getStorageConnectorProvider(),
+          format
+      );
+    } else if (targetDataSource instanceof TableDestination) {
       Granularity segmentGranularityObject;
       try {
         segmentGranularityObject = jsonMapper.readValue((String) segmentGranularity, Granularity.class);
@@ -223,15 +239,18 @@ public class MSQTaskQueryMaker implements QueryMaker
 
       MSQTaskQueryMakerUtils.validateSegmentSortOrder(
           segmentSortOrder,
-          fieldMapping.stream().map(f -> f.right).collect(Collectors.toList())
+          fieldMapping.stream().map(f -> f.getValue()).collect(Collectors.toList())
       );
 
-      destination = new DataSourceMSQDestination(
-          targetDataSource,
+      final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
+          targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks
       );
+      MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext,
+                                                        dataSourceMSQDestination.isReplaceTimeChunks());
+      destination = dataSourceMSQDestination;
     } else {
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
       if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {
@@ -261,8 +280,16 @@ public class MSQTaskQueryMaker implements QueryMaker
                .columnMappings(new ColumnMappings(columnMappings))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, indexSpec))
+               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec))
                .build();
+
+    MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
+
+    final Map<String, Object> context = new HashMap<>();
+    context.put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, plannerContext.getLookupLoadingSpec().getMode());
+    if (plannerContext.getLookupLoadingSpec().getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED) {
+      context.put(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD, plannerContext.getLookupLoadingSpec().getLookupsToLoad());
+    }
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
@@ -272,7 +299,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         SqlResults.Context.fromPlannerContext(plannerContext),
         sqlTypeNames,
         columnTypeList,
-        null
+        context
     );
 
     FutureUtils.getUnchecked(overlordClient.runTask(taskId, controllerTask), true);

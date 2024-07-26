@@ -100,6 +100,7 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
     } else if (maxPartitions > maxNumPartitions) {
       return Either.error((long) maxPartitions);
     } else {
+      collector.logSketches();
       final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithMaxCount(maxPartitions);
       if (generatedPartitions.size() <= maxNumPartitions) {
         return Either.value(generatedPartitions);
@@ -119,7 +120,11 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   @Override
   public int partitionCount()
   {
-    throw new ISE("Number of partitions not known for [%s].", kind());
+    if (maxPartitions == 1) {
+      return 1;
+    } else {
+      throw new ISE("Number of partitions not known for [%s] with maxPartitions[%d].", kind(), maxPartitions);
+    }
   }
 
   @JsonProperty("partitions")

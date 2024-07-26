@@ -33,7 +33,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Nested field writer for long type columns of {@link NestedDataColumnSerializerV4}. In addition to the normal
+ * Nested field writer for long type columns of {@link NestedDataColumnSerializer}. In addition to the normal
  * dictionary encoded column, this writer also writes an additional long value column with {@link #longsSerializer},
  * which is written to during {@link #addValue}.
  */
@@ -59,21 +59,6 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
   }
 
   @Override
-  public void open() throws IOException
-  {
-    super.open();
-    longsSerializer = CompressionFactory.getLongSerializer(
-        fieldName,
-        segmentWriteOutMedium,
-        StringUtils.format("%s.long_column", fieldName),
-        ByteOrder.nativeOrder(),
-        indexSpec.getLongEncoding(),
-        indexSpec.getDimensionCompression()
-    );
-    longsSerializer.open();
-  }
-
-  @Override
   void writeValue(@Nullable Long value) throws IOException
   {
     if (value == null) {
@@ -81,6 +66,22 @@ public final class ScalarLongFieldColumnWriter extends GlobalDictionaryEncodedFi
     } else {
       longsSerializer.add(value);
     }
+  }
+
+  @Override
+  public void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
+  {
+    super.openColumnSerializer(medium, maxId);
+    longsSerializer = CompressionFactory.getLongSerializer(
+        fieldName,
+        medium,
+        StringUtils.format("%s.long_column", fieldName),
+        ByteOrder.nativeOrder(),
+        indexSpec.getLongEncoding(),
+        indexSpec.getDimensionCompression(),
+        fieldResourceCloser
+    );
+    longsSerializer.open();
   }
 
   @Override

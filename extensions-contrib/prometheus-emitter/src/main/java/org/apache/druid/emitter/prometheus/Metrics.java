@@ -62,10 +62,15 @@ public class Metrics
     }
   }
 
-  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel)
+  public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel, Map<String, String> extraLabels)
   {
     Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
     Map<String, Metric> metrics = readConfig(path);
+
+    if (extraLabels == null) {
+      extraLabels = Collections.emptyMap(); // Avoid null checks later
+    }
+
     for (Map.Entry<String, Metric> entry : metrics.entrySet()) {
       String name = entry.getKey();
       Metric metric = entry.getValue();
@@ -78,6 +83,8 @@ public class Metrics
       if (isAddServiceAsLabel) {
         metric.dimensions.add(TAG_SERVICE);
       }
+
+      metric.dimensions.addAll(extraLabels.keySet());
 
       String[] dimensions = metric.dimensions.toArray(new String[0]);
       String formattedName = PATTERN.matcher(StringUtils.toLowerCase(name)).replaceAll("_");

@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 
@@ -46,6 +47,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  * Usage:
@@ -116,6 +118,12 @@ public final class CacheScheduler
     }
 
     @VisibleForTesting
+    public void awaitTotalUpdatesWithTimeout(int totalUpdates, long timeoutMills)
+        throws InterruptedException, TimeoutException
+    {
+      impl.updateCounter.awaitCount(totalUpdates, timeoutMills, TimeUnit.MILLISECONDS);
+    }
+    @VisibleForTesting
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
       impl.updateCounter.awaitNextIncrements(nextUpdates);
@@ -180,9 +188,9 @@ public final class CacheScheduler
       final long updateMs = namespace.getPollMs();
       Runnable command = this::updateCache;
       if (updateMs > 0) {
-        return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, 0, updateMs, TimeUnit.MILLISECONDS);
+        return cacheManager.scheduledExecutorService().scheduleAtFixedRate(command, namespace.getJitterMills(), updateMs, TimeUnit.MILLISECONDS);
       } else {
-        return cacheManager.scheduledExecutorService().schedule(command, 0, TimeUnit.MILLISECONDS);
+        return cacheManager.scheduledExecutorService().schedule(command, namespace.getJitterMills(), TimeUnit.MILLISECONDS);
       }
     }
 
@@ -403,6 +411,14 @@ public final class CacheScheduler
       return cacheHandler.getCache();
     }
 
+    /**
+     * Returns a {@link LookupExtractor} view of the cached data.
+     */
+    public LookupExtractor asLookupExtractor(final boolean isOneToOne, final Supplier<byte[]> cacheKeySupplier)
+    {
+      return cacheHandler.asLookupExtractor(isOneToOne, cacheKeySupplier);
+    }
+
     public String getVersion()
     {
       return version;
@@ -445,7 +461,7 @@ public final class CacheScheduler
               final long tasks = updatesStarted.get();
               serviceEmitter.emit(
                   ServiceMetricEvent.builder()
-                                    .build("namespace/deltaTasksStarted", tasks - priorUpdatesStarted)
+                                    .setMetric("namespace/deltaTasksStarted", tasks - priorUpdatesStarted)
               );
               priorUpdatesStarted = tasks;
             }

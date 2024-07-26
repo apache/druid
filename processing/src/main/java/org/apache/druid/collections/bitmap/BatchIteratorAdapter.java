@@ -21,13 +21,13 @@ package org.apache.druid.collections.bitmap;
 
 import com.google.common.base.Preconditions;
 import org.roaringbitmap.BatchIterator;
-import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.PeekableIntIterator;
 
 public final class BatchIteratorAdapter implements BatchIterator
 {
-  private final IntIterator iterator;
+  private final PeekableIntIterator iterator;
 
-  public BatchIteratorAdapter(IntIterator iterator)
+  public BatchIteratorAdapter(PeekableIntIterator iterator)
   {
     this.iterator = Preconditions.checkNotNull(iterator, "iterator");
   }
@@ -47,6 +47,12 @@ public final class BatchIteratorAdapter implements BatchIterator
   public boolean hasNext()
   {
     return iterator.hasNext();
+  }
+
+  @Override
+  public void advanceIfNeeded(int target)
+  {
+    iterator.advanceIfNeeded(target);
   }
 
   @Override

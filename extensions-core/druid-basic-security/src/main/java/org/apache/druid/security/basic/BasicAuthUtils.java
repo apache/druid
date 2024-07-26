@@ -23,10 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerRole;
@@ -35,21 +33,15 @@ import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleM
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 
 import javax.annotation.Nullable;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class BasicAuthUtils
 {
 
-  private static final Logger log = new Logger(BasicAuthUtils.class);
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   public static final String ADMIN_NAME = "admin";
   public static final String ADMIN_GROUP_MAPPING_NAME = "adminGroupMapping";
@@ -66,8 +58,6 @@ public class BasicAuthUtils
   public static final int DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS = 600;
   public static final int DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS = 3600;
   public static final int DEFAULT_CREDENTIAL_CACHE_SIZE = 100;
-  public static final int KEY_LENGTH = 512;
-  public static final String ALGORITHM = "PBKDF2WithHmacSHA512";
   public static final int MAX_INIT_RETRIES = 2;
   public static final Predicate<Throwable> SHOULD_RETRY_INIT =
       (throwable) -> throwable instanceof BasicSecurityDBResourceException;
@@ -101,30 +91,6 @@ public class BasicAuthUtils
       new TypeReference<GroupMappingAndRoleMap>()
       {
       };
-
-  public static byte[] hashPassword(final char[] password, final byte[] salt, final int iterations)
-  {
-    try {
-      SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(ALGORITHM);
-      SecretKey key = keyFactory.generateSecret(
-          new PBEKeySpec(
-              password,
-              salt,
-              iterations,
-              KEY_LENGTH
-          )
-      );
-      return key.getEncoded();
-    }
-    catch (InvalidKeySpecException ikse) {
-      log.error("Invalid keyspec");
-      throw new RuntimeException("Invalid keyspec", ikse);
-    }
-    catch (NoSuchAlgorithmException nsae) {
-      log.error("%s not supported on this system.", ALGORITHM);
-      throw new RE(nsae, "%s not supported on this system.", ALGORITHM);
-    }
-  }
 
   public static byte[] generateSalt()
   {

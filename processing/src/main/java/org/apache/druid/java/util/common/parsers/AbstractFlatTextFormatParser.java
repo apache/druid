@@ -100,7 +100,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   public void setFieldNames(final Iterable<String> fieldNames)
   {
     if (fieldNames != null) {
-      this.fieldNames = TextReader.findOrCreateColumnNames(Lists.newArrayList(fieldNames));
+      this.fieldNames = TextReader.findOrCreateInputRowSignature(Lists.newArrayList(fieldNames)).getColumnNames();
     }
   }
 

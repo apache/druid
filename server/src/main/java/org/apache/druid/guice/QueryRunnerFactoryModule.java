@@ -31,7 +31,6 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -88,8 +87,6 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
       queryFactoryBinder.addBinding(entry.getKey()).to(entry.getValue());
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
-
-    binder.bind(GroupByQueryEngine.class).in(LazySingleton.class);
   }
 
   @LazySingleton

@@ -139,13 +139,6 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     if (object instanceof byte[]) {

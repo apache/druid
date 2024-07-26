@@ -44,7 +44,7 @@ public class FalseDimFilterTest
   {
     EqualsVerifier.forClass(FalseDimFilter.class)
                   .usingGetClass()
-                  .withIgnoredFields("cachedOptimizedFilter")
+                  .withIgnoredFields("optimizedFilterIncludeUnknown", "optimizedFilterNoIncludeUnknown")
                   .verify();
   }
 }

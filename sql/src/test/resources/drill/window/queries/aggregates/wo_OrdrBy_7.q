@@ -1,1 +1,1 @@
-SELECT MAX(col_int) OVER (PARTITION BY col_char_2) max_int, col_char_2, col_int FROM "smlTbl.parquet" WHERE col_vchar_52 = "GXXXXXXXXXXXXXXXXXXXXXXXXXHXXXXXXXXXXXXXXXXXXXXXXXXI"
+SELECT MAX(col_int) OVER (PARTITION BY col_char_2) max_int, col_char_2, col_int FROM "smlTbl.parquet" WHERE col_vchar_52 = 'GXXXXXXXXXXXXXXXXXXXXXXXXXHXXXXXXXXXXXXXXXXXXXXXXXXI'

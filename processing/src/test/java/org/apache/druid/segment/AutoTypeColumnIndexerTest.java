@@ -34,6 +34,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -67,72 +68,74 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @Test
   public void testKeySizeEstimation()
   {
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
     EncodedKeyComponent<StructuredData> key;
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(228, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(112, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(94, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.globalDictionary.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.globalDictionary.getCardinality());
     // new raw value, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(11L, false);
     Assert.assertEquals(48, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 3, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 3, indexer.globalDictionary.getCardinality());
 
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(168, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     // new raw value, re-use fields and dictionary
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(104, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(166, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(166, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
     } else {
       Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
     }
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(0L, false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(16, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
     } else {
       Assert.assertEquals(48, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 8, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 8, indexer.globalDictionary.getCardinality());
     }
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
   }
 
   @Test
@@ -198,6 +201,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, dimensionSelector.getRow().size());
     Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
     Assert.assertNull(dimensionSelector.getObject());
+
+    Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(STRING_COL).toColumnType());
   }
 
   @Test
@@ -294,6 +299,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
     }
+    Assert.assertEquals(ColumnType.LONG, storageAdapter.getColumnCapabilities(LONG_COL).toColumnType());
   }
 
   @Test
@@ -389,6 +395,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       );
       Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
     }
+    Assert.assertEquals(ColumnType.DOUBLE, storageAdapter.getColumnCapabilities(DOUBLE_COL).toColumnType());
   }
 
   @Test
@@ -454,6 +461,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertEquals(ColumnType.STRING_ARRAY, storageAdapter.getColumnCapabilities(STRING_ARRAY_COL).toColumnType());
   }
 
   @Test
@@ -512,6 +520,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
     Assert.assertNull(valueSelector.getObject());
     Assert.assertNull(dimensionSelector.getObject());
+    Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(VARIANT_COL).toColumnType());
   }
 
   @Test
@@ -553,7 +562,6 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
@@ -562,7 +570,6 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1.1, "y", 2L)), valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
 
     columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
     valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
@@ -579,145 +586,229 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
     );
     Assert.assertNull(valueSelector.getObject());
+    Assert.assertEquals(ColumnType.NESTED_DATA, storageAdapter.getColumnCapabilities(NESTED_COL).toColumnType());
+  }
+
+  @Test
+  public void testNestedColumnIndexerSchemaDiscoveryTypeCoercion() throws IndexSizeExceededException
+  {
+    // coerce nested column to STRING type, throwing parse exceptions for nested data
+    // and casting anything else to string
+    long minTimestamp = System.currentTimeMillis();
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema(
+                minTimestamp,
+                new TimestampSpec(TIME_COL, "millis", null),
+                Granularities.NONE,
+                VirtualColumns.EMPTY,
+                DimensionsSpec.builder()
+                              .setDimensions(ImmutableList.of(new AutoTypeColumnSchema(NESTED_COL, ColumnType.STRING)))
+                              .useSchemaDiscovery(true)
+                              .build(),
+                new AggregatorFactory[0],
+                false
+            )
+        )
+        .setMaxRowCount(1000)
+        .build();
+
+    index.add(makeInputRow(minTimestamp + 1, true, NESTED_COL, "a"));
+    index.add(makeInputRow(minTimestamp + 2, true, NESTED_COL, 2L));
+    IncrementalIndexAddResult result = index.add(makeInputRow(minTimestamp + 3, true, NESTED_COL, ImmutableMap.of("x", 1.1, "y", 2L)));
+    Assert.assertTrue(result.hasParseException());
+    index.add(makeInputRow(minTimestamp + 4, true, NESTED_COL, null));
+    index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
+
+    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
+    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
+        null,
+        Intervals.ETERNITY,
+        VirtualColumns.EMPTY,
+        Granularities.NONE,
+        false,
+        null
+    );
+    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
+    List<Cursor> cursorList = cursorSequence.toList();
+    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+
+    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    DimensionSelector dimensionSelector = cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals("a", valueSelector.getObject());
+    Assert.assertEquals("a", dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertEquals("2", valueSelector.getObject());
+    Assert.assertFalse(valueSelector.isNull());
+    Assert.assertEquals("2", dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
+
+    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
+    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+    dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+    Assert.assertNull(valueSelector.getObject());
+    Assert.assertNull(dimensionSelector.getObject());
+
+    Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(NESTED_COL).toColumnType());
   }
 
   @Test
   public void testConstantNull()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
     Assert.assertEquals(0, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
 
     Assert.assertEquals(0, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(null, true);
     Assert.assertEquals(0, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
 
     Assert.assertTrue(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.STRING, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantString()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
     Assert.assertEquals(166, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
 
     Assert.assertEquals(52, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("abcd", true);
     Assert.assertEquals(52, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
 
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.STRING, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantLong()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
     Assert.assertEquals(94, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
 
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(1234L, true);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
 
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.LONG, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantEmptyArray()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
     Assert.assertEquals(54, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
 
     Assert.assertEquals(8, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(), true);
     Assert.assertEquals(8, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
 
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantArray()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
     Assert.assertEquals(246, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 4, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 4, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
 
     Assert.assertEquals(104, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 4, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 4, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 3L), true);
     Assert.assertEquals(104, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 4, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 4, indexer.globalDictionary.getCardinality());
 
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.LONG_ARRAY, indexer.getLogicalType());
   }
 
   @Test
   public void testConstantEmptyObject()
   {
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer();
+    AutoTypeColumnIndexer indexer = new AutoTypeColumnIndexer("test", null);
     EncodedKeyComponent<StructuredData> key;
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
 
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of(), true);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
     Assert.assertFalse(indexer.hasNulls);
     Assert.assertTrue(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
+    Assert.assertEquals(ColumnType.NESTED_DATA, indexer.getLogicalType());
   }
 
   @Nonnull

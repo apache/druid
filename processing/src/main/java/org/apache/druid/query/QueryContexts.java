@@ -77,6 +77,8 @@ public class QueryContexts
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
+  public static final String IN_FUNCTION_THRESHOLD = "inFunctionThreshold";
+  public static final String IN_FUNCTION_EXPR_THRESHOLD = "inFunctionExprThreshold";
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
@@ -85,6 +87,10 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
+  // query's runtime
+  public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
   public static final String UNAVAILABLE_SEGMENTS_ACTION_KEY = "unavailableSegmentsAction";
 
@@ -118,7 +124,10 @@ public class QueryContexts
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
+  public static final int DEFAULT_IN_FUNCTION_THRESHOLD = 100;
+  public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
+  public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

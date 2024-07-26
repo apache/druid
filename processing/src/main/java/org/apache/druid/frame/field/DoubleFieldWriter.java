@@ -25,65 +25,49 @@ import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 /**
  * Wraps a {@link BaseDoubleColumnValueSelector} and writes field values.
  *
- * See {@link DoubleFieldReader} for format details.
+ * @see NumericFieldWriter for the details of the byte-format that it writes as
  */
-public class DoubleFieldWriter implements FieldWriter
+public class DoubleFieldWriter extends NumericFieldWriter
 {
-  public static final int SIZE = Double.BYTES + Byte.BYTES;
-
-  // Different from the values in NullHandling, since we want to be able to sort as bytes, and we want
-  // nulls to come before non-nulls.
-  public static final byte NULL_BYTE = 0x00;
-  public static final byte NOT_NULL_BYTE = 0x01;
-
   private final BaseDoubleColumnValueSelector selector;
 
-  public DoubleFieldWriter(final BaseDoubleColumnValueSelector selector)
+  public static DoubleFieldWriter forPrimitive(final BaseDoubleColumnValueSelector selector)
   {
+    return new DoubleFieldWriter(selector, false);
+  }
+
+  public static DoubleFieldWriter forArray(final BaseDoubleColumnValueSelector selector)
+  {
+    return new DoubleFieldWriter(selector, true);
+  }
+
+  private DoubleFieldWriter(final BaseDoubleColumnValueSelector selector, final boolean forArray)
+  {
+    super(selector, forArray);
     this.selector = selector;
   }
 
   @Override
-  public long writeTo(final WritableMemory memory, final long position, final long maxSize)
+  public int getNumericSizeBytes()
   {
-    if (maxSize < SIZE) {
-      return -1;
-    }
-
-    if (selector.isNull()) {
-      memory.putByte(position, NULL_BYTE);
-      memory.putLong(position + Byte.BYTES, transform(0));
-    } else {
-      memory.putByte(position, NOT_NULL_BYTE);
-      memory.putLong(position + Byte.BYTES, transform(selector.getDouble()));
-    }
-
-    return SIZE;
+    return Double.BYTES;
   }
 
   @Override
-  public void close()
+  public void writeSelectorToMemory(WritableMemory memory, long position)
   {
-    // Nothing to close.
+    writeToMemory(memory, position, selector.getDouble());
   }
 
-  /**
-   * Transforms a double into a form where it can be compared as unsigned bytes without decoding.
-   */
-  public static long transform(final double n)
+  @Override
+  public void writeNullToMemory(WritableMemory memory, long position)
   {
-    final long bits = Double.doubleToLongBits(n);
-    final long mask = ((bits & Long.MIN_VALUE) >> 11) | Long.MIN_VALUE;
-    return Long.reverseBytes(bits ^ mask);
+    writeToMemory(memory, position, 0);
   }
 
-  /**
-   * Inverse of {@link #transform}.
-   */
-  public static double detransform(final long bits)
+  private void writeToMemory(WritableMemory memory, long position, double value)
   {
-    final long reversedBits = Long.reverseBytes(bits);
-    final long mask = (((reversedBits ^ Long.MIN_VALUE) & Long.MIN_VALUE) >> 11) | Long.MIN_VALUE;
-    return Double.longBitsToDouble(reversedBits ^ mask);
+    memory.putLong(position, TransformUtils.transformFromDouble(value));
   }
+
 }

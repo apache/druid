@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
-  public static Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
+  public static final Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
   {
     @Override
     /**
@@ -106,6 +106,8 @@ public abstract class Granularity implements Cacheable
    * ALL will not be returned unless the provided granularity is ALL. NONE will never be returned, even if the
    * provided granularity is NONE. This is because the main usage of this function in production is segment
    * allocation, and we do not wish to generate NONE-granular segments.
+   *
+   * The list of granularities returned contains WEEK only if the requested granularity is WEEK.
    */
   public static List<Granularity> granularitiesFinerThan(final Granularity gran0)
   {
@@ -115,6 +117,9 @@ public abstract class Granularity implements Cacheable
     for (GranularityType gran : GranularityType.values()) {
       // Exclude ALL, unless we're looking for granularities finer than ALL; always exclude NONE.
       if ((gran == GranularityType.ALL && !gran0.equals(Granularities.ALL)) || gran == GranularityType.NONE) {
+        continue;
+      }
+      if (gran == GranularityType.WEEK && !gran0.equals(Granularities.WEEK)) {
         continue;
       }
       final Granularity segmentGranularity = gran.create(origin, tz);
@@ -213,6 +218,16 @@ public abstract class Granularity implements Cacheable
     }
 
     return vals;
+  }
+
+  /**
+   * Decides whether this granularity is finer than the other granularity
+   *
+   * @return true if this {@link Granularity} is finer than the passed one
+   */
+  public boolean isFinerThan(Granularity g)
+  {
+    return IS_FINER_THAN.compare(this, g) < 0;
   }
 
   /**

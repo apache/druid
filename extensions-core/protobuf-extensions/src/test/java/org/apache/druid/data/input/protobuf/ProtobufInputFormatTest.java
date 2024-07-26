@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import org.apache.druid.common.config.NullHandling;
@@ -57,6 +58,7 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 
 public class ProtobufInputFormatTest
 {
@@ -231,7 +233,7 @@ public class ProtobufInputFormatTest
     ).read().next();
 
     Assert.assertEquals(
-        ImmutableList.builder()
+        ImmutableSet.builder()
                      .add("eventType")
                      .add("foobar")
                      .add("bar0")
@@ -244,7 +246,7 @@ public class ProtobufInputFormatTest
                      .add("id")
                      .add("someBytesColumn")
                      .build(),
-        row.getDimensions()
+        new HashSet<>(row.getDimensions())
     );
 
     ProtobufInputRowParserTest.verifyNestedData(row, dateTime);
@@ -269,14 +271,14 @@ public class ProtobufInputFormatTest
             timestampSpec,
             new DimensionsSpec(
                 Lists.newArrayList(
-                    new AutoTypeColumnSchema("event"),
-                    new AutoTypeColumnSchema("id"),
-                    new AutoTypeColumnSchema("someOtherId"),
-                    new AutoTypeColumnSchema("isValid"),
-                    new AutoTypeColumnSchema("eventType"),
-                    new AutoTypeColumnSchema("foo"),
-                    new AutoTypeColumnSchema("bar"),
-                    new AutoTypeColumnSchema("someBytesColumn")
+                    new AutoTypeColumnSchema("event", null),
+                    new AutoTypeColumnSchema("id", null),
+                    new AutoTypeColumnSchema("someOtherId", null),
+                    new AutoTypeColumnSchema("isValid", null),
+                    new AutoTypeColumnSchema("eventType", null),
+                    new AutoTypeColumnSchema("foo", null),
+                    new AutoTypeColumnSchema("bar", null),
+                    new AutoTypeColumnSchema("someBytesColumn", null)
                 )
             ),
             null
@@ -368,9 +370,8 @@ public class ProtobufInputFormatTest
     InputRow row = transformingReader.read().next();
 
     Assert.assertEquals(
-        ImmutableList.of(
+        ImmutableSet.of(
             "someOtherId",
-            "bar",
             "someIntColumn",
             "isValid",
             "foo",
@@ -378,10 +379,11 @@ public class ProtobufInputFormatTest
             "someLongColumn",
             "someFloatColumn",
             "eventType",
+            "bar",
             "id",
             "someBytesColumn"
         ),
-        row.getDimensions()
+        new HashSet<>(row.getDimensions())
     );
 
     Assert.assertEquals(ImmutableMap.of("bar", "baz"), row.getRaw("foo"));

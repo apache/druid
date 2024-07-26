@@ -32,10 +32,10 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class BasicMonitorSchedulerTest
 {
-  private final MonitorSchedulerConfig config = new MonitorSchedulerConfig()
+  private final DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig()
   {
     @Override
-    public Duration getEmitterPeriod()
+    public Duration getEmissionDuration()
     {
       return Duration.millis(5);
     }

@@ -34,7 +34,6 @@ import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
@@ -99,7 +98,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -133,7 +131,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -173,7 +170,6 @@ public class DruidInputSourceTest
             indexIO,
             coordinatorClient,
             segmentCacheManagerFactory,
-            retryPolicyFactory,
             taskConfig
         ),
         inputSource
@@ -256,7 +252,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
@@ -291,7 +286,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
@@ -315,7 +309,6 @@ public class DruidInputSourceTest
         indexIO,
         coordinatorClient,
         segmentCacheManagerFactory,
-        retryPolicyFactory,
         taskConfig
     );
     Assert.assertEquals(ImmutableSet.of(DruidInputSource.TYPE_KEY), druidInputSource.getTypes());

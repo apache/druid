@@ -331,6 +331,7 @@ public class DeterminePartitionsJobTest
                 false,
                 false,
                 false,
+                false,
                 null,
                 false,
                 false,
@@ -342,7 +343,8 @@ public class DeterminePartitionsJobTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

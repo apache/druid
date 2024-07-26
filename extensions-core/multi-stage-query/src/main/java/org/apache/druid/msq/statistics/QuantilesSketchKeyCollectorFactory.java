@@ -19,19 +19,18 @@
 
 package org.apache.druid.msq.statistics;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.datasketches.common.ArrayOfItemsSerDe;
+import org.apache.datasketches.common.ByteArrayUtil;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.RowSignature;
 
-import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 import java.util.Comparator;
 
 public class QuantilesSketchKeyCollectorFactory
@@ -48,29 +47,15 @@ public class QuantilesSketchKeyCollectorFactory
     this.comparator = comparator;
   }
 
-  static QuantilesSketchKeyCollectorFactory create(final ClusterBy clusterBy)
+  static QuantilesSketchKeyCollectorFactory create(final ClusterBy clusterBy, final RowSignature rowSignature)
   {
-    return new QuantilesSketchKeyCollectorFactory(clusterBy.byteKeyComparator());
+    return new QuantilesSketchKeyCollectorFactory(clusterBy.byteKeyComparator(rowSignature));
   }
 
   @Override
   public QuantilesSketchKeyCollector newKeyCollector()
   {
     return new QuantilesSketchKeyCollector(comparator, ItemsSketch.getInstance(byte[].class, SKETCH_INITIAL_K, comparator), 0);
-  }
-
-  @Override
-  public JsonDeserializer<QuantilesSketchKeyCollectorSnapshot> snapshotDeserializer()
-  {
-    return new JsonDeserializer<QuantilesSketchKeyCollectorSnapshot>()
-    {
-      @Override
-      public QuantilesSketchKeyCollectorSnapshot deserialize(JsonParser jp, DeserializationContext ctxt)
-          throws IOException
-      {
-        return jp.readValueAs(QuantilesSketchKeyCollectorSnapshot.class);
-      }
-    };
   }
 
   @Override
@@ -91,9 +76,9 @@ public class QuantilesSketchKeyCollectorFactory
     return new QuantilesSketchKeyCollector(comparator, sketch, snapshot.getAverageKeyLength());
   }
 
-  private static class ByteRowKeySerde extends ArrayOfItemsSerDe<byte[]>
+  static class ByteRowKeySerde extends ArrayOfItemsSerDe<byte[]>
   {
-    private static final ByteRowKeySerde INSTANCE = new ByteRowKeySerde();
+    static final ByteRowKeySerde INSTANCE = new ByteRowKeySerde();
 
     private ByteRowKeySerde()
     {
@@ -126,22 +111,66 @@ public class QuantilesSketchKeyCollectorFactory
     }
 
     @Override
-    public byte[][] deserializeFromMemory(final Memory mem, final int numItems)
+    public byte[][] deserializeFromMemory(final Memory mem, long offsetBytes, final int numItems)
     {
       final byte[][] keys = new byte[numItems][];
-      long keyPosition = (long) Integer.BYTES * numItems;
+      final long start = offsetBytes;
+      offsetBytes += (long) Integer.BYTES * numItems;
 
       for (int i = 0; i < numItems; i++) {
-        final int keyLength = mem.getInt((long) Integer.BYTES * i);
+        final int keyLength = mem.getInt(start + (long) Integer.BYTES * i);
         final byte[] keyBytes = new byte[keyLength];
 
-        mem.getByteArray(keyPosition, keyBytes, 0, keyLength);
+        mem.getByteArray(offsetBytes, keyBytes, 0, keyLength);
         keys[i] = keyBytes;
 
-        keyPosition += keyLength;
+        offsetBytes += keyLength;
       }
 
       return keys;
+    }
+
+    @Override
+    public byte[] serializeToByteArray(final byte[] item)
+    {
+      final byte[] bytes = new byte[Integer.BYTES + item.length];
+      ByteArrayUtil.putIntLE(bytes, 0, item.length);
+      ByteArrayUtil.copyBytes(item, 0, bytes, Integer.BYTES, item.length);
+      return bytes;
+    }
+
+    @Override
+    public byte[][] deserializeFromMemory(final Memory mem, final int numItems)
+    {
+      return deserializeFromMemory(mem, 0, numItems);
+    }
+
+    @Override
+    public int sizeOf(final byte[] item)
+    {
+      return Integer.BYTES + item.length;
+    }
+
+    @Override
+    public int sizeOf(final Memory mem, long offsetBytes, final int numItems)
+    {
+      int length = Integer.BYTES * numItems;
+      for (int i = 0; i < numItems; i++) {
+        length += mem.getInt(offsetBytes + (long) Integer.BYTES * i);
+      }
+      return length;
+    }
+
+    @Override
+    public String toString(final byte[] item)
+    {
+      return Arrays.toString(item);
+    }
+
+    @Override
+    public Class<?> getClassOfT()
+    {
+      return byte[].class;
     }
   }
 }

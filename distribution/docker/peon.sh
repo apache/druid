@@ -97,8 +97,8 @@ then
     setKey _common druid.zk.service.host "${ZOOKEEPER}"
 fi
 
-DRUID_SET_HOST=${DRUID_SET_HOST:-1}
-if [ "${DRUID_SET_HOST}" = "1" ]
+DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
+if [ "${DRUID_SET_HOST_IP}" = "1" ]
 then
     setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
 fi
@@ -107,7 +107,7 @@ env | grep ^druid_ | while read evar;
 do
     # Can't use IFS='=' to parse since var might have = in it (e.g. password)
     val=$(echo "$evar" | sed -e 's?[^=]*=??')
-    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?_?.?g')
+    var=$(echo "$evar" | sed -e 's?^\([^=]*\)=.*?\1?g' -e 's?__?%UNDERSCORE%?g' -e 's?_?.?g' -e 's?%UNDERSCORE%?_?g')
     setKey $SERVICE "$var" "$val"
 done
 
@@ -149,7 +149,8 @@ then
     mkdir -p ${DRUID_DIRS_TO_CREATE}
 fi
 
-# take the ${TASK_JSON} environment variable and base64 decode, unzip and throw it in ${TASK_DIR}/task.json
-mkdir -p ${TASK_DIR}; echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
+# take the ${TASK_JSON} environment variable and base64 decode, unzip and throw it in ${TASK_DIR}/task.json.
+# If TASK_JSON is not set, CliPeon will pull the task.json file from deep storage.
+mkdir -p ${TASK_DIR}; [ -n "$TASK_JSON" ] && echo ${TASK_JSON} | base64 -d | gzip -d > ${TASK_DIR}/task.json;
 
 exec bin/run-java ${JAVA_OPTS} -cp $COMMON_CONF_DIR:$SERVICE_CONF_DIR:lib/*: org.apache.druid.cli.Main internal peon $@

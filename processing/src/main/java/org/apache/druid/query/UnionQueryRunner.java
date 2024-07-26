@@ -57,16 +57,16 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
 
       final UnionDataSource unionDataSource = analysis.getBaseUnionDataSource().get();
 
-      if (unionDataSource.getDataSources().isEmpty()) {
+      if (unionDataSource.getDataSourcesAsTableDataSources().isEmpty()) {
         // Shouldn't happen, because UnionDataSource doesn't allow empty unions.
         throw new ISE("Unexpectedly received empty union");
-      } else if (unionDataSource.getDataSources().size() == 1) {
+      } else if (unionDataSource.getDataSourcesAsTableDataSources().size() == 1) {
         // Single table. Run as a normal query.
         return baseRunner.run(
             queryPlus.withQuery(
                 Queries.withBaseDataSource(
                     query,
-                    Iterables.getOnlyElement(unionDataSource.getDataSources())
+                    Iterables.getOnlyElement(unionDataSource.getDataSourcesAsTableDataSources())
                 )
             ),
             responseContext
@@ -77,8 +77,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
             query.getResultOrdering(),
             Sequences.simple(
                 Lists.transform(
-                    IntStream.range(0, unionDataSource.getDataSources().size())
-                             .mapToObj(i -> new Pair<>(unionDataSource.getDataSources().get(i), i + 1))
+                    IntStream.range(0, unionDataSource.getDataSourcesAsTableDataSources().size())
+                             .mapToObj(i -> new Pair<>(unionDataSource.getDataSourcesAsTableDataSources().get(i), i + 1))
                              .collect(Collectors.toList()),
                     (Function<Pair<TableDataSource, Integer>, Sequence<T>>) singleSourceWithIndex ->
                         baseRunner.run(

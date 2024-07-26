@@ -43,20 +43,40 @@ PARTITIONED BY ALL TIME
 export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
   multiStageQuery: {
     type: 'multiStageQuery',
-    taskId: 'query-5aa683e2-a6ee-4655-a834-a643e91055b1',
+    taskId: 'query-346b9ac6-4912-46e4-9b98-75f11071af87',
     payload: {
       status: {
         status: 'SUCCESS',
-        startTime: '2023-06-19T05:39:26.377Z',
-        durationMs: 23170,
+        startTime: '2024-01-23T19:45:43.073Z',
+        durationMs: 14208,
+        workers: {
+          '0': [
+            {
+              workerId: 'query-346b9ac6-4912-46e4-9b98-75f11071af87-worker0_0',
+              state: 'SUCCESS',
+              durationMs: 8789,
+            },
+          ],
+        },
         pendingTasks: 0,
-        runningTasks: 2,
+        runningTasks: 1,
+        segmentLoadWaiterStatus: {
+          state: 'SUCCESS',
+          startTime: '2024-01-23T19:45:52.189Z',
+          duration: 5092,
+          totalSegments: 1,
+          usedSegments: 1,
+          precachedSegments: 1,
+          onDemandSegments: 0,
+          pendingSegments: 0,
+          unknownSegments: 0,
+        },
       },
       stages: [
         {
           stageNumber: 0,
           definition: {
-            id: '8af42220-2724-4a76-b39f-c2f98df2de69_0',
+            id: '7f62fa91-f49a-4053-adec-5aa09c251ee3_0',
             input: [
               {
                 type: 'external',
@@ -125,21 +145,23 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
                 ],
                 resultFormat: 'compactedList',
                 columns: ['agent_type', 'v0'],
-                legacy: false,
                 context: {
+                  __resultFormat: 'array',
                   __timeColumn: 'v0',
                   __user: 'allowAll',
+                  executionMode: 'async',
                   finalize: false,
                   finalizeAggregations: false,
                   groupByEnableMultiValueUnnesting: false,
                   maxNumTasks: 2,
                   maxParseExceptions: 0,
-                  queryId: '5aa683e2-a6ee-4655-a834-a643e91055b1',
+                  queryId: '346b9ac6-4912-46e4-9b98-75f11071af87',
                   scanSignature:
                     '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
                   sqlInsertSegmentGranularity: '{"type":"all"}',
-                  sqlQueryId: '5aa683e2-a6ee-4655-a834-a643e91055b1',
+                  sqlQueryId: '346b9ac6-4912-46e4-9b98-75f11071af87',
                   sqlReplaceTimeChunks: 'all',
+                  waitUntilSegmentsLoad: true,
                 },
                 granularity: {
                   type: 'all',
@@ -178,14 +200,14 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
           phase: 'FINISHED',
           workerCount: 1,
           partitionCount: 1,
-          startTime: '2023-06-19T05:39:26.711Z',
-          duration: 20483,
+          startTime: '2024-01-23T19:45:43.302Z',
+          duration: 6884,
           sort: true,
         },
         {
           stageNumber: 1,
           definition: {
-            id: '8af42220-2724-4a76-b39f-c2f98df2de69_1',
+            id: '7f62fa91-f49a-4053-adec-5aa09c251ee3_1',
             input: [
               {
                 type: 'stage',
@@ -250,8 +272,8 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
           phase: 'FINISHED',
           workerCount: 1,
           partitionCount: 1,
-          startTime: '2023-06-19T05:39:47.166Z',
-          duration: 2381,
+          startTime: '2024-01-23T19:45:50.170Z',
+          duration: 1263,
         },
       ],
       counters: {
@@ -314,120 +336,138 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
       },
     },
   },
-}).updateWithTaskPayload({
-  task: 'query-5aa683e2-a6ee-4655-a834-a643e91055b1',
-  payload: {
-    type: 'query_controller',
-    id: 'query-5aa683e2-a6ee-4655-a834-a643e91055b1',
-    spec: {
-      query: {
-        queryType: 'scan',
-        dataSource: {
-          type: 'external',
-          inputSource: {
-            type: 'http',
-            uris: ['https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz'],
-          },
-          inputFormat: {
-            type: 'json',
-            keepNullColumns: false,
-            assumeNewlineDelimited: false,
-            useJsonNodeReader: false,
-          },
-          signature: [
-            {
-              name: 'timestamp',
-              type: 'STRING',
+})
+  .updateWithTaskPayload({
+    task: 'query-346b9ac6-4912-46e4-9b98-75f11071af87',
+    payload: {
+      type: 'query_controller',
+      id: 'query-346b9ac6-4912-46e4-9b98-75f11071af87',
+      spec: {
+        query: {
+          queryType: 'scan',
+          dataSource: {
+            type: 'external',
+            inputSource: {
+              type: 'http',
+              uris: ['https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz'],
             },
+            inputFormat: {
+              type: 'json',
+              keepNullColumns: false,
+              assumeNewlineDelimited: false,
+              useJsonNodeReader: false,
+            },
+            signature: [
+              {
+                name: 'timestamp',
+                type: 'STRING',
+              },
+              {
+                name: 'agent_type',
+                type: 'STRING',
+              },
+            ],
+          },
+          intervals: {
+            type: 'intervals',
+            intervals: ['-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z'],
+          },
+          virtualColumns: [
             {
-              name: 'agent_type',
-              type: 'STRING',
+              type: 'expression',
+              name: 'v0',
+              expression: 'timestamp_parse("timestamp",null,\'UTC\')',
+              outputType: 'LONG',
             },
           ],
+          resultFormat: 'compactedList',
+          columns: ['agent_type', 'v0'],
+          context: {
+            __resultFormat: 'array',
+            __user: 'allowAll',
+            executionMode: 'async',
+            finalize: false,
+            finalizeAggregations: false,
+            groupByEnableMultiValueUnnesting: false,
+            maxNumTasks: 2,
+            maxParseExceptions: 0,
+            queryId: '346b9ac6-4912-46e4-9b98-75f11071af87',
+            scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
+            sqlInsertSegmentGranularity: '{"type":"all"}',
+            sqlQueryId: '346b9ac6-4912-46e4-9b98-75f11071af87',
+            sqlReplaceTimeChunks: 'all',
+            waitUntilSegmentsLoad: true,
+          },
+          granularity: {
+            type: 'all',
+          },
         },
-        intervals: {
-          type: 'intervals',
-          intervals: ['-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z'],
-        },
-        virtualColumns: [
+        columnMappings: [
           {
-            type: 'expression',
-            name: 'v0',
-            expression: 'timestamp_parse("timestamp",null,\'UTC\')',
-            outputType: 'LONG',
+            queryColumn: 'v0',
+            outputColumn: '__time',
+          },
+          {
+            queryColumn: 'agent_type',
+            outputColumn: 'agent_type',
           },
         ],
-        resultFormat: 'compactedList',
-        columns: ['agent_type', 'v0'],
-        legacy: false,
-        context: {
-          __user: 'allowAll',
-          finalize: false,
-          finalizeAggregations: false,
-          groupByEnableMultiValueUnnesting: false,
-          maxNumTasks: 2,
-          maxParseExceptions: 0,
-          queryId: '5aa683e2-a6ee-4655-a834-a643e91055b1',
-          scanSignature: '[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]',
-          sqlInsertSegmentGranularity: '{"type":"all"}',
-          sqlQueryId: '5aa683e2-a6ee-4655-a834-a643e91055b1',
-          sqlReplaceTimeChunks: 'all',
+        destination: {
+          type: 'dataSource',
+          dataSource: 'kttm_simple',
+          segmentGranularity: {
+            type: 'all',
+          },
+          replaceTimeChunks: ['-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z'],
         },
-        granularity: {
-          type: 'all',
+        assignmentStrategy: 'max',
+        tuningConfig: {
+          maxNumWorkers: 1,
+          maxRowsInMemory: 100000,
+          rowsPerSegment: 3000000,
         },
       },
-      columnMappings: [
-        {
-          queryColumn: 'v0',
-          outputColumn: '__time',
-        },
-        {
-          queryColumn: 'agent_type',
-          outputColumn: 'agent_type',
-        },
-      ],
-      destination: {
-        type: 'dataSource',
-        dataSource: 'kttm_simple',
-        segmentGranularity: {
-          type: 'all',
-        },
-        replaceTimeChunks: ['-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z'],
+      sqlQuery:
+        'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT\n  TIME_PARSE("timestamp") AS "__time",\n  "agent_type"\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\'\n  )\n) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)\nPARTITIONED BY ALL TIME',
+      sqlQueryContext: {
+        finalizeAggregations: false,
+        sqlQueryId: '346b9ac6-4912-46e4-9b98-75f11071af87',
+        groupByEnableMultiValueUnnesting: false,
+        sqlInsertSegmentGranularity: '{"type":"all"}',
+        maxNumTasks: 2,
+        waitUntilSegmentsLoad: true,
+        sqlReplaceTimeChunks: 'all',
+        executionMode: 'async',
+        __resultFormat: 'array',
+        queryId: '346b9ac6-4912-46e4-9b98-75f11071af87',
       },
-      assignmentStrategy: 'max',
-      tuningConfig: {
-        maxNumWorkers: 1,
-        maxRowsInMemory: 100000,
-        rowsPerSegment: 3000000,
+      sqlResultsContext: {
+        timeZone: 'UTC',
+        serializeComplexValues: true,
+        stringifyArrays: true,
+      },
+      sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
+      nativeTypeNames: ['LONG', 'STRING'],
+      context: {
+        forceTimeChunkLock: true,
+        useLineageBasedSegmentAllocation: true,
+      },
+      groupId: 'query-346b9ac6-4912-46e4-9b98-75f11071af87',
+      dataSource: 'kttm_simple',
+      resource: {
+        availabilityGroup: 'query-346b9ac6-4912-46e4-9b98-75f11071af87',
+        requiredCapacity: 1,
       },
     },
-    sqlQuery:
-      'REPLACE INTO "kttm_simple" OVERWRITE ALL\nSELECT\n  TIME_PARSE("timestamp") AS "__time",\n  "agent_type"\nFROM TABLE(\n  EXTERN(\n    \'{"type":"http","uris":["https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz"]}\',\n    \'{"type":"json"}\'\n  )\n) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)\nPARTITIONED BY ALL TIME',
-    sqlQueryContext: {
-      finalizeAggregations: false,
-      sqlQueryId: '5aa683e2-a6ee-4655-a834-a643e91055b1',
-      groupByEnableMultiValueUnnesting: false,
-      sqlInsertSegmentGranularity: '{"type":"all"}',
-      maxNumTasks: 2,
-      sqlReplaceTimeChunks: 'all',
-      queryId: '5aa683e2-a6ee-4655-a834-a643e91055b1',
+  })
+  .updateWithAsyncStatus({
+    queryId: 'query-346b9ac6-4912-46e4-9b98-75f11071af87',
+    state: 'SUCCESS',
+    createdAt: '2024-01-23T19:45:41.136Z',
+    durationMs: 16637,
+    result: {
+      numTotalRows: 465346,
+      totalSizeInBytes: 0,
+      dataSource: 'kttm_simple',
     },
-    sqlResultsContext: {
-      timeZone: 'UTC',
-      serializeComplexValues: true,
-      stringifyArrays: true,
-    },
-    sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],
-    context: {
-      forceTimeChunkLock: true,
-      useLineageBasedSegmentAllocation: true,
-    },
-    groupId: 'query-5aa683e2-a6ee-4655-a834-a643e91055b1',
-    dataSource: 'kttm_simple',
-    resource: {
-      availabilityGroup: 'query-5aa683e2-a6ee-4655-a834-a643e91055b1',
-      requiredCapacity: 1,
-    },
-  },
-});
+  });

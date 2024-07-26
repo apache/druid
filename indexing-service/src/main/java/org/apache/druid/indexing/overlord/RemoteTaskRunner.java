@@ -266,7 +266,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                           waitingForMonitor.notifyAll();
                         }
                       }
-                    }
+                    },
+                    MoreExecutors.directExecutor()
                 );
                 break;
               case CHILD_UPDATED:
@@ -965,7 +966,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
       IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-      emitter.emit(metricBuilder.build(
+      emitter.emit(metricBuilder.setMetric(
           "task/pending/time",
           new Duration(workItem.getQueueInsertionTime(), DateTimes.nowUtc()).getMillis())
       );
@@ -1308,7 +1309,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
           {
             removedWorkerCleanups.remove(worker, cleanupTask);
           }
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -1638,5 +1640,17 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     }
 
     return totalBlacklistedPeons;
+  }
+
+  @Override
+  public int getTotalCapacity()
+  {
+    return getWorkers().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+  }
+
+  @Override
+  public int getUsedCapacity()
+  {
+    return getWorkers().stream().mapToInt(ImmutableWorkerInfo::getCurrCapacityUsed).sum();
   }
 }

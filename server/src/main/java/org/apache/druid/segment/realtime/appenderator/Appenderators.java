@@ -32,21 +32,21 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 public class Appenderators
 {
   public static Appenderator createRealtime(
+      SegmentLoaderConfig segmentLoaderConfig,
       String id,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -55,16 +55,17 @@ public class Appenderators
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
       QueryProcessingPool queryProcessingPool,
-      JoinableFactory joinableFactory,
       Cache cache,
       CacheConfig cacheConfig,
       CachePopulatorStats cachePopulatorStats,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     return new StreamAppenderator(
+        segmentLoaderConfig,
         id,
         schema,
         config,
@@ -81,7 +82,6 @@ public class Appenderators
             emitter,
             conglomerate,
             queryProcessingPool,
-            new JoinableFactoryWrapper(joinableFactory),
             Preconditions.checkNotNull(cache, "cache"),
             cacheConfig,
             cachePopulatorStats
@@ -91,22 +91,24 @@ public class Appenderators
         cache,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 
-  public static Appenderator createOffline(
+  public static Appenderator createBatch(
       String id,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
       IndexMerger indexMerger,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
+      boolean useMaxMemoryEstimates,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     // Use newest, slated to be the permanent batch appenderator but for now keeping it as a non-default
@@ -123,76 +125,8 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates
-    );
-  }
-
-  public static Appenderator createOpenSegmentsOffline(
-      String id,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
-  )
-  {
-    // fallback to original code known to be working, this is just a fallback option in case new
-    // batch appenderator has some early bugs but we will remove this fallback as soon as
-    // we determine that batch appenderator code is stable
-    return new AppenderatorImpl(
-        id,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
-        indexIO,
-        indexMerger,
-        null,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        true,
-        useMaxMemoryEstimates
-    );
-  }
-
-  public static Appenderator createClosedSegmentsOffline(
-      String id,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates
-  )
-  {
-    return new AppenderatorImpl(
-        id,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
-        indexIO,
-        indexMerger,
-        null,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        false,
-        useMaxMemoryEstimates
+        useMaxMemoryEstimates,
+        centralizedDatasourceSchemaConfig
     );
   }
 }

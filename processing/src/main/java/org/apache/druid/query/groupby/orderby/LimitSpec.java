@@ -53,8 +53,6 @@ public interface LimitSpec extends Cacheable
    */
   Function<Sequence<ResultRow>, Sequence<ResultRow>> build(GroupByQuery query);
 
-  LimitSpec merge(LimitSpec other);
-
   /**
    * Discard sorting columns not contained in given set. This is used when generating new queries, e.g. to process
    * subtotal spec in GroupBy query.

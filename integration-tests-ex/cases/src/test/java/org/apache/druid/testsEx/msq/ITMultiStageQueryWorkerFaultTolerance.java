@@ -110,7 +110,7 @@ public class ITMultiStageQueryWorkerFaultTolerance
         );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(
         queryLocal,
         ImmutableMap.of(
             MultiStageQueryContext.CTX_FAULT_TOLERANCE,

@@ -20,8 +20,10 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.actions.TaskActionToolbox;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -33,8 +35,8 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CircularBuffer;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -44,29 +46,6 @@ import java.util.Map;
 
 public class IndexTaskUtils
 {
-  @Nullable
-  public static List<String> getMessagesFromSavedParseExceptions(
-      CircularBuffer<ParseException> savedParseExceptions,
-      boolean includeTimeOfException
-  )
-  {
-    if (savedParseExceptions == null) {
-      return null;
-    }
-
-    List<String> events = new ArrayList<>();
-    for (int i = 0; i < savedParseExceptions.size(); i++) {
-      if (includeTimeOfException) {
-        DateTime timeOfException = DateTimes.utc(savedParseExceptions.getLatest(i).getTimeOfExceptionMillis());
-        events.add(timeOfException + ", " + savedParseExceptions.getLatest(i).getMessage());
-      } else {
-        events.add(savedParseExceptions.getLatest(i).getMessage());
-      }
-    }
-
-    return events;
-  }
-
   @Nullable
   public static List<ParseExceptionReport> getReportListFromSavedParseExceptions(
       CircularBuffer<ParseExceptionReport> savedParseExceptionReports
@@ -140,5 +119,36 @@ public class IndexTaskUtils
   {
     metricBuilder.setDimension(DruidMetrics.TASK_ID, taskStatus.getId());
     metricBuilder.setDimension(DruidMetrics.TASK_STATUS, taskStatus.getStatusCode().toString());
+  }
+
+  public static void setSegmentDimensions(
+      ServiceMetricEvent.Builder metricBuilder,
+      DataSegment segment
+  )
+  {
+    final String partitionType = segment.getShardSpec() == null ? null : segment.getShardSpec().getType();
+    metricBuilder.setDimension(DruidMetrics.PARTITIONING_TYPE, partitionType);
+    metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
+  }
+
+  public static void emitSegmentPublishMetrics(
+      SegmentPublishResult publishResult,
+      Task task,
+      TaskActionToolbox toolbox
+  )
+  {
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+
+    if (publishResult.isSuccess()) {
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
+      for (DataSegment segment : publishResult.getSegments()) {
+        IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
+        toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
+        toolbox.getEmitter().emit(SegmentMetadataEvent.create(segment, DateTimes.nowUtc()));
+      }
+    } else {
+      toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/failure", 1));
+    }
   }
 }

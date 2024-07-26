@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -55,7 +56,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
@@ -79,14 +79,13 @@ public class CoordinatorBasicAuthorizerResourceTest
   private static final String AUTHORIZER_NAME3 = "test3";
 
   @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   @Mock
   private AuthValidator authValidator;
   @Mock
   private HttpServletRequest req;
+  @Mock
+  private AuditManager auditManager;
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
@@ -154,7 +153,8 @@ public class CoordinatorBasicAuthorizerResourceTest
             authorizerMapper,
             new ObjectMapper(new SmileFactory())
         ),
-        authValidator
+        authValidator,
+        auditManager
     );
 
     storageUpdater.start();

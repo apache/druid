@@ -77,7 +77,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
    * Returns -1 if cardinality + 1 (for null) > Integer.MAX_VALUE. Returns computed required buffer capacity
    * otherwise.
    */
-  static long requiredBufferCapacity(int cardinality, AggregatorFactory[] aggregatorFactories)
+  public static long requiredBufferCapacity(int cardinality, AggregatorFactory[] aggregatorFactories)
   {
     final long cardinalityWithMissingValue = computeCardinalityWithMissingValue(cardinality);
     // Cardinality should be in the integer range. See DimensionDictionarySelector.
@@ -269,6 +269,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   {
     // Clear the entire usedFlagBuffer
     usedFlagMemory.clear();
+    aggregators.reset();
   }
 
   @Override
@@ -280,7 +281,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   @Override
   public void close()
   {
-    aggregators.close();
+    aggregators.reset();
   }
 
   @Override

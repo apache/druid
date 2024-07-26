@@ -22,10 +22,12 @@ title: "Query execution"
   ~ under the License.
   -->
 
-> This document describes how Druid executes [native queries](querying.md), but since [Druid SQL](sql.md) queries
-> are translated to native queries, this document applies to the SQL runtime as well. Refer to the SQL
-> [Query translation](sql-translation.md) page for information about how SQL queries are translated to native
-> queries.
+:::info
+ This document describes how Druid executes [native queries](querying.md), but since [Druid SQL](sql.md) queries
+ are translated to native queries, this document applies to the SQL runtime as well. Refer to the SQL
+ [Query translation](sql-translation.md) page for information about how SQL queries are translated to native
+ queries.
+:::
 
 Druid's approach to query execution varies depending on the kind of [datasource](datasource.md) you are querying.
 
@@ -91,9 +93,9 @@ cannot exceed the [`druid.server.http.maxSubqueryRows`](../configuration/index.m
 [`druid.server.http.maxSubqueryBytes`](../configuration/index.md) if set. Otherwise, Druid throws a resource limit exceeded 
 exception.
 
-There is one exception: if the outer query and all subqueries are the [groupBy](groupbyquery.md) type, then subquery
-results can be processed in a streaming fashion and the `druid.server.http.maxSubqueryRows` and `druid.server.http.maxSubqueryBytes` 
-limits do not apply.
+There is one exception: if the outer query is of type [`groupBy`](groupbyquery.md), and has a `dataSource` of type
+`query` that is itself another `groupBy`, then subquery results can be processed in a streaming fashion. In this case
+the `druid.server.http.maxSubqueryRows` and `druid.server.http.maxSubqueryBytes` limits do not apply.
 
 ### `join`
 

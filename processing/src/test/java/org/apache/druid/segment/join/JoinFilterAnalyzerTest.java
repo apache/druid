@@ -119,7 +119,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         null,
         ImmutableSet.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -183,7 +183,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         new SelectorFilter("rtc.countryName", "United States"),
         ImmutableSet.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -249,7 +249,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -320,7 +320,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -382,7 +382,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -461,7 +461,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -521,7 +521,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -685,7 +685,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -758,7 +758,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
 
     ExpressionVirtualColumn expectedVirtualColumn = new ExpressionVirtualColumn(
         "JOIN-FILTER-PUSHDOWN-VIRTUAL-COLUMN-0",
@@ -933,7 +933,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1013,7 +1013,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(
         expectedFilterSplit.getBaseTableFilter(),
         actualFilterSplit.getBaseTableFilter()
@@ -1103,7 +1103,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(
         expectedFilterSplit.getBaseTableFilter(),
         actualFilterSplit.getBaseTableFilter()
@@ -1171,7 +1171,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1228,7 +1228,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1284,7 +1284,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1341,7 +1341,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1396,7 +1396,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1460,7 +1460,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1523,7 +1523,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1578,7 +1578,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1632,7 +1632,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1690,7 +1690,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1747,7 +1747,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1803,7 +1803,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1858,7 +1858,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1924,7 +1924,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -1995,7 +1995,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2043,7 +2043,8 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // filter rewrites.
     expectedException.expect(IAE.class);
     expectedException.expectMessage(
-        "Cannot build hash-join matcher on non-key-based condition: Equality{leftExpr=user, rightColumn='regionName'}"
+        "Cannot build hash-join matcher on non-key-based condition: "
+        + "Equality{leftExpr=user, rightColumn='regionName', includeNull=false}"
     );
 
     JoinTestHelper.verifyCursors(
@@ -2073,7 +2074,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2132,7 +2133,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2240,7 +2241,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2493,7 +2494,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         expectedVirtualColumns
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2555,7 +2556,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2629,7 +2630,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         ImmutableSet.of()
     );
 
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis);
+    JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
@@ -2673,7 +2674,16 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         null,
         ImmutableSet.of()
     );
-    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(joinFilterPreAnalysis, baseTableFilter);
+    JoinFilterSplit actualFilterSplit = JoinFilterAnalyzer.splitFilter(
+        joinFilterPreAnalysis,
+        baseTableFilter
+    );
     Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+  }
+
+
+  private JoinFilterSplit split(JoinFilterPreAnalysis preAnalysis)
+  {
+    return JoinFilterAnalyzer.splitFilter(preAnalysis, null);
   }
 }

@@ -24,6 +24,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.CpuSet;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
@@ -41,7 +42,7 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 
   public CgroupCpuSetMonitor(final Map<String, String[]> dimensions, String feed)
   {
-    this(null, dimensions, feed);
+    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
   }
 
   public CgroupCpuSetMonitor(final Map<String, String[]> dimensions)
@@ -62,19 +63,19 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/cpu_count",
         cpusetSnapshot.getCpuSetCpus().length
     ));
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/effective_cpu_count",
         cpusetSnapshot.getEffectiveCpuSetCpus().length
     ));
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/mems_count",
         cpusetSnapshot.getCpuSetMems().length
     ));
-    emitter.emit(builder.build(
+    emitter.emit(builder.setMetric(
         "cgroup/cpuset/effective_mems_count",
         cpusetSnapshot.getEffectiveCpuSetMems().length
     ));

@@ -73,7 +73,7 @@ public class RandomBalancerStrategy implements BalancerStrategy
   }
 
   @Override
-  public CoordinatorRunStats getAndResetStats()
+  public CoordinatorRunStats getStats()
   {
     return CoordinatorRunStats.empty();
   }

@@ -20,23 +20,17 @@ import type { Execution } from '../druid-models';
 import type { DruidError, QueryState } from '../utils';
 
 export class ExecutionStateCache {
-  private static readonly cache: Record<string, QueryState<Execution, DruidError, Execution>> = {};
+  private static readonly cache = new Map<string, QueryState<Execution, DruidError, Execution>>();
 
   static storeState(id: string, report: QueryState<Execution, DruidError, Execution>): void {
-    ExecutionStateCache.cache[id] = report;
+    ExecutionStateCache.cache.set(id, report);
   }
 
   static getState(id: string): QueryState<Execution, DruidError, Execution> | undefined {
-    return ExecutionStateCache.cache[id];
+    return ExecutionStateCache.cache.get(id);
   }
 
   static deleteState(id: string): void {
-    delete ExecutionStateCache.cache[id];
-  }
-
-  static deleteStates(ids: string[]): void {
-    for (const id of ids) {
-      delete ExecutionStateCache.cache[id];
-    }
+    ExecutionStateCache.cache.delete(id);
   }
 }

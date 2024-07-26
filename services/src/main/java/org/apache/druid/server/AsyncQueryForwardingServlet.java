@@ -56,6 +56,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.eclipse.jetty.client.HttpClient;
@@ -303,6 +304,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
   /**
    * Rebuilds the {@link SqlQuery} object with sqlQueryId and queryId context parameters if not present
+   *
    * @param sqlQuery the original SqlQuery
    * @return an updated sqlQuery object with sqlQueryId and queryId context parameters
    */
@@ -367,13 +369,16 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     // Log the error message
     final String errorMessage = exceptionToReport.getMessage() == null
                                 ? "no error message" : exceptionToReport.getMessage();
+
+    AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
+
     if (isNativeQuery) {
       requestLogger.logNativeQuery(
           RequestLogLine.forNative(
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
+              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
           )
       );
     } else {
@@ -383,7 +388,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage))
+              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
           )
       );
     }
@@ -744,6 +749,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       }
       emitQueryTime(requestTimeNs, success, sqlQueryId, queryId);
 
+      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+
       //noinspection VariableNotUsedInsideIf
       if (sqlQueryId != null) {
         // SQL query doesn't have a native query translation in router. Hence, not logging the native query.
@@ -761,7 +768,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                             TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                             "success",
                             success
-                            && result.getResponse().getStatus() == Status.OK.getStatusCode()
+                            && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                            "identity",
+                            authenticationResult.getIdentity()
                         )
                     )
                 )
@@ -787,7 +796,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
                         "success",
                         success
-                        && result.getResponse().getStatus() == Status.OK.getStatusCode()
+                        && result.getResponse().getStatus() == Status.OK.getStatusCode(),
+                        "identity",
+                        authenticationResult.getIdentity()
                     )
                 )
             )
@@ -824,6 +835,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
       failedQueryCount.incrementAndGet();
       emitQueryTime(requestTimeNs, false, sqlQueryId, queryId);
+      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       //noinspection VariableNotUsedInsideIf
       if (sqlQueryId != null) {
@@ -841,7 +853,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                             "success",
                             false,
                             "exception",
-                            errorMessage == null ? "no message" : errorMessage
+                            errorMessage == null ? "no message" : errorMessage,
+                            "identity",
+                            authenticationResult.getIdentity()
                         )
                     )
                 )
@@ -871,7 +885,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                         "success",
                         false,
                         "exception",
-                        errorMessage == null ? "no message" : errorMessage
+                        errorMessage == null ? "no message" : errorMessage,
+                        "identity",
+                        authenticationResult.getIdentity()
                     )
                 )
             )
@@ -890,7 +906,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       super.onFailure(response, failure);
     }
 
-    private void emitQueryTime(long requestTimeNs, boolean success, @Nullable String sqlQueryId, @Nullable String queryId)
+    private void emitQueryTime(
+        long requestTimeNs,
+        boolean success,
+        @Nullable String sqlQueryId,
+        @Nullable String queryId
+    )
     {
       QueryMetrics queryMetrics;
       if (sqlQueryId != null) {

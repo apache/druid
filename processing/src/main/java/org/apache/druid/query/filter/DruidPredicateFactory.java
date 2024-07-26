@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.column.TypeSignature;
@@ -30,7 +29,7 @@ import javax.annotation.Nullable;
 @SubclassesMustOverrideEqualsAndHashCode
 public interface DruidPredicateFactory
 {
-  Predicate<String> makeStringPredicate();
+  DruidObjectPredicate<String> makeStringPredicate();
 
   DruidLongPredicate makeLongPredicate();
 
@@ -38,7 +37,7 @@ public interface DruidPredicateFactory
 
   DruidDoublePredicate makeDoublePredicate();
 
-  default Predicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> inputType)
+  default DruidObjectPredicate<Object[]> makeArrayPredicate(@Nullable TypeSignature<ValueType> inputType)
   {
     throw new UOE("Predicate does not support ARRAY types");
   }
@@ -53,9 +52,9 @@ public interface DruidPredicateFactory
    *
    * @see org.apache.druid.segment.VectorColumnProcessorFactory#makeObjectProcessor
    */
-  default Predicate<Object> makeObjectPredicate()
+  default DruidObjectPredicate<Object> makeObjectPredicate()
   {
-    final Predicate<String> stringPredicate = makeStringPredicate();
+    final DruidObjectPredicate<String> stringPredicate = makeStringPredicate();
     return o -> stringPredicate.apply(null);
   }
 }

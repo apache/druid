@@ -43,7 +43,27 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
-        new SelectorDimFilter("dim", "val", null)
+        new SelectorDimFilter("dim", "val", null),
+        Collections.singleton("dim")
+    );
+
+    Assert.assertEquals(
+        spec,
+        mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
+    );
+  }
+
+  @Test
+  public void testSerdeEmptyFilterFields() throws Exception
+  {
+    final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                          .registerModules(new MSQIndexingModule().getJacksonModules());
+
+    final TableInputSpec spec = new TableInputSpec(
+        "myds",
+        Collections.singletonList(Intervals.of("2000/P1M")),
+        new SelectorDimFilter("dim", "val", null),
+        Collections.emptySet()
     );
 
     Assert.assertEquals(
@@ -61,7 +81,8 @@ public class TableInputSpecTest extends InitializedNullHandlingTest
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Intervals.ONLY_ETERNITY,
-        new SelectorDimFilter("dim", "val", null)
+        new SelectorDimFilter("dim", "val", null),
+        null
     );
 
     Assert.assertEquals(
