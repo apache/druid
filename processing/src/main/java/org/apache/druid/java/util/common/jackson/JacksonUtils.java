@@ -125,6 +125,11 @@ public final class JacksonUtils
     }
   }
 
+  /**
+   * Reads an object using the {@link JsonParser}. It reuses the provided {@link DeserializationContext} which offers
+   * better performance that calling {@link JsonParser#readValueAs(Class)} because it avoids re-creating the {@link DeserializationContext}
+   * for each readValue call
+   */
   @Nullable
   public static <T> T readObjectUsingDeserializationContext(
       final JsonParser jp,
@@ -138,6 +143,9 @@ public final class JacksonUtils
     return deserializationContext.readValue(jp, clazz);
   }
 
+  /**
+   * @see #readObjectUsingDeserializationContext(JsonParser, DeserializationContext, Class)
+   */
   @Nullable
   public static Object readObjectUsingDeserializationContext(
       final JsonParser jp,
