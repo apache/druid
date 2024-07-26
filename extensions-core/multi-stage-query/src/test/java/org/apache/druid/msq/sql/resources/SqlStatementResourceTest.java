@@ -97,6 +97,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -449,7 +450,11 @@ public class SqlStatementResourceTest extends MSQTestBase
            )));
 
 
-    Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(FINISHED_SELECT_MSQ_QUERY)))
+           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
+           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(RUNNING_SELECT_MSQ_QUERY)))
            .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
 
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
@@ -583,6 +588,10 @@ public class SqlStatementResourceTest extends MSQTestBase
            ))));
 
     Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(FINISHED_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(ACCEPTED_INSERT_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(RUNNING_INSERT_MSQ_QUERY)))
            .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
 
     Mockito.when(indexingServiceClient.taskPayload(FINISHED_INSERT_MSQ_QUERY))
@@ -757,8 +766,6 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Test
   public void testMSQSelectRunningQueryWithDetail()
   {
-    Mockito.when(overlordClient.taskReportAsMap(RUNNING_SELECT_MSQ_QUERY))
-           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
     Response response = resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY, true, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
@@ -771,7 +778,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         null,
         null,
         selectTaskReport.get().getPayload().getStages(),
-        selectTaskReport.get().getPayload().getCounters()
+        selectTaskReport.get().getPayload().getCounters(),
+        new ArrayList<>(selectTaskReport.get().getPayload().getStatus().getWarningReports())
     );
 
     Assert.assertEquals(

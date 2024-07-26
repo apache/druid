@@ -47,7 +47,6 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -56,7 +55,6 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
-import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
@@ -589,38 +587,27 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
+    MSQTaskReportPayload msqTaskReportPayload = null;
+    try {
+      msqTaskReportPayload = SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
+    }
+    catch (DruidException e) {
+      if (!e.getErrorCode().equals("notFound")) {
+        throw e;
+      }
+    }
+
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
           queryId,
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId),
-          jsonMapper
+          msqTaskReportPayload,
+          jsonMapper,
+          detail
       );
     } else {
-      MSQStagesReport stages = null;
-      CounterSnapshotsTree counters = null;
-
-      if (detail) {
-        MSQTaskReportPayload msqTaskReportPayload;
-        try {
-          msqTaskReportPayload = SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
-        }
-        catch (DruidException e) {
-          if (e.getErrorCode().equals("notFound")) {
-            msqTaskReportPayload = null;
-          } else {
-            throw e;
-          }
-        }
-
-        if (msqTaskReportPayload != null) {
-          stages = msqTaskReportPayload.getStages();
-          counters = msqTaskReportPayload.getCounters();
-        }
-      }
-
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
       return Optional.of(new SqlStatementResult(
           queryId,
@@ -635,8 +622,9 @@ public class SqlStatementResource
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
           null,
-          stages,
-          counters
+          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayload) : null,
+          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayload) : null,
+          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayload) : null
       ));
     }
   }

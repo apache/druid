@@ -250,11 +250,12 @@ public class SqlStatementResourceHelper
       TaskStatusResponse taskResponse,
       TaskStatusPlus statusPlus,
       SqlStatementState sqlStatementState,
-      TaskReport.ReportMap msqPayload,
-      ObjectMapper jsonMapper
+      MSQTaskReportPayload msqTaskReportPayload,
+      ObjectMapper jsonMapper,
+      boolean detail
   )
   {
-    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
+    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(msqTaskReportPayload);
     final MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
     if (exceptionDetails == null || fault == null) {
       return Optional.of(new SqlStatementResult(
@@ -267,7 +268,10 @@ public class SqlStatementResourceHelper
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
                         .build("%s", taskResponse.getStatus().getErrorMsg())
-                        .toErrorResponse()
+                        .toErrorResponse(),
+          detail ? getQueryStagesReport(msqTaskReportPayload) : null,
+          detail ? getQueryCounters(msqTaskReportPayload) : null,
+          detail ? getQueryWarningDetails(msqTaskReportPayload) : null
       ));
     }
 
@@ -293,7 +297,10 @@ public class SqlStatementResourceHelper
             ex.withContext(exceptionContext);
             return ex;
           }
-        }).toErrorResponse()
+        }).toErrorResponse(),
+        detail ? getQueryStagesReport(msqTaskReportPayload) : null,
+        detail ? getQueryCounters(msqTaskReportPayload) : null,
+        detail ? getQueryWarningDetails(msqTaskReportPayload) : null
     ));
   }
 
@@ -372,6 +379,24 @@ public class SqlStatementResourceHelper
   private static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
   {
     return payload == null ? null : payload.getStatus().getErrorReport();
+  }
+
+  @Nullable
+  public static List<MSQErrorReport> getQueryWarningDetails(MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : new ArrayList<>(payload.getStatus().getWarningReports());
+  }
+
+  @Nullable
+  public static MSQStagesReport getQueryStagesReport(MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : payload.getStages();
+  }
+
+  @Nullable
+  public static CounterSnapshotsTree getQueryCounters(MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : payload.getCounters();
   }
 
   @Nullable

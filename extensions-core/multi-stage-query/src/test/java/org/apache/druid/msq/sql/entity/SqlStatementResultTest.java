@@ -89,7 +89,8 @@ public class SqlStatementResultTest
         + " resultSetInformation=ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=null, sizeInBytes=1, worker=null, partition=null}]},"
         + " errorResponse={error=druidException, errorCode=QueryNotSupported, persona=USER, category=UNCATEGORIZED, errorMessage=QueryNotSupported, context={}},"
         + " stages=null,"
-        + " counters=null}",
+        + " counters=null,"
+        + " warnings=null}",
         SQL_STATEMENT_RESULT.toString()
     );
   }

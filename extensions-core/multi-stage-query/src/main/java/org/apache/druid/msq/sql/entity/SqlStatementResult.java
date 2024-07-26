@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.joda.time.DateTime;
@@ -59,6 +60,9 @@ public class SqlStatementResult
   @Nullable
   private final CounterSnapshotsTree counters;
 
+  @Nullable
+  private final List<MSQErrorReport> warnings;
+
   public SqlStatementResult(
       String queryId,
       SqlStatementState state,
@@ -69,7 +73,7 @@ public class SqlStatementResult
       ErrorResponse errorResponse
   )
   {
-    this(queryId, state, createdAt, sqlRowSignature, durationMs, resultSetInformation, errorResponse, null, null);
+    this(queryId, state, createdAt, sqlRowSignature, durationMs, resultSetInformation, errorResponse, null, null, null);
   }
 
   @JsonCreator
@@ -91,7 +95,9 @@ public class SqlStatementResult
       @Nullable @JsonProperty("stages")
       MSQStagesReport stages,
       @Nullable @JsonProperty("counters")
-      CounterSnapshotsTree counters
+      CounterSnapshotsTree counters,
+      @Nullable @JsonProperty("warnings")
+      List<MSQErrorReport> warnings
   )
   {
     this.queryId = queryId;
@@ -103,6 +109,7 @@ public class SqlStatementResult
     this.errorResponse = errorResponse;
     this.stages = stages;
     this.counters = counters;
+    this.warnings = warnings;
   }
 
   @JsonProperty
@@ -171,6 +178,13 @@ public class SqlStatementResult
     return counters;
   }
 
+  @JsonProperty("warnings")
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<MSQErrorReport> getWarnings()
+  {
+    return warnings;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -191,7 +205,10 @@ public class SqlStatementResult
     ) && Objects.equals(resultSetInformation, that.resultSetInformation) && Objects.equals(
         errorResponse == null ? null : errorResponse.getAsMap(),
         that.errorResponse == null ? null : that.errorResponse.getAsMap()
-    ) && Objects.equals(stages, that.stages) && Objects.equals(counters, that.counters);
+    ) && Objects.equals(stages, that.stages) && Objects.equals(counters, that.counters) && Objects.equals(
+        warnings,
+        that.warnings
+    );
   }
 
   @Override
@@ -206,7 +223,8 @@ public class SqlStatementResult
         resultSetInformation,
         errorResponse == null ? null : errorResponse.getAsMap(),
         stages,
-        counters
+        counters,
+        warnings
     );
   }
 
@@ -225,6 +243,7 @@ public class SqlStatementResult
                                  : errorResponse.getAsMap().toString()) +
            ", stages=" + stages +
            ", counters=" + counters +
+           ", warnings=" + warnings +
            '}';
   }
 }
