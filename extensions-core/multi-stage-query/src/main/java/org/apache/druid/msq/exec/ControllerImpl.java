@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -1696,10 +1695,21 @@ public class ControllerImpl implements Controller
 
     if (querySpec.getQuery() instanceof GroupByQuery) {
       // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
-      // in a mismatch between schema in compaction spec and the one in compaction state. Sourcing the metricsSpec
-      // therefore directly from the querySpec.
+      // in a mismatch between schema in compaction spec and the one in compaction state. Sourcing the original
+      // AggregatorFactory definition for aggregators in the dataSchema, therefore, directly from the querySpec.
       GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQuery();
-      metricsSpec = jsonMapper.convertValue(groupByQuery.getAggregatorSpecs(), new TypeReference<List<Object>>() {});
+      // Collect all aggregators that are part of the current dataSchema, since a non-rollup query (isRollup() is false)
+      // moves metrics columns to dimensions in the final schema.
+      Set<String> aggregatorsInDataSchema = Arrays.stream(dataSchema.getAggregators())
+                                           .map(AggregatorFactory::getName)
+                                           .collect(
+                                               Collectors.toSet());
+      metricsSpec = new ArrayList<>(
+          groupByQuery.getAggregatorSpecs()
+                      .stream()
+                      .filter(aggregatorFactory -> aggregatorsInDataSchema.contains(aggregatorFactory.getName()))
+                      .collect(Collectors.toList())
+      );
     }
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();

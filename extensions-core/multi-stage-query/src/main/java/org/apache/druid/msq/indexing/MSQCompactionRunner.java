@@ -163,7 +163,7 @@ public class MSQCompactionRunner implements CompactionRunner
     for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalToDataSchemaMap.entrySet()) {
       if (intervalDataSchema.getValue() instanceof CombinedDataSchema) {
         CombinedDataSchema combinedDataSchema = (CombinedDataSchema) intervalDataSchema.getValue();
-        if (Boolean.TRUE.equals(combinedDataSchema.hasRolledUpSegments())) {
+        if (combinedDataSchema.hasRolledUpSegments()) {
           for (AggregatorFactory aggregatorFactory : combinedDataSchema.getAggregators()) {
             // This is a conservative check as existing rollup may have been idempotent but the aggregator provided in
             // compaction spec isn't. This would get properly compacted yet fails in the below pre-check.

@@ -374,8 +374,6 @@ public class MSQCompactionRunnerTest
             Collections.singletonList(COMPACTION_INTERVAL)
         ),
         null,
-        null,
-        null,
         true
     );
     CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(

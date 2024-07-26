@@ -460,7 +460,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         transformSpec,
         metricsSpec,
         granularitySpec,
-        getMetricBuilder()
+        getMetricBuilder(),
+        compactionRunner
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
@@ -487,7 +488,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable final ClientCompactionTaskTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
-      final ServiceMetricEvent.Builder metricBuilder
+      final ServiceMetricEvent.Builder metricBuilder,
+      CompactionRunner compactionRunner
   ) throws IOException
   {
     final Iterable<DataSegment> timelineSegments = retrieveRelevantTimelineHolders(
@@ -551,7 +553,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricsSpec,
             granularitySpec == null
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
-            : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
+            : granularitySpec.withSegmentGranularity(segmentGranularityToUse),
+            compactionRunner
         );
         intervalDataSchemaMap.put(interval, dataSchema);
       }
@@ -576,7 +579,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           dimensionsSpec,
           transformSpec,
           metricsSpec,
-          granularitySpec
+          granularitySpec,
+          compactionRunner
       );
       return Collections.singletonMap(segmentProvider.interval, dataSchema);
     }
@@ -606,13 +610,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec
+      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable CompactionRunner compactionRunner
   )
   {
     // Check index metadata & decide which values to propagate (i.e. carry over) for rollup & queryGranularity
     final ExistingSegmentAnalyzer existingSegmentAnalyzer = new ExistingSegmentAnalyzer(
         segments,
-        true, // Always need rollup to check if there are some rollup segments already present.
+        // For MSQ, always need rollup to check if there are some rollup segments already present.
+        compactionRunner == null || compactionRunner instanceof NativeCompactionRunner
+        ? (granularitySpec.isRollup() == null)
+        : true,
         granularitySpec.getQueryGranularity() == null,
         dimensionsSpec == null,
         metricsSpec == null
@@ -674,8 +682,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         finalMetricsSpec,
         uniformGranularitySpec,
         transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
-        null,
-        null,
         existingSegmentAnalyzer.hasRolledUpSegments()
     );
   }
@@ -821,7 +827,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return rollup;
     }
 
-    public Boolean hasRolledUpSegments()
+    public boolean hasRolledUpSegments()
     {
       return hasRolledUpSegments;
     }
