@@ -2860,7 +2860,7 @@ public class ExpressionsTest extends CalciteTestBase
         () -> testHelper.testExpression(rexNode, null, plannerContext)
     );
 
-    assertThat(t.getMessage(), StringContains.containsString("Encountered an OVER"));
+    assertThat(t.getMessage(), StringContains.containsString("Unexpected OVER expression"));
   }
 
   @Test
