@@ -82,8 +82,7 @@ Note the following aspects of the ingestion statement:
 * You create the `bytes` and `packets` metrics, which are summed from their respective input fields.
 * You also create the `count` metric that records the number of rows that get rolled-up per each row in the datasource.
 
-With rollup, Druid combines rows with identical timestamp and dimension values after the timestamp truncation.
-Druid computes and stores the metric values using the specified aggregation function over each set of rolled-up rows.
+With rollup, Druid combines rows with identical timestamp and dimension values after the timestamp truncation. Druid computes and stores the metric values using the specified aggregation function over each set of rolled-up rows.
 
 After the ingestion completes, you can query the data.
 
@@ -105,7 +104,7 @@ Returns the following:
 | `2018-01-02T21:33:00.000Z` | `7.7.7.7` | `8.8.8.8` | `100,288` | `2` | `161` |
 | `2018-01-02T21:35:00.000Z` | `7.7.7.7` | `8.8.8.8` | `2,818` | `1` | `12` |
 
-Notice there are only six rows as opposed to the nine rows in the example data. In the next section, you explore the components of the rolled-up rows.
+Notice there are only five rows as opposed to the nine rows in the example data. In the next section, you explore the components of the rolled-up rows.
 
 ## View rollup in action
 
@@ -151,5 +150,19 @@ Therefore, no rollup takes place:
 | `__time` | `srcIP` | `dstIP` | `bytes` | `count` | `packets` |
 | -- | -- | -- | -- | -- | -- |
 | `2018-01-01T01:03:00.000Z` | `1.1.1.1` | `2.2.2.2` | `10,204` | `1` | `49` |
+
+
+## Learn More
+
+See the following topics for more information:
+
+* [SQL-based ingestion query examples](https://druid.apache.org/docs/latest/multi-stage-query/examples/#insert-with-rollup) for another example of data rollup during ingestion.
+
+* [SQL-based ingestion concepts](https://druid.apache.org/docs/latest/multi-stage-query/concepts/#rollup) for more details on the concept of rollup.
+
+* [Data rollup](https://druid.apache.org/docs/latest/ingestion/rollup/) for suggestions and best practices when performing rollup.
+
+
+* [Druid schema model](https://druid.apache.org/docs/latest/ingestion/schema-model/) to go over more details on timestamp, dimensions, and metrics.
 
 
