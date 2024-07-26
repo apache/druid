@@ -121,7 +121,9 @@ public class CounterSnapshotsTree
     }
     CounterSnapshotsTree that = (CounterSnapshotsTree) o;
     synchronized (snapshotsMap) {
-      return Objects.equals(snapshotsMap, that.snapshotsMap);
+      synchronized (that.snapshotsMap) {
+        return Objects.equals(snapshotsMap, that.snapshotsMap);
+      }
     }
   }
 
