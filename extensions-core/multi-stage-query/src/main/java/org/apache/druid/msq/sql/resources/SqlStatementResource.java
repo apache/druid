@@ -587,9 +587,9 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
-    MSQTaskReportPayload msqTaskReportPayload = null;
+    Optional<MSQTaskReportPayload> msqTaskReportPayload = Optional.empty();
     try {
-      msqTaskReportPayload = SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(queryId), queryId));
+      msqTaskReportPayload = Optional.ofNullable(SqlStatementResourceHelper.getPayload(contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)));
     }
     catch (DruidException e) {
       if (!e.getErrorCode().equals("notFound")) {
@@ -603,7 +603,7 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          msqTaskReportPayload,
+          msqTaskReportPayload.orElse(null),
           jsonMapper,
           detail
       );
@@ -622,9 +622,9 @@ public class SqlStatementResource
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
           null,
-          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayload) : null,
-          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayload) : null,
-          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayload) : null
+          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayload.orElse(null)) : null,
+          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayload.orElse(null)) : null,
+          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayload.orElse(null)) : null
       ));
     }
   }
