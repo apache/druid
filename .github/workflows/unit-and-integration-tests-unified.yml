@@ -198,6 +198,18 @@ jobs:
 #    steps:
 #      - run: echo "Exposing env vars"
 
+  print-env-vars:
+    needs: set-env-var
+    runs-on: ubuntu-latest
+    steps:
+      - name: print env vars
+        id: test
+        run: |
+          echo ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+
   revised-its:
     needs: [unit-tests, set-env-var]
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
