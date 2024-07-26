@@ -70,11 +70,26 @@ Returns the following:
 
 ## ACOS
 
-`ACOS(<NUMERIC>)`
+Calculates the arc cosine (arccosine) of a numeric expression.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `ACOS(expr)`
+* **Function type:** Scalar, numeric
 
-Calculates the arc cosine of a numeric expression.
+<details><summary>Example</summary>
+
+The following example calculates the arc cosine  of `0`.
+
+```sql
+SELECT ACOS(0) AS "arc_cosine"
+```
+Returns the following:
+
+| `arc_cosine` |  
+| -- | 
+| `1.5707963267948966` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ANY_VALUE
 
@@ -280,27 +295,72 @@ Joins all elements of `arr` by the delimiter specified by `str`.
 
 ## ASIN
 
-`ASIN(<NUMERIC>)`
+Calculates the arc sine (arcsine) of a numeric expression.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `ASIN(expr)`
+* **Function type:** Scalar, numeric
 
-Calculates the arc sine of a numeric expression.
+<details><summary>Example</summary>
+
+The following example calculates the arc sine of `1`.
+
+```sql
+SELECT ASIN(1) AS "arc_sine"
+```
+Returns the following:
+
+| `arc_sine` |  
+| -- | 
+| `1.5707963267948966` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ATAN
 
-`ATAN(<NUMERIC>)`
+Calculates the arc tangent (arctangent) of a numeric expression.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `ATAN(expr)`
+* **Function type:** Scalar, numeric
 
-Calculates the arc tangent of a numeric expression.
+<details><summary>Example</summary>
+
+The following example calculates the arc tangent of `1`.
+
+```sql
+SELECT ATAN(1) AS "arc_tangent"
+```
+Returns the following:
+
+| `arc_tangent` |  
+| -- | 
+| `0.7853981633974483` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ATAN2
 
-`ATAN2(<NUMERIC>, <NUMERIC>)`
+Calculates the arc tangent (arctangent) of a specified x and y coordinate.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `ATAN2(x, y)`
+* **Function type:** Scalar, numeric
 
-Calculates the arc tangent of the two arguments.
+<details><summary>Example</summary>
+
+The following example calculates the arc tangent of the coordinate `(1, -1)`
+
+```sql
+SELECT ATAN2(1,-1) AS "arc_tangent_2"
+```
+Returns the following:
+
+| `arc_tangent_2` |  
+| -- | 
+| `2.356194490192345` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## AVG
 
@@ -514,19 +574,49 @@ Finds whether a string is in a given expression, case-sensitive.
 
 ## COS
 
-`COS(<NUMERIC>)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the trigonometric cosine of an angle expressed in radians.
+
+* **Syntax:** `COS(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates the cosine of angle `PI/3` radians.
+
+```sql
+SELECT COS(PI / 3) AS "cosine"
+```
+Returns the following:
+
+| `cosine` |  
+| -- | 
+| `0.5000000000000001` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## COT
 
-`COT(<NUMERIC>)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the trigonometric cotangent of an angle expressed in radians.
+
+* **Syntax:** `COT(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates the cotangent of angle `PI/3` radians.
+
+```sql
+SELECT COT(PI / 3) AS "cotangent"
+```
+Returns the following:
+
+| `cotangent` |  
+| -- | 
+| `0.577350269189626` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## COUNT
 
@@ -589,11 +679,26 @@ Decodes a Base64-encoded string into a UTF-8 encoded string.
 
 ## DEGREES
 
-`DEGREES(<NUMERIC>)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Converts an angle from radians to degrees.
+
+* **Syntax:** `DEGREES(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example converts an angle of `PI` radians to degrees
+
+```sql
+SELECT DEGREES(PI) AS "degrees"
+```
+Returns the following:
+
+| `degrees` |  
+| -- | 
+| `180` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## DENSE_RANK
 
@@ -1385,11 +1490,26 @@ Returns the following:
 
 ## RADIANS
 
-`RADIANS(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Converts an angle from degrees to radians.
+
+* **Syntax:** `RADIANS(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example converts an angle of `180` degrees to radians
+
+```sql
+SELECT RADIANS(180) AS "radians"
+```
+Returns the following:
+
+| `radians` |  
+| -- | 
+| `3.141592653589793` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## RANK
 
@@ -1518,11 +1638,26 @@ Returns `x` divided by `y`, guarded on division by 0.
 
 ## SIN
 
-`SIN(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the trigonometric sine of an angle expressed in radians.
+
+* **Syntax:** `SIN(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates the sine of angle `PI/3` radians.
+
+```sql
+SELECT SIN(PI / 3) AS "sine"
+```
+Returns the following:
+
+| `sine` |  
+| -- | 
+| `0.8660254037844386` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## SQRT
 
@@ -1646,11 +1781,26 @@ Calculates the sum of a set of values.
 
 ## TAN
 
-`TAN(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the trigonometric tangent of an angle expressed in radians.
+
+* **Syntax:** `TAN(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates the tangent of angle `PI/3` radians.
+
+```sql
+SELECT TAN(PI / 3) AS "tangent"
+```
+Returns the following:
+
+| `tangent` |  
+| -- | 
+| `1.7320508075688767` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## TDIGEST_GENERATE_SKETCH
 
