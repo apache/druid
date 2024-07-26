@@ -95,17 +95,17 @@ public class FutureReadableFrameChannel implements ReadableFrameChannel
       // have no effect. Guard against this case by checking if the channelFuture has resolved, and if so, close the
       // channel here.
       try {
-        final ReadableFrameChannel channel = FutureUtils.getUncheckedImmediately(channelFuture);
+        final ReadableFrameChannel theChannel = FutureUtils.getUncheckedImmediately(channelFuture);
 
         try {
-          channel.close();
+          theChannel.close();
         }
         catch (Throwable t) {
           log.noStackTrace().warn(t, "Failed to close channel");
         }
       }
       catch (Throwable ignored) {
-        // Some error happened while creating the channel. Suppress it.
+        // Suppress.
       }
     }
   }
