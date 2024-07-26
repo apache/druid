@@ -25,7 +25,6 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.audit.NoopAuditManager;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -59,7 +58,6 @@ import org.skife.jdbi.v2.Handle;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -371,14 +369,14 @@ public class CoordinatorCompactionConfigsResourceTest
   /**
    * Test implementation of AuditManager that keeps audit entries in memory.
    */
-  private static class TestAuditManager extends NoopAuditManager
+  private static class TestAuditManager implements AuditManager
   {
     private final List<AuditEntry> audits = new ArrayList<>();
 
     @Override
-    public void doAudit(AuditEntry event, Handle handle) throws IOException
+    public void doAudit(AuditEntry event, Handle handle)
     {
-      super.doAudit(event, handle);
+      // do nothing
     }
 
     @Override
@@ -408,6 +406,30 @@ public class CoordinatorCompactionConfigsResourceTest
     public List<AuditEntry> fetchAuditHistory(String key, String type, Interval interval)
     {
       return audits;
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String type, int limit)
+    {
+      return audits;
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String type, Interval interval)
+    {
+      return audits;
+    }
+
+    @Override
+    public List<AuditEntry> fetchAuditHistory(String key, String type, int limit)
+    {
+      return audits;
+    }
+
+    @Override
+    public int removeAuditLogsOlderThan(long timestamp)
+    {
+      return 0;
     }
   }
 
