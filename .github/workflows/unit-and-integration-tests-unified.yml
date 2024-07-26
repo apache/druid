@@ -53,22 +53,30 @@ env:
   #DRUID_PREVIOUS_IT_IMAGE_NAME: org.apache.druid.integration-tests/test:30.0.0
 
 jobs:
-  set-new-env-var:
-    name: Set new env var
+  set-env-var:
+    name: Set env var
     runs-on: ubuntu-latest
+    outputs:
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ steps.image_name.outputs.image_name }}
+      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ steps.it_enabled.outputs.enabled }}
+      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
     steps:
-      - name: Set new environment variable
+      - name: Set image name env var
+        id: image_name
+        run: |
+          echo "::set-output name=image_name::org.apache.druid.integration-tests/test:${{ env.DRUID_PREVIOUS_VERSION }}"
+      - name: Set env for enabling backward compatibility it
+        id: it_enabled
         run: |
           if [ -n "${{ env.DRUID_PREVIOUS_VERSION }}" ]; then
-            echo "export BACKWARD_COMPATIBILITY_IT_ENABLED=true" >> $GITHUB_ENV
+            echo "::set-output name=enabled::true"
           else
-            echo "export BACKWARD_COMPATIBILITY_IT_ENABLED=false" >> $GITHUB_ENV
+            echo "::set-output name=enabled::false"
           fi
-          echo "export DRUID_PREVIOUS_IT_IMAGE_NAME=org.apache.druid.integration-tests/test:${{ env.DRUID_PREVIOUS_VERSION }}" >> $GITHUB_ENV
-          echo "New environment variable: $DRUID_PREVIOUS_IT_IMAGE_NAME, $BACKWARD_COMPATIBILITY_IT_ENABLED"
 
   build:
-    needs: set-new-env-var
+    needs: set-env-var
     name: "build (jdk${{ matrix.jdk }})"
     strategy:
       fail-fast: false
@@ -117,9 +125,9 @@ jobs:
         id: docker_container_previous_version
         uses: actions/cache@v4
         with:
-          key: druid-container-jdk${{ matrix.jdk }}-version${{ env.DRUID_PREVIOUS_VERSION }}.tar.gz-${{ github.sha }}
+          key: druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz-${{ github.sha }}
           path: |
-            ./druid-container-jdk${{ matrix.jdk }}-version${{ env.DRUID_PREVIOUS_VERSION }}.tar.gz
+            ./druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz
 
       - name: Maven build
         id: maven_build
@@ -128,10 +136,10 @@ jobs:
 
       - name: Container build
         env:
-          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ env.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-          DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
-          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+          DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+          DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+          DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
         run: |
           ./it.sh image
           source ./integration-tests-ex/image/target/env.sh
@@ -144,11 +152,11 @@ jobs:
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ matrix.jdk }}.tar.gz
 
       - name: Save previous version docker image
-        if: ${{ env.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
+        if: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
         run: |
-          docker tag ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }} ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}-version${{ env.DRUID_PREVIOUS_VERSION }}
-          echo ${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}
-          docker save "${{ env.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ env.DRUID_PREVIOUS_VERSION }}.tar.gz    
+          docker tag ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }} ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+          docker save "${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz    
 
   unit-tests-phase2:
     strategy:
@@ -180,22 +188,22 @@ jobs:
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
 
-  expose-vars:
-    runs-on: ubuntu-latest
-    outputs:
-      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ BACKWARD_COMPATIBILITY_IT_ENABLED }}
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ DRUID_PREVIOUS_IT_IMAGE_NAME }}
-    steps:
-      - run: echo "Exposing env vars"
+#  expose-vars:
+#    runs-on: ubuntu-latest
+#    outputs:
+#      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
+#      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+#      BACKWARD_COMPATIBILITY_IT_ENABLED: $BACKWARD_COMPATIBILITY_IT_ENABLED
+#      DRUID_PREVIOUS_IT_IMAGE_NAME: $DRUID_PREVIOUS_IT_IMAGE_NAME
+#    steps:
+#      - run: echo "Exposing env vars"
 
   revised-its:
-    needs: [unit-tests, expose-vars]
+    needs: [unit-tests, set-env-var]
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/revised-its.yml
     with:
-      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.expose-vars.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-      DRUID_PREVIOUS_VERSION: ${{ needs.expose-vars.outputs.DRUID_PREVIOUS_VERSION }}
-      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.expose-vars.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.expose-vars.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
