@@ -15608,7 +15608,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1, ROW_NUMBER() OVER W from druid.foo WINDOW W as (ORDER BY max(length(dim1)))")
         .run());
 
-    assertThat(e, unsupportedSqlContains("not supported with syntax WINDOW W AS <DEF>"));
+    assertThat(e, invalidSqlContains("not supported with syntax WINDOW W AS <DEF>"));
   }
 
   @Test
