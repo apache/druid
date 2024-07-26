@@ -57,7 +57,7 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
         ColumnsFilter.all()
     );
     FetchingFileEntity entity = new FetchingFileEntity(new File("example/wiki/wiki.parquet"));
-    ParquetInputFormat parquet = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
+    ParquetInputFormat parquet = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, false, new Configuration());
     File tempDir = temporaryFolder.newFolder();
     InputEntityReader reader = parquet.createReader(schema, entity, tempDir);
     Assert.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
@@ -75,6 +75,12 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
     private FetchingFileEntity(File file)
     {
       super(file);
+    }
+
+    @Override
+    public boolean isSeekable()
+    {
+      return false;
     }
 
     @Override

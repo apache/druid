@@ -45,6 +45,17 @@ public abstract class RetryingInputEntity implements InputEntity
     return CompressionUtils.decompress(retryingInputStream, getPath());
   }
 
+  @Override
+  public SeekableInputStream openSeekable() throws IOException
+  {
+    return new RetryingInputStream<>(
+        this,
+        new RetryingInputEntityOpenFunction(),
+        getRetryCondition(),
+        getMaxRetries()
+    );
+  }
+
   // override this in sub-classes to customize retries
   protected int getMaxRetries()
   {
