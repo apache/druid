@@ -227,6 +227,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     final Filter combinedFilter = baseFilterAnd(spec.getFilter());
 
+
     if (clauses.isEmpty()) {
       // HashJoinEngine isn't vectorized yet.
       // However, we can still vectorize if there are no clauses, since that means all we need to do is apply
@@ -324,6 +325,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         return CursorMaker.super.makeVectorCursor();
       }
     };
+  }
+
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseAdapter.isFromTombstone();
   }
 
   /**

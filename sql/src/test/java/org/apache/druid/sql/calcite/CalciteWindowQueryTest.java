@@ -45,8 +45,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
@@ -65,6 +67,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   ) || developerIDEdetected();
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
+
+  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
+      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+      QueryContexts.ENABLE_DEBUG, true
+  );
 
   public static Object[] parametersForWindowQueryTest() throws Exception
   {
@@ -184,6 +191,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         log.info("Actual results:\n%s", sb.toString());
       }
     }
+
+    public Map<? extends String, ? extends Object> getQueryContext()
+    {
+      return input.queryContext == null ? Collections.emptyMap() : input.queryContext;
+    }
   }
 
   @MethodSource("parametersForWindowQueryTest")
@@ -199,32 +211,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(
-              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              QueryContexts.ENABLE_DEBUG, true
-              ))
-          .addCustomVerification(QueryVerification.ofResults(testCase))
-          .run();
-    }
-  }
-
-  @MethodSource("parametersForWindowQueryTest")
-  @ParameterizedTest(name = "{0}")
-  @SuppressWarnings("unchecked")
-  public void windowQueryTestWithCustomContextMaxSubqueryBytes(String filename) throws Exception
-  {
-    TestCase testCase = new TestCase(filename);
-
-    assumeTrue(testCase.getType() != TestType.failingTest);
-
-    if (testCase.getType() == TestType.operatorValidation) {
-      testBuilder()
-          .skipVectorize(true)
-          .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true,
-                                        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000"
-                        )
+          .queryContext(
+              ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_QUERY_CONTEXT)
+                  .putAll(testCase.getQueryContext())
+                  .build()
           )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
@@ -241,10 +232,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
              + "where countryName in ('Austria', 'Republic of Korea') "
              + "and (cityName in ('Vienna', 'Seoul') or cityName is null)\n"
              + "group by countryName, cityName, channel")
-        .queryContext(ImmutableMap.of(
-            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true
-        ))
+        .queryContext(DEFAULT_QUERY_CONTEXT)
         .expectedResults(
             ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
@@ -277,8 +265,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       failingTest,
       operatorValidation
     }
+
     @JsonProperty
     public TestType type;
+
+    @JsonProperty
+    public Map<String, String> queryContext;
 
     @JsonProperty
     public String sql;

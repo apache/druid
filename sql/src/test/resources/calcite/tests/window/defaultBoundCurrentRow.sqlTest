@@ -19,60 +19,43 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: true
-          lowOffset: 0
-          uppUnbounded: false
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          upperOffset: 0
       aggregations:
         - { type: "count", name: "w0" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: -1
-          uppUnbounded: false
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          lowerOffset: -1
+          upperOffset: 0
       aggregations:
         - { type: "count", name: "w1" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: 0
-          uppUnbounded: false
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          lowerOffset: 0
+          upperOffset: 0
       aggregations:
         - { type: "count", name: "w2" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: 0
-          uppUnbounded: false
-          uppOffset: 1
-          orderBy: null
+          type: "rows"
+          lowerOffset: 0
+          upperOffset: 1
       aggregations:
         - { type: "count", name: "w3" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: 0
-          uppUnbounded: true
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          lowerOffset: 0
       aggregations:
         - { type: "count", name: "w4" }
 

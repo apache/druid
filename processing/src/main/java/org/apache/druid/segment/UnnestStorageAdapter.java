@@ -254,6 +254,12 @@ public class UnnestStorageAdapter implements StorageAdapter
     return baseAdapter.getMetadata();
   }
 
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseAdapter.isFromTombstone();
+  }
+
   public VirtualColumn getUnnestColumn()
   {
     return unnestColumn;

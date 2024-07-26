@@ -4426,7 +4426,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_7")
   @Test
   public void test_nestedAggs_emtyOvrCls_7()
@@ -7274,7 +7274,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_8")
   @Test
   public void test_nestedAggs_emtyOvrCls_8()
@@ -7747,6 +7747,27 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_3")
   @Test
   public void test_empty_and_non_empty_over_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_1")
+  @Test
+  public void test_partition_by_array_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_2")
+  @Test
+  public void test_partition_by_array_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_3")
+  @Test
+  public void test_partition_by_array_wikipedia_query_3()
   {
     windowQueryTest();
   }

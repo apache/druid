@@ -142,7 +142,8 @@ DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
       "columnTypes" : [ "LONG", "DOUBLE", "LONG" ],
       "granularity" : {
         "type" : "all"
-      }
+      },
+      "legacy" : false
     }
   },
   "intervals" : {
