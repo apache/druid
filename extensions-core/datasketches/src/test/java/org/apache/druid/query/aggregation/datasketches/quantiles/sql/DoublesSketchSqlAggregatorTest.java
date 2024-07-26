@@ -24,8 +24,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -33,6 +36,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchModule;
@@ -43,6 +47,7 @@ import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchTo
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToRankPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchToStringPostAggregator;
 import org.apache.druid.query.aggregation.datasketches.quantiles.sql.DoublesSketchSqlAggregatorTest.DoublesSketchComponentSupplier;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -53,6 +58,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -262,6 +268,143 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testSubqueryWithNestedGroupBy()
+  {
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{946684800000L, "", 1L, "val1"},
+        new Object[]{946684800000L, "1", 1L, "val1"},
+        new Object[]{946684800000L, "10.1", 1L, "val1"},
+        new Object[]{946684800000L, "2", 1L, "val1"},
+        new Object[]{946684800000L, "abc", 1L, "val1"},
+        new Object[]{946684800000L, "def", 1L, "val1"}
+    );
+
+    testQuery(
+        "SELECT\n"
+        + "  MILLIS_TO_TIMESTAMP(946684800000) AS __time,\n"
+        + "  alias.\"user\",\n"
+        + "  alias.days,\n"
+        + "  (CASE WHEN alias.days < quantiles.first_quartile THEN 'val2' \n"
+        + "  WHEN alias.days >= quantiles.first_quartile AND alias.days < quantiles.third_quartile THEN 'val3' \n"
+        + "  WHEN alias.days >= quantiles.third_quartile THEN 'val1' END) AS val4\n"
+        + "FROM (\n"
+        + "  SELECT\n"
+        + "    APPROX_QUANTILE_DS(alias.days, 0.25) AS first_quartile,\n"
+        + "    APPROX_QUANTILE_DS(alias.days, 0.75) AS third_quartile\n"
+        + "  FROM (\n"
+        + "    SELECT\n"
+        + "      dim1 \"user\",\n"
+        + "      COUNT(DISTINCT __time) AS days\n"
+        + "    FROM \"foo\"\n"
+        + "    GROUP BY 1\n"
+        + "  ) AS alias\n"
+        + ") AS quantiles, (\n"
+        + "  SELECT\n"
+        + "    dim1 \"user\",\n"
+        + "    COUNT(DISTINCT __time) AS days\n"
+        + "  FROM \"foo\"\n"
+        + "  GROUP BY 1\n"
+        + ") AS alias\n",
+        ImmutableMap.<String, Object>builder()
+                    .putAll(QUERY_CONTEXT_DEFAULT)
+                    .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                    // Disallows the fallback to row based limiting
+                    .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "10")
+                    .build(),
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource(
+                                            new QueryDataSource(
+                                                GroupByQuery.builder()
+                                                            .setDataSource("foo")
+                                                            .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                            .setGranularity(Granularities.ALL)
+                                                            .addDimension(new DefaultDimensionSpec(
+                                                                "dim1",
+                                                                "d0",
+                                                                ColumnType.STRING
+                                                            ))
+                                                            .addAggregator(new CardinalityAggregatorFactory(
+                                                                "a0:a",
+                                                                null,
+                                                                Collections.singletonList(new DefaultDimensionSpec(
+                                                                    "__time",
+                                                                    "__time",
+                                                                    ColumnType.LONG
+                                                                )),
+                                                                false,
+                                                                true
+                                                            ))
+                                                            .setPostAggregatorSpecs(new HyperUniqueFinalizingPostAggregator(
+                                                                "a0",
+                                                                "a0:a"
+                                                            ))
+                                                            .build()
+                                            )
+                                        )
+                                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                        .setGranularity(Granularities.ALL)
+                                        .addAggregator(new DoublesSketchAggregatorFactory("_a0:agg", "a0", 128))
+                                        .setPostAggregatorSpecs(
+                                            new DoublesSketchToQuantilePostAggregator(
+                                                "_a0",
+                                                new FieldAccessPostAggregator("_a0:agg", "_a0:agg"),
+                                                0.25
+                                            ),
+                                            new DoublesSketchToQuantilePostAggregator(
+                                                "_a1",
+                                                new FieldAccessPostAggregator("_a0:agg", "_a0:agg"),
+                                                0.75
+                                            )
+                                        )
+                                        .build()
+
+                        ),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("foo")
+                                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                        .setGranularity(Granularities.ALL)
+                                        .addDimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                        .addAggregator(new CardinalityAggregatorFactory(
+                                            "a0",
+                                            null,
+                                            Collections.singletonList(new DefaultDimensionSpec(
+                                                "__time",
+                                                "__time",
+                                                ColumnType.LONG
+                                            )),
+                                            false,
+                                            true
+                                        ))
+                                        .build()
+                        ),
+                        "j0.",
+                        "1",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .virtualColumns(
+                    new ExpressionVirtualColumn("v0", "946684800000", ColumnType.LONG, TestExprMacroTable.INSTANCE),
+                    new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                )
+                .columns("j0.a0", "j0.d0", "v0", "v1")
+                .build()
+        ),
+        expectedResults
+    );
+  }
+
 
   @Test
   public void testQuantileOnCastedString()
@@ -539,8 +682,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(ImmutableList.of(
                       new LongSumAggregatorFactory("a0", "cnt"),
                       new DoublesSketchAggregatorFactory("a1:agg", "cnt", 128),
-                      new DoublesSketchAggregatorFactory("a2:agg", "cnt", 128, null, false),
-                      new DoublesSketchAggregatorFactory("a3:agg", "v0", 128, null, false)
+                      new DoublesSketchAggregatorFactory("a2", "cnt", 128, null, false),
+                      new DoublesSketchAggregatorFactory("a3", "v0", 128, null, false)
                   ))
                   .postAggregators(
                       new DoublesSketchToQuantilePostAggregator(
@@ -557,7 +700,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p2",
                           new FieldAccessPostAggregator(
                               "p1",
-                              "a2:agg"
+                              "a2"
                           ),
                           0.5f
                       ),
@@ -570,7 +713,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p5",
                           new FieldAccessPostAggregator(
                               "p4",
-                              "a3:agg"
+                              "a3"
                           ),
                           0.5f
                       ),
@@ -583,7 +726,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p8",
                           new FieldAccessPostAggregator(
                               "p7",
-                              "a2:agg"
+                              "a2"
                           ),
                           0.5f
                       ),
@@ -592,7 +735,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p11",
                           new FieldAccessPostAggregator(
                               "p10",
-                              "a2:agg"
+                              "a2"
                           ),
                           new double[]{0.5d, 0.8d}
                       ),
@@ -600,7 +743,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p13",
                           new FieldAccessPostAggregator(
                               "p12",
-                              "a2:agg"
+                              "a2"
                           ),
                           new double[]{0.5d, 0.8d}
                       ),
@@ -608,7 +751,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p15",
                           new FieldAccessPostAggregator(
                               "p14",
-                              "a2:agg"
+                              "a2"
                           ),
                           new double[]{0.2d, 0.6d},
                           null
@@ -617,7 +760,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p17",
                           new FieldAccessPostAggregator(
                               "p16",
-                              "a2:agg"
+                              "a2"
                           ),
                           3.0d
                       ),
@@ -625,7 +768,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p19",
                           new FieldAccessPostAggregator(
                               "p18",
-                              "a2:agg"
+                              "a2"
                           ),
                           new double[]{0.2d, 0.6d}
                       ),
@@ -633,7 +776,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           "p21",
                           new FieldAccessPostAggregator(
                               "p20",
-                              "a2:agg"
+                              "a2"
                           )
                       ),
                       expressionPostAgg(
@@ -697,24 +840,24 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new DoublesSketchAggregatorFactory("a0:agg", "m1", 128, null, false)
+                          new DoublesSketchAggregatorFactory("a0", "m1", 128, null, false)
                       )
                   )
                   .postAggregators(
                       ImmutableList.of(
                           new DoublesSketchToQuantilePostAggregator(
                               "p1",
-                              new FieldAccessPostAggregator("p0", "a0:agg"),
+                              new FieldAccessPostAggregator("p0", "a0"),
                               0.5
                           ),
                           new DoublesSketchToQuantilePostAggregator(
                               "s1",
-                              new FieldAccessPostAggregator("s0", "a0:agg"),
+                              new FieldAccessPostAggregator("s0", "a0"),
                               0.5
                           ),
                           new DoublesSketchToQuantilePostAggregator(
                               "s3",
-                              new FieldAccessPostAggregator("s2", "a0:agg"),
+                              new FieldAccessPostAggregator("s2", "a0"),
                               0.9800000190734863
                           )
                       )
@@ -750,8 +893,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                       new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),
-                      new DoublesSketchAggregatorFactory("a2:agg", "m1", null, null, false),
-                      new DoublesSketchAggregatorFactory("a3:agg", "qsketch_m1", null, null, false)
+                      new DoublesSketchAggregatorFactory("a2", "m1", null, null, false),
+                      new DoublesSketchAggregatorFactory("a3", "qsketch_m1", null, null, false)
                   ))
                   .postAggregators(
                       new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
@@ -797,8 +940,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                       new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),
-                      new DoublesSketchAggregatorFactory("a2:agg", "m1", null, null, true),
-                      new DoublesSketchAggregatorFactory("a3:agg", "qsketch_m1", null, null, true)
+                      new DoublesSketchAggregatorFactory("a2", "m1", null, null, true),
+                      new DoublesSketchAggregatorFactory("a3", "qsketch_m1", null, null, true)
                   ))
                   .postAggregators(
                       new DoublesSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.01f),
@@ -848,11 +991,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new DoublesSketchAggregatorFactory("a2:agg", "m1", null, null, false),
+                                    new DoublesSketchAggregatorFactory("a2", "m1", null, null, false),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new DoublesSketchAggregatorFactory("a3:agg", "qsketch_m1", null, null, false),
+                                    new DoublesSketchAggregatorFactory("a3", "qsketch_m1", null, null, false),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )
@@ -919,11 +1062,11 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new DoublesSketchAggregatorFactory("a2:agg", "m1", null, null, true),
+                                    new DoublesSketchAggregatorFactory("a2", "m1", null, null, true),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new DoublesSketchAggregatorFactory("a3:agg", "qsketch_m1", null, null, true),
+                                    new DoublesSketchAggregatorFactory("a3", "qsketch_m1", null, null, true),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )

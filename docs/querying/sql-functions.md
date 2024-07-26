@@ -27,18 +27,46 @@ sidebar_label: "All functions"
  Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
+<!-- The **Learn More** at the end of each function section provides further documentation. -->
+This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more details on a function, refer to the following:
+* [Aggregation functions](sql-aggregations.md)
+* [Array functions](sql-array-functions.md)
+* [JSON functions](sql-json-functions.md)
+* [Multi-value string functions](sql-multivalue-string-functions.md)
+* [Scalar functions](sql-scalar.md)
+* [Window functions](sql-window-functions.md)
 
-
-This page provides a reference of all Druid SQL functions in alphabetical order.
-Click the linked function type for documentation on a particular function.
+The examples on this page use the following example datasources:
+* `flight-carriers` using `FlightCarrierOnTime (1 month)` 
+* `taxi-trips` using `NYC Taxi cabs (3 files)`
 
 ## ABS
 
-`ABS(<NUMERIC>)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the absolute value of a numeric expression.
+
+* **Syntax:** `ABS(<NUMERIC>)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example applies the ABS function to the `ArrDelay` column from the `flight-carriers` datasource.
+
+```sql
+SELECT
+  "ArrDelay" AS "arrival_delay",
+  ABS("ArrDelay") AS "absolute_arrival_delay"
+FROM "flight-carriers"
+WHERE "ArrDelay" < 0
+LIMIT 1
+```
+Returns the following:
+
+| `arrival_delay` | `absolute_arrival_delay` | 
+| -- | -- | 
+| `-27` | `27` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ACOS
 
@@ -64,6 +92,7 @@ Returns any value of the specified expression.
 
 Counts distinct values of a regular column or a prebuilt sketch column.
 
+## APPROX_COUNT_DISTINCT_BUILTIN
 `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
 
 **Function type:** [Aggregation](sql-aggregations.md)
@@ -419,11 +448,29 @@ Rounds up a timestamp by a given time unit.
 
 ## CEIL (numeric)
 
-`CEIL(<NUMERIC>)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the smallest integer value greater than or equal to the numeric expression.
+* **Syntax:** `CEIL(<NUMERIC>)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example applies the CEIL function to the `fare_amount` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "fare_amount" AS "fare_amount",
+  CEIL("fare_amount") AS "ceiling_fare_amount"
+FROM "taxi-trips"
+LIMIT 1
+```
+Returns the following:
+
+| `fare_amount` | `ceiling_fare_amount` | 
+| -- | -- | 
+| `21.25` | `22` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## CHAR_LENGTH
 
@@ -697,11 +744,26 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 ## EXP
 
-`EXP(<NUMERIC>)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates _e_ raised to the power of the numeric expression.
+
+* **Syntax:** `EXP(<NUMERIC>)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates _e_ to the power of 1.
+
+```sql
+SELECT EXP(1) AS "exponential" 
+```
+Returns the following:
+
+| `exponential` |
+| -- |
+| `2.7182818284590455` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## EXTRACT
 
@@ -729,11 +791,30 @@ Rounds down a timestamp by a given time unit.
 
 ## FLOOR (numeric)
 
-`FLOOR(<NUMERIC>)`
+Calculates the largest integer less than or equal to the numeric expression.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `FLOOR(<NUMERIC>)`
+* **Function type:** Scalar, numeric
 
-Calculates the largest integer value less than or equal to the numeric expression.
+<details><summary>Example</summary>
+
+The following example applies the FLOOR function to the `fare_amount` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "fare_amount" AS "fare_amount",
+  FLOOR("fare_amount") AS "floor_fare_amount"
+FROM "taxi-trips"
+LIMIT 1
+```
+Returns the following:
+
+| `fare_amount` | `floor_fare_amount` | 
+| -- | -- | 
+| `21.25` | `21` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## GREATEST
 
@@ -961,19 +1042,57 @@ Returns the length of the expression in UTF-16 encoding.
 
 ## LN
 
-`LN(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the natural logarithm of the numeric expression.
+
+* **Syntax:** `LN(<NUMERIC>)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example applies the LN function to the `max_temperature` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "max_temperature" AS "max_temperature",
+  LN("max_temperature") AS "natural_log_max_temp"
+FROM "taxi-trips"
+LIMIT 1
+```
+Returns the following:
+
+| `max_temperature` | `natural_log_max_temp` | 
+| -- | -- | 
+| `76` | `4.330733340286331` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## LOG10
 
-`LOG10(expr)`
+Calculates the base-10 logarithm of the numeric expression.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `LOG10(<NUMERIC>)`
+* **Function type:** Scalar, numeric
 
-Calculates the base-10 of the numeric expression.
+<details><summary>Example</summary>
+
+The following example applies the LOG10 function to the `max_temperature` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "max_temperature" AS "max_temperature",
+  LOG10("max_temperature") AS "log10_max_temp"
+FROM "taxi-trips"
+LIMIT 1
+```
+Returns the following:
+
+| `max_temperature` | `log10_max_temp` | 
+| -- | -- | 
+| `76` | `1.8808135922807914` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## LOOKUP
 
@@ -1033,11 +1152,26 @@ Returns the minimum value of a set of values.
 
 ## MOD
 
-`MOD(x, y)`
+Calculates x modulo y, or the remainder of x divided by y. Where x and y are numeric expressions.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `MOD(x, y)`
+* **Function type:** Scalar, numeric
 
-Calculates x modulo y, or the remainder of x divided by y.
+<details><summary>Example</summary>
+
+The following calculates 78 MOD 10.
+
+```sql
+SELECT MOD(78, 10) as "modulo"
+```
+Returns the following:
+
+| `modulo` | 
+| -- | 
+| `8` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## MV_APPEND
 
@@ -1217,11 +1351,26 @@ Returns the one-based index position of a substring within an expression, option
 
 ## POWER
 
-`POWER(expr, power)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates a numerical expression raised to the specified power.
+
+* **Syntax:** `POWER(base, exponent)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example raises 5 to the power of 2.
+
+```sql
+SELECT POWER(5, 2) AS "power"
+```
+Returns the following:
+
+| `power` |
+| -- |
+| `25` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## RADIANS
 
@@ -1298,11 +1447,31 @@ Returns the rightmost number of characters from an expression.
 
 ## ROUND
 
-`ROUND(expr[, digits])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the rounded value for a numerical expression.
+
+* **Syntax:** `ROUND(expr[, digits])`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "pickup_longitude" AS "pickup_longitude",
+  ROUND("pickup_longitude", 0) as "rounded_pickup_longitude"
+FROM "taxi-trips"
+WHERE "pickup_longitude" IS NOT NULL
+LIMIT 1
+```
+Returns the following:
+
+| `pickup_longitude` | `rounded_pickup_longitude` | 
+| -- | -- | 
+| `-73.9377670288086` | `-74` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ROW_NUMBER
 
@@ -1346,11 +1515,26 @@ Calculates the trigonometric sine of an angle expressed in radians.
 
 ## SQRT
 
-`SQRT(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Calculates the square root of a numeric expression.
+
+* **Syntax:** `SQRT(<NUMERIC>)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example calculates the square root of 25.
+
+```sql
+SELECT SQRT(25) AS "square_root"
+```
+Returns the following:
+
+| `square_root` |  
+| -- | 
+| `5` |
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## STDDEV
 
@@ -1620,20 +1804,41 @@ Trims the leading or trailing characters of an expression.
 
 ## TRUNC
 
-`TRUNC(expr[, digits])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Alias for [`TRUNCATE`](#truncate).
+
+* **Syntax:** `TRUNC(expr[, digits])`
+* **Function type:** Scalar, numeric
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## TRUNCATE
 
-`TRUNCATE(expr[, digits])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Truncates a numerical expression to a specific number of decimal digits.
 
+* **Syntax:** `TRUNCATE(expr[, digits])`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column from the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "pickup_longitude" as "pickup_longitude",
+  TRUNCATE("pickup_longitude", 1) as "truncate_pickup_longitude"
+FROM "taxi-trips"
+WHERE "pickup_longitude" IS NOT NULL
+LIMIT 1
+```
+Returns the following:
+
+| `pickup_longitude` | `truncate_pickup_longitude` | 
+| -- | -- | 
+| `-73.9377670288086` | `-73.9` | 
+</details>
+
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## TRY_PARSE_JSON
 
@@ -1682,4 +1887,5 @@ Calculates the sample variance of a set of values.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Alias for [`VAR_SAMP`](#var_samp).
+
 

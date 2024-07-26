@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`RestrictedMode matches snapshot when in auto capability detection mode 1`] = `
-<Blueprint4.Popover2
+<Blueprint5.Popover
   boundary="clippingParents"
   captureDismiss={false}
   className="restricted-mode"
@@ -17,7 +17,7 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
         For more info refer to the
          
         <Memo(ExternalLink)
-          href="https://druid.apache.org/docs/latest/operations/web-console.html"
+          href="https://druid.apache.org/docs/latest/operations/web-console"
         >
           web console documentation
         </Memo(ExternalLink)>
@@ -28,7 +28,7 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
           It is possible that the console is experiencing an issue with the capability detection. You can enable the unrestricted console, but certain features might not work if the underlying APIs are not available.
         </p>
         <p>
-          <Blueprint4.Button
+          <Blueprint5.Button
             icon="warning-sign"
             onClick={[Function]}
             text="Temporarily unrestrict console (with SQL)"
@@ -36,7 +36,7 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
         </p>
       </React.Fragment>
       <p>
-        <Blueprint4.Button
+        <Blueprint5.Button
           icon="warning-sign"
           onClick={[Function]}
           text="Temporarily unrestrict console (without SQL)"
@@ -62,17 +62,17 @@ exports[`RestrictedMode matches snapshot when in auto capability detection mode 
   transitionDuration={300}
   usePortal={true}
 >
-  <Blueprint4.Button
+  <Blueprint5.Button
     icon="warning-sign"
     intent="warning"
     minimal={true}
     text="Coordinator/Overlord mode"
   />
-</Blueprint4.Popover2>
+</Blueprint5.Popover>
 `;
 
 exports[`RestrictedMode matches snapshot when in manual capability detection mode 1`] = `
-<Blueprint4.Popover2
+<Blueprint5.Popover
   boundary="clippingParents"
   captureDismiss={false}
   className="restricted-mode"
@@ -88,7 +88,7 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
         For more info refer to the
          
         <Memo(ExternalLink)
-          href="https://druid.apache.org/docs/latest/operations/web-console.html"
+          href="https://druid.apache.org/docs/latest/operations/web-console"
         >
           web console documentation
         </Memo(ExternalLink)>
@@ -99,7 +99,7 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
           The console did no perform its automatic capability detection because it is running in manual capability detection mode.
         </p>
         <p>
-          <Blueprint4.Button
+          <Blueprint5.Button
             intent="primary"
             onClick={[Function]}
             text="Use to automatic capability detection"
@@ -107,7 +107,7 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
         </p>
       </React.Fragment>
       <p>
-        <Blueprint4.Button
+        <Blueprint5.Button
           icon="warning-sign"
           onClick={[Function]}
           text="Temporarily unrestrict console (without SQL)"
@@ -133,11 +133,11 @@ exports[`RestrictedMode matches snapshot when in manual capability detection mod
   transitionDuration={300}
   usePortal={true}
 >
-  <Blueprint4.Button
+  <Blueprint5.Button
     icon="warning-sign"
     intent="warning"
     minimal={true}
     text="Coordinator/Overlord mode"
   />
-</Blueprint4.Popover2>
+</Blueprint5.Popover>
 `;

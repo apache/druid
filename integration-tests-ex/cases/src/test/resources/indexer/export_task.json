@@ -129,7 +129,6 @@
         "delta",
         "page"
       ],
-      "legacy": false,
       "context": {
         "__exportFileFormat": "CSV",
         "__resultFormat": "array",

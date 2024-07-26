@@ -88,10 +88,10 @@ DruidJoin(condition=[AND(=($0, $1), =('abc', $1))], joinType=[inner])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "j0.d0" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

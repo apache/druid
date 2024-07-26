@@ -256,6 +256,12 @@ public class UnnestStorageAdapter implements StorageAdapter
     return baseAdapter.getMetadata();
   }
 
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseAdapter.isFromTombstone();
+  }
+
   public VirtualColumn getUnnestColumn()
   {
     return unnestColumn;
@@ -582,10 +588,12 @@ public class UnnestStorageAdapter implements StorageAdapter
       final TypeSignature<ValueType> outputType =
           capabilities.isArray() ? capabilities.getElementType() : capabilities.toColumnType();
 
+      final boolean useDimensionCursor = useDimensionCursor(capabilities);
       return ColumnCapabilitiesImpl.createDefault()
                                    .setType(outputType)
                                    .setHasMultipleValues(false)
-                                   .setDictionaryEncoded(useDimensionCursor(capabilities));
+                                   .setDictionaryEncoded(useDimensionCursor)
+                                   .setDictionaryValuesUnique(useDimensionCursor);
     }
   }
 

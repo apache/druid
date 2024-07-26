@@ -142,4 +142,10 @@ public class FilteredStorageAdapter implements StorageAdapter
   {
     return baseStorageAdapter.getMetadata();
   }
+
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseStorageAdapter.isFromTombstone();
+  }
 }
