@@ -22,6 +22,7 @@ package org.apache.druid.collections;
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -29,22 +30,22 @@ import java.util.Set;
 
 /**
  * A circular list that is backed by an ordered list of elements containing no duplicates. The list is ordered by the
- * supplied comparator. Callers are responsible for terminating the iterator explicitly.
+ * supplied comparator. The iterator keeps track of the current position, so iterating the list multiple times will
+ * resume from the last location and continue until a caller explicitly terminates it.
  * <p>
  * This class is not thread-safe and must be used from a single thread.
  */
 @NotThreadSafe
 public class CircularList<T> implements Iterable<T>
 {
-  private final List<T> collection = new ArrayList<>();
-  private final Comparator<? super T> comparator;
+  private final List<T> elements = new ArrayList<>();
   private int currentPosition;
 
-  public CircularList(final Set<T> elements, Comparator<? super T> comparator)
+  public CircularList(final Set<T> elements, final Comparator<? super T> comparator)
   {
-    this.collection.addAll(elements);
-    this.comparator = comparator;
-    this.collection.sort(comparator);
+    this.elements.addAll(elements);
+    this.elements.sort(comparator);
+    this.currentPosition = -1;
   }
 
   @Override
@@ -55,7 +56,7 @@ public class CircularList<T> implements Iterable<T>
       @Override
       public boolean hasNext()
       {
-        return collection.size() > 0;
+        return elements.size() > 0;
       }
 
       @Override
@@ -65,20 +66,13 @@ public class CircularList<T> implements Iterable<T>
           throw new NoSuchElementException();
         }
 
-        T nextCandidate = peekNext();
         advanceCursor();
-        return nextCandidate;
-      }
-
-      private T peekNext()
-      {
-        int nextPosition = currentPosition < collection.size() ? currentPosition : 0;
-        return collection.get(nextPosition);
+        return elements.get(currentPosition);
       }
 
       private void advanceCursor()
       {
-        if (++currentPosition >= collection.size()) {
+        if (++currentPosition >= elements.size()) {
           currentPosition = 0;
         }
       }
@@ -90,8 +84,6 @@ public class CircularList<T> implements Iterable<T>
    */
   public boolean equalsSet(final Set<T> inputSet)
   {
-    final List<T> sortedList = new ArrayList<>(inputSet);
-    sortedList.sort(comparator);
-    return collection.equals(sortedList);
+    return new HashSet<>(elements).equals(inputSet);
   }
 }

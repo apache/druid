@@ -67,6 +67,35 @@ public class CircularListTest
   }
 
   @Test
+  public void testIteratorResumesFromLastPosition()
+  {
+    final Set<String> input = ImmutableSet.of("a", "b", "c", "d", "e", "f");
+    final CircularList<String> circularList = new CircularList<>(input, Comparator.naturalOrder());
+
+    List<String> observedElements = new ArrayList<>();
+    int cnt = 0;
+    for (String element : circularList) {
+      observedElements.add(element);
+      if (++cnt >= input.size() / 2) {
+        break;
+      }
+    }
+
+    Assert.assertEquals(ImmutableList.of("a", "b", "c"), observedElements);
+
+    observedElements = new ArrayList<>();
+    for (String element : circularList) {
+      observedElements.add(element);
+      // Resume and go till the end, and add two more elements looping around
+      if (++cnt == input.size() + 2) {
+        break;
+      }
+    }
+
+    Assert.assertEquals(ImmutableList.of("d", "e", "f", "a", "b"), observedElements);
+  }
+
+  @Test
   public void testEqualsSet()
   {
     final Set<String> input = ImmutableSet.of("a", "b", "c");

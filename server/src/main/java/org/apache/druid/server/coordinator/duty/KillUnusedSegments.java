@@ -198,7 +198,7 @@ public class KillUnusedSegments implements CoordinatorDuty
     int submittedTasks = 0;
     for (String dataSource : datasourceCircularKillList) {
       if (dataSource.equals(prevDatasourceKilled) && remainingDatasourcesToKill.size() > 1) {
-        // Skip this dataSource if it's the same as the previous one and there are others left to kill.
+        // Skip this dataSource if it's the same as the previous one and there are remaining datasources to kill.
         continue;
       } else {
         prevDatasourceKilled = dataSource;
@@ -209,11 +209,11 @@ public class KillUnusedSegments implements CoordinatorDuty
       final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime, stats);
       if (intervalToKill == null) {
         datasourceToLastKillIntervalEnd.remove(dataSource);
+        // If no interval is found for this datasource, either terminate or continue based on remaining datasources to kill.
         if (remainingDatasourcesToKill.isEmpty()) {
           break;
         }
         continue;
-
       }
 
       try {
@@ -231,6 +231,7 @@ public class KillUnusedSegments implements CoordinatorDuty
         ++submittedTasks;
         datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
 
+        // Termination conditions.
         if (remainingDatasourcesToKill.isEmpty() || submittedTasks >= availableKillTaskSlots) {
           break;
         }

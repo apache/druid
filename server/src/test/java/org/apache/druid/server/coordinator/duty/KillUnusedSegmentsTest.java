@@ -230,7 +230,7 @@ public class KillUnusedSegmentsTest
    * slots. Running the kill duty each time should pick at least one unique datasource in a round-robin manner.
    */
   @Test
-  public void testKillMultipleDatasourcesInRoundRobinManner()
+  public void testRoundRobinKillMultipleDatasources()
   {
     configBuilder.withIgnoreDurationToRetain(true)
                  .withMaxSegmentsToKill(2);
@@ -289,7 +289,7 @@ public class KillUnusedSegmentsTest
    * consecutive datasources across runs as long as there are other datasources to kill.
    */
   @Test
-  public void testKillInRoundRobinMannerWhenDatasourcesChange()
+  public void testRoundRobinKillWhenDatasourcesChange()
   {
     configBuilder.withIgnoreDurationToRetain(true)
                  .withMaxSegmentsToKill(2);
@@ -335,9 +335,6 @@ public class KillUnusedSegmentsTest
     Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
   }
 
-  /**
-   * There is a single datasource to kill across multiple runs. The duty should keep picking the same datasource.
-   */
   @Test
   public void testKillSingleDatasourceMultipleRuns()
   {
@@ -901,7 +898,7 @@ public class KillUnusedSegmentsTest
     overlordClient.deleteLastKillInterval(dataSource);
   }
 
-  private void createAndAddUsedSegment(final String dataSource, final Interval interval, final String version)
+  private DataSegment createAndAddUsedSegment(final String dataSource, final Interval interval, final String version)
   {
     final DataSegment segment = createSegment(dataSource, interval, version);
     try {
@@ -910,6 +907,7 @@ public class KillUnusedSegmentsTest
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+    return segment;
   }
 
   private void createAndAddUnusedSegment(
@@ -919,13 +917,7 @@ public class KillUnusedSegmentsTest
       final DateTime lastUpdatedTime
   )
   {
-    final DataSegment segment = createSegment(dataSource, interval, version);
-    try {
-      SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+    final DataSegment segment = createAndAddUsedSegment(dataSource, interval, version);
     sqlSegmentsMetadataManager.markSegmentsAsUnused(ImmutableSet.of(segment.getId()));
     derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment.getId().toString(), lastUpdatedTime);
   }
