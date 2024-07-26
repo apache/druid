@@ -4209,7 +4209,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.12.0
+version: 1.12.2
 libraries:
   - com.azure: azure-identity
 
@@ -4307,7 +4307,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.15.0
+version: 1.15.1
 libraries:
   - com.microsoft.azure: msal4j
 
@@ -4871,7 +4871,7 @@ libraries:
 
 name: org.apache.solr solr-solrj
 license_category: binary
-version: 8.11.2
+version: 8.11.3
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
