@@ -197,19 +197,23 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     int submittedTasks = 0;
     for (String dataSource : datasourceCircularKillList) {
-      if (dataSource.equals(prevDatasourceKilled)) {
-        datasourceCircularKillList.advanceCursor();
+      if (dataSource.equals(prevDatasourceKilled) && remainingDatasourcesToKill.size() > 1) {
+        // Skip this dataSource if it's the same as the previous one and there are others left to kill.
+        continue;
+      } else {
+        prevDatasourceKilled = dataSource;
+        remainingDatasourcesToKill.remove(dataSource);
       }
 
       final DateTime maxUsedStatusLastUpdatedTime = DateTimes.nowUtc().minus(bufferPeriod);
       final Interval intervalToKill = findIntervalForKill(dataSource, maxUsedStatusLastUpdatedTime, stats);
       if (intervalToKill == null) {
         datasourceToLastKillIntervalEnd.remove(dataSource);
-        remainingDatasourcesToKill.remove(dataSource);
-        if (remainingDatasourcesToKill.size() == 0) {
+        if (remainingDatasourcesToKill.isEmpty()) {
           break;
         }
         continue;
+
       }
 
       try {
@@ -224,20 +228,11 @@ public class KillUnusedSegments implements CoordinatorDuty
             ),
             true
         );
-        datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
-        prevDatasourceKilled = dataSource;
         ++submittedTasks;
-        remainingDatasourcesToKill.remove(dataSource);
+        datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
 
-        if (remainingDatasourcesToKill.size() == 0) {
-          break;
-        }
-
-        if (submittedTasks >= availableKillTaskSlots) {
-          log.info(
-              "Submitted [%d] kill tasks and reached kill task slot limit [%d].",
-              submittedTasks, availableKillTaskSlots
-          );
+        // Check for termination conditions.
+        if (remainingDatasourcesToKill.isEmpty() || submittedTasks >= availableKillTaskSlots) {
           break;
         }
       }
