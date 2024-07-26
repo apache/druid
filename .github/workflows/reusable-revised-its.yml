@@ -57,7 +57,7 @@ on:
       AWS_SECRET_ACCESS_KEY:
         required: false
         type: string
-      BACKWARD_INCOMPATIBILITY_IT_ENABLED:
+      BACKWARD_COMPATIBILITY_IT_ENABLED:
         required: false
         type: string
         default: false
@@ -121,7 +121,7 @@ jobs:
 
       - name: Retrieve previous version cached docker image
         id: docker-restore-previous-version
-        if: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' }}
+        if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
         uses: actions/cache/restore@v4
         with:
           key: druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz-${{ github.sha }}
@@ -137,7 +137,7 @@ jobs:
         if: steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true'
         env:
           docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
-          BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
+          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
           DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
           DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
           DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
@@ -149,7 +149,7 @@ jobs:
           docker save "$DRUID_IT_IMAGE_NAME" | gzip > druid-container-jdk${{ inputs.build_jdk }}.tar.gz
 
       - name: Save previous version docker image
-        if: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' && (steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true') }}
+        if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' && (steps.docker-restore.outputs.cache-hit != 'true' || steps.maven-restore.outputs.cache-hit != 'true') }}
         env:
           docker-restore: ${{ toJson(steps.docker-restore.outputs) }}
         run: |
@@ -169,7 +169,7 @@ jobs:
           docker images
 
       - name: Load previous version docker image
-        if: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED == 'true' }}
+        if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' }}
         run: |
           docker load --input druid-container-jdk${{ inputs.build_jdk }}-version${{ inputs.DRUID_PREVIOUS_VERSION }}.tar.gz
           docker images
@@ -177,7 +177,7 @@ jobs:
       - name: Run IT
         id: run-it
         env:
-          BACKWARD_INCOMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_INCOMPATIBILITY_IT_ENABLED }}
+          BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
           DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
           DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
           DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
