@@ -75,17 +75,14 @@ public class CircularList<T> implements Iterable<T>
         int nextPosition = currentPosition < collection.size() ? currentPosition : 0;
         return collection.get(nextPosition);
       }
-    };
-  }
 
-  /**
-   * Advances the cursor position in the circular list. If the position reaches the end of the list, it wraps around.
-   */
-  public void advanceCursor()
-  {
-    if (++currentPosition >= collection.size()) {
-      currentPosition = 0;
-    }
+      private void advanceCursor()
+      {
+        if (++currentPosition >= collection.size()) {
+          currentPosition = 0;
+        }
+      }
+    };
   }
 
   /**

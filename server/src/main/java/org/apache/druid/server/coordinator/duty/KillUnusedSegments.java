@@ -231,7 +231,6 @@ public class KillUnusedSegments implements CoordinatorDuty
         ++submittedTasks;
         datasourceToLastKillIntervalEnd.put(dataSource, intervalToKill.getEnd());
 
-        // Check for termination conditions.
         if (remainingDatasourcesToKill.isEmpty() || submittedTasks >= availableKillTaskSlots) {
           break;
         }

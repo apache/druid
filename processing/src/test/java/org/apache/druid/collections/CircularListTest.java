@@ -67,23 +67,6 @@ public class CircularListTest
   }
 
   @Test
-  public void testAdvanceCursor()
-  {
-    final Set<Integer> input = ImmutableSet.of(1, 10, 35, 50);
-    final CircularList<Integer> circularList = new CircularList<>(input, Comparator.naturalOrder());
-    final Iterator<Integer> iterator = circularList.iterator();
-
-    circularList.advanceCursor();
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals((Integer) 10, iterator.next());
-
-    circularList.advanceCursor();
-    circularList.advanceCursor();
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals((Integer) 1, iterator.next());
-  }
-
-  @Test
   public void testEqualsSet()
   {
     final Set<String> input = ImmutableSet.of("a", "b", "c");

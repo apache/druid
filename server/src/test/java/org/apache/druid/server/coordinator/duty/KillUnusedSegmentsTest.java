@@ -556,7 +556,7 @@ public class KillUnusedSegmentsTest
   }
 
   @Test
-  public void testDatasourcesFoundButNoUnusedSegments()
+  public void testKillDatasourceWithNoUnusedSegmentsInInitialRun()
   {
     configBuilder.withMaxSegmentsToKill(1);
 
@@ -643,10 +643,10 @@ public class KillUnusedSegmentsTest
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
+
     Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
-
     Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
     Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
 
