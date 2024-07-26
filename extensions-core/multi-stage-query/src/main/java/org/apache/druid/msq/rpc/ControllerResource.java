@@ -195,7 +195,7 @@ public class ControllerResource
   public Response httpGetTaskList(@Context final HttpServletRequest req)
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    return Response.ok(new MSQTaskList(controller.getTaskIds())).build();
+    return Response.ok(new MSQTaskList(controller.getWorkerIds())).build();
   }
 
   /**

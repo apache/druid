@@ -23,11 +23,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.util.NoSuchElementException;
 
+/**
+ * Channel that wraps a {@link ListenableFuture} of a {@link ReadableFrameChannel}, but acts like a regular (non-future)
+ * {@link ReadableFrameChannel}.
+ */
 public class FutureReadableFrameChannel implements ReadableFrameChannel
 {
   private static final Logger log = new Logger(FutureReadableFrameChannel.class);
@@ -87,27 +90,23 @@ public class FutureReadableFrameChannel implements ReadableFrameChannel
       channel.close();
     } else {
       channelFuture.cancel(true);
-      channelFuture.addListener(
-          () -> {
-            final ReadableFrameChannel channel;
 
-            try {
-              channel = FutureUtils.getUncheckedImmediately(channelFuture);
-            }
-            catch (Throwable ignored) {
-              // Some error happened while creating the channel. Suppress it.
-              return;
-            }
+      // In case of a race where channelFuture resolved between populateChannel() and here, the cancel call above would
+      // have no effect. Guard against this case by checking if the channelFuture has resolved, and if so, close the
+      // channel here.
+      try {
+        final ReadableFrameChannel channel = FutureUtils.getUncheckedImmediately(channelFuture);
 
-            try {
-              channel.close();
-            }
-            catch (Throwable t) {
-              log.noStackTrace().warn(t, "Failed to close channel");
-            }
-          },
-          Execs.directExecutor()
-      );
+        try {
+          channel.close();
+        }
+        catch (Throwable t) {
+          log.noStackTrace().warn(t, "Failed to close channel");
+        }
+      }
+      catch (Throwable ignored) {
+        // Some error happened while creating the channel. Suppress it.
+      }
     }
   }
 

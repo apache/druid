@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
@@ -70,21 +71,25 @@ public class ChannelStageOutputReader implements StageOutputReader
   /**
    * State of this reader.
    */
+  @GuardedBy("this")
   private State state = State.INIT;
 
   /**
    * Position within the overall stream.
    */
+  @GuardedBy("this")
   private long cursor;
 
   /**
    * Offset of the first chunk in {@link #chunks} which corresponds to {@link #cursor}.
    */
+  @GuardedBy("this")
   private int positionWithinFirstChunk;
 
   /**
    * Whether {@link FrameFileWriter#close()} is called on {@link #writer}.
    */
+  @GuardedBy("this")
   private boolean didCloseWriter;
 
   public ChannelStageOutputReader(final ReadableFrameChannel channel)

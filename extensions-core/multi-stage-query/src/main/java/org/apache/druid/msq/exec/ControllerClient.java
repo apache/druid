@@ -23,6 +23,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
@@ -81,12 +82,9 @@ public interface ControllerClient extends Closeable
 
   /**
    * Client side method to inform the controller that the error has occured in the given worker.
-   *
-   * @param queryId      query ID, if this error is associated with a specific query
-   * @param errorWrapper error details
    */
   void postWorkerError(
-      @Nullable String queryId,
+      String workerId,
       MSQErrorReport errorWrapper
   ) throws IOException;
 
@@ -95,6 +93,13 @@ public interface ControllerClient extends Closeable
    */
   void postWorkerWarning(List<MSQErrorReport> MSQErrorReports) throws IOException;
 
+  /**
+   * Client side method for retrieving the list of worker IDs from the controller. These IDs can be passed to
+   * {@link WorkerClient} methods to communicate with other workers. Not necessary when the {@link WorkOrder} has
+   * {@link WorkOrder#getWorkerIds()} set.
+   *
+   * @see Controller#getWorkerIds() for the controller side
+   */
   List<String> getWorkerIds() throws IOException;
 
   /**

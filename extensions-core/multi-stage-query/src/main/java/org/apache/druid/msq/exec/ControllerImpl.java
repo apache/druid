@@ -1172,7 +1172,7 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public List<String> getTaskIds()
+  public List<String> getWorkerIds()
   {
     if (workerManager == null) {
       return Collections.emptyList();
@@ -1261,7 +1261,7 @@ public class ControllerImpl implements Controller
   {
     // Sorted copy of target worker numbers to ensure consistent iteration order.
     final List<Integer> workersCopy = Ordering.natural().sortedCopy(workers);
-    final List<String> workerIds = getTaskIds();
+    final List<String> workerIds = getWorkerIds();
     final List<ListenableFuture<Void>> workerFutures = new ArrayList<>(workersCopy.size());
 
     try {
@@ -1486,7 +1486,7 @@ public class ControllerImpl implements Controller
   private CounterSnapshotsTree getCountersFromAllTasks()
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
-    final List<String> taskList = getTaskIds();
+    final List<String> taskList = getWorkerIds();
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
 
@@ -1506,7 +1506,7 @@ public class ControllerImpl implements Controller
 
   private void postFinishToAllTasks()
   {
-    final List<String> taskList = getTaskIds();
+    final List<String> taskList = getWorkerIds();
 
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
@@ -2930,7 +2930,7 @@ public class ControllerImpl implements Controller
       }
 
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
-      final List<String> taskIds = getTaskIds();
+      final List<String> taskIds = getWorkerIds();
 
       final InputChannelFactory inputChannelFactory;
 

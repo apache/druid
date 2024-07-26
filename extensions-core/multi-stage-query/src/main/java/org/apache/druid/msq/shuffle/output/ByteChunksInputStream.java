@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.shuffle.output;
 
+import org.apache.druid.error.DruidException;
+
 import java.io.InputStream;
 import java.util.List;
 
@@ -41,6 +43,8 @@ public class ByteChunksInputStream extends InputStream
   {
     this.chunks = chunks;
     this.positionWithinChunk = positionWithinFirstChunk;
+    this.chunkNum = -1;
+    advanceChunk();
   }
 
   @Override
@@ -98,5 +102,15 @@ public class ByteChunksInputStream extends InputStream
   {
     chunkNum = chunks.size();
     positionWithinChunk = 0;
+  }
+
+  private void advanceChunk()
+  {
+    chunkNum++;
+
+    // Verify nonempty
+    if (chunkNum < chunks.size() && chunks.get(chunkNum).length == 0) {
+      throw DruidException.defensive("Empty chunk not allowed");
+    }
   }
 }
