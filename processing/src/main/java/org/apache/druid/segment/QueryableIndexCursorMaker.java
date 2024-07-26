@@ -20,17 +20,12 @@
 package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
@@ -65,7 +60,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class QueryableIndexCursorMaker implements CursorMaker
@@ -140,7 +134,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
   }
 
   @Override
-  public Sequence<Cursor> makeCursors()
+  public Cursor makeCursor()
   {
     if (metrics != null) {
       metrics.vectorized(false);
@@ -163,84 +157,59 @@ public class QueryableIndexCursorMaker implements CursorMaker
       baseOffset = BitmapOffset.of(filterBundle.getIndex().getBitmap(), descending, index.getNumRows());
     }
 
-    Iterable<Interval> iterable = gran.getIterable(interval);
+    final long timeStart = Math.max(interval.getStartMillis(), minDataTimestamp);
+    final long timeEnd = interval.getEndMillis();
+
     if (descending) {
-      iterable = Lists.reverse(ImmutableList.copyOf(iterable));
+      for (; baseOffset.withinBounds(); baseOffset.increment()) {
+        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
+          break;
+        }
+      }
+    } else {
+      for (; baseOffset.withinBounds(); baseOffset.increment()) {
+        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
+          break;
+        }
+      }
     }
 
-    return Sequences.filter(
-        Sequences.withBaggage(
-            Sequences.map(
-                Sequences.simple(iterable),
-                new Function<Interval, Cursor>()
-                {
-                  @Override
-                  public Cursor apply(final Interval inputInterval)
-                  {
-                    final long timeStart = Math.max(interval.getStartMillis(), inputInterval.getStartMillis());
-                    final long timeEnd = Math.min(
-                        interval.getEndMillis(),
-                        gran.increment(inputInterval.getStartMillis())
-                    );
-
-                    if (descending) {
-                      for (; baseOffset.withinBounds(); baseOffset.increment()) {
-                        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
-                          break;
-                        }
-                      }
-                    } else {
-                      for (; baseOffset.withinBounds(); baseOffset.increment()) {
-                        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
-                          break;
-                        }
-                      }
-                    }
-
-                    final Offset offset = descending ?
-                                          new DescendingTimestampCheckingOffset(
-                                              baseOffset,
-                                              timestamps,
-                                              timeStart,
-                                              minDataTimestamp >= timeStart
-                                          ) :
-                                          new AscendingTimestampCheckingOffset(
-                                              baseOffset,
-                                              timestamps,
-                                              timeEnd,
-                                              maxDataTimestamp < timeEnd
-                                          );
+    final Offset offset = descending ?
+                          new DescendingTimestampCheckingOffset(
+                              baseOffset,
+                              timestamps,
+                              timeStart,
+                              minDataTimestamp >= timeStart
+                          ) :
+                          new AscendingTimestampCheckingOffset(
+                              baseOffset,
+                              timestamps,
+                              timeEnd,
+                              maxDataTimestamp < timeEnd
+                          );
 
 
-                    final Offset baseCursorOffset = offset.clone();
-                    final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-                        virtualColumns,
-                        descending,
-                        baseCursorOffset.getBaseReadableOffset(),
-                        columnCache
-                    );
-                    final DateTime myBucket = gran.toDateTime(inputInterval.getStartMillis());
-                    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
-                    // needs to use a value matcher
-                    if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
-                      final ValueMatcher matcher = filterBundle.getMatcherBundle()
-                                                               .valueMatcher(
-                                                                   columnSelectorFactory,
-                                                                   baseCursorOffset,
-                                                                   descending
-                                                               );
-                      final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
-                      return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, myBucket);
-                    } else {
-                      return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, myBucket);
-                    }
-                  }
-                }
-            ),
-            resources
-        ),
-        Objects::nonNull
+    final Offset baseCursorOffset = offset.clone();
+    final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
+        virtualColumns,
+        descending,
+        baseCursorOffset.getBaseReadableOffset(),
+        columnCache
     );
+    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
+    // needs to use a value matcher
+    if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
+      final ValueMatcher matcher = filterBundle.getMatcherBundle()
+                                               .valueMatcher(
+                                                   columnSelectorFactory,
+                                                   baseCursorOffset,
+                                                   descending
+                                               );
+      final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
+      return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, DateTimes.utc(timeStart));
+    } else {
+      return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, DateTimes.utc(timeStart));
+    }
   }
 
   @Nullable
@@ -260,7 +229,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
 
       // sanity check
       if (!canVectorize()) {
-        cleanup();
+        close();
         throw new IllegalStateException("canVectorize()");
       }
       if (metrics != null) {
@@ -332,7 +301,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
   }
 
   @Override
-  public void cleanup()
+  public void close()
   {
     CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
   }
@@ -537,12 +506,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
     public ColumnSelectorFactory getColumnSelectorFactory()
     {
       return columnSelectorFactory;
-    }
-
-    @Override
-    public DateTime getTime()
-    {
-      return bucketStart;
     }
 
     @Override

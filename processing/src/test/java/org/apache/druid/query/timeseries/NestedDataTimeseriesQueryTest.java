@@ -669,7 +669,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
                                             final CursorMaker maker = s.asStorageAdapter()
                                                                        .asCursorMaker(spec);
                                             final boolean canVectorize = maker.canVectorize();
-                                            maker.cleanup();
+                                            maker.close();
                                             return canVectorize;
                                           });
 

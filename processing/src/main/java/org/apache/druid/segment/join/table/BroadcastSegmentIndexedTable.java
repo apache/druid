@@ -22,8 +22,6 @@ package org.apache.druid.segment.join.table;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -32,6 +30,7 @@ import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
@@ -121,59 +120,50 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
                                                      )
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
+    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
 
-    final Sequence<Integer> sequence = Sequences.map(
-        cursors,
-        cursor -> {
-          if (cursor == null) {
-            return 0;
-          }
-          int rowNumber = 0;
-          ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+      int rowNumber = 0;
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-          // this should really be optimized to use dimension selectors where possible to populate indexes from bitmap
-          // indexes, but, an optimization for another day
-          final List<BaseObjectColumnValueSelector> selectors = keyColumnNames
-              .stream()
-              .map(columnName -> {
-                // multi-value dimensions are not currently supported
-                if (adapter.getColumnCapabilities(columnName).hasMultipleValues().isMaybeTrue()) {
-                  return NilColumnValueSelector.instance();
-                }
-                return columnSelectorFactory.makeColumnValueSelector(columnName);
-              })
-              .collect(Collectors.toList());
-
-          while (!cursor.isDone()) {
-            for (int keyColumnSelectorIndex = 0; keyColumnSelectorIndex < selectors.size(); keyColumnSelectorIndex++) {
-              final String keyColumnName = keyColumnNames.get(keyColumnSelectorIndex);
-              final int columnPosition = rowSignature.indexOf(keyColumnName);
-              final RowBasedIndexBuilder keyColumnIndexBuilder = indexBuilders.get(columnPosition);
-              keyColumnIndexBuilder.add(selectors.get(keyColumnSelectorIndex).getObject());
+      // this should really be optimized to use dimension selectors where possible to populate indexes from bitmap
+      // indexes, but, an optimization for another day
+      final List<BaseObjectColumnValueSelector> selectors = keyColumnNames
+          .stream()
+          .map(columnName -> {
+            // multi-value dimensions are not currently supported
+            if (adapter.getColumnCapabilities(columnName).hasMultipleValues().isMaybeTrue()) {
+              return NilColumnValueSelector.instance();
             }
+            return columnSelectorFactory.makeColumnValueSelector(columnName);
+          })
+          .collect(Collectors.toList());
 
-            if (rowNumber % 100_000 == 0) {
-              if (rowNumber == 0) {
-                LOG.debug("Indexed first row for table %s", theSegment.getId());
-              } else {
-                LOG.debug("Indexed row %s for table %s", rowNumber, theSegment.getId());
-              }
-            }
-            rowNumber++;
-            cursor.advance();
-          }
-          return rowNumber;
+      while (!cursor.isDone()) {
+        for (int keyColumnSelectorIndex = 0; keyColumnSelectorIndex < selectors.size(); keyColumnSelectorIndex++) {
+          final String keyColumnName = keyColumnNames.get(keyColumnSelectorIndex);
+          final int columnPosition = rowSignature.indexOf(keyColumnName);
+          final RowBasedIndexBuilder keyColumnIndexBuilder = indexBuilders.get(columnPosition);
+          keyColumnIndexBuilder.add(selectors.get(keyColumnSelectorIndex).getObject());
         }
-    );
 
-    Integer totalRows = sequence.accumulate(0, (accumulated, in) -> accumulated += in);
+        if (rowNumber % 100_000 == 0) {
+          if (rowNumber == 0) {
+            LOG.debug("Indexed first row for table %s", theSegment.getId());
+          } else {
+            LOG.debug("Indexed row %s for table %s", rowNumber, theSegment.getId());
+          }
+        }
+        rowNumber++;
+        cursor.advance();
+      }
 
-    this.keyColumnsIndexes = indexBuilders.stream()
-                                          .map(builder -> builder != null ? builder.build() : null)
-                                          .collect(Collectors.toList());
+      this.keyColumnsIndexes = indexBuilders.stream()
+                                            .map(builder -> builder != null ? builder.build() : null)
+                                            .collect(Collectors.toList());
 
-    LOG.info("Created BroadcastSegmentIndexedTable with %s rows.", totalRows);
+      LOG.info("Created BroadcastSegmentIndexedTable with %s rows.", rowNumber);
+    }
   }
 
   @Override

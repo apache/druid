@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.indexing;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -37,6 +36,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.generator.DataGenerator;
@@ -149,22 +149,23 @@ public class IncrementalIndexReadBenchmark
   public void read(Blackhole blackhole)
   {
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, null);
-    Cursor cursor = cursors.limit(1).toList().get(0);
+    try (final CursorMaker maker = makeCursor(sa, null)) {
+      Cursor cursor = maker.makeCursor();
 
-    List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
-    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
-    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
-    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
+      List<DimensionSelector> selectors = new ArrayList<>();
+      selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+      selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+      selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+      selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
-    cursor.reset();
-    while (!cursor.isDone()) {
-      for (DimensionSelector selector : selectors) {
-        IndexedInts row = selector.getRow();
-        blackhole.consume(selector.lookupName(row.get(0)));
+      cursor.reset();
+      while (!cursor.isDone()) {
+        for (DimensionSelector selector : selectors) {
+          IndexedInts row = selector.getRow();
+          blackhole.consume(selector.lookupName(row.get(0)));
+        }
+        cursor.advance();
       }
-      cursor.advance();
     }
   }
 
@@ -184,26 +185,27 @@ public class IncrementalIndexReadBenchmark
     );
 
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, filter);
-    Cursor cursor = cursors.limit(1).toList().get(0);
+    try (final CursorMaker maker = makeCursor(sa, filter)) {
+      Cursor cursor = maker.makeCursor();
 
-    List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
-    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
-    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
-    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
+      List<DimensionSelector> selectors = new ArrayList<>();
+      selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+      selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+      selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+      selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
-    cursor.reset();
-    while (!cursor.isDone()) {
-      for (DimensionSelector selector : selectors) {
-        IndexedInts row = selector.getRow();
-        blackhole.consume(selector.lookupName(row.get(0)));
+      cursor.reset();
+      while (!cursor.isDone()) {
+        for (DimensionSelector selector : selectors) {
+          IndexedInts row = selector.getRow();
+          blackhole.consume(selector.lookupName(row.get(0)));
+        }
+        cursor.advance();
       }
-      cursor.advance();
     }
   }
 
-  private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
+  private CursorMaker makeCursor(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
                                                                     .setGranularity(Granularities.ALL)
@@ -211,7 +213,7 @@ public class IncrementalIndexReadBenchmark
     if (filter != null) {
       builder.setFilter(filter.toFilter());
     }
-    return sa.asCursorMaker(builder.build()).makeCursors();
+    return sa.asCursorMaker(builder.build());
   }
 
   private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)

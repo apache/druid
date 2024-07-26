@@ -28,7 +28,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -165,13 +164,6 @@ public class HashJoinEngine
       public ColumnSelectorFactory getColumnSelectorFactory()
       {
         return joinColumnSelectorFactory;
-      }
-
-      @Override
-      @Nonnull
-      public DateTime getTime()
-      {
-        return leftCursor.getTime();
       }
 
       @Override

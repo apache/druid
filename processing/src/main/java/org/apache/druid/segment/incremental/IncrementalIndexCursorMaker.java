@@ -19,12 +19,8 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -58,10 +54,10 @@ public class IncrementalIndexCursorMaker implements CursorMaker
   }
 
   @Override
-  public Sequence<Cursor> makeCursors()
+  public Cursor makeCursor()
   {
     if (index.isEmpty()) {
-      return Sequences.empty();
+      return null;
     }
 
     if (builder.getQueryMetrics() != null) {
@@ -74,26 +70,19 @@ public class IncrementalIndexCursorMaker implements CursorMaker
     );
 
     if (!builder.getInterval().overlaps(dataInterval)) {
-      return Sequences.empty();
+      return null;
     }
     final Interval actualInterval = builder.getInterval().overlap(dataInterval);
-    Iterable<Interval> intervals = builder.getGranularity().getIterable(actualInterval);
-    if (builder.isDescending()) {
-      intervals = Lists.reverse(ImmutableList.copyOf(intervals));
-    }
 
-    return Sequences
-        .simple(intervals)
-        .map(i -> new IncrementalIndexCursor(
-            storageAdapter,
-            index,
-            builder.getVirtualColumns(),
-            builder.isDescending(),
-            builder.getFilter(),
-            i,
-            actualInterval,
-            builder.getGranularity()
-        ));
+    return new IncrementalIndexCursor(
+        storageAdapter,
+        index,
+        builder.getVirtualColumns(),
+        builder.isDescending(),
+        builder.getFilter(),
+        actualInterval,
+        builder.getGranularity()
+    );
   }
 
   static class IncrementalIndexCursor implements Cursor
@@ -115,7 +104,6 @@ public class IncrementalIndexCursorMaker implements CursorMaker
         VirtualColumns virtualColumns,
         boolean descending,
         @Nullable Filter filter,
-        Interval interval,
         Interval actualInterval,
         Granularity gran
     )
@@ -131,14 +119,13 @@ public class IncrementalIndexCursorMaker implements CursorMaker
       maxRowIndex = index.getLastRowIndex();
       filterMatcher = filter == null ? ValueMatchers.allTrue() : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
-      final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
       cursorIterable = index.getFacts().timeRangeIterable(
           descending,
-          timeStart,
-          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStartMillis()))
+          actualInterval.getStartMillis(),
+          actualInterval.getEndMillis()
       );
       emptyRange = !cursorIterable.iterator().hasNext();
-      time = gran.toDateTime(interval.getStartMillis());
+      time = gran.toDateTime(actualInterval.getStartMillis());
 
       reset();
     }
@@ -147,12 +134,6 @@ public class IncrementalIndexCursorMaker implements CursorMaker
     public ColumnSelectorFactory getColumnSelectorFactory()
     {
       return columnSelectorFactory;
-    }
-
-    @Override
-    public DateTime getTime()
-    {
-      return time;
     }
 
     @Override

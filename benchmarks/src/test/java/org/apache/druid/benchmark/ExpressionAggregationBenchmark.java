@@ -20,11 +20,9 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -36,6 +34,7 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.ValueType;
@@ -60,7 +59,6 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -169,25 +167,22 @@ public class ExpressionAggregationBenchmark
                                                      .setInterval(index.getDataInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
+    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
 
-    final List<Double> results = cursors
-        .map(cursor -> {
-          final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
-          bufferAggregator.init(aggregationBuffer, 0);
+      final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
+      bufferAggregator.init(aggregationBuffer, 0);
 
-          while (!cursor.isDone()) {
-            bufferAggregator.aggregate(aggregationBuffer, 0);
-            cursor.advance();
-          }
+      while (!cursor.isDone()) {
+        bufferAggregator.aggregate(aggregationBuffer, 0);
+        cursor.advance();
+      }
 
-          final Double dbl = (Double) bufferAggregator.get(aggregationBuffer, 0);
-          bufferAggregator.close();
-          return dbl;
-        })
-        .toList();
+      final Double dbl = (Double) bufferAggregator.get(aggregationBuffer, 0);
+      bufferAggregator.close();
 
-    return Iterables.getOnlyElement(results);
+      return dbl;
+    }
   }
 
   private static class NativeBufferAggregator implements BufferAggregator

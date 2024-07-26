@@ -31,11 +31,14 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
@@ -95,17 +98,17 @@ public class TimeseriesQueryEngine
     final CursorMaker cursorMaker = adapter.asCursorMaker(query.asCursorBuildSpec(timeseriesQueryMetrics));
     final Sequence<Result<TimeseriesResultValue>> result;
 
-    if (query.context().getVectorize().shouldVectorize(cursorMaker.canVectorize(), cursorMaker::cleanup)) {
+    if (query.context().getVectorize().shouldVectorize(cursorMaker.canVectorize(), cursorMaker::close)) {
       result = processVectorized(query, adapter, cursorMaker, interval, gran);
     } else {
-      result = processNonVectorized(query, cursorMaker);
+      result = processNonVectorized(query, adapter, cursorMaker, interval, gran);
     }
 
     final int limit = query.getLimit();
     if (limit < Integer.MAX_VALUE) {
-      return result.limit(limit);
+      return result.limit(limit).withBaggage(cursorMaker);
     } else {
-      return result;
+      return result.withBaggage(cursorMaker);
     }
   }
 
@@ -229,12 +232,84 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processNonVectorized(
       final TimeseriesQuery query,
-      final CursorMaker cursorMaker
+      final StorageAdapter adapter,
+      final CursorMaker cursorMaker,
+      final Interval queryInterval,
+      final Granularity gran
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
+    final Cursor cursor = cursorMaker.makeCursor();
+    if (cursor == null) {
+      return Sequences.empty();
+    }
+    final CursorGranularizer granularizer = CursorGranularizer.create(
+        adapter,
+        cursor,
+        gran,
+        queryInterval,
+        query.isDescending()
+    );
+    if (granularizer == null) {
+      return Sequences.empty();
+    }
+    final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+    return Sequences.simple(granularizer.getBucketIterable())
+                    .map(
+                        bucketInterval -> {
+                          // Whether or not the current bucket is empty
+                          boolean emptyBucket = true;
+                          boolean advancedToBucket = granularizer.advanceToBucket(bucketInterval);
+                          if ((!advancedToBucket || cursor.isDone()) && skipEmptyBuckets) {
+                            return null;
+                          }
+                          final Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
+                          final String[] aggregatorNames = new String[aggregatorSpecs.size()];
 
+                          for (int i = 0; i < aggregatorSpecs.size(); i++) {
+                            aggregators[i] = aggregatorSpecs.get(i).factorize(columnSelectorFactory);
+                            aggregatorNames[i] = aggregatorSpecs.get(i).getName();
+                          }
+                          try {
+                            if (advancedToBucket) {
+                              while (!cursor.isDone()) {
+                                for (Aggregator aggregator : aggregators) {
+                                  aggregator.aggregate();
+                                }
+                                emptyBucket = false;
+
+                                if (!granularizer.advanceCursorWithinBucket()) {
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (emptyBucket && skipEmptyBuckets) {
+                              // Return null, will get filtered out later by the Objects::nonNull filter.
+                              return null;
+                            }
+
+                            final TimeseriesResultBuilder bob = new TimeseriesResultBuilder(
+                                gran.toDateTime(bucketInterval.getStartMillis())
+                            );
+                            for (int i = 0; i < aggregatorSpecs.size(); i++) {
+                              bob.addMetric(aggregatorNames[i], aggregators[i].get());
+                            }
+
+                            return bob.build();
+                          }
+                          finally {
+                            // cleanup
+                            for (Aggregator agg : aggregators) {
+                              agg.close();
+                            }
+                          }
+                        }
+                    )
+                    .filter(Objects::nonNull);
+
+    /*
     return Sequences.filter(
         Sequences.map(
             cursorMaker.makeCursors(),
@@ -277,5 +352,6 @@ public class TimeseriesQueryEngine
         ),
         Objects::nonNull
     );
+     */
   }
 }

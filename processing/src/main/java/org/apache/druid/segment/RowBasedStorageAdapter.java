@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -29,12 +28,12 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.SimpleSequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -172,15 +171,17 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   {
     return new CursorMaker()
     {
+      final Closer closer = Closer.create();
+
       @Override
-      public Sequence<Cursor> makeCursors()
+      public Cursor makeCursor()
       {
         final Granularity gran = spec.getGranularity();
         final Interval actualInterval = spec.getInterval()
                                             .overlap(new Interval(getMinTime(), gran.bucketEnd(getMaxTime())));
 
         if (actualInterval == null) {
-          return Sequences.empty();
+          return null;
         }
 
         if (!isQueryGranularityAllowed(actualInterval, gran)) {
@@ -195,40 +196,25 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
             spec.isDescending() ? reverse(rowSequence) : rowSequence,
             rowAdapter
         );
+        closer.register(rowWalker);
+        return new RowBasedCursor<>(
+            rowWalker,
+            rowAdapter,
+            spec.getFilter(),
+            actualInterval,
+            spec.getVirtualColumns(),
+            gran,
+            spec.isDescending(),
+            rowSignature
+        );
+      }
 
-        final Iterable<Interval> bucketIntervals = gran.getIterable(actualInterval);
-
-        return Sequences.simple(
-            Iterables.transform(
-                spec.isDescending() ? reverse(bucketIntervals) : bucketIntervals,
-                bucketInterval ->
-                    (Cursor) new RowBasedCursor<>(
-                        rowWalker,
-                        rowAdapter,
-                        spec.getFilter(),
-                        bucketInterval,
-                        spec.getVirtualColumns(),
-                        gran,
-                        spec.isDescending(),
-                        rowSignature
-                    )
-            )
-        ).withBaggage(rowWalker::close);
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      final Interval queryInterval,
-      final VirtualColumns virtualColumns,
-      final Granularity gran,
-      final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, queryInterval, virtualColumns, gran, descending, queryMetrics);
   }
 
   /**

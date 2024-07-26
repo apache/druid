@@ -37,37 +37,6 @@ import javax.annotation.Nullable;
  */
 public class VectorCursorGranularizer
 {
-  // And a cursor that has been made from it.
-  private final VectorCursor cursor;
-
-  // Iterable that iterates over time buckets.
-  private final Iterable<Interval> bucketIterable;
-
-  // Vector selector for the "__time" column.
-  @Nullable
-  private final VectorValueSelector timeSelector;
-
-  // Current time vector.
-  @Nullable
-  private long[] timestamps = null;
-
-  // Offset into the vector that we should start reading from.
-  private int startOffset = 0;
-
-  // Offset into the vector that is one past the last one we should read.
-  private int endOffset = 0;
-
-  private VectorCursorGranularizer(
-      VectorCursor cursor,
-      Iterable<Interval> bucketIterable,
-      @Nullable VectorValueSelector timeSelector
-  )
-  {
-    this.cursor = cursor;
-    this.bucketIterable = bucketIterable;
-    this.timeSelector = timeSelector;
-  }
-
   @Nullable
   public static VectorCursorGranularizer create(
       final StorageAdapter storageAdapter,
@@ -100,6 +69,37 @@ public class VectorCursorGranularizer
     }
 
     return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector);
+  }
+
+  // And a cursor that has been made from it.
+  private final VectorCursor cursor;
+
+  // Iterable that iterates over time buckets.
+  private final Iterable<Interval> bucketIterable;
+
+  // Vector selector for the "__time" column.
+  @Nullable
+  private final VectorValueSelector timeSelector;
+
+  // Current time vector.
+  @Nullable
+  private long[] timestamps = null;
+
+  // Offset into the vector that we should start reading from.
+  private int startOffset = 0;
+
+  // Offset into the vector that is one past the last one we should read.
+  private int endOffset = 0;
+
+  private VectorCursorGranularizer(
+      VectorCursor cursor,
+      Iterable<Interval> bucketIterable,
+      @Nullable VectorValueSelector timeSelector
+  )
+  {
+    this.cursor = cursor;
+    this.bucketIterable = bucketIterable;
+    this.timeSelector = timeSelector;
   }
 
   public void setCurrentOffsets(final Interval bucketInterval)

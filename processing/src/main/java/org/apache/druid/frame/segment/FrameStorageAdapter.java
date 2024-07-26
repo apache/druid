@@ -21,23 +21,16 @@ package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -152,38 +145,5 @@ public class FrameStorageAdapter implements StorageAdapter
   public CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
     return cursorFactory.asCursorMaker(spec);
-  }
-
-  @Override
-  public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
-  {
-    return cursorFactory.canVectorize(filter, virtualColumns, descending);
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
-  }
-
-  @Nullable
-  @Override
-  public VectorCursor makeVectorCursor(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
   }
 }

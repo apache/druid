@@ -38,7 +38,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
@@ -56,7 +55,21 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
   public CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
     final CursorMaker delegate = super.asCursorMaker(spec);
-    return () -> delegate.makeCursors().map(DecoratedCursor::new);
+    return new CursorMaker()
+    {
+      @Nullable
+      @Override
+      public Cursor makeCursor()
+      {
+        return new DecoratedCursor(delegate.makeCursor());
+      }
+
+      @Override
+      public void close()
+      {
+        delegate.close();
+      }
+    };
   }
 
 
@@ -169,12 +182,6 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
           return TestArrayStorageAdapter.this.getColumnCapabilities(column);
         }
       };
-    }
-
-    @Override
-    public DateTime getTime()
-    {
-      return cursor.getTime();
     }
 
     @Override

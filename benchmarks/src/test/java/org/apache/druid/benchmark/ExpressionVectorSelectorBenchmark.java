@@ -22,7 +22,6 @@ package org.apache.druid.benchmark;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -157,7 +156,7 @@ public class ExpressionVectorSelectorBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
-    final CursorMaker cursorMaker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec);
+    final CursorMaker cursorMaker = closer.register(new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec));
     if (vectorize) {
       VectorCursor cursor = cursorMaker.makeVectorCursor();
       if (outputType.isNumeric()) {
@@ -178,18 +177,32 @@ public class ExpressionVectorSelectorBenchmark
         closer.register(cursor);
       }
     } else {
-      final Sequence<Cursor> cursors = cursorMaker.makeCursors();
-      int rowCount = cursors
-          .map(cursor -> {
-            final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-            int rows = 0;
-            while (!cursor.isDone()) {
-              blackhole.consume(selector.getObject());
-              rows++;
-              cursor.advance();
-            }
-            return rows;
-          }).accumulate(0, (acc, in) -> acc + in);
+      final Cursor cursor = cursorMaker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      int rowCount = 0;
+      if (outputType.isNumeric()) {
+        if (outputType.is(ExprType.DOUBLE)) {
+          while (!cursor.isDone()) {
+            blackhole.consume(selector.isNull());
+            blackhole.consume(selector.getDouble());
+            rowCount++;
+            cursor.advance();
+          }
+        } else {
+          while (!cursor.isDone()) {
+            blackhole.consume(selector.isNull());
+            blackhole.consume(selector.getLong());
+            rowCount++;
+            cursor.advance();
+          }
+        }
+      } else {
+        while (!cursor.isDone()) {
+          blackhole.consume(selector.getObject());
+          rowCount++;
+          cursor.advance();
+        }
+      }
 
       blackhole.consume(rowCount);
     }

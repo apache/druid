@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -35,9 +34,9 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.DateTime;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -73,7 +72,21 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
       public CursorMaker asCursorMaker(CursorBuildSpec spec)
       {
         final CursorMaker delegate = super.asCursorMaker(spec);
-        return () -> delegate.makeCursors().map(cursor -> new CursorNoAdvance(cursor, countDownLatch));
+        return new CursorMaker()
+        {
+          @Nullable
+          @Override
+          public Cursor makeCursor()
+          {
+            return new CursorNoAdvance(delegate.makeCursor(), countDownLatch);
+          }
+
+          @Override
+          public void close()
+          {
+            delegate.close();
+          }
+        };
       }
 
       private static class CursorNoAdvance implements Cursor
@@ -91,12 +104,6 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         public ColumnSelectorFactory getColumnSelectorFactory()
         {
           return cursor.getColumnSelectorFactory();
-        }
-
-        @Override
-        public DateTime getTime()
-        {
-          return cursor.getTime();
         }
 
         @Override
@@ -222,25 +229,25 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         joinFilterPreAnalysis
     );
 
-    Cursor cursor = Iterables.getOnlyElement(
-        hashJoinSegmentStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors().toList()
-    );
+    try (final CursorMaker maker = hashJoinSegmentStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = maker.makeCursor();
 
-    ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
-    {
-      @Override
-      public boolean matches(boolean includeUnknown)
+      ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
       {
-        return false;
-      }
+        @Override
+        public boolean matches(boolean includeUnknown)
+        {
+          return false;
+        }
 
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
 
-      }
-    });
+        }
+      });
 
-    cursor.advance();
+      cursor.advance();
+    }
   }
 }

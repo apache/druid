@@ -92,12 +92,6 @@ public class RowBasedCursor<RowType> implements Cursor
   }
 
   @Override
-  public DateTime getTime()
-  {
-    return cursorTime;
-  }
-
-  @Override
   public void advance()
   {
     advanceUninterruptibly();

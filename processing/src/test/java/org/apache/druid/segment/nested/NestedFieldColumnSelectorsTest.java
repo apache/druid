@@ -24,9 +24,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
@@ -35,6 +32,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.LongColumnSelector;
@@ -352,10 +350,8 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
                                                      .setVirtualColumns(virtualColumns)
                                                      .setGranularity(Granularities.DAY)
                                                      .build();
-    Sequence<Cursor> cursorSequence = storageAdapter.asCursorMaker(buildSpec).makeCursors();
-    final Yielder<Cursor> yielder = Yielders.each(cursorSequence);
-    closer.register(yielder);
-    final Cursor cursor = yielder.get();
+    final CursorMaker maker = closer.register(storageAdapter.asCursorMaker(buildSpec));
+    final Cursor cursor = maker.makeCursor();
     return cursor.getColumnSelectorFactory();
   }
 

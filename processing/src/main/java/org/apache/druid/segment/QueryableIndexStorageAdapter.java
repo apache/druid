@@ -21,9 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -32,7 +29,6 @@ import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -187,56 +183,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         index,
         CursorBuildSpec.builder(spec).setInterval(actualInterval).build()
     );
-  }
-
-  @Override
-  public boolean canVectorize(
-      @Nullable final Filter filter,
-      final VirtualColumns virtualColumns,
-      final boolean descending
-  )
-  {
-    // For safety, this uses the old-school canVectorize implementation instead of delegating to the CursorMaker,
-    // because QueryableIndexCursorMaker expects to make cursors one way or another and so opens stuff that must be
-    // cleaned if for some reason a cursor or vector cursor is not constructed
-    if (filter != null) {
-
-      final boolean filterCanVectorize = filter.canVectorizeMatcher(this);
-
-      if (!filterCanVectorize) {
-        return false;
-      }
-    }
-
-    // vector cursors can't iterate backwards yet
-    return !descending;
-  }
-
-  @Override
-  @Nullable
-  public VectorCursor makeVectorCursor(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final boolean descending,
-      final int vectorSize,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Override

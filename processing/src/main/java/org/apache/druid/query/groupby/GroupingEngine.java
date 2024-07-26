@@ -47,6 +47,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
@@ -487,6 +488,8 @@ public class GroupingEngine
 
     final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
 
+    Closer closer = Closer.create();
+    closer.register(bufferHolder);
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
           query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP)
@@ -499,15 +502,12 @@ public class GroupingEngine
       // group by specific vectorization check:
 
       final CursorBuildSpec buildSpec = query.asCursorBuildSpec(groupByQueryMetrics);
-      final CursorMaker cursorMaker = storageAdapter.asCursorMaker(buildSpec);
+      final CursorMaker cursorMaker = closer.register(storageAdapter.asCursorMaker(buildSpec));
 
       final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
       final boolean canVectorize = cursorMaker.canVectorize() &&
                                    VectorGroupByEngine.canVectorizeDimensions(inspector, query.getDimensions());
-      final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(
-          canVectorize,
-          cursorMaker::cleanup
-      );
+      final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(canVectorize);
       final Sequence<ResultRow> result;
       if (shouldVectorize) {
         result = VectorGroupByEngine.process(
@@ -525,6 +525,7 @@ public class GroupingEngine
             query,
             storageAdapter,
             cursorMaker,
+            buildSpec,
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
@@ -532,10 +533,10 @@ public class GroupingEngine
         );
       }
 
-      return result.withBaggage(bufferHolder);
+      return result.withBaggage(closer);
     }
     catch (Throwable e) {
-      bufferHolder.close();
+      CloseableUtils.closeAndWrapExceptions(closer);
       throw e;
     }
   }

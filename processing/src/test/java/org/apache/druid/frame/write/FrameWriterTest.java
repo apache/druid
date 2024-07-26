@@ -48,7 +48,9 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.RowIdSupplier;
@@ -575,49 +577,44 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       inputSegment = new FrameSegment(inputFrame, FrameReader.create(signature), SegmentId.dummy("xxx"));
     }
 
-    return inputSegment.asStorageAdapter()
-                       .asCursorMaker(CursorBuildSpec.FULL_SCAN)
-                       .makeCursors()
-                       .accumulate(
-                           null,
-                           (retVal, cursor) -> {
-                             int numRows = 0;
-                             final FrameWriterFactory frameWriterFactory;
-                             if (FrameType.ROW_BASED.equals(outputFrameType)) {
-                               frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
-                                   new SingleMemoryAllocatorFactory(allocator),
-                                   signature,
-                                   keyColumns,
-                                   false
-                               );
-                             } else {
-                               frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
-                                   new SingleMemoryAllocatorFactory(allocator),
-                                   signature,
-                                   keyColumns
-                               );
-                             }
+    try (final CursorMaker maker = inputSegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = maker.makeCursor();
 
-                             ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+      int numRows = 0;
+      final FrameWriterFactory frameWriterFactory;
+      if (FrameType.ROW_BASED.equals(outputFrameType)) {
+        frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+            new SingleMemoryAllocatorFactory(allocator),
+            signature,
+            keyColumns,
+            false
+        );
+      } else {
+        frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+            new SingleMemoryAllocatorFactory(allocator),
+            signature,
+            keyColumns
+        );
+      }
 
-                             if (capabilitiesAdjustFn != null) {
-                               columnSelectorFactory = new OverrideCapabilitiesColumnSelectorFactory(
-                                   columnSelectorFactory,
-                                   capabilitiesAdjustFn
-                               );
-                             }
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-                             try (final FrameWriter frameWriter =
-                                      frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
-                               while (!cursor.isDone() && frameWriter.addSelection()) {
-                                 numRows++;
-                                 cursor.advance();
-                               }
+      if (capabilitiesAdjustFn != null) {
+        columnSelectorFactory = new OverrideCapabilitiesColumnSelectorFactory(
+            columnSelectorFactory,
+            capabilitiesAdjustFn
+        );
+      }
 
-                               return Pair.of(Frame.wrap(frameWriter.toByteArray()), numRows);
-                             }
-                           }
-                       );
+      try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+        while (!cursor.isDone() && frameWriter.addSelection()) {
+          numRows++;
+          cursor.advance();
+        }
+
+        return Pair.of(Frame.wrap(frameWriter.toByteArray()), numRows);
+      }
+    }
   }
 
   /**

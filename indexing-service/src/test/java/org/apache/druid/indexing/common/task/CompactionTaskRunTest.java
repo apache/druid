@@ -61,7 +61,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -73,6 +72,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -1706,18 +1706,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
-                                                     .asCursorMaker(buildSpec)
-                                                     .makeCursors();
+      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
+        final Cursor cursor = maker.makeCursor();
 
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertTrue(factory.getColumnCapabilities("spatial").hasSpatialIndexes());
         while (!cursor.isDone()) {
           final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
           final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("spatial", "spatial"));
+          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec(
+              "spatial",
+              "spatial"
+          ));
           final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
 
 
@@ -1733,11 +1734,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
+      Assert.assertEquals(spatialrows, rowsFromSegment);
     }
-    Assert.assertEquals(spatialrows, rowsFromSegment);
   }
 
   @Test
@@ -1839,11 +1838,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
-                                                     .asCursorMaker(buildSpec)
-                                                     .makeCursors();
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
+        final Cursor cursor = maker.makeCursor();
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
@@ -1871,11 +1867,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
+      Assert.assertEquals(rows, rowsFromSegment);
     }
-    Assert.assertEquals(rows, rowsFromSegment);
   }
 
   private Pair<TaskStatus, DataSegmentsWithSchemas> runIndexTask() throws Exception
@@ -2072,11 +2066,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter()
-                                                     .asCursorMaker(buildSpec)
-                                                     .makeCursors();
+      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
+        final Cursor cursor = maker.makeCursor();
 
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
         cursor.reset();
         while (!cursor.isDone()) {
           final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
@@ -2104,9 +2096,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
 
     return rowsFromSegment;

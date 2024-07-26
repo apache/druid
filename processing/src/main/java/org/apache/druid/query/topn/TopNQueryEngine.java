@@ -23,9 +23,13 @@ import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -68,18 +72,34 @@ public class TopNQueryEngine
 
     final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
 
-    return Sequences.filter(
-        Sequences.map(
-            adapter.asCursorMaker(query.asCursorBuildSpec(queryMetrics)).makeCursors(),
-            input -> {
-              if (queryMetrics != null) {
-                queryMetrics.cursor(input);
-              }
-              return mapFn.apply(input, queryMetrics);
-            }
-        ),
-        Predicates.notNull()
+    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(queryMetrics);
+    final CursorMaker maker = adapter.asCursorMaker(buildSpec);
+    final Cursor cursor = maker.makeCursor();
+    if (cursor == null) {
+      return Sequences.withBaggage(Sequences.empty(), maker);
+    }
+    final CursorGranularizer granularizer = CursorGranularizer.create(
+        adapter,
+        cursor,
+        buildSpec.getGranularity(),
+        buildSpec.getInterval(),
+        buildSpec.isDescending()
     );
+    if (granularizer == null) {
+      return Sequences.withBaggage(Sequences.empty(), maker);
+    }
+
+    if (queryMetrics != null) {
+      queryMetrics.cursor(cursor);
+    }
+    return Sequences.filter(
+        Sequences.simple(granularizer.getBucketIterable())
+                 .map(bucketInterval -> {
+                   granularizer.advanceToBucket(bucketInterval);
+                   return mapFn.apply(cursor, granularizer, queryMetrics);
+                 }),
+                 Predicates.notNull()
+    ).withBaggage(maker);
   }
 
   /**

@@ -21,11 +21,12 @@ package org.apache.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntRBTreeMap;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
@@ -73,47 +74,43 @@ public class CursorOnlyStrategy extends SearchStrategy
     public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
       final StorageAdapter adapter = segment.asStorageAdapter();
-      final Sequence<Cursor> cursors = adapter.asCursorMaker(query.asCursorBuildSpec(null)).makeCursors();
+      final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
+        final Cursor cursor = maker.makeCursor();
 
-      final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
-      retVal.defaultReturnValue(0);
+        final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
+        retVal.defaultReturnValue(0);
 
-      cursors.accumulate(
-          retVal,
-          (map, cursor) -> {
-            if (map.size() >= limit) {
-              return map;
-            }
+        if (cursor == null) {
+          return retVal;
+        }
 
-            final ColumnSelectorPlus<SearchColumnSelectorStrategy>[] selectorPlusList = DimensionHandlerUtils.createColumnSelectorPluses(
-                SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
-                dimsToSearch,
-                cursor.getColumnSelectorFactory()
+        final ColumnSelectorPlus<SearchColumnSelectorStrategy>[] selectorPlusList = DimensionHandlerUtils.createColumnSelectorPluses(
+            SearchQueryRunner.SEARCH_COLUMN_SELECTOR_STRATEGY_FACTORY,
+            dimsToSearch,
+            cursor.getColumnSelectorFactory()
+        );
+
+        while (!cursor.isDone()) {
+          for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
+            selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
+                selectorPlus.getOutputName(),
+                selectorPlus.getSelector(),
+                searchQuerySpec,
+                limit,
+                retVal
             );
 
-            while (!cursor.isDone()) {
-              for (ColumnSelectorPlus<SearchColumnSelectorStrategy> selectorPlus : selectorPlusList) {
-                selectorPlus.getColumnSelectorStrategy().updateSearchResultSet(
-                    selectorPlus.getOutputName(),
-                    selectorPlus.getSelector(),
-                    searchQuerySpec,
-                    limit,
-                    map
-                );
-
-                if (map.size() >= limit) {
-                  return map;
-                }
-              }
-
-              cursor.advance();
+            if (retVal.size() >= limit) {
+              return retVal;
             }
-
-            return map;
           }
-      );
 
-      return retVal;
+          cursor.advance();
+        }
+
+        return retVal;
+      }
     }
   }
 }

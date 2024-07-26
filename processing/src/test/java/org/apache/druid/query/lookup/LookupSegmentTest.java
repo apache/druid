@@ -25,11 +25,11 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -192,37 +192,31 @@ public class LookupSegmentTest
   @Test
   public void test_asStorageAdapter_makeCursors()
   {
-    final Sequence<Cursor> cursors = LOOKUP_SEGMENT.asStorageAdapter().asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(Intervals.of("1970/PT1H"))
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.of("1970/PT1H"))
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = LOOKUP_SEGMENT.asStorageAdapter().asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
 
-    final List<Pair<String, String>> kvs = new ArrayList<>();
+      final List<Pair<String, String>> kvs = new ArrayList<>();
 
-    cursors.accumulate(
-        null,
-        (ignored, cursor) -> {
-          final ColumnValueSelector keySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("k");
-          final ColumnValueSelector valueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      final ColumnValueSelector keySelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("k");
+      final ColumnValueSelector valueSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
 
-          while (!cursor.isDone()) {
-            kvs.add(Pair.of(String.valueOf(keySelector.getObject()), String.valueOf(valueSelector.getObject())));
-            cursor.advanceUninterruptibly();
-          }
+      while (!cursor.isDone()) {
+        kvs.add(Pair.of(String.valueOf(keySelector.getObject()), String.valueOf(valueSelector.getObject())));
+        cursor.advanceUninterruptibly();
+      }
 
-          return null;
-        }
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            Pair.of("a", "b"),
-            Pair.of("x", "y")
-        ),
-        kvs
-    );
+      Assert.assertEquals(
+          ImmutableList.of(
+              Pair.of("a", "b"),
+              Pair.of("x", "y")
+          ),
+          kvs
+      );
+    }
   }
 
   @Test

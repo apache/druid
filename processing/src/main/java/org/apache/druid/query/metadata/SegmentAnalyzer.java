@@ -24,14 +24,13 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Accumulator;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -280,37 +279,25 @@ public class SegmentAnalyzer
                                                        .setInterval(new Interval(start, end))
                                                        .setGranularity(Granularities.ALL)
                                                        .build();
-      final Sequence<Cursor> cursors = storageAdapter.asCursorMaker(buildSpec).makeCursors();
+      try (final CursorMaker maker = storageAdapter.asCursorMaker(buildSpec)) {
+        final Cursor cursor = maker.makeCursor();
 
-      size = cursors.accumulate(
-          0L,
-          new Accumulator<Long, Cursor>()
-          {
-            @Override
-            public Long accumulate(Long accumulated, Cursor cursor)
-            {
-              DimensionSelector selector = cursor
-                  .getColumnSelectorFactory()
-                  .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
-              if (selector == null) {
-                return accumulated;
+        if (cursor != null) {
+          final DimensionSelector selector =
+              cursor.getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
+          while (!cursor.isDone()) {
+            final IndexedInts row = selector.getRow();
+            for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
+              final String dimVal = selector.lookupName(row.get(i));
+              if (dimVal != null && !dimVal.isEmpty()) {
+                size += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
               }
-              long current = accumulated;
-              while (!cursor.isDone()) {
-                final IndexedInts row = selector.getRow();
-                for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
-                  final String dimVal = selector.lookupName(row.get(i));
-                  if (dimVal != null && !dimVal.isEmpty()) {
-                    current += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
-                  }
-                }
-                cursor.advance();
-              }
-
-              return current;
             }
+            cursor.advance();
           }
-      );
+        }
+      }
     }
 
     if (analyzingMinMax()) {

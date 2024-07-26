@@ -19,10 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
@@ -41,15 +37,17 @@ public class TombstoneSegmentStorageAdapterTest
     StorageAdapter sa = new StorageAdapter()
     {
       @Override
-      public Sequence<Cursor> makeCursors(
-          @Nullable Filter filter,
-          Interval interval,
-          VirtualColumns virtualColumns,
-          Granularity gran,
-          boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics)
+      public CursorMaker asCursorMaker(CursorBuildSpec spec)
       {
-        return null;
+        return new CursorMaker()
+        {
+          @Nullable
+          @Override
+          public Cursor makeCursor()
+          {
+            return null;
+          }
+        };
       }
 
       @Override

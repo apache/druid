@@ -33,7 +33,6 @@ import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -122,9 +121,7 @@ public class FrameProcessors
                                                            .build();
     // Safe to never close the Sequence that the FrameCursor comes from, because it does not need to be closed.
     // Refer to FrameStorageAdapter#makeCursors.
-    return (FrameCursor) Yielders.each(
-        new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(cursorBuildSpec).makeCursors()
-    ).get();
+    return (FrameCursor) new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(cursorBuildSpec).makeCursor();
   }
 
   /**

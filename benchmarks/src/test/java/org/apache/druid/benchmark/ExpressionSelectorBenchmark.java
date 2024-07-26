@@ -25,8 +25,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
@@ -36,9 +38,11 @@ import org.apache.druid.query.extraction.TimeFormatExtractionFn;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -63,8 +67,8 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
+
 import java.util.BitSet;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -142,372 +146,314 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFloorUsingExpression(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "timestamp_floor(__time, 'PT1H')",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "timestamp_floor(__time, 'PT1H')",
+                                                                 ColumnType.LONG,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void timeFloorUsingExtractionFn(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(
-                  new ExtractionDimensionSpec(
-                      ColumnHolder.TIME_COLUMN_NAME,
-                      "v",
-                      new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
-                  )
-              );
-          consumeDimension(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(
+              new ExtractionDimensionSpec(
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  "v",
+                  new TimeFormatExtractionFn(null, null, null, Granularities.HOUR, true)
+              )
+          );
+      consumeDimension(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void timeFloorUsingCursor(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.HOUR)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.HOUR)
+                                                     .build();
+    final StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
+    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final CursorGranularizer granularizer = CursorGranularizer.create(
+          adapter,
+          cursor,
+          buildSpec.getGranularity(),
+          buildSpec.getInterval(),
+          buildSpec.isDescending()
+      );
+      final Sequence<Long> results =
+          Sequences.simple(granularizer.getBucketIterable())
+                   .map(bucketInterval -> {
+                     if (!granularizer.advanceToBucket(bucketInterval)) {
+                       return 0L;
+                     }
+                     long count = 0L;
+                     while (!cursor.isDone()) {
+                       count++;
+                       if (!granularizer.advanceCursorWithinBucket()) {
+                         break;
+                       }
+                     }
+                     return count;
+                   });
 
-    final List<Long> results = cursors
-        .map(cursor -> {
-          long count = 0L;
-          while (!cursor.isDone()) {
-            count++;
-            cursor.advance();
-          }
-          return count;
-        })
-        .toList();
+      long count = 0L;
+      for (Long result : results.toList()) {
+        count += result;
+      }
 
-    long count = 0L;
-    for (Long result : results) {
-      count += result;
+      blackhole.consume(count);
     }
-
-    blackhole.consume(count);
   }
 
   @Benchmark
   public void timeFormatUsingExpression(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "timestamp_format(__time, 'yyyy-MM-dd')",
-                                   ColumnType.STRING,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "timestamp_format(__time, 'yyyy-MM-dd')",
+                                                                 ColumnType.STRING,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(
-              DefaultDimensionSpec.of("v")
-          );
-          consumeDimension(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(
+          DefaultDimensionSpec.of("v")
+      );
+      consumeDimension(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void timeFormatUsingExtractionFn(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
-
-    final List<?> results = cursors
-        .map(cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(
-                  new ExtractionDimensionSpec(
-                      ColumnHolder.TIME_COLUMN_NAME,
-                      "v",
-                      new TimeFormatExtractionFn("yyyy-MM-dd", null, null, null, false)
-                  )
-              );
-          consumeDimension(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(
+              new ExtractionDimensionSpec(
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  "v",
+                  new TimeFormatExtractionFn("yyyy-MM-dd", null, null, null, false)
+              )
+          );
+      consumeDimension(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void strlenUsingExpressionAsLong(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "strlen(s)",
-                                   ColumnType.STRING,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "strlen(s)",
+                                                                 ColumnType.STRING,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void strlenUsingExpressionAsString(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "strlen(s)",
-                                   ColumnType.STRING,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "strlen(s)",
+                                                                 ColumnType.STRING,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("v", "v", ColumnType.STRING));
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("v", "v", ColumnType.STRING));
 
-          consumeDimension(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+      consumeDimension(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void strlenUsingExtractionFn(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new ExtractionDimensionSpec("x", "v", StrlenExtractionFn.instance()));
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new ExtractionDimensionSpec("x", "v", StrlenExtractionFn.instance()));
 
-          consumeDimension(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+      consumeDimension(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void arithmeticOnLong(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "n + 1",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "n + 1",
+                                                                 ColumnType.LONG,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void stringConcatAndCompareOnLong(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "concat(n, ' is my favorite number') == '3 is my favorite number'",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
-
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "concat(n, ' is my favorite number') == '3 is my favorite number'",
+                                                                 ColumnType.LONG,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void caseSearched1(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "case_searched(s == 'asd' || isnull(s) || s == 'xxx', 1, s == 'foo' || s == 'bar', 2, 3)",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
-
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "case_searched(s == 'asd' || isnull(s) || s == 'xxx', 1, s == 'foo' || s == 'bar', 2, 3)",
+                                                                 ColumnType.LONG,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void caseSearched2(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "case_searched(s == 'asd' || isnull(s) || n == 1, 1, n == 2, 2, 3)",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
-
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "case_searched(s == 'asd' || isnull(s) || n == 1, 1, n == 2, 2, 3)",
+                                                                 ColumnType.LONG,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
 
   @Benchmark
   public void caseSearched100(Blackhole blackhole)
   {
-
     StringBuilder caseBranches = new StringBuilder();
     for (int i = 0; i < 100; i++) {
       caseBranches.append(
@@ -519,114 +465,96 @@ public class ExpressionSelectorBenchmark
       );
     }
 
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "case_searched(s == 'asd' || isnull(s) || n == 1, 1, " + caseBranches + " 3)",
-                                   ColumnType.LONG,
-                                   TestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "case_searched(s == 'asd' || isnull(s) || n == 1, 1, " + caseBranches + " 3)",
+                                                                 ColumnType.LONG,
+                                                                 TestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void caseSearchedWithLookup(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               new ExpressionVirtualColumn(
-                                   "v",
-                                   "case_searched(n == 1001, -1, "
-                                   + "lookup(s, 'lookyloo') == 'asd1', 1, "
-                                   + "lookup(s, 'lookyloo') == 'asd2', 2, "
-                                   + "lookup(s, 'lookyloo') == 'asd3', 3, "
-                                   + "lookup(s, 'lookyloo') == 'asd4', 4, "
-                                   + "lookup(s, 'lookyloo') == 'asd5', 5, "
-                                   + "-2)",
-                                   ColumnType.LONG,
-                                   LookupEnabledTestExprMacroTable.INSTANCE
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             new ExpressionVirtualColumn(
+                                                                 "v",
+                                                                 "case_searched(n == 1001, -1, "
+                                                                 + "lookup(s, 'lookyloo') == 'asd1', 1, "
+                                                                 + "lookup(s, 'lookyloo') == 'asd2', 2, "
+                                                                 + "lookup(s, 'lookyloo') == 'asd3', 3, "
+                                                                 + "lookup(s, 'lookyloo') == 'asd4', 4, "
+                                                                 + "lookup(s, 'lookyloo') == 'asd5', 5, "
+                                                                 + "-2)",
+                                                                 ColumnType.LONG,
+                                                                 LookupEnabledTestExprMacroTable.INSTANCE
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
   @Benchmark
   public void caseSearchedWithLookup2(Blackhole blackhole)
   {
-    final Sequence<Cursor> cursors = new QueryableIndexStorageAdapter(index).asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(index.getDataInterval())
-                       .setGranularity(Granularities.ALL)
-                       .setVirtualColumns(
-                           VirtualColumns.create(
-                               ImmutableList.of(
-                                   new ExpressionVirtualColumn(
-                                       "ll",
-                                       "lookup(s, 'lookyloo')",
-                                       ColumnType.STRING,
-                                       LookupEnabledTestExprMacroTable.INSTANCE
-                                   ),
-                                   new ExpressionVirtualColumn(
-                                       "v",
-                                       "case_searched(n == 1001, -1, "
-                                       + "ll == 'asd1', 1, "
-                                       + "ll == 'asd2', 2, "
-                                       + "ll == 'asd3', 3, "
-                                       + "ll == 'asd4', 4, "
-                                       + "ll == 'asd5', 5, "
-                                       + "-2)",
-                                       ColumnType.LONG,
-                                       LookupEnabledTestExprMacroTable.INSTANCE
-                                   )
-                               )
-                           )
-                       )
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(index.getDataInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             ImmutableList.of(
+                                                                 new ExpressionVirtualColumn(
+                                                                     "ll",
+                                                                     "lookup(s, 'lookyloo')",
+                                                                     ColumnType.STRING,
+                                                                     LookupEnabledTestExprMacroTable.INSTANCE
+                                                                 ),
+                                                                 new ExpressionVirtualColumn(
+                                                                     "v",
+                                                                     "case_searched(n == 1001, -1, "
+                                                                     + "ll == 'asd1', 1, "
+                                                                     + "ll == 'asd2', 2, "
+                                                                     + "ll == 'asd3', 3, "
+                                                                     + "ll == 'asd4', 4, "
+                                                                     + "ll == 'asd5', 5, "
+                                                                     + "-2)",
+                                                                     ColumnType.LONG,
+                                                                     LookupEnabledTestExprMacroTable.INSTANCE
+                                                                 )
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
 
-    final List<?> results = cursors
-        .map(cursor -> {
-          final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
-          consumeLong(cursor, selector, blackhole);
-          return null;
-        })
-        .toList();
-
-    blackhole.consume(results);
+    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
+      final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
+      consumeLong(cursor, selector, blackhole);
+    }
   }
 
 

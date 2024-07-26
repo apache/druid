@@ -24,23 +24,20 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
@@ -321,16 +318,17 @@ public class TopNMetricSpecOptimizationsTest
       }
 
       @Override
-      public Sequence<Cursor> makeCursors(
-          @Nullable Filter filter,
-          Interval interval,
-          VirtualColumns virtualColumns,
-          Granularity gran,
-          boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics
-      )
+      public CursorMaker asCursorMaker(CursorBuildSpec spec)
       {
-        return null;
+        return new CursorMaker()
+        {
+          @Nullable
+          @Override
+          public Cursor makeCursor()
+          {
+            return null;
+          }
+        };
       }
     };
 

@@ -20,30 +20,21 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.vector.VectorCursor;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 
-public interface CursorMaker
+public interface CursorMaker extends Closeable
 {
   /**
-   * Create a {@link Sequence} of {@link Cursor} for use with non-vectorized query engines. Each {@link Cursor} of the
-   * sequence corresponds to a {@link org.apache.druid.java.util.common.granularity.Granularity} bucket determined by
-   * {@link CursorBuildSpec#getGranularity()}.
-   * <p>
-   * Consuming this {@link Sequence} will automatically close all resources associated with this {@link CursorMaker}
-   * so calling {@link #cleanup()} is not needed.
+   * Create a {@link Cursor} for use with non-vectorized query engines.
    */
-  Sequence<Cursor> makeCursors();
+  @Nullable
+  Cursor makeCursor();
 
   /**
    * Create a {@link VectorCursor} for use with vectorized query engines.
-   * <p>
-   * Advancing this {@link VectorCursor} to the end or explicitly calling {@link VectorCursor#close()} will
-   * automatically close all resources associated with this {@link CursorMaker} so calling {@link #cleanup()} is not
-   * needed.
    */
   @Nullable
   default VectorCursor makeVectorCursor()
@@ -52,8 +43,7 @@ public interface CursorMaker
   }
 
   /**
-   * Returns true if this {@link CursorMaker} supports creating vectorized selectors. This operation may acquire
-   * underlying resources, so calling {@link #cleanup()} is necessary if no cursors are created and consumed.
+   * Returns true if this {@link CursorMaker} supports calling {@link #makeVectorCursor()}.
    */
   default boolean canVectorize()
   {
@@ -61,12 +51,12 @@ public interface CursorMaker
   }
 
   /**
-   * Release any resources acquired if cursors are not consumed. Typically consuming a cursor or vector cursor releases
-   * the resources upon completion, but if for some reason this will not happen, this method must be called.
+   * Release any resources acquired by cursors.
    */
-  default void cleanup()
+  @Override
+  default void close()
   {
-    // nothing to cleanup
+    // nothing to close
   }
 
   CursorMaker EMPTY = new CursorMaker()
@@ -78,9 +68,9 @@ public interface CursorMaker
     }
 
     @Override
-    public Sequence<Cursor> makeCursors()
+    public Cursor makeCursor()
     {
-      return Sequences.empty();
+      return null;
     }
 
     @Nullable

@@ -33,6 +33,7 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -55,6 +57,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -232,10 +235,14 @@ public class FrameTestUtil
     return new FrameChannelSequence(channel)
         .flatMap(
             frame ->
-                new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                    .asCursorMaker(CursorBuildSpec.FULL_SCAN)
-                    .makeCursors()
-                    .flatMap(cursor -> readRowsFromCursor(cursor, frameReader.signature()))
+                readRowsFromCursor(
+                    // if FrameStorageAdapter.asCursorMaker ever needs closing.. this needs to change to add to a
+                    // closer that is tied to baggage of this sequence...
+                    new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
+                        .asCursorMaker(CursorBuildSpec.FULL_SCAN)
+                        .makeCursor(),
+                    frameReader.signature()
+                )
         );
   }
 
@@ -256,9 +263,8 @@ public class FrameTestUtil
   )
   {
     final RowSignature signatureToUse = signature == null ? adapter.getRowSignature() : signature;
-    return makeCursorsForAdapter(adapter, populateRowNumber).flatMap(
-        cursor -> readRowsFromCursor(cursor, signatureToUse)
-    );
+    final Pair<Cursor, Closeable> cursorAndCloseable = makeCursorForAdapter(adapter, populateRowNumber);
+    return readRowsFromCursor(cursorAndCloseable.lhs, signatureToUse).withBaggage(cursorAndCloseable.rhs);
   }
 
   /**
@@ -269,7 +275,7 @@ public class FrameTestUtil
    * @param adapter           the adapter
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static Sequence<Cursor> makeCursorsForAdapter(
+  public static Pair<Cursor, Closeable> makeCursorForAdapter(
       final StorageAdapter adapter,
       final boolean populateRowNumber
   )
@@ -289,15 +295,14 @@ public class FrameTestUtil
                                                      .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
-    return adapter.asCursorMaker(buildSpec)
-                  .makeCursors()
-                  .map(cursor -> {
-                    if (populateRowNumber) {
-                      return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);
-                    } else {
-                      return cursor;
-                    }
-                  });
+
+    final CursorMaker maker = adapter.asCursorMaker(buildSpec);
+    final Cursor cursor = maker.makeCursor();
+    if (populateRowNumber) {
+      return new Pair<>(new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn), maker);
+    } else {
+      return new Pair<>(cursor, maker);
+    }
   }
 
   public static Sequence<List<Object>> readRowsFromCursor(final Cursor cursor, final RowSignature signature)

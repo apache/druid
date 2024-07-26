@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -40,7 +40,6 @@ public interface CursorFactory
 {
   default CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
-
     return new CursorMaker()
     {
       @Override
@@ -50,15 +49,17 @@ public interface CursorFactory
       }
 
       @Override
-      public Sequence<Cursor> makeCursors()
+      public Cursor makeCursor()
       {
-        return CursorFactory.this.makeCursors(
-            spec.getFilter(),
-            spec.getInterval(),
-            spec.getVirtualColumns(),
-            spec.getGranularity(),
-            spec.isDescending(),
-            spec.getQueryMetrics()
+        return Iterables.getOnlyElement(
+            CursorFactory.this.makeCursors(
+                spec.getFilter(),
+                spec.getInterval(),
+                spec.getVirtualColumns(),
+                Granularities.ALL,
+                spec.isDescending(),
+                spec.getQueryMetrics()
+            ).toList()
         );
       }
 
@@ -74,6 +75,12 @@ public interface CursorFactory
             spec.getQueryMetrics()
         );
       }
+
+      @Override
+      public void close()
+      {
+        // consuming sequences of CursorFactory are expected to close themselves.
+      }
     };
   }
 
@@ -84,7 +91,8 @@ public interface CursorFactory
    * mode if this method returns false.
    *
    * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call {@link CursorMaker#canVectorize()}.
-   * Implementors should implement {@link #asCursorMaker(CursorBuildSpec)} instead.
+   * Implementors should implement {@link #asCursorMaker(CursorBuildSpec)} instead.  This method is no longer
+   * implemented by any built-in factories.
    */
   @Deprecated
   default boolean canVectorize(
@@ -93,13 +101,13 @@ public interface CursorFactory
       boolean descending
   )
   {
-    return false;
+    throw DruidException.defensive("canVectorize is no longer supported, use asCursorMaker instead");
   }
 
   /**
    * Creates a sequence of Cursors, one for each time-granular bucket (based on the provided Granularity).
    *
-   * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call {@link CursorMaker#makeCursors()}.
+   * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call {@link CursorMaker#makeCursor()}.
    * Implementors should implement {@link #asCursorMaker(CursorBuildSpec)} instead. Recommend for implementors to fill
    * this method in with:
    * <pre>
@@ -113,16 +121,20 @@ public interface CursorFactory
    *                                                      .build();
    *     return asCursorMaker(buildSpec).makeCursors();
    * </pre>
+   * This method is no longer implemented by any built-in factories.
    */
   @Deprecated
-  Sequence<Cursor> makeCursors(
+  default Sequence<Cursor> makeCursors(
       @Nullable Filter filter,
       Interval interval,
       VirtualColumns virtualColumns,
       Granularity gran,
       boolean descending,
       @Nullable QueryMetrics<?> queryMetrics
-  );
+  )
+  {
+    throw DruidException.defensive("makeCursors is no longer supported, use asCursorMaker instead");
+  }
 
   /**
    * Creates a VectorCursor. Unlike the Cursor returned by "makeCursor", there is just one of these. Hence, this method
@@ -134,7 +146,7 @@ public interface CursorFactory
    *
    * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call
    * {@link CursorMaker#makeVectorCursor()}. Implementors should implement {@link #asCursorMaker(CursorBuildSpec)}
-   * instead.
+   * instead. This method is no longer implemented by any built-in factories.
    */
   @Deprecated
   @Nullable
@@ -147,51 +159,6 @@ public interface CursorFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    throw new UnsupportedOperationException("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
-  }
-
-  default Sequence<Cursor> delegateMakeCursorToMaker(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setFilter(filter)
-                       .setInterval(interval)
-                       .setVirtualColumns(virtualColumns)
-                       .setGranularity(gran)
-                       .isDescending(descending)
-                       .setQueryMetrics(queryMetrics)
-                       .build()
-    ).makeCursors();
-  }
-
-  default VectorCursor delegateMakeVectorCursorToMaker(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setFilter(filter)
-                                                     .setInterval(interval)
-                                                     .setVirtualColumns(virtualColumns)
-                                                     .isDescending(descending)
-                                                     .setQueryContext(
-                                                         QueryContext.of(
-                                                             ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, vectorSize)
-                                                         )
-                                                     )
-                                                     .setQueryMetrics(queryMetrics)
-                                                     .build();
-    return asCursorMaker(buildSpec).makeVectorCursor();
+    throw DruidException.defensive("makeVectorCursor is no longer supported, use asCursorMaker instead");
   }
 }

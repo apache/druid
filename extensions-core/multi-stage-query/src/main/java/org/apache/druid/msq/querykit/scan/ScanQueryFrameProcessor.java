@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit.scan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -41,7 +40,6 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -63,10 +61,9 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -248,21 +245,23 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
-      final Yielder<Cursor> cursorYielder = Yielders.each(
-          makeCursors(
-              query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mapSegment(segmentHolder.get()).asStorageAdapter()
-          )
-      );
+      final StorageAdapter adapter = mapSegment(segmentHolder.get()).asStorageAdapter();
+      if (adapter == null) {
+        throw new ISE(
+            "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+        );
+      }
 
-      if (cursorYielder.isDone()) {
+      final CursorMaker maker = closer.register(adapter.asCursorMaker(query.asCursorBuildSpec(null)));
+      final Cursor cursor = maker.makeCursor();
+
+      if (cursor == null) {
         // No cursors!
-        cursorYielder.close();
+        maker.close();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final long rowsFlushed = setNextCursor(cursorYielder.get(), segmentHolder.get());
+        final long rowsFlushed = setNextCursor(cursor, segmentHolder.get());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
-        closer.register(cursorYielder);
       }
     }
 
@@ -290,15 +289,22 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
 
-        final long rowsFlushed = setNextCursor(
-            Iterables.getOnlyElement(
-                makeCursors(
-                    query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                    mapSegment(frameSegment).asStorageAdapter()
-                ).toList()
-            ),
-            frameSegment
-        );
+        final StorageAdapter adapter = mapSegment(frameSegment).asStorageAdapter();
+        if (adapter == null) {
+          throw new ISE(
+              "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          );
+        }
+
+        final CursorMaker maker = closer.register(adapter.asCursorMaker(query.asCursorBuildSpec(null)));
+        final Cursor cursor = maker.makeCursor();
+
+        if (cursor == null) {
+          // no cursor
+          maker.close();
+          return ReturnOrAwait.returnObject(Unit.instance());
+        }
+        final long rowsFlushed = setNextCursor(cursor, frameSegment);
 
         if (rowsFlushed > 0) {
           return ReturnOrAwait.runAgain();
@@ -425,16 +431,5 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       );
     }
     return baseColumnSelectorFactory;
-  }
-
-  private static Sequence<Cursor> makeCursors(final ScanQuery query, final StorageAdapter adapter)
-  {
-    if (adapter == null) {
-      throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-      );
-    }
-
-    return adapter.asCursorMaker(query.asCursorBuildSpec(null)).makeCursors();
   }
 }

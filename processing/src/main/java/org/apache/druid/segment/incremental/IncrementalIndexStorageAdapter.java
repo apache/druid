@@ -19,11 +19,6 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -31,7 +26,6 @@ import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -252,19 +246,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
     return new IncrementalIndexCursorMaker(this, index, spec);
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final Granularity gran,
-      final boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   @Override

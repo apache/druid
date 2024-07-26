@@ -113,7 +113,7 @@ public class FrameBasedIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    final Sequence<Cursor> cursors = Sequences.concat(
+    final Sequence<Cursor> cursors = Sequences.simple(
         frameBasedInlineDataSource
             .getFrames()
             .stream()
@@ -122,7 +122,7 @@ public class FrameBasedIndexedTable implements IndexedTable
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
               FrameStorageAdapter frameStorageAdapter =
                   new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
-              return frameStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors();
+              return frameStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursor();
             })
             .collect(Collectors.toList())
     );

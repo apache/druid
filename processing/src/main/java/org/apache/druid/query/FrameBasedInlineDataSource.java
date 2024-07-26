@@ -80,17 +80,16 @@ public class FrameBasedInlineDataSource implements DataSource
 
   public Sequence<Object[]> getRowsAsSequence()
   {
-
     final Sequence<Cursor> cursorSequence =
         Sequences.simple(frames)
-                 .flatMap(
+                 .map(
                      frameSignaturePair -> {
                        Frame frame = frameSignaturePair.getFrame();
                        RowSignature frameSignature = frameSignaturePair.getRowSignature();
                        FrameReader frameReader = FrameReader.create(frameSignature);
                        return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(
                            CursorBuildSpec.FULL_SCAN
-                       ).makeCursors();
+                       ).makeCursor();
                      }
                  );
 

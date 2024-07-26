@@ -26,7 +26,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
@@ -104,12 +103,6 @@ public class PostJoinCursor implements Cursor
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     return columnSelectorFactory;
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Nullable

@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -46,6 +45,7 @@ import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -228,21 +228,15 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (virtualColumns != null) {
       builder.setVirtualColumns(virtualColumns);
     }
-    final Sequence<Cursor> cursors = as.asCursorMaker(builder.build()).makeCursors();
+    try (final CursorMaker maker = as.asCursorMaker(builder.build())) {
+      final Cursor cursor = maker.makeCursor();
 
-    AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
-
-    FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {
-      if (accumulated != null) {
-        // We should not get multiple cursors because we set the granularity to ALL.  So, this should never
-        // actually happen, but it doesn't hurt us to defensive here, so we test against it.
-        throw new ISE("accumulated[%s] non-null, why did we get multiple cursors?", accumulated);
-      }
+      final AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
       long remainingRowsToSkip = limit.getOffset();
       long remainingRowsToFetch = limit.getLimitOrMax();
 
-      final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
+      final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
       final RowSignature.Builder sigBob = RowSignature.builder();
 
       for (String col : cols) {
@@ -281,26 +275,24 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
           sortColumns
       );
 
-      final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      for (; !in.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
-        in.advance();
+      final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory);
+      for (; !cursor.isDoneOrInterrupted() && remainingRowsToSkip > 0; remainingRowsToSkip--) {
+        cursor.advance();
       }
-      for (; !in.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
-        frameWriter.addSelection();
-        in.advance();
+      for (; !cursor.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
+        writer.addSelection();
+        cursor.advance();
       }
 
-      return frameWriter;
-    });
-
-    if (writer == null) {
-      // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
-      // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
-      // should be completely empty.
-      return null;
-    } else {
-      final byte[] bytes = writer.toByteArray();
-      return Pair.of(bytes, siggy.get());
+      if (writer == null) {
+        // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
+        // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
+        // should be completely empty.
+        return null;
+      } else {
+        final byte[] bytes = writer.toByteArray();
+        return Pair.of(bytes, siggy.get());
+      }
     }
   }
 

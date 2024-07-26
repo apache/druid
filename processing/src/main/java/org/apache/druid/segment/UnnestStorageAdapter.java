@@ -23,10 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -49,6 +46,7 @@ import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -102,67 +100,55 @@ public class UnnestStorageAdapter implements StorageAdapter
         input,
         input == null ? null : spec.getVirtualColumns().getColumnCapabilitiesWithFallback(baseAdapter, input)
     );
-    final CursorBuildSpec unnestBuildSpec = CursorBuildSpec.builder(spec)
-                                                           .setFilter(filterPair.lhs)
-                                                           .setVirtualColumns(
-                                                               VirtualColumns.create(
-                                                                   Collections.singletonList(unnestColumn)
-                                                               )
-                                                           )
-                                                           .build();
+    final CursorBuildSpec unnestBuildSpec =
+        CursorBuildSpec.builder(spec)
+                       .setFilter(filterPair.lhs)
+                       .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
+                       .build();
+
     return new CursorMaker()
     {
+      final Closer closer = Closer.create();
       @Override
-      public Sequence<Cursor> makeCursors()
+      public Cursor makeCursor()
       {
-        final Sequence<Cursor> baseCursorSequence = baseAdapter.asCursorMaker(unnestBuildSpec).makeCursors();
-        return Sequences.map(
-            baseCursorSequence,
-            cursor -> {
-              Objects.requireNonNull(cursor);
-              final ColumnCapabilities capabilities = unnestColumn.capabilities(
-                  cursor.getColumnSelectorFactory(),
-                  unnestColumn.getOutputName()
-              );
-              final Cursor unnestCursor;
+        final CursorMaker maker = closer.register(baseAdapter.asCursorMaker(unnestBuildSpec));
+        final Cursor cursor = maker.makeCursor();
+        Objects.requireNonNull(cursor);
+        final ColumnCapabilities capabilities = unnestColumn.capabilities(
+            cursor.getColumnSelectorFactory(),
+            unnestColumn.getOutputName()
+        );
+        final Cursor unnestCursor;
 
-              if (useDimensionCursor(capabilities)) {
-                unnestCursor = new UnnestDimensionCursor(
-                    cursor,
-                    cursor.getColumnSelectorFactory(),
-                    unnestColumn,
-                    outputColumnName
-                );
-              } else {
-                unnestCursor = new UnnestColumnValueSelectorCursor(
-                    cursor,
-                    cursor.getColumnSelectorFactory(),
-                    unnestColumn,
-                    outputColumnName
-                );
-              }
-              return PostJoinCursor.wrap(
-                  unnestCursor,
-                  spec.getVirtualColumns(),
-                  filterPair.rhs
-              );
-            }
+        if (useDimensionCursor(capabilities)) {
+          unnestCursor = new UnnestDimensionCursor(
+              cursor,
+              cursor.getColumnSelectorFactory(),
+              unnestColumn,
+              outputColumnName
+          );
+        } else {
+          unnestCursor = new UnnestColumnValueSelectorCursor(
+              cursor,
+              cursor.getColumnSelectorFactory(),
+              unnestColumn,
+              outputColumnName
+          );
+        }
+        return PostJoinCursor.wrap(
+            unnestCursor,
+            spec.getVirtualColumns(),
+            filterPair.rhs
         );
       }
-    };
-  }
 
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
+    };
   }
 
   @Override

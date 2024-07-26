@@ -25,7 +25,6 @@ import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.NestedDataTestUtils;
@@ -229,14 +228,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   @Test
   public void test_unnest_adapters_basic()
   {
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(UNNEST_STORAGE_ADAPTER.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(UNNEST_STORAGE_ADAPTER.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = UNNEST_STORAGE_ADAPTER.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
 
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
@@ -254,22 +252,18 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       unnest 2 rows -> 16 rows after unnest
        */
       Assert.assertEquals(count, 16);
-      return null;
-    });
-
+    }
   }
 
   @Test
   public void test_two_levels_of_unnest_adapters()
   {
-    Sequence<Cursor> cursorSequence = UNNEST_STORAGE_ADAPTER1.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(UNNEST_STORAGE_ADAPTER1.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
-
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(UNNEST_STORAGE_ADAPTER1.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = UNNEST_STORAGE_ADAPTER1.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME1));
@@ -295,8 +289,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
        */
       Assert.assertEquals(count, 128);
       Assert.assertEquals(dimSelector.getValueCardinality(), 17);
-      return null;
-    });
+    }
   }
 
   @Test
@@ -322,25 +315,22 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         selector(inputColumn, "2")
     ));
 
-    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setFilter(baseFilter)
-                       .setInterval(unnestStorageAdapter.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(baseFilter)
+                                                     .setInterval(unnestStorageAdapter.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
+      final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+      final Filter pushDownFilter = base.getPushDownFilter();
 
-    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
-    final Filter pushDownFilter = base.getPushDownFilter();
-
-    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
       Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
       final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
       // OR-case so base filter should match the postJoinFilter
       Assert.assertEquals(baseFilter, postFilter);
-      return null;
-    });
+    }
   }
 
   @Test
@@ -372,25 +362,22 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         ))
     ));
 
-    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setFilter(baseFilter)
-                       .setInterval(unnestStorageAdapter.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(baseFilter)
+                                                     .setInterval(unnestStorageAdapter.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
+      final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+      final Filter pushDownFilter = base.getPushDownFilter();
 
-    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
-    final Filter pushDownFilter = base.getPushDownFilter();
-
-    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
       Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
       final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
       // OR-case so base filter should match the postJoinFilter
       Assert.assertEquals(baseFilter, postFilter);
-      return null;
-    });
+    }
   }
 
   @Test
@@ -655,19 +642,17 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
     final Filter expectedPushDownFilter =
         selector(inputColumn, "1");
 
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(unnestStorageAdapter.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
 
-    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(unnestStorageAdapter.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
+      final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+      final Filter pushDownFilter = base.getPushDownFilter();
 
-    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
-    final Filter pushDownFilter = base.getPushDownFilter();
-
-    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
       Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
       final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
       Assert.assertEquals(unnestStorageAdapter.getUnnestFilter(), postFilter);
@@ -678,8 +663,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         count++;
       }
       Assert.assertEquals(1, count);
-      return null;
-    });
+    }
   }
 
 
@@ -700,19 +684,18 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         selector(inputColumn, "1");
 
     final Filter queryFilter = new SelectorFilter(OUTPUT_COLUMN_NAME, "1", null);
-    final Sequence<Cursor> cursorSequence = unnestStorageAdapter.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setFilter(queryFilter)
-                       .setInterval(unnestStorageAdapter.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(queryFilter)
+                                                     .setInterval(unnestStorageAdapter.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
 
-    final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
-    final Filter pushDownFilter = base.getPushDownFilter();
+    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
+      final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
+      final Filter pushDownFilter = base.getPushDownFilter();
 
-    Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      Assert.assertEquals(expectedPushDownFilter, pushDownFilter);
       Assert.assertEquals(cursor.getClass(), PostJoinCursor.class);
       final Filter postFilter = ((PostJoinCursor) cursor).getPostJoinFilter();
       Assert.assertEquals(queryFilter, postFilter);
@@ -723,8 +706,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         count++;
       }
       Assert.assertEquals(1, count);
-      return null;
-    });
+    }
   }
 
   @Test
@@ -751,14 +733,12 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + inputColumn + "\"", null, ExprMacroTable.nil()),
         null
     );
-    Sequence<Cursor> cursorSequence = withNullsStorageAdapter.asCursorMaker(
-        CursorBuildSpec.builder()
-                       .setInterval(withNullsStorageAdapter.getInterval())
-                       .setGranularity(Granularities.ALL)
-                       .build()
-    ).makeCursors();
-
-    cursorSequence.accumulate(null, (accumulated, cursor) -> {
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(withNullsStorageAdapter.getInterval())
+                                                     .setGranularity(Granularities.ALL)
+                                                     .build();
+    try (final CursorMaker maker = withNullsStorageAdapter.asCursorMaker(buildSpec)) {
+      Cursor cursor = maker.makeCursor();
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
@@ -776,9 +756,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
         count++;
       }
       Assert.assertEquals(count, 618);
-      return null;
-    });
-
+    }
   }
 
   public void testComputeBaseAndPostUnnestFilters(

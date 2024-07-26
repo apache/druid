@@ -34,6 +34,8 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -112,114 +114,112 @@ public class ScanQueryEngine
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
-    return Sequences.concat(
-            adapter.asCursorMaker(query.asCursorBuildSpec(queryMetrics))
-                .makeCursors()
-                .map(cursor -> new BaseSequence<>(
-                    new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
-                    {
-                      @Override
-                      public Iterator<ScanResultValue> make()
-                      {
-                        final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
-                        final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-                        final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+    final CursorMaker maker = adapter.asCursorMaker(query.asCursorBuildSpec(queryMetrics));
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
+        {
+          @Override
+          public Iterator<ScanResultValue> make()
+          {
+            final Cursor cursor = maker.makeCursor();
+            final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
+            final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+            final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
-                        for (String column : allColumns) {
-                          final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
-                          ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
-                          rowSignatureBuilder.add(
-                              column,
-                              columnCapabilities == null ? null : columnCapabilities.toColumnType()
-                          );
+            for (String column : allColumns) {
+              final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
+              ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
+              rowSignatureBuilder.add(
+                  column,
+                  columnCapabilities == null ? null : columnCapabilities.toColumnType()
+              );
 
-                          columnSelectors.add(selector);
-                        }
+              columnSelectors.add(selector);
+            }
 
-                        final int batchSize = query.getBatchSize();
-                        return new Iterator<ScanResultValue>()
-                        {
-                          private long offset = 0;
+            final int batchSize = query.getBatchSize();
+            return new Iterator<ScanResultValue>()
+            {
+              private long offset = 0;
 
-                          @Override
-                          public boolean hasNext()
-                          {
-                            return !cursor.isDone() && offset < limit;
-                          }
+              @Override
+              public boolean hasNext()
+              {
+                return !cursor.isDone() && offset < limit;
+              }
 
-                          @Override
-                          public ScanResultValue next()
-                          {
-                            if (!hasNext()) {
-                              throw new NoSuchElementException();
-                            }
-                            if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
-                              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
-                            }
-                            final long lastOffset = offset;
-                            final Object events;
-                            final ScanQuery.ResultFormat resultFormat = query.getResultFormat();
-                            if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
-                              events = rowsToCompactedList();
-                            } else if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
-                              events = rowsToList();
-                            } else {
-                              throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
-                            }
-                            responseContext.addRowScanCount(offset - lastOffset);
-                            return new ScanResultValue(segmentId.toString(), allColumns, events, rowSignatureBuilder.build());
-                          }
+              @Override
+              public ScanResultValue next()
+              {
+                if (!hasNext()) {
+                  throw new NoSuchElementException();
+                }
+                if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
+                  throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
+                }
+                final long lastOffset = offset;
+                final Object events;
+                final ScanQuery.ResultFormat resultFormat = query.getResultFormat();
+                if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
+                  events = rowsToCompactedList();
+                } else if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
+                  events = rowsToList();
+                } else {
+                  throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
+                }
+                responseContext.addRowScanCount(offset - lastOffset);
+                return new ScanResultValue(segmentId.toString(), allColumns, events, rowSignatureBuilder.build());
+              }
 
-                          @Override
-                          public void remove()
-                          {
-                            throw new UnsupportedOperationException();
-                          }
+              @Override
+              public void remove()
+              {
+                throw new UnsupportedOperationException();
+              }
 
-                          private List<List<Object>> rowsToCompactedList()
-                          {
-                            final List<List<Object>> events = new ArrayList<>(batchSize);
-                            final long iterLimit = Math.min(limit, offset + batchSize);
-                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
-                              final List<Object> theEvent = new ArrayList<>(allColumns.size());
-                              for (int j = 0; j < allColumns.size(); j++) {
-                                theEvent.add(getColumnValue(j));
-                              }
-                              events.add(theEvent);
-                            }
-                            return events;
-                          }
+              private List<List<Object>> rowsToCompactedList()
+              {
+                final List<List<Object>> events = new ArrayList<>(batchSize);
+                final long iterLimit = Math.min(limit, offset + batchSize);
+                for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
+                  final List<Object> theEvent = new ArrayList<>(allColumns.size());
+                  for (int j = 0; j < allColumns.size(); j++) {
+                    theEvent.add(getColumnValue(j));
+                  }
+                  events.add(theEvent);
+                }
+                return events;
+              }
 
-                          private List<Map<String, Object>> rowsToList()
-                          {
-                            List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
-                            final long iterLimit = Math.min(limit, offset + batchSize);
-                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
-                              final Map<String, Object> theEvent = new LinkedHashMap<>();
-                              for (int j = 0; j < allColumns.size(); j++) {
-                                theEvent.put(allColumns.get(j), getColumnValue(j));
-                              }
-                              events.add(theEvent);
-                            }
-                            return events;
-                          }
+              private List<Map<String, Object>> rowsToList()
+              {
+                List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
+                final long iterLimit = Math.min(limit, offset + batchSize);
+                for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
+                  final Map<String, Object> theEvent = new LinkedHashMap<>();
+                  for (int j = 0; j < allColumns.size(); j++) {
+                    theEvent.put(allColumns.get(j), getColumnValue(j));
+                  }
+                  events.add(theEvent);
+                }
+                return events;
+              }
 
-                          private Object getColumnValue(int i)
-                          {
-                            final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
-                            final Object value = selector == null ? null : selector.getObject();
-                            return value;
-                          }
-                        };
-                      }
+              private Object getColumnValue(int i)
+              {
+                final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
+                final Object value = selector == null ? null : selector.getObject();
+                return value;
+              }
+            };
+          }
 
-                      @Override
-                      public void cleanup(Iterator<ScanResultValue> iterFromMake)
-                      {
-                      }
-                    }
-            ))
-    );
+          @Override
+          public void cleanup(Iterator<ScanResultValue> iterFromMake)
+          {
+          }
+        }
+    ).withBaggage(maker);
   }
 
   /**

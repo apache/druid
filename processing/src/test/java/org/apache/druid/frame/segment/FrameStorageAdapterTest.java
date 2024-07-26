@@ -365,7 +365,7 @@ public class FrameStorageAdapterTest
     @Test
     public void test_makeCursors()
     {
-      assertCursorsMatch(adapter -> adapter.asCursorMaker(buildSpec).makeCursors());
+      assertCursorMatch(adapter -> adapter.asCursorMaker(buildSpec));
     }
 
     @Test
@@ -374,15 +374,17 @@ public class FrameStorageAdapterTest
       assertVectorCursorsMatch(adapter -> adapter.asCursorMaker(buildSpec));
     }
 
-    private void assertCursorsMatch(final Function<StorageAdapter, Sequence<Cursor>> call)
+    private void assertCursorMatch(final Function<StorageAdapter, CursorMaker> call)
     {
       final RowSignature signature = frameAdapter.getRowSignature();
-      final Sequence<List<Object>> queryableRows =
-          call.apply(queryableAdapter).flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, signature));
-      final Sequence<List<Object>> frameRows =
-          call.apply(frameAdapter)
-              .flatMap(cursor -> FrameTestUtil.readRowsFromCursor(advanceAndReset(cursor), signature));
-      FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
+      try (final CursorMaker queryableMaker = call.apply(queryableAdapter);
+           final CursorMaker frameMaker = call.apply(frameAdapter)) {
+        final Sequence<List<Object>> queryableRows =
+            FrameTestUtil.readRowsFromCursor(queryableMaker.makeCursor(), signature);
+        final Sequence<List<Object>> frameRows =
+            FrameTestUtil.readRowsFromCursor(frameMaker.makeCursor(), signature);
+        FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
+      }
     }
 
     private void assertVectorCursorsMatch(final Function<StorageAdapter, CursorMaker> call)
@@ -397,8 +399,8 @@ public class FrameStorageAdapterTest
             FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameMaker.makeVectorCursor()), signature);
         FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
       } else {
-        maker.cleanup();
-        frameMaker.cleanup();
+        maker.close();
+        frameMaker.close();
       }
     }
 

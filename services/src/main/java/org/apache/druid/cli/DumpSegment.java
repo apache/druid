@@ -72,6 +72,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
@@ -308,64 +309,52 @@ public class DumpSegment extends GuiceRunnable
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
 
-    final Sequence<Cursor> cursors = adapter.asCursorMaker(buildSpec).makeCursors();
+    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
+      final Cursor cursor = maker.makeCursor();
 
-    withOutputStream(
-        new Function<OutputStream, Object>()
-        {
-          @Override
-          public Object apply(final OutputStream out)
+      withOutputStream(
+          new Function<OutputStream, Object>()
           {
-            final Sequence<Object> sequence = Sequences.map(
-                cursors,
-                new Function<Cursor, Object>()
-                {
-                  @Override
-                  public Object apply(Cursor cursor)
-                  {
-                    ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-                    final List<BaseObjectColumnValueSelector> selectors = columnNames
-                        .stream()
-                        .map(columnSelectorFactory::makeColumnValueSelector)
-                        .collect(Collectors.toList());
+            @Override
+            public Object apply(final OutputStream out)
+            {
+              ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+              final List<BaseObjectColumnValueSelector> selectors = columnNames
+                  .stream()
+                  .map(columnSelectorFactory::makeColumnValueSelector)
+                  .collect(Collectors.toList());
 
-                    while (!cursor.isDone()) {
-                      final Map<String, Object> row = Maps.newLinkedHashMap();
+              while (!cursor.isDone()) {
+                final Map<String, Object> row = Maps.newLinkedHashMap();
 
-                      for (int i = 0; i < columnNames.size(); i++) {
-                        final String columnName = columnNames.get(i);
-                        final Object value = selectors.get(i).getObject();
+                for (int i = 0; i < columnNames.size(); i++) {
+                  final String columnName = columnNames.get(i);
+                  final Object value = selectors.get(i).getObject();
 
-                        if (timeISO8601 && columnNames.get(i).equals(ColumnHolder.TIME_COLUMN_NAME)) {
-                          row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
-                        } else {
-                          row.put(columnName, value);
-                        }
-                      }
-
-                      try {
-                        out.write(objectMapper.writeValueAsBytes(row));
-                        out.write('\n');
-                      }
-                      catch (IOException e) {
-                        throw new RuntimeException(e);
-                      }
-
-                      cursor.advance();
-                    }
-
-                    return null;
+                  if (timeISO8601 && columnNames.get(i).equals(ColumnHolder.TIME_COLUMN_NAME)) {
+                    row.put(columnName, new DateTime(value, DateTimeZone.UTC).toString());
+                  } else {
+                    row.put(columnName, value);
                   }
                 }
-            );
 
-            evaluateSequenceForSideEffects(sequence);
+                try {
+                  out.write(objectMapper.writeValueAsBytes(row));
+                  out.write('\n');
+                }
+                catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
 
-            return null;
-          }
-        },
-        outputFileName
-    );
+                cursor.advance();
+              }
+
+              return null;
+            }
+          },
+          outputFileName
+      );
+    }
   }
 
   @VisibleForTesting

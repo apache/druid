@@ -88,12 +88,6 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
   }
 
   @Override
-  public DateTime getTime()
-  {
-    return time;
-  }
-
-  @Override
   public void advance()
   {
     value = iterator.next();

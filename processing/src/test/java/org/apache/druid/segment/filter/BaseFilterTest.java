@@ -47,8 +47,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
@@ -72,6 +70,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -792,29 +791,33 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return optimize ? dimFilter.optimize(false) : dimFilter;
   }
 
-
-  private Sequence<Cursor> makeCursorSequence(final Filter filter)
+  private CursorBuildSpec makeCursorBuildSpec(@Nullable Filter filter)
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setFilter(filter)
-                                                     .setVirtualColumns(VIRTUAL_COLUMNS)
-                                                     .setGranularity(Granularities.ALL)
-                                                     .build();
-    return adapter.asCursorMaker(buildSpec).makeCursors();
+    return CursorBuildSpec.builder()
+                          .setFilter(filter)
+                          .setVirtualColumns(VIRTUAL_COLUMNS)
+                          .setGranularity(Granularities.ALL)
+                          .build();
+
+  }
+
+  private CursorBuildSpec makeVectorCursorBuildSpec(@Nullable Filter filter)
+  {
+    return CursorBuildSpec.builder()
+                          .setFilter(filter)
+                          .setVirtualColumns(virtualColumns)
+                          .setGranularity(Granularities.ALL)
+                          .setQueryContext(
+                              QueryContext.of(
+                                  ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
+                              )
+                          )
+                          .build();
   }
 
   private VectorCursor makeVectorCursor(final Filter filter)
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setFilter(filter)
-                                                     .setVirtualColumns(virtualColumns)
-                                                     .setGranularity(Granularities.ALL)
-                                                     .setQueryContext(
-                                                         QueryContext.of(
-                                                             ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
-                                                         )
-                                                     )
-                                                     .build();
+    final CursorBuildSpec buildSpec = makeVectorCursorBuildSpec(filter);
     return adapter.asCursorMaker(buildSpec).makeVectorCursor();
   }
 
@@ -823,48 +826,39 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
    */
   private List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
-    Sequence<List<String>> seq = Sequences.map(
-        cursors,
-        cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+    try (final CursorMaker maker = adapter.asCursorMaker(makeCursorBuildSpec(makeFilter(filter)))) {
+      final Cursor cursor = maker.makeCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-          final List<String> values = new ArrayList<>();
+      final List<String> values = new ArrayList<>();
 
-          while (!cursor.isDone()) {
-            IndexedInts row = selector.getRow();
-            Preconditions.checkState(row.size() == 1);
-            values.add(selector.lookupName(row.get(0)));
-            cursor.advance();
-          }
-
-          return values;
-        }
-    );
-    return seq.toList().get(0);
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        values.add(selector.lookupName(row.get(0)));
+        cursor.advance();
+      }
+      return values;
+    }
   }
 
   private long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(null);
-    Sequence<Aggregator> aggSeq = Sequences.map(
-        cursors,
-        cursor -> {
-          Aggregator agg = new FilteredAggregatorFactory(
-              new CountAggregatorFactory("count"),
-              maybeOptimize(filter)
-          ).factorize(cursor.getColumnSelectorFactory());
+    try (final CursorMaker maker = adapter.asCursorMaker(makeCursorBuildSpec(null))) {
+      final Cursor cursor = maker.makeCursor();
+      Aggregator agg = new FilteredAggregatorFactory(
+          new CountAggregatorFactory("count"),
+          maybeOptimize(filter)
+      ).factorize(cursor.getColumnSelectorFactory());
 
-          for (; !cursor.isDone(); cursor.advance()) {
-            agg.aggregate();
-          }
+      for (; !cursor.isDone(); cursor.advance()) {
+        agg.aggregate();
+      }
 
-          return agg;
-        }
-    );
-    return aggSeq.toList().get(0).getLong();
+      return agg.getLong();
+    }
   }
 
   private long selectCountUsingVectorizedFilteredAggregator(final DimFilter dimFilter)
@@ -875,7 +869,9 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         dimFilter
     );
 
-    try (final VectorCursor cursor = makeVectorCursor(null)) {
+
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(null));
+         final VectorCursor cursor = maker.makeVectorCursor()) {
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
           maybeOptimize(dimFilter)
@@ -941,27 +937,23 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    final Sequence<Cursor> cursors = makeCursorSequence(postFilteringFilter);
-    Sequence<List<String>> seq = Sequences.map(
-        cursors,
-        cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+    try (final CursorMaker maker = adapter.asCursorMaker(makeCursorBuildSpec(postFilteringFilter))) {
+      final Cursor cursor = maker.makeCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-          final List<String> values = new ArrayList<>();
+      final List<String> values = new ArrayList<>();
 
-          while (!cursor.isDone()) {
-            IndexedInts row = selector.getRow();
-            Preconditions.checkState(row.size() == 1);
-            values.add(selector.lookupName(row.get(0)));
-            cursor.advance();
-          }
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        values.add(selector.lookupName(row.get(0)));
+        cursor.advance();
+      }
 
-          return values;
-        }
-    );
-    return seq.toList().get(0);
+      return values;
+    }
   }
 
   private List<String> selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(
@@ -1005,7 +997,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final VectorCursor cursor = makeVectorCursor(postFilteringFilter)) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(postFilteringFilter));
+         final VectorCursor cursor = maker.makeVectorCursor()) {
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1029,7 +1022,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)));
+         final VectorCursor cursor = maker.makeVectorCursor()) {
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1055,7 +1049,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
-    try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)));
+         final VectorCursor cursor = maker.makeVectorCursor()) {
 
       final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
       final List<String> values = new ArrayList<>();

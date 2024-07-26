@@ -28,11 +28,7 @@ import org.apache.druid.frame.segment.FrameFilteredOffset;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
@@ -52,10 +48,10 @@ import org.apache.druid.segment.vector.QueryableIndexVectorColumnSelectorFactory
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -85,6 +81,7 @@ public class FrameCursorFactory implements CursorFactory
   @Override
   public CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
+    final Closer closer = Closer.create();
     return new CursorMaker()
     {
       @Override
@@ -96,12 +93,11 @@ public class FrameCursorFactory implements CursorFactory
       }
 
       @Override
-      public Sequence<Cursor> makeCursors()
+      public Cursor makeCursor()
       {
         final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
 
         if (Granularities.ALL.equals(spec.getGranularity())) {
-          final Closer closer = Closer.create();
           final Cursor cursor = makeGranularityAllCursor(
               new ColumnCache(index, closer),
               frame.numRows(),
@@ -111,7 +107,7 @@ public class FrameCursorFactory implements CursorFactory
               spec.isDescending()
           );
 
-          return Sequences.simple(Collections.singletonList(cursor)).withBaggage(closer);
+          return cursor;
         } else {
           // Not currently needed for the intended use cases of frame-based cursors.
           throw new UOE("Granularity [%s] not supported", spec.getGranularity());
@@ -126,7 +122,6 @@ public class FrameCursorFactory implements CursorFactory
           throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
         }
 
-        final Closer closer = Closer.create();
         final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
         final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
         final VectorOffset baseOffset = new NoFilterVectorOffset(
@@ -163,42 +158,13 @@ public class FrameCursorFactory implements CursorFactory
           return new FrameVectorCursor(filteredOffset, filteredColumnSelectorFactory, closer);
         }
       }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
     };
-  }
-
-  @Override
-  public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
-  {
-    return (filter == null || filter.canVectorizeMatcher(signature))
-           && virtualColumns.canVectorize(signature)
-           && !descending;
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
-  }
-
-  @Nullable
-  @Override
-  public VectorCursor makeVectorCursor(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
   }
 
   private static Cursor makeGranularityAllCursor(

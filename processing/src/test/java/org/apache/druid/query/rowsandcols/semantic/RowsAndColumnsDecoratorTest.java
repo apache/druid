@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.groupby.ResultRow;
@@ -38,6 +37,7 @@ import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -256,22 +256,16 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       if (interval != null) {
         builder.setInterval(interval);
       }
-      final Sequence<Cursor> cursors = seggy
-          .asStorageAdapter()
-          .asCursorMaker(builder.build())
-          .makeCursors();
+      try (final CursorMaker maker = seggy.asStorageAdapter().asCursorMaker(builder.build())) {
+        final Cursor cursor = maker.makeCursor();
 
-      vals = cursors.accumulate(
-          new ArrayList<>(),
-          (accumulated, in) -> {
-            final ColumnValueSelector idSupplier = in.getColumnSelectorFactory().makeColumnValueSelector("arrayIndex");
-            while (!in.isDone()) {
-              accumulated.add(originalVals[(int) idSupplier.getLong()]);
-              in.advance();
-            }
-            return accumulated;
-          }
-      );
+        vals = new ArrayList<>();
+        final ColumnValueSelector idSupplier = cursor.getColumnSelectorFactory().makeColumnValueSelector("arrayIndex");
+        while (!cursor.isDone()) {
+          vals.add(originalVals[(int) idSupplier.getLong()]);
+          cursor.advance();
+        }
+      }
     }
 
     if (ordering != null) {

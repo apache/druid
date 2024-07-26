@@ -23,11 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -44,10 +40,10 @@ import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.segment.vector.VectorCursor;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -240,11 +236,13 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
                                                             .build();
       return baseAdapter.asCursorMaker(newSpec);
     }
+
     return new CursorMaker()
     {
+      final Closer joinablesCloser = Closer.create();
 
       @Override
-      public Sequence<Cursor> makeCursors()
+      public Cursor makeCursor()
       {
         // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
         // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
@@ -289,66 +287,43 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
         cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
 
-        final Sequence<Cursor> baseCursorSequence = baseAdapter.asCursorMaker(cursorBuildSpecBuilder.build())
-                                                               .makeCursors();
+        final Cursor baseCursor = joinablesCloser.register(baseAdapter.asCursorMaker(cursorBuildSpecBuilder.build()))
+                                                 .makeCursor();
 
-        Closer joinablesCloser = Closer.create();
 
-        return Sequences.<Cursor, Cursor>map(
-            baseCursorSequence,
-            cursor -> {
-              assert cursor != null;
-              Cursor retVal = cursor;
+        assert baseCursor != null;
+        Cursor retVal = baseCursor;
 
-              for (JoinableClause clause : clauses) {
-                retVal = HashJoinEngine.makeJoinCursor(retVal, clause, spec.isDescending(), joinablesCloser);
-              }
+        for (JoinableClause clause : clauses) {
+          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, spec.isDescending(), joinablesCloser);
+        }
 
-              return PostJoinCursor.wrap(
-                  retVal,
-                  VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
-                  joinFilterSplit.getJoinTableFilter().orElse(null)
-              );
-            }
-        ).withBaggage(joinablesCloser);
+        return PostJoinCursor.wrap(
+            retVal,
+            VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
+            joinFilterSplit.getJoinTableFilter().orElse(null)
+        );
+      }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(joinablesCloser);
+      }
+
+      @Override
+      public boolean canVectorize()
+      {
+        return CursorMaker.super.canVectorize();
+      }
+
+      @Nullable
+      @Override
+      public VectorCursor makeVectorCursor()
+      {
+        return CursorMaker.super.makeVectorCursor();
       }
     };
-  }
-
-  @Override
-  public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
-  {
-    // HashJoinEngine isn't vectorized yet.
-    // However, we can still vectorize if there are no clauses, since that means all we need to do is apply
-    // a base filter. That's easy enough!
-    return clauses.isEmpty() && baseAdapter.canVectorize(baseFilterAnd(filter), virtualColumns, descending);
-  }
-
-  @Nullable
-  @Override
-  public VectorCursor makeVectorCursor(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeVectorCursorToMaker(filter, interval, virtualColumns, descending, vectorSize, queryMetrics);
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      @Nonnull final Interval interval,
-      @Nonnull final VirtualColumns virtualColumns,
-      @Nonnull final Granularity gran,
-      final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    return delegateMakeCursorToMaker(filter, interval, virtualColumns, gran, descending, queryMetrics);
   }
 
   /**

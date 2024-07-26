@@ -21,9 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -86,9 +83,8 @@ public class QueryableIndexStorageAdapterTest
         partialNullSelector =
             columnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("partial_null_column"));
       } else {
-        final Sequence<Cursor> cursors = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors();
-        final Yielder<Cursor> yielder = closer.register(Yielders.each(cursors));
-        final Cursor cursor = yielder.get();
+        final CursorMaker maker = closer.register(adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN));
+        final Cursor cursor = maker.makeCursor();
         final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
         qualitySelector =
@@ -232,11 +228,9 @@ public class QueryableIndexStorageAdapterTest
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
       final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-      final Sequence<Cursor> cursors = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursors();
-      final Yielder<Cursor> cursorYielder = Yielders.each(cursors);
-      cursor = cursorYielder.get();
+      final CursorMaker maker = closer.register(adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN));
+      cursor = maker.makeCursor();
       columnSelectorFactory = cursor.getColumnSelectorFactory();
-      closer.register(cursorYielder);
     }
 
     @After
