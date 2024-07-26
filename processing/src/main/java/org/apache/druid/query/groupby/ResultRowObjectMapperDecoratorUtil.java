@@ -232,7 +232,7 @@ public class ResultRowObjectMapperDecoratorUtil
 
   /**
    * Creates java types for deserializing the result row. For timestamp, aggregators and post-aggregators, it resorts to
-   * {@link Object.class}. For dimensions requiring conversion (check {@link #dimensionRequiresConversion(ColumnType)}),
+   * {@code Object.class}. For dimensions requiring conversion (check {@link #dimensionRequiresConversion(ColumnType)}),
    * it returns the java type for the associated class of the complex object.
    */
   private static JavaType[] createJavaTypesForResultRow(final GroupByQuery groupByQuery)
