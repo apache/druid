@@ -452,7 +452,7 @@ Returns the following:
 
 ## BITWISE_SHIFT_LEFT
 
-Returns x bitwise left shifts of an expr, That is, `expr << x`.
+Returns bitwise left shift by x positions of an expr, That is, `expr << x`.
 
 * **Syntax:** `BITWISE_SHIFT_LEFT(expr, x)`
 * **Function type:** Scalar, numeric
@@ -475,7 +475,7 @@ Returns the following:
 
 ## BITWISE_SHIFT_RIGHT
 
-Returns x bitwise right shifts of an expr, That is, `expr >> x`.
+Returns bitwise right shift by x positions of an expr, That is, `expr >> x`.
 
 * **Syntax:** `BITWISE_SHIFT_RIGHT(expr, x)`
 * **Function type:** Scalar, numeric
