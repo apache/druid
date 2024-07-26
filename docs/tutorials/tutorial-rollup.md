@@ -156,7 +156,7 @@ Therefore, no rollup takes place:
 
 See the following topics for more information:
 
-* [SQL-based ingestion query examples](../multi-stage-query/examples.md#insert-with-rollup) for another example of data rollup during ingestion.  
-* [SQL-based ingestion concepts](../multi-stage-query/concepts.md#rollup) for more details on the concept of rollup.  
-* [Data rollup](../ingestion/rollup.md) for suggestions and best practices when performing rollup.  
-* [Druid schema model](../ingestion/schema-model.md) to go over more details on timestamp, dimensions, and metrics.
+* [Data rollup](../ingestion/rollup.md) for suggestions and best practices when performing rollup.
+* [SQL-based ingestion concepts](../multi-stage-query/concepts.md#rollup) for information on rollup using SQL-based ingestion.
+* [SQL-based ingestion query examples](../multi-stage-query/examples.md#insert-with-rollup) for another example of data rollup.  
+* [Druid schema model](../ingestion/schema-model.md) to learn about the primary timestamp, dimensions, and metrics.
