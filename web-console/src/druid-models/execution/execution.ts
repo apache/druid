@@ -235,7 +235,7 @@ export class Execution {
     sqlQuery?: string,
     queryContext?: QueryContext,
   ): Execution {
-    const { queryId, schema, result, errorDetails, stages, counters } = asyncSubmitResult;
+    const { queryId, schema, result, errorDetails, stages, counters, warnings } = asyncSubmitResult;
 
     let queryResult: QueryResult | undefined;
     if (schema && result?.sampleRecords) {
@@ -264,6 +264,7 @@ export class Execution {
       sqlQuery,
       queryContext,
       stages: Array.isArray(stages) && counters ? new Stages(stages, counters) : undefined,
+      warnings: Array.isArray(warnings) ? warnings : undefined,
       error: executionError,
       destination:
         typeof result?.dataSource === 'string'

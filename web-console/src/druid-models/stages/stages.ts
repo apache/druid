@@ -75,6 +75,7 @@ export interface StageDefinition {
   duration?: number;
   sort?: boolean;
   shuffle?: string;
+  output?: string;
 }
 
 export interface ClusterBy {
