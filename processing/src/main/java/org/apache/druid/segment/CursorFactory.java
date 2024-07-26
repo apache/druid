@@ -36,8 +36,9 @@ import javax.annotation.Nullable;
  *
  * @see StorageAdapter
  */
-public interface CursorFactory
+public interface CursorFactory extends CursorMakerFactory
 {
+  @Override
   default CursorMaker asCursorMaker(CursorBuildSpec spec)
   {
     return new CursorMaker()

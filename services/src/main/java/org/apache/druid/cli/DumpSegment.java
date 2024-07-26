@@ -311,6 +311,9 @@ public class DumpSegment extends GuiceRunnable
 
     try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
       final Cursor cursor = maker.makeCursor();
+      if (cursor == null) {
+        return;
+      }
 
       withOutputStream(
           new Function<OutputStream, Object>()

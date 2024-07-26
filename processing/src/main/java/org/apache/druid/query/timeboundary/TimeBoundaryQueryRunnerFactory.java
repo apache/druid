@@ -123,7 +123,7 @@ public class TimeBoundaryQueryRunnerFactory
         if (cursor == null) {
           return null;
         }
-        final Result<DateTime> result = skipToFirstMatching.apply(maker.makeCursor());
+        final Result<DateTime> result = skipToFirstMatching.apply(cursor);
         return result == null ? null : result.getValue();
       }
     }

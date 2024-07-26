@@ -28,11 +28,11 @@ import org.apache.druid.frame.key.FrameComparisonWidgetImpl;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.frame.segment.row.FrameCursorFactory;
+import org.apache.druid.frame.segment.row.FrameCursorMakerFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorMakerFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -136,15 +136,15 @@ public class FrameReader
   }
 
   /**
-   * Create a {@link CursorFactory} for the given frame.
+   * Create a {@link CursorMakerFactory} for the given frame.
    */
-  public CursorFactory makeCursorFactory(final Frame frame)
+  public CursorMakerFactory makeCursorMakerFactory(final Frame frame)
   {
     switch (frame.type()) {
       case COLUMNAR:
-        return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
+        return new org.apache.druid.frame.segment.columnar.FrameCursorMakerFactory(frame, signature, columnReaders);
       case ROW_BASED:
-        return new FrameCursorFactory(frame, this, fieldReaders);
+        return new FrameCursorMakerFactory(frame, this, fieldReaders);
       default:
         throw new ISE("Unrecognized frame type [%s]", frame.type());
     }

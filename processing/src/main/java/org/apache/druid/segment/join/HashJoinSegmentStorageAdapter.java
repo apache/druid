@@ -291,8 +291,10 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         final Cursor baseCursor = joinablesCloser.register(baseAdapter.asCursorMaker(cursorBuildSpecBuilder.build()))
                                                  .makeCursor();
 
+        if (baseCursor == null) {
+          return null;
+        }
 
-        assert baseCursor != null;
         Cursor retVal = baseCursor;
 
         for (JoinableClause clause : clauses) {

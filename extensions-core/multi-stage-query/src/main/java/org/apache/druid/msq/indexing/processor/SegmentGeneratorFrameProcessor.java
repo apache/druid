@@ -184,6 +184,9 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
     final StorageAdapter adapter = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY);
     try (final CursorMaker maker = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = maker.makeCursor();
+      if (cursor == null) {
+        return;
+      }
 
       final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

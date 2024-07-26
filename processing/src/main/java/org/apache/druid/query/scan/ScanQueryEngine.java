@@ -122,6 +122,9 @@ public class ScanQueryEngine
           public Iterator<ScanResultValue> make()
           {
             final Cursor cursor = maker.makeCursor();
+            if (cursor == null) {
+              return Collections.emptyIterator();
+            }
             final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
             final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
             final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();

@@ -231,6 +231,10 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     try (final CursorMaker maker = as.asCursorMaker(builder.build())) {
       final Cursor cursor = maker.makeCursor();
 
+      if (cursor == null) {
+        return null;
+      }
+
       final AtomicReference<RowSignature> siggy = new AtomicReference<>(null);
 
       long remainingRowsToSkip = limit.getOffset();

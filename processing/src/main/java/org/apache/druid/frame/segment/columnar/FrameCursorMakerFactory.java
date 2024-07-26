@@ -34,8 +34,8 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorMakerFactory;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
@@ -55,19 +55,19 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * A {@link CursorFactory} implementation based on a single columnar {@link Frame}.
+ * A {@link CursorMakerFactory} implementation based on a single columnar {@link Frame}.
  *
  * This class is only used for columnar frames. It is not used for row-based frames.
  *
- * @see org.apache.druid.frame.segment.row.FrameCursorFactory the row-based version
+ * @see org.apache.druid.frame.segment.row.FrameCursorMakerFactory the row-based version
  */
-public class FrameCursorFactory implements CursorFactory
+public class FrameCursorMakerFactory implements CursorMakerFactory
 {
   private final Frame frame;
   private final RowSignature signature;
   private final List<FrameColumnReader> columnReaders;
 
-  public FrameCursorFactory(
+  public FrameCursorMakerFactory(
       final Frame frame,
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders

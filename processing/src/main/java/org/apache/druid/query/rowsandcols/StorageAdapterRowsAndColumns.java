@@ -98,6 +98,10 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
     try (final CursorMaker maker = as.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = maker.makeCursor();
 
+      if (cursor == null) {
+        return new EmptyRowsAndColumns();
+      }
+      
       final RowSignature rowSignature = as.getRowSignature();
 
       final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();

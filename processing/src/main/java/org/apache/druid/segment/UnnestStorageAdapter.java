@@ -55,7 +55,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -114,7 +113,9 @@ public class UnnestStorageAdapter implements StorageAdapter
       {
         final CursorMaker maker = closer.register(baseAdapter.asCursorMaker(unnestBuildSpec));
         final Cursor cursor = maker.makeCursor();
-        Objects.requireNonNull(cursor);
+        if (cursor == null) {
+          return null;
+        }
         final ColumnCapabilities capabilities = unnestColumn.capabilities(
             cursor.getColumnSelectorFactory(),
             unnestColumn.getOutputName()

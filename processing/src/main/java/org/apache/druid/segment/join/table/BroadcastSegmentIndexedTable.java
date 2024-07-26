@@ -50,6 +50,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -122,6 +123,10 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
                                                      .build();
     try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
       final Cursor cursor = maker.makeCursor();
+      if (cursor == null) {
+        this.keyColumnsIndexes = Collections.emptyList();
+        return;
+      }
 
       int rowNumber = 0;
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();

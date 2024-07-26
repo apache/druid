@@ -33,6 +33,7 @@ import org.apache.druid.data.input.IntermediateRowParsingReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -132,6 +133,9 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
 
     final CursorMaker maker = storageAdapter.getAdapter().asCursorMaker(cursorBuildSpec);
     final Cursor cursor = maker.makeCursor();
+    if (cursor == null) {
+      return CloseableIterators.wrap(Collections.emptyIterator(), maker);
+    }
 
     // Retain order of columns from the original segments. Useful for preserving dimension order if we're in
     // schemaless mode.

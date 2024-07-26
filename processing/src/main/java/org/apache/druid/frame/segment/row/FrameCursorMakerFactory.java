@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorMakerFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
@@ -40,19 +40,19 @@ import org.apache.druid.segment.SimpleSettableOffset;
 import java.util.List;
 
 /**
- * A {@link CursorFactory} implementation based on a single row-based {@link Frame}.
+ * A {@link CursorMakerFactory} implementation based on a single row-based {@link Frame}.
  *
  * This class is only used for row-based frames.
  *
- * @see org.apache.druid.frame.segment.columnar.FrameCursorFactory the columnar version
+ * @see org.apache.druid.frame.segment.columnar.FrameCursorMakerFactory the columnar version
  */
-public class FrameCursorFactory implements CursorFactory
+public class FrameCursorMakerFactory implements CursorMakerFactory
 {
   private final Frame frame;
   private final FrameReader frameReader;
   private final List<FieldReader> fieldReaders;
 
-  public FrameCursorFactory(
+  public FrameCursorMakerFactory(
       final Frame frame,
       final FrameReader frameReader,
       final List<FieldReader> fieldReaders
