@@ -152,17 +152,11 @@ Therefore, no rollup takes place:
 | `2018-01-01T01:03:00.000Z` | `1.1.1.1` | `2.2.2.2` | `10,204` | `1` | `49` |
 
 
-## Learn More
+## Learn more
 
 See the following topics for more information:
 
-* [SQL-based ingestion query examples](../multi-stage-query/examples.md/#insert-with-rollup) for another example of data rollup during ingestion.
-
-* [SQL-based ingestion concepts](../multi-stage-query/concepts/#rollup) for more details on the concept of rollup.
-
-* [Data rollup](../ingestion/rollup/) for suggestions and best practices when performing rollup.
-
-
+* [SQL-based ingestion query examples](../multi-stage-query/examples.md#insert-with-rollup) for another example of data rollup during ingestion.  
+* [SQL-based ingestion concepts](../multi-stage-query/concepts.md#rollup) for more details on the concept of rollup.  
+* [Data rollup](../ingestion/rollup.md) for suggestions and best practices when performing rollup.  
 * [Druid schema model](../ingestion/schema-model.md) to go over more details on timestamp, dimensions, and metrics.
-
-
