@@ -227,7 +227,7 @@ public class KillUnusedSegmentsTest
 
   /**
    * Set up multiple datasources {@link #DS1}, {@link #DS2} and {@link #DS3} with unused segments with 2 kill task
-   * slots. Running the kill duty each time should pick a different set of datasources in a round-robin manner.
+   * slots. Running the kill duty each time should pick at least one unique datasource in a round-robin manner.
    */
   @Test
   public void testKillMultipleDatasourcesInRoundRobinManner()
@@ -567,10 +567,10 @@ public class KillUnusedSegmentsTest
 
     initDuty();
     final CoordinatorRunStats stats = runDutyAndGetStats();
-
     Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
     Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
     Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+
     Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
     Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
 
@@ -825,11 +825,7 @@ public class KillUnusedSegmentsTest
     overlordClient.deleteLastKillInterval(dataSource);
   }
 
-  private void createAndAddUsedSegment(
-      final String dataSource,
-      final Interval interval,
-      final String version
-  )
+  private void createAndAddUsedSegment(final String dataSource, final Interval interval, final String version)
   {
     final DataSegment segment = createSegment(dataSource, interval, version);
     try {
@@ -875,25 +871,7 @@ public class KillUnusedSegmentsTest
 
   private void initDuty()
   {
-    killDuty = new KillUnusedSegments(
-        sqlSegmentsMetadataManager,
-        overlordClient,
-        configBuilder.build(),
-        new RoundRobinIterator()
-        {
-          @Override
-          int generateRandomCursorPosition(final int maxBound)
-          {
-            return 0;
-          }
-        }
-    ) {
-      @Override
-      int generateRandomCursorPosition(final int maxBound)
-      {
-        return 0;
-      }
-    };
+    killDuty = new KillUnusedSegments(sqlSegmentsMetadataManager, overlordClient, configBuilder.build());
   }
 
   private CoordinatorRunStats runDutyAndGetStats()

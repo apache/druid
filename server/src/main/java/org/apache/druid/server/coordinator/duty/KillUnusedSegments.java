@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.CircularList;
@@ -45,12 +44,10 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Comparator;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -64,8 +61,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * as there can be multiple unused segments with different {@code used_status_last_updated} time.
  * </p>
  * <p>
- *  The datasources to kill during each cycle is picked using {@link #datasourceIterator}, which is refreshed as needed
- *  during each cycle of this duty.
+ * The datasources to be killed during each cycle are selected from {@link #datasourceCircularKillList}. This state is
+ * refreshed in a run if the set of datasources to be killed changes. Consecutive duplicate datasources are avoided
+ * across runs, provided there are other datasources to be killed.
  * </p>
  * <p>
  * See {@link org.apache.druid.indexing.common.task.KillUnusedSegmentsTask}.
@@ -94,7 +92,6 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
 
   private DateTime lastKillTime;
-  private final RoundRobinIterator datasourceIterator;
 
   private final SegmentsMetadataManager segmentsMetadataManager;
   private final OverlordClient overlordClient;
@@ -106,17 +103,6 @@ public class KillUnusedSegments implements CoordinatorDuty
       SegmentsMetadataManager segmentsMetadataManager,
       OverlordClient overlordClient,
       KillUnusedSegmentsConfig killConfig
-  )
-  {
-    this(segmentsMetadataManager, overlordClient, killConfig, new RoundRobinIterator());
-  }
-
-  @VisibleForTesting
-  KillUnusedSegments(
-      SegmentsMetadataManager segmentsMetadataManager,
-      OverlordClient overlordClient,
-      KillUnusedSegmentsConfig killConfig,
-      RoundRobinIterator robinUniqueIterator
   )
   {
     this.period = killConfig.getCleanupPeriod();
@@ -143,7 +129,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     this.segmentsMetadataManager = segmentsMetadataManager;
     this.overlordClient = overlordClient;
     this.datasourceToLastKillIntervalEnd = new ConcurrentHashMap<>();
-    this.datasourceIterator = robinUniqueIterator;
   }
 
   @Override
@@ -181,9 +166,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     if (datasourceCircularKillList == null ||
         !datasourceCircularKillList.equalsSet(dataSourcesToKill)) {
       datasourceCircularKillList = new CircularList<>(dataSourcesToKill, Comparator.naturalOrder());
-
-      final int randomPosition = generateRandomCursorPosition(dataSourcesToKill.size());
-      datasourceCircularKillList.resetCursor(randomPosition);
     }
 
     lastKillTime = DateTimes.nowUtc();
@@ -194,12 +176,6 @@ public class KillUnusedSegments implements CoordinatorDuty
     // last kill interval removed from map.
     datasourceToLastKillIntervalEnd.keySet().retainAll(dataSourcesToKill);
     return params;
-  }
-
-  @VisibleForTesting
-  int generateRandomCursorPosition(final int maxBound)
-  {
-    return maxBound <= 0 ? 0 : ThreadLocalRandom.current().nextInt(maxBound);
   }
 
   /**

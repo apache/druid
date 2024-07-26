@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -28,9 +28,12 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
- *
- * @param <T>
+ * A circular list that is backed by an ordered list of elements containing no duplicates. The list is ordered by the
+ * supplied comparator. Callers are responsible for terminating the iterator explicitly.
+ * <p>
+ * This class is not thread-safe and must be used from a single thread.
  */
+@NotThreadSafe
 public class CircularList<T> implements Iterable<T>
 {
   private final List<T> collection = new ArrayList<>();
@@ -67,7 +70,7 @@ public class CircularList<T> implements Iterable<T>
         return nextCandidate;
       }
 
-      T peekNext()
+      private T peekNext()
       {
         int nextPosition = currentPosition < collection.size() ? currentPosition : 0;
         return collection.get(nextPosition);
@@ -75,6 +78,9 @@ public class CircularList<T> implements Iterable<T>
     };
   }
 
+  /**
+   * Advances the cursor position in the circular list. If the position reaches the end of the list, it wraps around.
+   */
   public void advanceCursor()
   {
     if (++currentPosition >= collection.size()) {
@@ -82,15 +88,13 @@ public class CircularList<T> implements Iterable<T>
     }
   }
 
-  public void resetCursor(final int position)
+  /**
+   * @return true if the supplied set is equal to the set used to instantiate this circular list, otherwise false.
+   */
+  public boolean equalsSet(final Set<T> inputSet)
   {
-    this.currentPosition = position;
-  }
-
-  public boolean equalsSet(final Set<T> s)
-  {
-    final List<T> x = new ArrayList<>(s);
-    x.sort(comparator);
-    return collection.equals(x);
+    final List<T> sortedList = new ArrayList<>(inputSet);
+    sortedList.sort(comparator);
+    return collection.equals(sortedList);
   }
 }
