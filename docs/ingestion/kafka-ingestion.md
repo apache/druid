@@ -254,7 +254,6 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 * `json`
 * `kafka`
 * `avro_stream`
-* `avro_ocf`
 * `protobuf`
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
