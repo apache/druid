@@ -82,6 +82,9 @@ Note the following aspects of the ingestion statement:
 * You create the `bytes` and `packets` metrics, which are summed from their respective input fields.
 * You also create the `count` metric that records the number of rows that get rolled-up per each row in the datasource.
 
+With rollup, Druid combines rows with identical timestamp and dimension values after the timestamp truncation.
+Druid computes and stores the metric values using the specified aggregation function over each set of rolled-up rows.
+
 After the ingestion completes, you can query the data.
 
 ## Query the example data
@@ -102,7 +105,7 @@ Returns the following:
 | `2018-01-02T21:33:00.000Z` | `7.7.7.7` | `8.8.8.8` | `100,288` | `2` | `161` |
 | `2018-01-02T21:35:00.000Z` | `7.7.7.7` | `8.8.8.8` | `2,818` | `1` | `12` |
 
-Notice there are only six rows as opposed to the nine rows in the example data. The next section covers how ingestion with rollup accomplishes this.
+Notice there are only six rows as opposed to the nine rows in the example data. In the next section, you explore the components of the rolled-up rows.
 
 ## View rollup in action
 
