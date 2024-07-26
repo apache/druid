@@ -144,20 +144,20 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * DataSource -> Segment -> AvailableSegmentMetadata(contains RowSignature) for that segment.
    * Use SortedMap for segments so they are merged in deterministic order, from older to newer.
-   * <p>
+   *
    * This map is updated by these two threads.
-   * <p>
+   *
    * - {@link #callbackExec} can update it in {@link #addSegment}, {@link #removeServerSegment},
-   * and {@link #removeSegment}.
+   *   and {@link #removeSegment}.
    * - {@link #cacheExec} can update it in {@link #refreshSegmentsForDataSource}.
-   * <p>
+   *
    * While it is being updated, this map is read by these two types of thread.
-   * <p>
+   *
    * - {@link #cacheExec} can iterate all {@link AvailableSegmentMetadata}s per datasource.
    *   See {@link #buildDataSourceRowSignature}.
    * - Query threads can create a snapshot of the entire map for processing queries on the system table.
-   * See {@link #getSegmentMetadataSnapshot()}.
-   * <p>
+   *   See {@link #getSegmentMetadataSnapshot()}.
+   *
    * As the access pattern of this map is read-intensive, we should minimize the contention between writers and readers.
    * Since there are two threads that can update this map at the same time, those writers should lock the inner map
    * first and then lock the entry before it updates segment metadata. This can be done using
@@ -182,7 +182,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    *     }
    *   );
    * </pre>
-   * <p>
+   *
    * Readers can simply delegate the locking to the concurrent map and iterate map entries.
    */
   protected final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
@@ -205,6 +205,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
    * Currently, there are 2 threads that can access these variables.
+   *
    * - {@link #callbackExec} executes the timeline callbacks whenever ServerView changes.
    * - {@code cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
    *   based on the information collected via timeline callbacks.
@@ -481,13 +482,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                       // segmentReplicatable is used to determine if segments are served by historical or realtime servers
                       long isRealtime = server.isSegmentReplicationTarget() ? 0 : 1;
                       segmentMetadata = AvailableSegmentMetadata
-                          .builder(
-                              segment,
-                              isRealtime,
-                              ImmutableSet.of(server),
-                              null,
-                              DEFAULT_NUM_ROWS
-                          ) // Added without needing a refresh
+                          .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
                       markSegmentAsNeedRefresh(segment.getId());
                       if (!server.isSegmentReplicationTarget()) {
