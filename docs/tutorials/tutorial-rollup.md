@@ -156,13 +156,13 @@ Therefore, no rollup takes place:
 
 See the following topics for more information:
 
-* [SQL-based ingestion query examples](https://druid.apache.org/docs/latest/multi-stage-query/examples/#insert-with-rollup) for another example of data rollup during ingestion.
+* [SQL-based ingestion query examples](../multi-stage-query/examples.md/#insert-with-rollup) for another example of data rollup during ingestion.
 
-* [SQL-based ingestion concepts](https://druid.apache.org/docs/latest/multi-stage-query/concepts/#rollup) for more details on the concept of rollup.
+* [SQL-based ingestion concepts](../multi-stage-query/concepts/#rollup) for more details on the concept of rollup.
 
-* [Data rollup](https://druid.apache.org/docs/latest/ingestion/rollup/) for suggestions and best practices when performing rollup.
+* [Data rollup](../ingestion/rollup/) for suggestions and best practices when performing rollup.
 
 
-* [Druid schema model](https://druid.apache.org/docs/latest/ingestion/schema-model/) to go over more details on timestamp, dimensions, and metrics.
+* [Druid schema model](../ingestion/schema-model.md) to go over more details on timestamp, dimensions, and metrics.
 
 
