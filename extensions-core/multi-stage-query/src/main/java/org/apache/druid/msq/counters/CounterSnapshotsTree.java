@@ -28,6 +28,7 @@ import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Tree of {@link CounterSnapshots} (named counter snapshots) organized by stage and worker.
@@ -106,6 +107,39 @@ public class CounterSnapshotsTree
           put(stageEntry.getKey(), workerEntry.getKey(), workerEntry.getValue());
         }
       }
+    }
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CounterSnapshotsTree that = (CounterSnapshotsTree) o;
+    synchronized (snapshotsMap) {
+      return Objects.equals(snapshotsMap, that.snapshotsMap);
+    }
+  }
+
+  @Override
+  public int hashCode()
+  {
+    synchronized (snapshotsMap) {
+      return Objects.hashCode(snapshotsMap);
+    }
+  }
+
+  @Override
+  public String toString()
+  {
+    synchronized (snapshotsMap) {
+      return "CounterSnapshotsTree{" +
+             "snapshotsMap=" + snapshotsMap +
+             '}';
     }
   }
 }

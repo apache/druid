@@ -689,7 +689,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
     Assert.assertEquals(expected, actual);
 
-    Response getResponse = resource.doGetStatus(actual.getQueryId(), SqlStatementResourceTest.makeOkRequest());
+    Response getResponse = resource.doGetStatus(actual.getQueryId(), false, SqlStatementResourceTest.makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
     Assert.assertEquals(expected, getResponse.getEntity());
 
@@ -732,7 +732,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
     Assert.assertEquals(expected, actual);
 
-    Response getResponse = resource.doGetStatus(actual.getQueryId(), SqlStatementResourceTest.makeOkRequest());
+    Response getResponse = resource.doGetStatus(actual.getQueryId(), false, SqlStatementResourceTest.makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
     Assert.assertEquals(expected, getResponse.getEntity());
 
