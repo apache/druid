@@ -76,8 +76,11 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-In the query, you group by dimensions, `timestamp`, `srcIP`, and `dstIP`. Note that the query uses the `FLOOR` function to bucket rows based on MINUTE granularity.
-For the metrics, you apply aggregations to sum the `bytes` and `packets` columns and add a column that counts the number of rows that get rolled-up.
+Note the following aspects of the ingestion statement:
+* You transform the timestamp field using the `FLOOR` function to round timestamps down to the minute.
+* You group by the dimensions `timestamp`, `srcIP`, and `dstIP`.
+* You create the `bytes` and `packets` metrics, which are summed from their respective input fields.
+* You also create the `count` metric that records the number of rows that get rolled-up per each row in the datasource.
 
 After the ingestion completes, you can query the data.
 
