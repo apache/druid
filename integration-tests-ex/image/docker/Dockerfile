@@ -34,7 +34,16 @@ ARG JDK_VERSION=8-slim-buster
 # thus provides bash, apt-get, etc.
 # See https://hub.docker.com/_/openjdk
 
-FROM openjdk:$JDK_VERSION
+FROM openjdk:$JDK_VERSION as base
+
+ARG DRUID_VERSION
+ENV DRUID_VERSION=$DRUID_VERSION
+ARG COPY_DRUID_TESTING_TOOLS
+
+FROM base as with-druid-testing-tools
+COPY druid-it-tools-${DRUID_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
+
+FROM base as final
 
 ARG DRUID_VERSION
 ENV DRUID_VERSION=$DRUID_VERSION
@@ -46,21 +55,22 @@ ARG MARIADB_VERSION
 ENV MARIADB_VERSION=$MARIADB_VERSION
 ARG MYSQL_DRIVER_CLASSNAME=com.mysql.jdbc.Driver
 ENV MYSQL_DRIVER_CLASSNAME=$MYSQL_DRIVER_CLASSNAME
-ARG DRUID_TESTING_TOOLS_VERSION
-ENV DRUID_TESTING_TOOLS_VERSION=$DRUID_TESTING_TOOLS_VERSION
+ARG COPY_DRUID_TESTING_TOOLS
 
 ENV DRUID_HOME=/usr/local/druid
 
 # Populate build artifacts
 
 COPY apache-druid-${DRUID_VERSION}-bin.tar.gz /usr/local/
-COPY druid-it-tools-${DRUID_TESTING_TOOLS_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
+COPY --from=with-druid-testing-tools /tmp/druid/extensions/druid-it-tools/ /tmp/druid/extensions/druid-it-tools/
+
 COPY kafka-protobuf-provider-${CONFLUENT_VERSION}.jar /tmp/druid/lib/
 COPY mysql-connector-j-${MYSQL_VERSION}.jar /tmp/druid/lib/
 COPY mariadb-java-client-${MARIADB_VERSION}.jar /tmp/druid/lib/
 COPY test-setup.sh /
 COPY druid.sh /
 COPY launch.sh /
+
 
 # Do the setup tasks. The tasks are done within a script, rather than
 # here, so they are easier to describe and debug. Turn on the "-x" flag

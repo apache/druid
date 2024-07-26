@@ -32,6 +32,7 @@ SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 
 # Copy environment variables to a file. Used for manual rebuilds
 # and by scripts that start the test cluster.
+
 cat > $TARGET_DIR/env.sh << EOF
 export ZK_VERSION=$ZK_VERSION
 export KAFKA_VERSION=$KAFKA_VERSION
