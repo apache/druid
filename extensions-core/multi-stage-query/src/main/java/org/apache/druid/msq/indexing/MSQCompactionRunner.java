@@ -143,7 +143,7 @@ public class MSQCompactionRunner implements CompactionRunner
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
-                            .orElse(new CompactionConfigValidationResult(true, null));
+                            .orElse(CompactionConfigValidationResult.success());
   }
 
   @Override

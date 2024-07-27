@@ -19,39 +19,22 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.java.util.common.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
-public class CompactionConfigValidationResult
+public class CoordinatorCompactionConfigTest
 {
-  private static final CompactionConfigValidationResult SUCCESS
-      = new CompactionConfigValidationResult(true, null);
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
-  private final boolean valid;
-  private final String reason;
-
-  public static CompactionConfigValidationResult success()
+  @Test
+  public void testSerdeDefaultConfig() throws Exception
   {
-    return SUCCESS;
-  }
+    final CoordinatorCompactionConfig defaultConfig = CoordinatorCompactionConfig.empty();
+    final String json = MAPPER.writeValueAsString(defaultConfig);
 
-  public static CompactionConfigValidationResult failure(String msgFormat, Object... args)
-  {
-    return new CompactionConfigValidationResult(false, msgFormat, args);
-  }
-
-  private CompactionConfigValidationResult(boolean valid, String format, Object... args)
-  {
-    this.valid = valid;
-    this.reason = format == null ? null : StringUtils.format(format, args);
-  }
-
-  public boolean isValid()
-  {
-    return valid;
-  }
-
-  public String getReason()
-  {
-    return reason;
+    CoordinatorCompactionConfig deserialized = MAPPER.readValue(json, CoordinatorCompactionConfig.class);
+    Assert.assertEquals(defaultConfig, deserialized);
   }
 }

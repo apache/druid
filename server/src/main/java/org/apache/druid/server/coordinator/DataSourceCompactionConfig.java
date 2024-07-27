@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.server.coordinator.config.DataSourceCompactionConfigBuilder;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -42,6 +43,12 @@ public class DataSourceCompactionConfig
   private final String dataSource;
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
+
+  public static DataSourceCompactionConfigBuilder builder()
+  {
+    return new DataSourceCompactionConfigBuilder();
+  }
+
   /**
    * The number of input segments is limited because the byte size of a serialized task spec is limited by
    * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
