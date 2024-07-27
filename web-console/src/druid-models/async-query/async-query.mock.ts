@@ -29,9 +29,9 @@ LIMIT 2
  */
 
 export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
-  queryId: 'query-35fe5ca2-ffb6-41a0-8f30-93694aa55fcc',
-  state: 'RUNNING',
-  createdAt: '2024-07-26T11:37:23.765Z',
+  queryId: 'query-45f1dafd-8a52-4eb7-9a6c-77840cddd349',
+  state: 'SUCCESS',
+  createdAt: '2024-07-27T02:39:22.230Z',
   schema: [
     {
       name: 'channel',
@@ -44,12 +44,28 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
       nativeType: 'LONG',
     },
   ],
-  durationMs: -1,
+  durationMs: 7183,
+  result: {
+    numTotalRows: 2,
+    totalSizeInBytes: 150,
+    dataSource: '__query_select',
+    sampleRecords: [
+      ['#en.wikipedia', 6650],
+      ['#sh.wikipedia', 3969],
+    ],
+    pages: [
+      {
+        id: 0,
+        numRows: 2,
+        sizeInBytes: 150,
+      },
+    ],
+  },
   stages: [
     {
       stageNumber: 0,
       definition: {
-        id: 'query-35fe5ca2-ffb6-41a0-8f30-93694aa55fcc_0',
+        id: 'query-45f1dafd-8a52-4eb7-9a6c-77840cddd349_0',
         input: [
           {
             type: 'table',
@@ -104,11 +120,11 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
               __user: 'allowAll',
               executionMode: 'async',
               finalize: true,
-              maxNumTasks: 8,
+              maxNumTasks: 2,
               maxParseExceptions: 0,
-              queryId: '35fe5ca2-ffb6-41a0-8f30-93694aa55fcc',
+              queryId: '45f1dafd-8a52-4eb7-9a6c-77840cddd349',
               sqlOuterLimit: 1001,
-              sqlQueryId: '35fe5ca2-ffb6-41a0-8f30-93694aa55fcc',
+              sqlQueryId: '45f1dafd-8a52-4eb7-9a6c-77840cddd349',
               sqlStringifyArrays: false,
             },
           },
@@ -133,20 +149,24 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
               },
             ],
           },
-          partitions: 7,
+          partitions: 1,
           aggregate: true,
         },
-        maxWorkerCount: 7,
+        maxWorkerCount: 1,
       },
+      phase: 'FINISHED',
+      workerCount: 1,
+      partitionCount: 1,
       shuffle: 'globalSort',
-      startTime: '2024-07-26T11:37:25.849Z',
-      duration: 2406,
+      output: 'localStorage',
+      startTime: '2024-07-27T02:39:24.713Z',
+      duration: 3384,
       sort: true,
     },
     {
       stageNumber: 1,
       definition: {
-        id: 'query-35fe5ca2-ffb6-41a0-8f30-93694aa55fcc_1',
+        id: 'query-45f1dafd-8a52-4eb7-9a6c-77840cddd349_1',
         input: [
           {
             type: 'stage',
@@ -200,11 +220,11 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
               __user: 'allowAll',
               executionMode: 'async',
               finalize: true,
-              maxNumTasks: 8,
+              maxNumTasks: 2,
               maxParseExceptions: 0,
-              queryId: '35fe5ca2-ffb6-41a0-8f30-93694aa55fcc',
+              queryId: '45f1dafd-8a52-4eb7-9a6c-77840cddd349',
               sqlOuterLimit: 1001,
-              sqlQueryId: '35fe5ca2-ffb6-41a0-8f30-93694aa55fcc',
+              sqlQueryId: '45f1dafd-8a52-4eb7-9a6c-77840cddd349',
               sqlStringifyArrays: false,
             },
           },
@@ -239,15 +259,21 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
           },
           partitions: 1,
         },
-        maxWorkerCount: 7,
+        maxWorkerCount: 1,
       },
+      phase: 'FINISHED',
+      workerCount: 1,
+      partitionCount: 1,
       shuffle: 'globalSort',
+      output: 'localStorage',
+      startTime: '2024-07-27T02:39:28.089Z',
+      duration: 26,
       sort: true,
     },
     {
       stageNumber: 2,
       definition: {
-        id: 'query-35fe5ca2-ffb6-41a0-8f30-93694aa55fcc_2',
+        id: 'query-45f1dafd-8a52-4eb7-9a6c-77840cddd349_2',
         input: [
           {
             type: 'stage',
@@ -290,11 +316,134 @@ export const SUCCESS_ASYNC_STATUS: AsyncStatusResponse = {
         },
         maxWorkerCount: 1,
       },
+      phase: 'FINISHED',
+      workerCount: 1,
+      partitionCount: 1,
       shuffle: 'globalSort',
+      output: 'localStorage',
+      startTime: '2024-07-27T02:39:28.112Z',
+      duration: 12,
       sort: true,
     },
   ],
-  counters: {},
+  counters: {
+    '0': {
+      '0': {
+        input0: {
+          type: 'channel',
+          rows: [24433],
+          bytes: [6525055],
+          files: [1],
+          totalFiles: [1],
+        },
+        output: {
+          type: 'channel',
+          rows: [51],
+          bytes: [2335],
+          frames: [1],
+        },
+        shuffle: {
+          type: 'channel',
+          rows: [51],
+          bytes: [2131],
+          frames: [1],
+        },
+        sortProgress: {
+          type: 'sortProgress',
+          totalMergingLevels: 3,
+          levelToTotalBatches: {
+            '0': 1,
+            '1': 1,
+            '2': 1,
+          },
+          levelToMergedBatches: {
+            '0': 1,
+            '1': 1,
+            '2': 1,
+          },
+          totalMergersForUltimateLevel: 1,
+          progressDigest: 1.0,
+        },
+      },
+    },
+    '1': {
+      '0': {
+        input0: {
+          type: 'channel',
+          rows: [51],
+          bytes: [2131],
+          frames: [1],
+        },
+        output: {
+          type: 'channel',
+          rows: [51],
+          bytes: [2998],
+          frames: [1],
+        },
+        shuffle: {
+          type: 'channel',
+          rows: [51],
+          bytes: [2794],
+          frames: [1],
+        },
+        sortProgress: {
+          type: 'sortProgress',
+          totalMergingLevels: 3,
+          levelToTotalBatches: {
+            '0': 1,
+            '1': 1,
+            '2': 1,
+          },
+          levelToMergedBatches: {
+            '0': 1,
+            '1': 1,
+            '2': 1,
+          },
+          totalMergersForUltimateLevel: 1,
+          progressDigest: 1.0,
+        },
+      },
+    },
+    '2': {
+      '0': {
+        input0: {
+          type: 'channel',
+          rows: [51],
+          bytes: [2794],
+          frames: [1],
+        },
+        output: {
+          type: 'channel',
+          rows: [2],
+          bytes: [150],
+          frames: [1],
+        },
+        shuffle: {
+          type: 'channel',
+          rows: [2],
+          bytes: [142],
+          frames: [1],
+        },
+        sortProgress: {
+          type: 'sortProgress',
+          totalMergingLevels: 3,
+          levelToTotalBatches: {
+            '0': 1,
+            '1': 1,
+            '2': 1,
+          },
+          levelToMergedBatches: {
+            '0': 1,
+            '1': 1,
+            '2': 1,
+          },
+          totalMergersForUltimateLevel: 1,
+          progressDigest: 1.0,
+        },
+      },
+    },
+  },
+  warnings: [],
 };
 
 /*
