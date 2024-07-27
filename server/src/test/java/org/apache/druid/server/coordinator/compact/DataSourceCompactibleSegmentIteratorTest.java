@@ -21,10 +21,8 @@ package org.apache.druid.server.coordinator.compact;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
-import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 

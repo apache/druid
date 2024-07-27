@@ -95,7 +95,7 @@ public class CoordinatorCompactionConfig
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine,
+      @JsonProperty("engine") @Nullable CompactionEngine compactionEngine,
       @JsonProperty("compactionPolicy") @Nullable CompactionSegmentSearchPolicy compactionPolicy
   )
   {

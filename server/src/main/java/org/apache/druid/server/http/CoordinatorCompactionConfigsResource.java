@@ -41,6 +41,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
 import org.apache.druid.server.coordinator.compact.CompactionDutySimulator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -70,7 +71,7 @@ public class CoordinatorCompactionConfigsResource
 {
   private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
   private static final long UPDATE_RETRY_DELAY = 1000;
-  static final int UPDATE_NUM_RETRY = 5;
+  static final int MAX_UPDATE_RETRIES = 5;
 
   private final CoordinatorConfigManager configManager;
   private final CompactionDutySimulator simulator;
@@ -90,28 +91,50 @@ public class CoordinatorCompactionConfigsResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig()
+  public Response getClusterCompactionConfig()
   {
     return Response.ok(configManager.getCurrentCompactionConfig()).build();
   }
 
   @POST
-  @Path("/dynamic")
+  @Path("/global")
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response updateCompactionDynamicConfig(
+  public Response updateClusterCompactionConfig(
       CompactionConfigUpdateRequest updatePayload,
       @Context HttpServletRequest req
   )
   {
-    UnaryOperator<CoordinatorCompactionConfig> operator =
-        current -> CoordinatorCompactionConfig.from(current, updatePayload);
+    UnaryOperator<CoordinatorCompactionConfig> operator = current -> {
+      final CoordinatorCompactionConfig newConfig = CoordinatorCompactionConfig.from(current, updatePayload);
+
+      final List<DataSourceCompactionConfig> datasourceConfigs = newConfig.getCompactionConfigs();
+      if (CollectionUtils.isNullOrEmpty(datasourceConfigs)
+          || current.getEngine() == newConfig.getEngine()) {
+        return newConfig;
+      }
+
+      // Validate all the datasource configs against the new engine
+      for (DataSourceCompactionConfig datasourceConfig : datasourceConfigs) {
+        CompactionConfigValidationResult validationResult =
+            ClientCompactionRunnerInfo.validateCompactionConfig(datasourceConfig, newConfig.getEngine());
+        if (!validationResult.isValid()) {
+          throw InvalidInput.exception(
+              "Cannot update engine to [%s] as it does not support"
+              + " compaction config of DataSource[%s]. Reason[%s].",
+              newConfig.getEngine(), datasourceConfig.getDataSource(), validationResult.getReason()
+          );
+        }
+      }
+
+      return newConfig;
+    };
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
   @POST
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response simulateCompactionDynamicConfig(
+  public Response simulateClusterCompactionConfigUpdate(
       CompactionConfigUpdateRequest updatePayload
   )
   {
@@ -128,7 +151,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    return updateCompactionDynamicConfig(
+    return updateClusterCompactionConfig(
         new CompactionConfigUpdateRequest(
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
@@ -142,7 +165,7 @@ public class CoordinatorCompactionConfigsResource
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response addOrUpdateCompactionConfig(
+  public Response addOrUpdateDatasourceCompactionConfig(
       final DataSourceCompactionConfig newConfig,
       @Context HttpServletRequest req
   )
@@ -173,7 +196,7 @@ public class CoordinatorCompactionConfigsResource
   @GET
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
+  public Response getDatasourceCompactionConfig(@PathParam("dataSource") String dataSource)
   {
     final CoordinatorCompactionConfig current = configManager.getCurrentCompactionConfig();
     final Map<String, DataSourceCompactionConfig> configs = current
@@ -262,7 +285,7 @@ public class CoordinatorCompactionConfigsResource
     int attemps = 0;
     SetResult setResult = null;
     try {
-      while (attemps < UPDATE_NUM_RETRY) {
+      while (attemps < MAX_UPDATE_RETRIES) {
         setResult = configManager.getAndUpdateCompactionConfig(configOperator, auditInfo);
         if (setResult.isOk() || !setResult.isRetryable()) {
           break;

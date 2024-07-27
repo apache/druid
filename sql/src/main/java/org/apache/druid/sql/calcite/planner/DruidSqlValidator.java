@@ -28,6 +28,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.calcite.runtime.CalciteException;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlIdentifier;
 import org.apache.calcite.sql.SqlInsert;
@@ -36,6 +37,7 @@ import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlUpdate;
 import org.apache.calcite.sql.SqlUtil;
 import org.apache.calcite.sql.SqlWindow;
@@ -64,6 +66,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -110,6 +113,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   @Override
   public void validateWindow(SqlNode windowOrId, SqlValidatorScope scope, @Nullable SqlCall call)
   {
+    if (isSqlCallDistinct(call)) {
+      throw buildCalciteContextException("DISTINCT is not supported for window functions", windowOrId);
+    }
+
     final SqlWindow targetWindow;
     switch (windowOrId.getKind()) {
       case IDENTIFIER:
@@ -755,8 +762,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException(
             StringUtils.format(
                 "The query contains window functions; To run these window functions, specify [%s] in query context.",
-                PlannerContext.CTX_ENABLE_WINDOW_FNS),
-            call);
+                PlannerContext.CTX_ENABLE_WINDOW_FNS
+            ),
+            call
+        );
       }
     }
     if (call.getKind() == SqlKind.NULLS_FIRST) {
@@ -771,7 +780,36 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw buildCalciteContextException("ASCENDING ordering with NULLS LAST is not supported!", call);
       }
     }
+    if (plannerContext.getPlannerConfig().isUseApproximateCountDistinct() && isSqlCallDistinct(call)) {
+      if (call.getOperator().getKind() != SqlKind.COUNT && call.getOperator() instanceof SqlAggFunction) {
+        if (!call.getOperator().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
+          throw buildCalciteContextException(
+              StringUtils.format(
+                  "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
+                  call.getOperator().getName()
+              ),
+              call
+          );
+        }
+      }
+    }
     super.validateCall(call, scope);
+  }
+
+  @Override
+  protected void validateWindowClause(SqlSelect select)
+  {
+    SqlNodeList windows = select.getWindowList();
+    for (SqlNode sqlNode : windows) {
+      if (SqlUtil.containsAgg(sqlNode)) {
+        throw buildCalciteContextException(
+            "Aggregation inside window is currently not supported with syntax WINDOW W AS <DEF>. "
+            + "Try providing window definition directly without alias",
+            sqlNode
+        );
+      }
+    }
+    super.validateWindowClause(select);
   }
 
   @Override
@@ -856,5 +894,12 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       }
     }
     return src;
+  }
+
+  private boolean isSqlCallDistinct(@Nullable SqlCall call)
+  {
+    return call != null
+           && call.getFunctionQuantifier() != null
+           && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
   }
 }

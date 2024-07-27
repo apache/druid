@@ -147,7 +147,8 @@ public class CompactionStatus
     return granularity.toString();
   }
 
-  private static String asString(PartitionsSpec partitionsSpec) {
+  private static String asString(PartitionsSpec partitionsSpec)
+  {
     if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
       DimensionRangePartitionsSpec rangeSpec = (DimensionRangePartitionsSpec) partitionsSpec;
       return StringUtils.format(

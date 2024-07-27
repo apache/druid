@@ -211,7 +211,7 @@ public class MSQCompactionRunnerTest
     CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask);
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
+        "MSQ: Different name[sum_added] and fieldName(s)[[added]] for aggregator",
         validationResult.getReason()
     );
   }

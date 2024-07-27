@@ -46,6 +46,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,8 +125,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     }
 
     if (isEmptyOverPresent) {
-      // empty over clause found
-      // moving everything to a single partition
+      // Move everything to a single partition since we have to load all the data on a single worker anyway to compute empty over() clause.
+      log.info(
+          "Empty over clause is present in the query. Creating a single stage with all operator factories [%s].",
+          queryToRun.getOperators()
+      );
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber)
                          .inputs(new StageInputSpec(firstStageNumber - 1))
@@ -136,9 +140,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                              queryToRun,
                              queryToRun.getOperators(),
                              rowSignature,
-                             true,
                              maxRowsMaterialized,
-                             new ArrayList<>()
+                             Collections.emptyList()
                          ))
       );
     } else {
@@ -237,7 +240,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                queryToRun,
                                operatorList.get(i),
                                stageRowSignature,
-                               false,
                                maxRowsMaterialized,
                                partitionColumnNames
                            ))
@@ -257,20 +259,34 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
   {
     List<List<OperatorFactory>> operatorList = new ArrayList<>();
     final List<OperatorFactory> operators = originalQuery.getOperators();
-    List<OperatorFactory> operatorFactoryList = new ArrayList<>();
-    for (OperatorFactory of : operators) {
-      operatorFactoryList.add(of);
+    List<OperatorFactory> currentStage = new ArrayList<>();
+
+    for (int i = 0; i < operators.size(); i++) {
+      OperatorFactory of = operators.get(i);
+      currentStage.add(of);
+
       if (of instanceof WindowOperatorFactory) {
-        operatorList.add(operatorFactoryList);
-        operatorFactoryList = new ArrayList<>();
-      } else if (of instanceof NaivePartitioningOperatorFactory) {
-        if (((NaivePartitioningOperatorFactory) of).getPartitionColumns().isEmpty()) {
-          operatorList.clear();
-          operatorList.add(originalQuery.getOperators());
-          return operatorList;
+        // Process consecutive window operators
+        while (i + 1 < operators.size() && operators.get(i + 1) instanceof WindowOperatorFactory) {
+          i++;
+          currentStage.add(operators.get(i));
         }
+
+        // Finalize the current stage
+        operatorList.add(new ArrayList<>(currentStage));
+        currentStage.clear();
       }
     }
+
+    // There shouldn't be any operators left in currentStage. The last operator should always be WindowOperatorFactory.
+    if (!currentStage.isEmpty()) {
+      throw new ISE(
+          "Found unexpected operators [%s] present in the list of operators [%s].",
+          currentStage,
+          operators
+      );
+    }
+
     return operatorList;
   }
 
