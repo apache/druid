@@ -112,17 +112,18 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
           Collections.emptyList()
       );
 
-      final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      while (!cursor.isDoneOrInterrupted()) {
-        writer.addSelection();
-        cursor.advance();
-      }
+      try(final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+        while (!cursor.isDoneOrInterrupted()) {
+          writer.addSelection();
+          cursor.advance();
+        }
 
-      if (writer == null) {
-        return new EmptyRowsAndColumns();
-      } else {
-        final byte[] bytes = writer.toByteArray();
-        return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
+        if (writer == null) {
+          return new EmptyRowsAndColumns();
+        } else {
+          final byte[] bytes = writer.toByteArray();
+          return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
+        }
       }
     }
   }

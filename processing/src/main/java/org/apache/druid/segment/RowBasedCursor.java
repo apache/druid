@@ -19,13 +19,11 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -42,7 +40,6 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ToLongFunction<RowType> timestampFunction;
   private final Interval interval;
   private final boolean descending;
-  private final DateTime cursorTime;
   private final ColumnSelectorFactory columnSelectorFactory;
   private final ValueMatcher valueMatcher;
 
@@ -54,7 +51,6 @@ public class RowBasedCursor<RowType> implements Cursor
       @Nullable final Filter filter,
       final Interval interval,
       final VirtualColumns virtualColumns,
-      final Granularity gran,
       final boolean descending,
       final RowSignature rowSignature
   )
@@ -63,7 +59,6 @@ public class RowBasedCursor<RowType> implements Cursor
     this.timestampFunction = rowAdapter.timestampFunction();
     this.interval = interval;
     this.descending = descending;
-    this.cursorTime = gran.toDateTime(interval.getStartMillis());
     this.columnSelectorFactory = virtualColumns.wrap(
         new RowBasedColumnSelectorFactory<>(
             rowWalker::currentRow,

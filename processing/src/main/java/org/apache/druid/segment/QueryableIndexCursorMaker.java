@@ -53,7 +53,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -67,6 +66,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
   private static final Logger log = new Logger(QueryableIndexCursorMaker.class);
   private final QueryableIndex index;
   private final Interval interval;
+  @SuppressWarnings("unused")
   private final Granularity gran;
   private final VirtualColumns virtualColumns;
 
@@ -206,9 +206,9 @@ public class QueryableIndexCursorMaker implements CursorMaker
                                                    descending
                                                );
       final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
-      return new QueryableIndexCursor(filteredOffset, columnSelectorFactory, DateTimes.utc(timeStart));
+      return new QueryableIndexCursor(filteredOffset, columnSelectorFactory);
     } else {
-      return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory, DateTimes.utc(timeStart));
+      return new QueryableIndexCursor(baseCursorOffset, columnSelectorFactory);
     }
   }
 
@@ -487,13 +487,11 @@ public class QueryableIndexCursorMaker implements CursorMaker
   {
     private final Offset cursorOffset;
     private final ColumnSelectorFactory columnSelectorFactory;
-    private final DateTime bucketStart;
 
-    QueryableIndexCursor(Offset cursorOffset, ColumnSelectorFactory columnSelectorFactory, DateTime bucketStart)
+    QueryableIndexCursor(Offset cursorOffset, ColumnSelectorFactory columnSelectorFactory)
     {
       this.cursorOffset = cursorOffset;
       this.columnSelectorFactory = columnSelectorFactory;
-      this.bucketStart = bucketStart;
     }
 
     @Override

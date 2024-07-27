@@ -20,7 +20,6 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterators;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -30,7 +29,6 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -80,8 +78,7 @@ public class IncrementalIndexCursorMaker implements CursorMaker
         builder.getVirtualColumns(),
         builder.isDescending(),
         builder.getFilter(),
-        actualInterval,
-        builder.getGranularity()
+        actualInterval
     );
   }
 
@@ -94,7 +91,6 @@ public class IncrementalIndexCursorMaker implements CursorMaker
     private Iterator<IncrementalIndexRow> baseIter;
     private Iterable<IncrementalIndexRow> cursorIterable;
     private boolean emptyRange;
-    private final DateTime time;
     private int numAdvanced;
     private boolean done;
 
@@ -104,8 +100,7 @@ public class IncrementalIndexCursorMaker implements CursorMaker
         VirtualColumns virtualColumns,
         boolean descending,
         @Nullable Filter filter,
-        Interval actualInterval,
-        Granularity gran
+        Interval actualInterval
     )
     {
       currEntry = new IncrementalIndexRowHolder();
@@ -125,7 +120,6 @@ public class IncrementalIndexCursorMaker implements CursorMaker
           actualInterval.getEndMillis()
       );
       emptyRange = !cursorIterable.iterator().hasNext();
-      time = gran.toDateTime(actualInterval.getStartMillis());
 
       reset();
     }

@@ -55,8 +55,8 @@ public class TopNQueryEngine
   /**
    * Do the thing - process a {@link StorageAdapter} into a {@link Sequence} of {@link TopNResultValue}, with one of the
    * fine {@link TopNAlgorithm} available chosen based on the type of column being aggregated. The algorithm provides a
-   * mapping function to process rows from the adapter {@link org.apache.druid.segment.Cursor} to apply
-   * {@link AggregatorFactory} and create or update {@link TopNResultValue}
+   * mapping function to process rows from the adapter {@link Cursor} to apply {@link AggregatorFactory} and create or
+   * update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
       final TopNQuery query,

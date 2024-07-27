@@ -253,14 +253,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       final CursorMaker maker = closer.register(adapter.asCursorMaker(query.asCursorBuildSpec(null)));
-      final Cursor cursor = maker.makeCursor();
+      final Cursor nextCursor = maker.makeCursor();
 
-      if (cursor == null) {
+      if (nextCursor == null) {
         // No cursors!
         maker.close();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final long rowsFlushed = setNextCursor(cursor, segmentHolder.get());
+        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
       }
     }
@@ -297,14 +297,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         }
 
         final CursorMaker maker = closer.register(adapter.asCursorMaker(query.asCursorBuildSpec(null)));
-        final Cursor cursor = maker.makeCursor();
+        final Cursor nextCursor = maker.makeCursor();
 
-        if (cursor == null) {
+        if (nextCursor == null) {
           // no cursor
           maker.close();
           return ReturnOrAwait.returnObject(Unit.instance());
         }
-        final long rowsFlushed = setNextCursor(cursor, frameSegment);
+        final long rowsFlushed = setNextCursor(nextCursor, frameSegment);
 
         if (rowsFlushed > 0) {
           return ReturnOrAwait.runAgain();

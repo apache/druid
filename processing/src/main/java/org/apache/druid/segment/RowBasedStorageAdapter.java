@@ -203,7 +203,6 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
             spec.getFilter(),
             actualInterval,
             spec.getVirtualColumns(),
-            gran,
             spec.isDescending(),
             rowSignature
         );

@@ -242,6 +242,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
                                                      .build();
     try (final CursorMaker maker = storageAdapter.asCursorMaker(buildSpec)) {
       final VectorCursor cursor = maker.makeVectorCursor();
+      Assert.assertNotNull(cursor);
 
       ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(storageAdapter, "v");
 
@@ -273,6 +274,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
           boolean[] nulls;
           switch (outputType.getType()) {
             case LONG:
+              Assert.assertNotNull(selector);
               nulls = selector.getNullVector();
               long[] longs = selector.getLongVector();
               for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
@@ -280,6 +282,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
               }
               break;
             case DOUBLE:
+              Assert.assertNotNull(selector);
               // special case to test floats just to get coverage on getFloatVector
               if ("float2".equals(expression)) {
                 nulls = selector.getNullVector();
@@ -295,7 +298,8 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
                 }
               }
               break;
-            case STRING:
+            default:
+              Assert.assertNotNull(objectSelector);
               Object[] objects = objectSelector.getObjectVector();
               for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++, rowCount++) {
                 resultsVector.add(objects[i]);
@@ -312,7 +316,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 
 
       final Cursor nonVectorized = maker.makeCursor();
-
+      Assert.assertNotNull(nonVectorized);
       final ColumnValueSelector nonSelector = nonVectorized.getColumnSelectorFactory()
                                                            .makeColumnValueSelector("v");
       int rows = 0;

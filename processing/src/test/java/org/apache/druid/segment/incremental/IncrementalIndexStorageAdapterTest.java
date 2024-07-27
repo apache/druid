@@ -84,7 +84,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -437,7 +436,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                                      .build();
     try (final CursorMaker maker = sa.asCursorMaker(buildSpec)) {
       Cursor cursor = maker.makeCursor();
-      final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
       DimensionSelector dimSelector = cursor
           .getColumnSelectorFactory()
           .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
@@ -496,7 +494,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                                      .build();
     try (final CursorMaker maker = sa.asCursorMaker(buildSpec)) {
       Cursor cursor = maker.makeCursor();
-      final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
       DimensionSelector dimSelector = cursor
           .getColumnSelectorFactory()
           .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
@@ -537,7 +534,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                                      .build();
     try (final CursorMaker maker = sa.asCursorMaker(buildSpec)) {
       Cursor cursor = maker.makeCursor();
-      final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
 
       DimensionSelector dimSelector1A = cursor
           .getColumnSelectorFactory()
