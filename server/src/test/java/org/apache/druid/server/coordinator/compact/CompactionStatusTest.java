@@ -19,20 +19,32 @@
 
 package org.apache.druid.server.coordinator.compact;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
+import org.apache.druid.timeline.CompactionState;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 
 public class CompactionStatusTest
 {
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final String DS_WIKI = "wiki";
 
   @Test
@@ -151,6 +163,56 @@ public class CompactionStatusTest
     Assert.assertEquals(
         partitionsSpec,
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
+    );
+  }
+
+  @Test
+  public void testStatusOnSegmentGranularityMismatch()
+  {
+    final GranularitySpec segmentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null, null);
+    final CompactionState segmentLastCompactionState = new CompactionState(
+        null,
+        null,
+        null,
+        null,
+        null,
+        segmentGranularitySpec.asMap(OBJECT_MAPPER)
+    );
+    final DataSegment segment
+        = DataSegment.builder()
+                     .dataSource(DS_WIKI)
+                     .interval(Intervals.of("2013-01-01/PT1H"))
+                     .size(100_000_000L)
+                     .version("v1")
+                     .lastCompactionState(segmentLastCompactionState)
+                     .build();
+
+    final CompactionStatus status = CompactionStatus.compute(
+        SegmentsToCompact.from(Collections.singletonList(segment)),
+        createCompactionConfig(Granularities.DAY),
+        OBJECT_MAPPER
+    );
+
+    Assert.assertFalse(status.isComplete());
+    Assert.assertEquals(
+        "segmentGranularity",
+        status.getReason()
+    );
+  }
+
+  private static DataSourceCompactionConfig createCompactionConfig(
+      Granularity segmentGranularity
+  )
+  {
+    return new DataSourceCompactionConfig(
+        DS_WIKI,
+        null, null, null, null,
+        createTuningConfig(
+            new DimensionRangePartitionsSpec(1_000_000, null, Arrays.asList("countryName", "cityName"), false)
+        ),
+        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null),
+        null, null, null, null, null, null
     );
   }
 

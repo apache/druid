@@ -27,10 +27,13 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -102,21 +105,70 @@ public class CompactionStatus
     return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args));
   }
 
-  private static CompactionStatus completeIfEqual(String field, Object configured, Object current)
+  private static <T> CompactionStatus completeIfEqual(
+      String field,
+      T configured,
+      T current,
+      Function<T, String> stringFunction
+  )
   {
     if (configured == null || configured.equals(current)) {
       return COMPLETE;
     } else {
-      return configChanged(field, configured, current);
+      return configChanged(field, configured, current, stringFunction);
     }
   }
 
-  private static CompactionStatus configChanged(String field, Object configured, Object current)
+  private static <T> CompactionStatus configChanged(
+      String field,
+      T target,
+      T current,
+      Function<T, String> stringFunction
+  )
   {
     return CompactionStatus.incomplete(
-        "Configured %s[%s] is different from current %s[%s]",
-        field, configured, field, current
+        "'%s' mismatch: required[%s], current[%s]",
+        field,
+        target == null ? null : stringFunction.apply(target),
+        current == null ? null : stringFunction.apply(current)
     );
+  }
+
+  private static String asString(Granularity granularity)
+  {
+    if (granularity == null) {
+      return null;
+    }
+    for (GranularityType type : GranularityType.values()) {
+      if (type.getDefaultGranularity().equals(granularity)) {
+        return type.toString();
+      }
+    }
+    return granularity.toString();
+  }
+
+  private static String asString(PartitionsSpec partitionsSpec) {
+    if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
+      DimensionRangePartitionsSpec rangeSpec = (DimensionRangePartitionsSpec) partitionsSpec;
+      return StringUtils.format(
+          "'range' on %s with %,d rows",
+          rangeSpec.getPartitionDimensions(), rangeSpec.getTargetRowsPerSegment()
+      );
+    } else if (partitionsSpec instanceof HashedPartitionsSpec) {
+      HashedPartitionsSpec hashedSpec = (HashedPartitionsSpec) partitionsSpec;
+      return StringUtils.format(
+          "'hashed' on %s with %,d rows",
+          hashedSpec.getPartitionDimensions(), hashedSpec.getTargetRowsPerSegment()
+      );
+    } else if (partitionsSpec instanceof DynamicPartitionsSpec) {
+      DynamicPartitionsSpec dynamicSpec = (DynamicPartitionsSpec) partitionsSpec;
+      return StringUtils.format(
+          "'dynamic' with %,d rows",
+          dynamicSpec.getMaxRowsPerSegment()
+      );
+    } else {
+      return partitionsSpec.toString();
+    }
   }
 
   static CompactionStatus skipped(String reasonFormat, Object... args)
@@ -197,7 +249,7 @@ public class CompactionStatus
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       if (lastCompactionState == null) {
-        return CompactionStatus.incomplete("Not compacted yet");
+        return CompactionStatus.incomplete("not compacted yet");
       } else {
         return COMPLETE;
       }
@@ -211,7 +263,7 @@ public class CompactionStatus
       if (allHaveSameCompactionState) {
         return COMPLETE;
       } else {
-        return CompactionStatus.incomplete("Candidate segments have different last compaction states.");
+        return CompactionStatus.incomplete("segments have different last compaction states");
       }
     }
 
@@ -220,7 +272,8 @@ public class CompactionStatus
       return CompactionStatus.completeIfEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
-          lastCompactionState.getPartitionsSpec()
+          lastCompactionState.getPartitionsSpec(),
+          CompactionStatus::asString
       );
     }
 
@@ -229,7 +282,8 @@ public class CompactionStatus
       return CompactionStatus.completeIfEqual(
           "indexSpec",
           Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
-          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class)
+          objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
+          String::valueOf
       );
     }
 
@@ -254,15 +308,16 @@ public class CompactionStatus
         );
         if (needsCompaction) {
           return CompactionStatus.incomplete(
-              "Configured segmentGranularity[%s] does not align with segment intervals.",
-              configuredSegmentGranularity
+              "segmentGranularity: segments do not align with target[%s]",
+              asString(configuredSegmentGranularity)
           );
         }
       } else {
         return CompactionStatus.configChanged(
             "segmentGranularity",
             configuredSegmentGranularity,
-            existingSegmentGranularity
+            existingSegmentGranularity,
+            CompactionStatus::asString
         );
       }
 
@@ -277,7 +332,8 @@ public class CompactionStatus
         return CompactionStatus.completeIfEqual(
             "rollup",
             configuredGranularitySpec.isRollup(),
-            existingGranularitySpec == null ? null : existingGranularitySpec.isRollup()
+            existingGranularitySpec == null ? null : existingGranularitySpec.isRollup(),
+            String::valueOf
         );
       }
     }
@@ -290,7 +346,8 @@ public class CompactionStatus
         return CompactionStatus.completeIfEqual(
             "queryGranularity",
             configuredGranularitySpec.getQueryGranularity(),
-            existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity()
+            existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity(),
+            CompactionStatus::asString
         );
       }
     }
@@ -304,7 +361,8 @@ public class CompactionStatus
         return CompactionStatus.completeIfEqual(
             "dimensionsSpec",
             compactionConfig.getDimensionsSpec().getDimensions(),
-            existingDimensionsSpec == null ? null : existingDimensionsSpec.getDimensions()
+            existingDimensionsSpec == null ? null : existingDimensionsSpec.getDimensions(),
+            String::valueOf
         );
       }
     }
@@ -324,8 +382,9 @@ public class CompactionStatus
       if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
         return CompactionStatus.configChanged(
             "metricsSpec",
-            Arrays.toString(configuredMetricsSpec),
-            Arrays.toString(existingMetricsSpec)
+            configuredMetricsSpec,
+            existingMetricsSpec,
+            Arrays::toString
         );
       } else {
         return COMPLETE;
@@ -345,7 +404,8 @@ public class CompactionStatus
       return CompactionStatus.completeIfEqual(
           "transformSpec filter",
           compactionConfig.getTransformSpec().getFilter(),
-          existingTransformSpec == null ? null : existingTransformSpec.getFilter()
+          existingTransformSpec == null ? null : existingTransformSpec.getFilter(),
+          String::valueOf
       );
     }
 

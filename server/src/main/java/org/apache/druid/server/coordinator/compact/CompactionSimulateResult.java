@@ -26,19 +26,28 @@ import java.util.List;
 
 public class CompactionSimulateResult
 {
-  private final List<List<Object>> submittedTasks;
+  private final List<List<Object>> intervalsToCompact;
+  private final List<List<Object>> skippedIntervals;
 
   @JsonCreator
   public CompactionSimulateResult(
-      @JsonProperty("submittedTasks") List<List<Object>> submittedTasks
+      @JsonProperty("intervalsToCompact") List<List<Object>> intervalsToCompact,
+      @JsonProperty("skippedIntervals") List<List<Object>> skippedIntervals
   )
   {
-    this.submittedTasks = submittedTasks;
+    this.intervalsToCompact = intervalsToCompact;
+    this.skippedIntervals = skippedIntervals;
   }
 
   @JsonProperty
-  public List<List<Object>> getSubmittedTasks()
+  public List<List<Object>> getIntervalsToCompact()
   {
-    return submittedTasks;
+    return intervalsToCompact;
+  }
+
+  @JsonProperty
+  public List<List<Object>> getSkippedIntervals()
+  {
+    return skippedIntervals;
   }
 }

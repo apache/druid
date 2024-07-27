@@ -36,6 +36,7 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.Streams;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -297,6 +298,9 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
   {
     while (compactibleSegmentIterator.hasNext()) {
       List<DataSegment> segments = compactibleSegmentIterator.next();
+      if (CollectionUtils.isNullOrEmpty(segments)) {
+        continue;
+      }
 
       // Do not compact an interval which comprises of a single tombstone
       // If there are multiple tombstones in the interval, we may still want to compact them
@@ -319,6 +323,7 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
         compactedSegmentStats.increment(candidates.getStats());
       } else if (compactionStatus.isSkipped()) {
         skippedSegmentStats.increment(candidates.getStats());
+        statusTracker.onIntervalSkipped(candidates, compactionStatus);
         log.warn(
             "Skipping compaction for datasource[%s], interval[%s] due to reason[%s].",
             dataSource, interval, compactionStatus.getReason()
@@ -329,10 +334,10 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
           // Skip these candidate segments as we have already queued this interval
         } else {
           queuedIntervals.add(interval);
-          queue.add(candidates);
+          queue.add(candidates.withStatus(compactionStatus));
         }
       } else {
-        queue.add(candidates);
+        queue.add(candidates.withStatus(compactionStatus));
       }
     }
 
@@ -360,10 +365,13 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
 
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
-    final List<Interval> fullSkipIntervals = sortAndAddSkipIntervalFromLatest(
-        last.getInterval().getEnd(),
-        skipOffset,
+    final Interval latestSkipInterval = computeLatestSkipInterval(
         configuredSegmentGranularity,
+        last.getInterval().getEnd(),
+        skipOffset
+    );
+    final List<Interval> fullSkipIntervals = sortAndAddSkipIntervalFromLatest(
+        latestSkipInterval,
         skipIntervals
     );
 
@@ -372,7 +380,18 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
       final List<DataSegment> segments = new ArrayList<>(
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
-      skippedSegmentStats.increment(SegmentsToCompact.from(segments).getStats());
+      if (!CollectionUtils.isNullOrEmpty(segments)) {
+        SegmentsToCompact candidates = SegmentsToCompact.from(segments);
+        skippedSegmentStats.increment(candidates.getStats());
+
+        final CompactionStatus reason;
+        if (skipInterval.overlaps(latestSkipInterval)) {
+          reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
+        } else {
+          reason = CompactionStatus.skipped("interval locked by another task");
+        }
+        statusTracker.onIntervalSkipped(candidates, reason);
+      }
     }
 
     final Interval totalInterval = new Interval(first.getInterval().getStart(), last.getInterval().getEnd());
@@ -413,25 +432,32 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
     return searchIntervals;
   }
 
+  Interval computeLatestSkipInterval(
+      Granularity configuredSegmentGranularity,
+      DateTime latest,
+      Period skipOffsetFromLatest
+  )
+  {
+    final Interval skipFromLatest;
+    if (configuredSegmentGranularity != null) {
+      DateTime skipFromLastest = new DateTime(latest, latest.getZone()).minus(skipOffsetFromLatest);
+      DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromLastest);
+      skipFromLatest = new Interval(skipOffsetBucketToSegmentGranularity, latest);
+    } else {
+      skipFromLatest = new Interval(skipOffsetFromLatest, latest);
+    }
+    return skipFromLatest;
+  }
+
   @VisibleForTesting
   static List<Interval> sortAndAddSkipIntervalFromLatest(
-      DateTime latest,
-      Period skipOffset,
-      Granularity configuredSegmentGranularity,
+      Interval skipFromLatest,
       @Nullable List<Interval> skipIntervals
   )
   {
     final List<Interval> nonNullSkipIntervals = skipIntervals == null
                                                 ? new ArrayList<>(1)
                                                 : new ArrayList<>(skipIntervals.size());
-    final Interval skipFromLatest;
-    if (configuredSegmentGranularity != null) {
-      DateTime skipFromLastest = new DateTime(latest, latest.getZone()).minus(skipOffset);
-      DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromLastest);
-      skipFromLatest = new Interval(skipOffsetBucketToSegmentGranularity, latest);
-    } else {
-      skipFromLatest = new Interval(skipOffset, latest);
-    }
 
     if (skipIntervals != null) {
       final List<Interval> sortedSkipIntervals = new ArrayList<>(skipIntervals);

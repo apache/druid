@@ -176,7 +176,7 @@ class LocalOverlordClient implements OverlordClient
   {
     if (taskPayload == null) {
       return null;
-    } else if (inputType.isAssignableFrom(taskPayload.getClass())) {
+    } else if (!inputType.isInstance(taskPayload)) {
       throw DruidException.defensive(
           "Unknown type[%s] for compaction task. Expected type[%s].",
           taskPayload.getClass().getSimpleName(), inputType.getSimpleName()

@@ -585,7 +585,7 @@ public class CoordinatorCompactionConfigsResourceTest
 
     coordinatorCompactionConfigsResource = new CoordinatorCompactionConfigsResource(
         null,
-        new CompactionDutySimulator(metadataManager, OBJECT_MAPPER),
+        new CompactionDutySimulator(null, metadataManager, OBJECT_MAPPER),
         null
     );
     Response response = coordinatorCompactionConfigsResource.simulateCompactionDynamicConfig(
@@ -598,17 +598,17 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(
         Arrays.asList(
             Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
-            Arrays.asList("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-08/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-04/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, ""),
-            Arrays.asList("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "")
+            Arrays.asList("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-08/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-04/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
+            Arrays.asList("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "not compacted yet")
         ),
-        simulateResult.getSubmittedTasks()
+        simulateResult.getIntervalsToCompact()
     );
   }
 

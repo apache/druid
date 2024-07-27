@@ -37,6 +37,17 @@ import java.util.Set;
  * Tracks status of both recently submitted compaction tasks and the compaction
  * state of segments. Can be used to check if a set of segments is currently
  * eligible for compaction.
+ * <p>
+ * TODO: Keep the interval sidelined until
+ *  - no other interval to compact for the last 1 hour
+ *  - some other intervals have been submitted
+ *  - threshold has been crossed - 30% uncompacted bytes or 50% uncompacted segments
+ *  - interval is uncompacted and has just 1 uncompacted segment out of 100
+ *  - level of uncompaction is important to know
+ *  - should this be a part of policy
+ *
+ *
+ *  - A policy that picks up stuff only if it meets some thresholds and then
  */
 public class CompactionStatusTracker
 {
@@ -71,7 +82,7 @@ public class CompactionStatusTracker
     final long inputSegmentSize = config.getInputSegmentSizeBytes();
     if (candidate.getTotalBytes() > inputSegmentSize) {
       return CompactionStatus.skipped(
-          "Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
+          "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
           candidate.getTotalBytes(), inputSegmentSize
       );
     }
@@ -92,8 +103,8 @@ public class CompactionStatusTracker
       case COMPACTED:
       case FAILED_ALL_RETRIES:
         return CompactionStatus.skipped(
-            "Interval[%s] was recently submitted for compaction and has state[%s].",
-            compactionInterval, intervalStatus.state
+            "recently submitted: current compaction state[%s]",
+            intervalStatus.state
         );
       default:
         break;
@@ -118,6 +129,14 @@ public class CompactionStatusTracker
         datasourceStatuses.remove(datasource);
       }
     });
+  }
+
+  public void onIntervalSkipped(
+      SegmentsToCompact candidateSegments,
+      CompactionStatus status
+  )
+  {
+    // do nothing
   }
 
   public void onTaskSubmitted(

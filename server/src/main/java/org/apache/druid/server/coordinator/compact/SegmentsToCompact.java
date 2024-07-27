@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.coordinator.compact;
 
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -34,38 +34,24 @@ import java.util.stream.Collectors;
  */
 public class SegmentsToCompact
 {
-  private static final SegmentsToCompact EMPTY_INSTANCE = new SegmentsToCompact();
-
   private final List<DataSegment> segments;
   private final Interval umbrellaInterval;
   private final String datasource;
   private final long totalBytes;
   private final int numIntervals;
 
-  static SegmentsToCompact empty()
-  {
-    return EMPTY_INSTANCE;
-  }
+  private final CompactionStatus compactionStatus;
 
   public static SegmentsToCompact from(List<DataSegment> segments)
   {
     if (segments == null || segments.isEmpty()) {
-      return empty();
+      throw InvalidInput.exception("Segments to compact must be non-empty");
     } else {
-      return new SegmentsToCompact(segments);
+      return new SegmentsToCompact(segments, null);
     }
   }
 
-  private SegmentsToCompact()
-  {
-    this.segments = Collections.emptyList();
-    this.totalBytes = 0L;
-    this.numIntervals = 0;
-    this.umbrellaInterval = null;
-    this.datasource = null;
-  }
-
-  private SegmentsToCompact(List<DataSegment> segments)
+  private SegmentsToCompact(List<DataSegment> segments, CompactionStatus status)
   {
     this.segments = segments;
     this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
@@ -74,6 +60,7 @@ public class SegmentsToCompact
     );
     this.numIntervals = (int) segments.stream().map(DataSegment::getInterval).distinct().count();
     this.datasource = segments.get(0).getDataSource();
+    this.compactionStatus = status;
   }
 
   public List<DataSegment> getSegments()
@@ -118,6 +105,16 @@ public class SegmentsToCompact
   public CompactionStatistics getStats()
   {
     return CompactionStatistics.create(totalBytes, size(), numIntervals);
+  }
+
+  public CompactionStatus getCompactionStatus()
+  {
+    return compactionStatus;
+  }
+
+  public SegmentsToCompact withStatus(CompactionStatus status)
+  {
+    return new SegmentsToCompact(this.segments, status);
   }
 
   @Override

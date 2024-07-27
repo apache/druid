@@ -38,6 +38,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -62,14 +63,17 @@ public class CompactionDutySimulator
 {
   private final ObjectMapper objectMapper;
   private final MetadataManager metadataManager;
+  private final CompactionStatusTracker statusTracker;
   private final OverlordClient emptyOverlordClient = new EmptyOverlordClient();
 
   @Inject
   public CompactionDutySimulator(
+      CompactionStatusTracker statusTracker,
       MetadataManager metadataManager,
       ObjectMapper objectMapper
   )
   {
+    this.statusTracker = statusTracker;
     this.objectMapper = objectMapper;
     this.metadataManager = metadataManager;
   }
@@ -98,41 +102,74 @@ public class CompactionDutySimulator
                          .getSnapshotOfDataSourcesWithAllUsedSegments()
                          .getUsedSegmentsTimelinesPerDataSource();
 
-    final List<List<Object>> tableOfSubmittedTasks = new ArrayList<>();
-    final CompactionStatusTracker statusTracker = new CompactionStatusTracker(objectMapper) {
+    final List<List<Object>> tableOfCompactibleIntervals = new ArrayList<>();
+    final List<List<Object>> tableOfSkippedIntervals = new ArrayList<>();
+    final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(objectMapper) {
+      @Override
+      public CompactionStatus computeCompactionStatus(
+          SegmentsToCompact candidateSegments,
+          DataSourceCompactionConfig config
+      )
+      {
+        return statusTracker.computeCompactionStatus(candidateSegments, config);
+      }
+
+      @Override
+      public void onIntervalSkipped(SegmentsToCompact candidateSegments, CompactionStatus status)
+      {
+        // Add a row for each skipped interval
+        tableOfSkippedIntervals.add(
+            Arrays.asList(
+                candidateSegments.getDataSource(),
+                candidateSegments.getUmbrellaInterval(),
+                candidateSegments.size(),
+                candidateSegments.getTotalBytes(),
+                status.getReason()
+            )
+        );
+      }
+
       @Override
       public void onTaskSubmitted(ClientCompactionTaskQuery taskPayload, SegmentsToCompact candidateSegments)
       {
         // Add a row for each task in order of submission
-        tableOfSubmittedTasks.add(
+        final CompactionStatus status = candidateSegments.getCompactionStatus();
+        final String reason = status == null ? "" : status.getReason();
+        tableOfCompactibleIntervals.add(
             Arrays.asList(
                 candidateSegments.getDataSource(),
                 candidateSegments.getUmbrellaInterval(),
                 candidateSegments.size(),
                 candidateSegments.getTotalBytes(),
                 CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(taskPayload.getTuningConfig()),
-                ""
+                reason
             )
         );
       }
     };
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
-    new CompactSegments(statusTracker, emptyOverlordClient).run(
+    new CompactSegments(simulationStatusTracker, emptyOverlordClient).run(
         configWithUnlimitedTaskSlots,
         datasourceTimelines,
         stats
     );
 
-    if (!tableOfSubmittedTasks.isEmpty()) {
-      // Add header row
-      tableOfSubmittedTasks.add(
+    // Add header rows
+    if (!tableOfCompactibleIntervals.isEmpty()) {
+      tableOfCompactibleIntervals.add(
           0,
           Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact")
       );
     }
+    if (!tableOfSkippedIntervals.isEmpty()) {
+      tableOfSkippedIntervals.add(
+          0,
+          Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToSkip")
+      );
+    }
 
-    return new CompactionSimulateResult(tableOfSubmittedTasks);
+    return new CompactionSimulateResult(tableOfCompactibleIntervals, tableOfSkippedIntervals);
   }
 
   /**
