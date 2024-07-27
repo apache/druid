@@ -1708,7 +1708,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .build();
       try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
         final Cursor cursor = maker.makeCursor();
-
+        Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertTrue(factory.getColumnCapabilities("spatial").hasSpatialIndexes());
@@ -1735,8 +1735,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
           cursor.advance();
         }
       }
-      Assert.assertEquals(spatialrows, rowsFromSegment);
     }
+    Assert.assertEquals(spatialrows, rowsFromSegment);
   }
 
   @Test
@@ -1840,6 +1840,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .build();
       try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
         final Cursor cursor = maker.makeCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
@@ -1868,8 +1869,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
           cursor.advance();
         }
       }
-      Assert.assertEquals(rows, rowsFromSegment);
     }
+    Assert.assertEquals(rows, rowsFromSegment);
   }
 
   private Pair<TaskStatus, DataSegmentsWithSchemas> runIndexTask() throws Exception
@@ -2068,7 +2069,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .build();
       try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
         final Cursor cursor = maker.makeCursor();
-
+        Assert.assertNotNull(cursor);
         cursor.reset();
         while (!cursor.isDone()) {
           final DimensionSelector selector1 = cursor.getColumnSelectorFactory()

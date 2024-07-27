@@ -37,7 +37,7 @@ public class StorageAdapterRowsAndColumnsTest extends RowsAndColumnsTestBase
 
   private static StorageAdapterRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    try(ColumnBasedFrameRowsAndColumns fRAC = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input)) {
+    try (ColumnBasedFrameRowsAndColumns fRAC = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input)) {
       return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
     }
   }
