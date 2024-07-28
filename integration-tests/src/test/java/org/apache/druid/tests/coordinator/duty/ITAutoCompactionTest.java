@@ -54,7 +54,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregat
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
@@ -1575,17 +1575,17 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     // First try update without useAutoScaleSlots
     updateCompactionTaskSlot(3, 5, null);
-    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
     // Should be default value which is false
-    Assert.assertFalse(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    Assert.assertFalse(compactionConfig.isUseAutoScaleSlots());
     // Now try update from default value to useAutoScaleSlots=true
     updateCompactionTaskSlot(3, 5, true);
-    coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
-    Assert.assertTrue(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    compactionConfig = compactionResource.getCompactionConfig();
+    Assert.assertTrue(compactionConfig.isUseAutoScaleSlots());
     // Now try update from useAutoScaleSlots=true to useAutoScaleSlots=false
     updateCompactionTaskSlot(3, 5, false);
-    coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
-    Assert.assertFalse(coordinatorCompactionConfig.isUseAutoScaleSlots());
+    compactionConfig = compactionResource.getCompactionConfig();
+    Assert.assertFalse(compactionConfig.isUseAutoScaleSlots());
   }
 
   private void loadData(String indexTask) throws Exception
@@ -1796,7 +1796,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       @Nullable CompactionEngine engine
   ) throws Exception
   {
-    DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
+    DataSourceCompactionConfig dataSourceCompactionConfig = new DataSourceCompactionConfig(
         fullDatasourceName,
         null,
         null,
@@ -1831,19 +1831,15 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         engine,
         null
     );
-    compactionResource.submitCompactionConfig(compactionConfig);
+    compactionResource.submitCompactionConfig(dataSourceCompactionConfig);
 
     // Wait for compaction config to persist
     Thread.sleep(2000);
 
     // Verify that the compaction config is updated correctly.
-    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
-    DataSourceCompactionConfig foundDataSourceCompactionConfig = null;
-    for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
-      if (dataSourceCompactionConfig.getDataSource().equals(fullDatasourceName)) {
-        foundDataSourceCompactionConfig = dataSourceCompactionConfig;
-      }
-    }
+    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
+    DataSourceCompactionConfig foundDataSourceCompactionConfig
+        = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
     Assert.assertNotNull(foundDataSourceCompactionConfig);
     Assert.assertNotNull(foundDataSourceCompactionConfig.getTuningConfig());
     Assert.assertEquals(foundDataSourceCompactionConfig.getTuningConfig().getPartitionsSpec(), partitionsSpec);
@@ -1858,16 +1854,12 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
   private void deleteCompactionConfig() throws Exception
   {
-    compactionResource.deleteCompactionConfig(fullDatasourceName);
+    compactionResource.deleteDataSourceCompactionConfig(fullDatasourceName);
 
     // Verify that the compaction config is updated correctly.
-    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
-    DataSourceCompactionConfig foundDataSourceCompactionConfig = null;
-    for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
-      if (dataSourceCompactionConfig.getDataSource().equals(fullDatasourceName)) {
-        foundDataSourceCompactionConfig = dataSourceCompactionConfig;
-      }
-    }
+    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
+    DataSourceCompactionConfig foundDataSourceCompactionConfig
+        = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
     Assert.assertNull(foundDataSourceCompactionConfig);
   }
 
@@ -1949,11 +1941,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   {
     compactionResource.updateCompactionTaskSlot(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots);
     // Verify that the compaction config is updated correctly.
-    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
-    Assert.assertEquals(coordinatorCompactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
-    Assert.assertEquals(coordinatorCompactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
+    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
+    Assert.assertEquals(compactionConfig.getCompactionTaskSlotRatio(), compactionTaskSlotRatio);
+    Assert.assertEquals(compactionConfig.getMaxCompactionTaskSlots(), maxCompactionTaskSlots);
     if (useAutoScaleSlots != null) {
-      Assert.assertEquals(coordinatorCompactionConfig.isUseAutoScaleSlots(), useAutoScaleSlots.booleanValue());
+      Assert.assertEquals(compactionConfig.isUseAutoScaleSlots(), useAutoScaleSlots.booleanValue());
     }
   }
 
