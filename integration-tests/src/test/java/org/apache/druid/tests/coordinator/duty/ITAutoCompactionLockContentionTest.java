@@ -307,6 +307,7 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
         .builder()
         .forDataSource(fullDatasourceName)
         .withSkipOffsetFromLatest(Period.ZERO)
+        .withMaxRowsPerSegment(Specs.MAX_ROWS_PER_SEGMENT)
         .build();
     compactionResource.updateCompactionTaskSlot(0.5, 10, null);
     compactionResource.submitCompactionConfig(dataSourceCompactionConfig);
