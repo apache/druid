@@ -481,7 +481,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
         for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
           ServerSelector server = chunk.getObject();
           if (brokerSegmentWatcherConfig.detectUnavailableSegments() && !server.isQueryable()) {
-            // todo report metric
             log.debug("ServerSelector for segment id [%s] is not queryable", server.getSegment().getId());
             continue;
           }
@@ -497,11 +496,12 @@ public class CachingClusteredClient implements QuerySegmentWalker
         }
       }
 
-      if (brokerSegmentWatcherConfig.detectUnavailableSegments() && unavailableSegmentsIds.size() > 0) {
+      if (brokerSegmentWatcherConfig.detectUnavailableSegments() && !unavailableSegmentsIds.isEmpty()) {
+        queryPlus.getQueryMetrics().reportUnavailableSegmentCount(unavailableSegmentsIds.size()).emit(emitter);
         log.warn(
             "Detected [%d] unavailable segments, trimmed segment ids: [%s]",
             unavailableSegmentsIds.size(),
-            unavailableSegmentsIds.subList(0, 100)
+            unavailableSegmentsIds.subList(0, 10)
         );
         if (unavailableSegmentsAction == UnavailableSegmentsAction.FAIL) {
           throw new QueryException(

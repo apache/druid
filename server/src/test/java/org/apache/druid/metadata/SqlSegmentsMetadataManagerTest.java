@@ -1504,9 +1504,9 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     List<DataSegmentChange> changes = changeRequestsSnapshot.getRequests().get(0);
     int segmentRemoved = 0, segmentAdded = 0;
     for (DataSegmentChange change : changes) {
-      if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_ADDED) {
+      if (change.getChangeType() == DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED) {
         segmentAdded++;
-      } else if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_REMOVED) {
+      } else if (change.getChangeType() == DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_REMOVED) {
         segmentRemoved++;
       }
     }
@@ -1518,9 +1518,9 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
     int segmentHandedOff = 0;
     segmentAdded = 0;
     for (DataSegmentChange change : changes) {
-      if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_ADDED) {
+      if (change.getChangeType() == DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED) {
         segmentAdded++;
-      } else if (change.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_HAS_LOADED) {
+      } else if (change.getChangeType() == DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_HAS_LOADED) {
         segmentHandedOff++;
       }
     }

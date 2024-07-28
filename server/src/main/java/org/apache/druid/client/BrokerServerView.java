@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.druid.client.MetadataSegmentView.PublishedSegmentCallback;
 import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -82,7 +83,11 @@ public class BrokerServerView implements TimelineServerView
   private final CountDownLatch initialized = new CountDownLatch(1);
   private final FilteredServerInventoryView baseView;
 
-  private final CountDownLatch metadataInitialized;
+  /**
+   * if detectUnavailableSegments is true,
+   * this latch ensures that we wait for published segment metadata to be polled from the Coordinator.
+   */
+  private final CountDownLatch publishedSegmentsMetadataInitialized;
 
   @Inject
   public BrokerServerView(
@@ -173,33 +178,32 @@ public class BrokerServerView implements TimelineServerView
 
     metadataSegmentView.registerSegmentCallback(
         exec,
-        new HandedOffSegmentCallback()
+        new PublishedSegmentCallback()
         {
-
           @Override
           public void fullSync(List<DataSegmentChange> segments)
           {
-            handedOffSegmentsFullSync(segments);
+            publishedSegmentsFullSync(segments);
           }
 
           @Override
           public void deltaSync(List<DataSegmentChange> segments)
           {
-            handedOffSegmentsDeltaSync(segments);
+            publishedSegmentsDeltaSync(segments);
           }
 
           @Override
           public void segmentViewInitialized()
           {
-            metadataInitialized.countDown();
+            publishedSegmentsMetadataInitialized.countDown();
           }
         }
     );
 
     if (segmentWatcherConfig.detectUnavailableSegments()) {
-      metadataInitialized = new CountDownLatch(1);
+      publishedSegmentsMetadataInitialized = new CountDownLatch(1);
     } else {
-      metadataInitialized = new CountDownLatch(0);
+      publishedSegmentsMetadataInitialized = new CountDownLatch(0);
     }
   }
 
@@ -221,13 +225,13 @@ public class BrokerServerView implements TimelineServerView
 
   public boolean isInitialized()
   {
-    return initialized.getCount() == 0 && metadataInitialized.getCount() == 0;
+    return initialized.getCount() == 0 && publishedSegmentsMetadataInitialized.getCount() == 0;
   }
 
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
-    metadataInitialized.await();
+    publishedSegmentsMetadataInitialized.await();
   }
 
   /**
@@ -282,10 +286,11 @@ public class BrokerServerView implements TimelineServerView
   {
     final SegmentId segmentId = segment.getId();
     synchronized (lock) {
+      boolean runCallBack = !segmentWatcherConfig.detectUnavailableSegments();
+
       // in theory we could probably just filter this to ensure we don't put ourselves in here, to make broker tree
       // query topologies, but for now just skip all brokers, so we don't create some sort of wild infinite query
       // loop...
-      boolean runCallBack = false;
       if (!server.getType().equals(ServerType.BROKER)) {
         log.debug("Adding segment[%s] for server[%s]", segment, server);
 
@@ -305,7 +310,7 @@ public class BrokerServerView implements TimelineServerView
           selectors.put(segmentId, selector);
         } else {
           // implies that segment was already present, if it is queryable run callback
-          runCallBack = selector.isQueryable();
+          runCallBack = runCallBack || selector.isQueryable();
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -325,7 +330,7 @@ public class BrokerServerView implements TimelineServerView
         selector.addServerAndUpdateSegment(queryableDruidServer, segment);
       }
 
-      if (!segmentWatcherConfig.detectUnavailableSegments() || runCallBack) {
+      if (runCallBack) {
         // run the callbacks, even if the segment came from a broker, lets downstream watchers decide what to do with it
         runTimelineCallbacks(callback -> callback.segmentAdded(server, segment));
       }
@@ -394,18 +399,18 @@ public class BrokerServerView implements TimelineServerView
     }
   }
 
-  private void handedOffSegmentsFullSync(final List<DataSegmentChange> dataSegmentChanges)
+  private void publishedSegmentsFullSync(final List<DataSegmentChange> dataSegmentChanges)
   {
-    Map<String, Map<SegmentId, SegmentStatusInCluster>> handedOffSegmentsPerDataSource = new HashMap<>();
+    Map<String, Map<SegmentId, SegmentStatusInCluster>> loadedSegmentsPerDataSource = new HashMap<>();
 
-    int segmentsAdded = 0, segmentsHandedOff = 0;
+    int addedSegmentCount = 0, loadedSegmentCount = 0;
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
-      segmentsAdded++;
+      addedSegmentCount++;
       SegmentStatusInCluster segmentStatusInCluster =
           dataSegmentChange.getSegmentStatusInCluster();
-      if (segmentStatusInCluster.isHandedOff()) {
-        segmentsHandedOff++;
-        handedOffSegmentsPerDataSource.computeIfAbsent(
+      if (segmentStatusInCluster.isLoaded()) {
+        loadedSegmentCount++;
+        loadedSegmentsPerDataSource.computeIfAbsent(
             segmentStatusInCluster.getDataSegment().getDataSource(),
             value -> new HashMap<>()
         ).put(segmentStatusInCluster.getDataSegment().getId(), segmentStatusInCluster);
@@ -414,26 +419,25 @@ public class BrokerServerView implements TimelineServerView
 
     emitter.emit(ServiceMetricEvent.builder().setMetric(
         "query/changedSegments/add",
-        segmentsAdded
+        addedSegmentCount
     ));
 
     emitter.emit(ServiceMetricEvent.builder().setMetric(
-        "query/changedSegments/handedOff",
-        segmentsHandedOff
+        "query/changedSegments/loaded",
+        loadedSegmentCount
     ));
 
     synchronized (lock) {
-      // for each datasource,
-      // set1 -> all segments which are existing in the system and handed off
-      // set2 -> all segments in the timeline
-      // remove segments from set2 which are not in set1 -> get rid of unused segments
-      // add segments from set1 not in set2 -> add handed off but unavialble segments to the timeline
-      // update handed off time for elements of set2 in set1
+       // For each datasource lets assume,
+       // `loadedSegments` is the set of segments in the system which are loaded
+       // `timelineSegments` is the set of segments in the current timeline
+       // To sync the timeline with the state of segments in the cluster,
+       // Get rid of unused segments, remove `timelineSegments` - `loadedSegments` from the timeline
+       // Add loaded but unavailable segments, add `loadedSegments` - `timelineSegments` to the timeline
 
-      for (Map.Entry<String, Map<SegmentId, SegmentStatusInCluster>> entry :
-          handedOffSegmentsPerDataSource.entrySet()) {
+      for (Map.Entry<String, Map<SegmentId, SegmentStatusInCluster>> entry : loadedSegmentsPerDataSource.entrySet()) {
         String dataSource = entry.getKey();
-        Map<SegmentId, SegmentStatusInCluster> segments = entry.getValue();
+        Map<SegmentId, SegmentStatusInCluster> loadedSegments = entry.getValue();
 
         VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(dataSource);
 
@@ -447,9 +451,11 @@ public class BrokerServerView implements TimelineServerView
                     Function.identity()
                 ));
 
+        // these segments were not present in the set of polled segments from the Coordinator
         Set<SegmentId> segmentIdsToRemoveFromTimeline =
-            Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), segments.keySet());
+            Sets.difference(segmentIdPartitionChunkEntryMap.keySet(), loadedSegments.keySet());
 
+        // remove segments from the timeline
         segmentIdsToRemoveFromTimeline.forEach(
             segmentId -> removeSegmentFromTimeline(
                 segmentIdPartitionChunkEntryMap
@@ -458,27 +464,28 @@ public class BrokerServerView implements TimelineServerView
                     .getObject()
                     .getSegment()));
 
+        // add all the loaded segment to the timeline, this would add segments which are loaded but unavailable
         addSegmentsToTimeline(new ArrayList<>(entry.getValue().values()));
       }
     }
   }
 
-  private void handedOffSegmentsDeltaSync(final List<DataSegmentChange> dataSegmentChanges)
+  private void publishedSegmentsDeltaSync(final List<DataSegmentChange> dataSegmentChanges)
   {
     List<SegmentStatusInCluster> segmentsToAdd = new ArrayList<>();
     List<DataSegment> segmentsToRemove = new ArrayList<>();
-    int segmentsAdded = 0, segmentsRemoved = 0, handedOffSegments = 0;
+    int addedSegmentCount = 0, removedSegmentCount = 0, loadedSegmentCount = 0;
 
     for (DataSegmentChange dataSegmentChange : dataSegmentChanges) {
       if (!dataSegmentChange.isRemoved()) {
-        segmentsAdded++;
-        if (dataSegmentChange.getSegmentStatusInCluster().isHandedOff()) {
-          handedOffSegments++;
+        addedSegmentCount++;
+        if (dataSegmentChange.getSegmentStatusInCluster().isLoaded()) {
+          loadedSegmentCount++;
           segmentsToAdd.add(dataSegmentChange.getSegmentStatusInCluster());
         }
       } else {
-        segmentsRemoved++;
-        if (dataSegmentChange.getChangeType() == DataSegmentChange.ChangeType.SEGMENT_REMOVED) {
+        removedSegmentCount++;
+        if (dataSegmentChange.getChangeType() == DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_REMOVED) {
           segmentsToRemove.add(dataSegmentChange.getSegmentStatusInCluster().getDataSegment());
         }
       }
@@ -486,21 +493,24 @@ public class BrokerServerView implements TimelineServerView
 
     emitter.emit(ServiceMetricEvent.builder().setMetric(
         "query/changedSegments/add",
-        segmentsAdded
+        addedSegmentCount
     ));
 
     emitter.emit(ServiceMetricEvent.builder().setMetric(
-        "query/changedSegments/handedOff",
-        handedOffSegments
+        "query/changedSegments/loaded",
+        loadedSegmentCount
     ));
 
     emitter.emit(ServiceMetricEvent.builder().setMetric(
         "query/changedSegments/remove",
-        segmentsRemoved
+        removedSegmentCount
     ));
 
     synchronized (lock) {
+      // remove the segment from the timeline
       segmentsToRemove.forEach(this::removeSegmentFromTimeline);
+
+      // add the segment to the timeline
       addSegmentsToTimeline(segmentsToAdd);
     }
   }
@@ -531,7 +541,7 @@ public class BrokerServerView implements TimelineServerView
                 segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)));
         selectors.put(segmentId, selector);
       } else {
-        // if segment was already added by historical, set it queryable
+        // if segment was already added by historical, mark it queryable
         selector.setQueryable(true);
         // run call back for all server this segment is present on
         for (DruidServerMetadata druidServer : selector.getAllServers()) {
@@ -560,11 +570,15 @@ public class BrokerServerView implements TimelineServerView
 
     selectors.remove(segmentId);
 
-    VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline = timelines.get(segment.getDataSource());
+    VersionedIntervalTimeline<String, ServerSelector> versionedIntervalTimeline =
+        timelines.get(segment.getDataSource());
 
-    final PartitionChunk<ServerSelector> removedPartition = versionedIntervalTimeline.remove(
-        segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
-    );
+    final PartitionChunk<ServerSelector> removedPartition =
+        versionedIntervalTimeline.remove(
+            segment.getInterval(),
+            segment.getVersion(),
+            segment.getShardSpec().createChunk(selector)
+        );
 
     if (removedPartition == null) {
       log.warn(

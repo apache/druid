@@ -22,9 +22,7 @@ package org.apache.druid.client;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.DataSegmentChange;
 
-import java.util.List;
 import java.util.concurrent.Executor;
 
 /**
@@ -104,15 +102,6 @@ public interface ServerView
      * @return continue or unregister
      */
     CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas);
-  }
-
-  interface HandedOffSegmentCallback
-  {
-    void fullSync(List<DataSegmentChange> segments);
-
-    void deltaSync(List<DataSegmentChange> segments);
-
-    void segmentViewInitialized();
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback

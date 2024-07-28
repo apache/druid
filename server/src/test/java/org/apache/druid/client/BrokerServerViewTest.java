@@ -538,7 +538,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   @Test
-  public void testHandedOffSegmentsFullSync() throws Exception
+  public void testPublishedSegmentsFullSync() throws Exception
   {
     final List<DataSegmentChange> dataSegmentChanges = Lists.transform(
         ImmutableList.of(
@@ -556,7 +556,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                 false,
                 true
             ),
-            DataSegmentChange.ChangeType.SEGMENT_ADDED)
+            DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED)
     );
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(true, "", ChangeRequestHistory.Counter.ZERO, dataSegmentChanges);
@@ -648,20 +648,20 @@ public class BrokerServerViewTest extends CuratorTestBase
   }
 
   @Test
-  public void testHandedOffSegmentsDeltaSync() throws Exception
+  public void testPublishedSegmentsDeltaSync() throws Exception
   {
     final List<DataSegmentChange> dataSegmentChanges = Lists.transform(
         ImmutableList.of(
             ImmutableList.of("2011-04-01/2011-04-03", "v1", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeType.SEGMENT_REMOVED.toString()),
+                             DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-06/2011-04-09", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeType.SEGMENT_REMOVED.toString()),
+                             DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_REMOVED.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeType.SEGMENT_HAS_LOADED.toString()),
+                             DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_HAS_LOADED.toString()),
             ImmutableList.of("2011-04-01/2011-04-02", "v3", Boolean.FALSE.toString(),
-                             DataSegmentChange.ChangeType.SEGMENT_OVERSHADOWED.toString()),
+                             DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_OVERSHADOWED.toString()),
             ImmutableList.of("2011-04-11/2011-04-13", "v3", Boolean.TRUE.toString(),
-                             DataSegmentChange.ChangeType.SEGMENT_ADDED.toString())
+                             DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED.toString())
         ),
         input -> new DataSegmentChange(
             new SegmentStatusInCluster(
@@ -672,7 +672,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                 false,
                 true
             ),
-            DataSegmentChange.ChangeType.fromString(input.get(3)))
+            DataSegmentChange.SegmentLifecycleChangeType.fromString(input.get(3)))
     );
 
     ChangeRequestsSnapshot<DataSegmentChange> changeRequestsSnapshot = new ChangeRequestsSnapshot<>(

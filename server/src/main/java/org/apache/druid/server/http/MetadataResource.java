@@ -206,7 +206,7 @@ public class MetadataResource
   }
 
   /**
-   * <p>This endpoint is used by MetadataSegmentView in broker to keep an up-to-date list of segments present in the system
+   * <p>This endpoint is used by MetadataSegmentView in broker to keep an up-to-date list of segments present in the system.
    * This endpoint lists segments present in the system and can also incrementally provide the segments added/dropped
    * since last response.</p>
    * <br>Flow
@@ -290,7 +290,7 @@ public class MetadataResource
                             segment.getId()
                         )
                     ),
-                    DataSegmentChange.ChangeType.SEGMENT_ADDED
+                    DataSegmentChange.SegmentLifecycleChangeType.SEGMENT_ADDED
                 );
               })
               .collect(Collectors.toList());
@@ -427,7 +427,7 @@ public class MetadataResource
       String dataSource, SegmentId segmentId
   )
   {
-    return dataSourcesSnapshot.getHandedOffStatePerDataSource()
+    return dataSourcesSnapshot.getLoadedSegmentsPerDataSource()
                        .getOrDefault(dataSource, new HashSet<>())
                        .contains(segmentId);
   }

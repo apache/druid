@@ -26,22 +26,21 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.StringUtils;
 
 /**
- * The class encapsulates segment change alongwith segment status
+ * Wrapper over segment to include change in segment lifecycle.
  */
-
 public class DataSegmentChange
 {
   private final SegmentStatusInCluster segmentStatusInCluster;
-  private final ChangeType changeType;
+  private final SegmentLifecycleChangeType segmentLifecycleChangeType;
 
   @JsonCreator
   public DataSegmentChange(
       @JsonProperty("segmentStatusInCluster") SegmentStatusInCluster segmentStatusInCluster,
-      @JsonProperty("changeType") ChangeType changeType
+      @JsonProperty("changeType") SegmentLifecycleChangeType segmentLifecycleChangeType
   )
   {
     this.segmentStatusInCluster = segmentStatusInCluster;
-    this.changeType = changeType;
+    this.segmentLifecycleChangeType = segmentLifecycleChangeType;
   }
 
   @JsonProperty
@@ -51,53 +50,53 @@ public class DataSegmentChange
   }
 
   @JsonProperty
-  public ChangeType getChangeType()
+  public SegmentLifecycleChangeType getChangeType()
   {
-    return changeType;
+    return segmentLifecycleChangeType;
   }
 
   @JsonIgnore
   public boolean isRemoved()
   {
-    return changeType == ChangeType.SEGMENT_REMOVED;
+    return segmentLifecycleChangeType == SegmentLifecycleChangeType.SEGMENT_REMOVED;
   }
 
   @Override
   public String toString()
   {
     return "DataSegmentChangeRequest{" +
-           ", changeReason=" + changeType +
+           ", changeReason=" + segmentLifecycleChangeType +
            ", segmentStatusInCluster=" + segmentStatusInCluster +
            '}';
   }
 
   /**
-   * Enum to represent change of segment in the system
+   * Enum to represent change in lifecycle of a segment in the system
    */
-  public enum ChangeType
+  public enum SegmentLifecycleChangeType
   {
     /**
-     * segment has been added in the system
+     * Segment has been added in the system
      */
     SEGMENT_ADDED,
 
     /**
-     * segment has been from the system
+     * Segment has been removed from the system
      */
     SEGMENT_REMOVED,
 
     /**
-     * segment has been overshadowed
+     * Segment has been overshadowed
      */
     SEGMENT_OVERSHADOWED,
 
     /**
-     * segment has been loaded by historical
+     * Segment has been loaded by historical
      */
     SEGMENT_HAS_LOADED,
 
     /**
-     * segment is both loaded by historical and overshadowed
+     * Segment is both loaded by historical and overshadowed
      */
     SEGMENT_OVERSHADOWED_AND_HAS_LOADED;
 
@@ -109,7 +108,7 @@ public class DataSegmentChange
     }
 
     @JsonCreator
-    public static ChangeType fromString(String name)
+    public static SegmentLifecycleChangeType fromString(String name)
     {
       return valueOf(StringUtils.toUpperCase(name));
     }

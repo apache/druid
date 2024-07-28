@@ -24,9 +24,9 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
-import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 
 /**
  * The module responsible for provide bindings for the Calcite Planner.

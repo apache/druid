@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -61,13 +60,18 @@ public class DataSourcesSnapshot
   public static DataSourcesSnapshot fromUsedSegments(
       Iterable<DataSegment> segments,
       ImmutableMap<String, String> dataSourceProperties,
-      Map<String, Set<SegmentId>> handedOffState
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
   )
   {
     Map<String, DruidDataSource> dataSources = new HashMap<>();
-    segments.forEach(segment -> dataSources
-        .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
-        .addSegmentIfAbsent(segment));
+    segments.forEach(
+        segment ->
+            dataSources.computeIfAbsent(
+                segment.getDataSource(),
+                dsName -> new DruidDataSource(dsName, dataSourceProperties)
+            ).addSegmentIfAbsent(segment)
+    );
+
     Map<String, ImmutableDruidDataSource> immutableDruidDataSources = CollectionUtils.mapValues(
         dataSources,
         DruidDataSource::toImmutableDruidDataSource
@@ -84,36 +88,14 @@ public class DataSourcesSnapshot
         immutableDruidDataSources,
         usedSegmentsTimelinesPerDataSource,
         overshadowedSegments,
-        handedOffState
-    );
-  }
-
-  public static DataSourcesSnapshot fromUsedSegmentsTimelines(
-      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
-      ImmutableMap<String, String> dataSourceProperties
-  )
-  {
-    Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments =
-        Maps.newHashMapWithExpectedSize(usedSegmentsTimelinesPerDataSource.size());
-    usedSegmentsTimelinesPerDataSource.forEach(
-        (dataSourceName, usedSegmentsTimeline) -> {
-          DruidDataSource dataSource = new DruidDataSource(dataSourceName, dataSourceProperties);
-          usedSegmentsTimeline.iterateAllObjects().forEach(dataSource::addSegment);
-          dataSourcesWithAllUsedSegments.put(dataSourceName, dataSource.toImmutableDruidDataSource());
-        }
-    );
-    return new DataSourcesSnapshot(
-        dataSourcesWithAllUsedSegments,
-        usedSegmentsTimelinesPerDataSource,
-        ImmutableMap.of()
+        loadedSegmentsPerDataSource
     );
   }
 
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
   private final ImmutableSet<DataSegment> overshadowedSegments;
-
-  private final Map<String, Set<SegmentId>> handedOffStatePerDataSource;
+  private final Map<String, Set<SegmentId>> loadedSegmentsPerDataSource;
 
   public DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments
@@ -132,14 +114,14 @@ public class DataSourcesSnapshot
   private DataSourcesSnapshot(
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
       Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
-      Map<String, Set<SegmentId>> handedOffStatePerDataSource
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
   )
   {
     this(
         dataSourcesWithAllUsedSegments,
         usedSegmentsTimelinesPerDataSource,
         determineOvershadowedSegments(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource),
-        handedOffStatePerDataSource
+        loadedSegmentsPerDataSource
     );
   }
 
@@ -147,13 +129,13 @@ public class DataSourcesSnapshot
       Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
       Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
       ImmutableSet<DataSegment> overshadowedSegments,
-      Map<String, Set<SegmentId>> handedOffStatePerDataSource
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
   )
   {
     this.dataSourcesWithAllUsedSegments = dataSourcesWithAllUsedSegments;
     this.usedSegmentsTimelinesPerDataSource = usedSegmentsTimelinesPerDataSource;
     this.overshadowedSegments = overshadowedSegments;
-    this.handedOffStatePerDataSource = handedOffStatePerDataSource;
+    this.loadedSegmentsPerDataSource = loadedSegmentsPerDataSource;
   }
 
   public Collection<ImmutableDruidDataSource> getDataSourcesWithAllUsedSegments()
@@ -182,9 +164,9 @@ public class DataSourcesSnapshot
     return overshadowedSegments;
   }
 
-  public Map<String, Set<SegmentId>> getHandedOffStatePerDataSource()
+  public Map<String, Set<SegmentId>> getLoadedSegmentsPerDataSource()
   {
-    return handedOffStatePerDataSource;
+    return loadedSegmentsPerDataSource;
   }
 
   /**
@@ -236,36 +218,44 @@ public class DataSourcesSnapshot
     return ImmutableSet.copyOf(overshadowedSegments);
   }
 
-  public static Set<SegmentStatusInCluster> getSegmentWithAdditionalDetails(
+  /**
+   * Note that the returned set of segments doesn't contain numRows information
+   */
+  public static Set<SegmentStatusInCluster> getSegmentsWithOvershadowedAndLoadStatus(
       Collection<ImmutableDruidDataSource> segments,
       Set<DataSegment> overshadowedSegments,
-      Map<String, Set<SegmentId>> handedOffState
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource
   )
   {
-
     final Stream<DataSegment> usedSegments = segments
         .stream()
         .flatMap(t -> t.getSegments().stream());
 
-    // numRows and realtime status will be set in MetadataResource#
     return usedSegments
-        .map(segment -> new SegmentStatusInCluster(
-                 segment,
-                 overshadowedSegments.contains(segment),
-                 null,
-                 null,
-                 false,
-                 getHandedOffStateForSegment(handedOffState, segment.getDataSource(), segment.getId())
-             )
+        .map(segment ->
+                 new SegmentStatusInCluster(
+                     segment,
+                     overshadowedSegments.contains(segment),
+                     null,
+                     null,
+                     false,
+                     getLoadStatusForSegment(
+                         loadedSegmentsPerDataSource,
+                         segment.getDataSource(),
+                         segment.getId()
+                     )
+                 )
         )
         .collect(Collectors.toSet());
   }
 
-  private static boolean getHandedOffStateForSegment(
-      Map<String, Set<SegmentId>> handedOffState,
-      String dataSource, SegmentId segmentId
+  private static boolean getLoadStatusForSegment(
+      Map<String, Set<SegmentId>> loadedSegmentsPerDataSource,
+      String dataSource,
+      SegmentId segmentId
   )
   {
-    return handedOffState.containsKey(dataSource) && handedOffState.get(dataSource).contains(segmentId);
+    return loadedSegmentsPerDataSource.containsKey(dataSource)
+           && loadedSegmentsPerDataSource.get(dataSource).contains(segmentId);
   }
 }

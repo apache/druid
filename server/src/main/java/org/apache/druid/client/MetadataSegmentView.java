@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
 /**
  * This class polls the Coordinator in background to keep the latest segments.
  * Provides {@link #getSegments()} for others to get the segments.
- *
+ * <br>
  * The difference between this class and {@link SegmentsMetadataManager} is that this class resides
  * in Broker's memory, while {@link SegmentsMetadataManager} resides in Coordinator's memory. In
  * fact, this class polls the data from {@link SegmentsMetadataManager} object in the memory of the
@@ -106,7 +106,8 @@ public class MetadataSegmentView
   @Nullable
   private ChangeRequestHistory.Counter counter = null;
 
-  private final ConcurrentMap<ServerView.HandedOffSegmentCallback, Executor> segmentCallbacks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<PublishedSegmentCallback, Executor> segmentCallbacks
+      = new ConcurrentHashMap<>();
 
   private final CountDownLatch initializationLatch = new CountDownLatch(1);
 
@@ -138,7 +139,7 @@ public class MetadataSegmentView
       throw new ISE("can't start.");
     }
     try {
-      if (isCacheEnabled || detectUnavailableSegments) {
+      if (cacheSegments()) {
         scheduledExec.schedule(new PollTask(), pollPeriodInMS, TimeUnit.MILLISECONDS);
       }
       lifecycleLock.started();
@@ -156,10 +157,24 @@ public class MetadataSegmentView
       throw new ISE("can't stop.");
     }
     log.info("MetadataSegmentView is stopping.");
-    if (isCacheEnabled) {
+    if (cacheSegments()) {
       scheduledExec.shutdown();
     }
     log.info("MetadataSegmentView is stopped.");
+  }
+
+  public Iterator<SegmentStatusInCluster> getSegments()
+  {
+    if (cacheSegments()) {
+      Uninterruptibles.awaitUninterruptibly(cachePopulated);
+      return publishedSegments.iterator();
+    } else {
+      return getMetadataSegments(
+          coordinatorDruidLeaderClient,
+          jsonMapper,
+          segmentWatcherConfig.getWatchedDataSources()
+      );
+    }
   }
 
   private void poll()
@@ -180,58 +195,6 @@ public class MetadataSegmentView
 
     publishedSegments = builder.build();
     cachePopulated.countDown();
-  }
-
-  private SegmentStatusInCluster internAndUpdateReplicationFactor(SegmentStatusInCluster segment)
-  {
-    final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
-    Integer replicationFactor = segment.getReplicationFactor();
-    if (replicationFactor == null) {
-      replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
-    } else {
-      segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
-    }
-    return new SegmentStatusInCluster(
-        interned,
-        segment.isOvershadowed(),
-        replicationFactor,
-        segment.getNumRows(),
-        segment.isRealtime(),
-        segment.isHandedOff()
-    );
-  }
-
-  public void registerSegmentCallback(
-      Executor exec,
-      ServerView.HandedOffSegmentCallback segmentCallback
-  )
-  {
-    segmentCallbacks.put(segmentCallback, exec);
-  }
-
-  private void runSegmentCallbacks(
-      final Consumer<ServerView.HandedOffSegmentCallback> fn
-  )
-  {
-    for (final Map.Entry<ServerView.HandedOffSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
-      entry.getValue().execute(
-          () -> fn.accept(entry.getKey())
-      );
-    }
-  }
-
-  public Iterator<SegmentStatusInCluster> getSegments()
-  {
-    if (isCacheEnabled) {
-      Uninterruptibles.awaitUninterruptibly(cachePopulated);
-      return publishedSegments.iterator();
-    } else {
-      return getMetadataSegments(
-          coordinatorDruidLeaderClient,
-          jsonMapper,
-          segmentWatcherConfig.getWatchedDataSources()
-      );
-    }
   }
 
   // Note that coordinator must be up to get segments
@@ -263,6 +226,33 @@ public class MetadataSegmentView
         },
         jsonMapper
     );
+  }
+
+  private SegmentStatusInCluster internAndUpdateReplicationFactor(SegmentStatusInCluster segment)
+  {
+    final DataSegment interned = DataSegmentInterner.intern(segment.getDataSegment());
+    Integer replicationFactor = segment.getReplicationFactor();
+    if (replicationFactor == null) {
+      replicationFactor = segmentIdToReplicationFactor.getIfPresent(segment.getDataSegment().getId());
+    } else {
+      segmentIdToReplicationFactor.put(segment.getDataSegment().getId(), segment.getReplicationFactor());
+    }
+    return new SegmentStatusInCluster(
+        interned,
+        segment.isOvershadowed(),
+        replicationFactor,
+        segment.getNumRows(),
+        segment.isRealtime(),
+        segment.isLoaded()
+    );
+  }
+
+  public void registerSegmentCallback(
+      Executor exec,
+      PublishedSegmentCallback publishedSegmentCallback
+  )
+  {
+    segmentCallbacks.put(publishedSegmentCallback, exec);
   }
 
   protected void pollChangedSegments()
@@ -313,46 +303,40 @@ public class MetadataSegmentView
           input -> input.fullSync(dataSegmentChanges)
       );
 
-      if (isCacheEnabled) {
-        dataSegmentChanges.forEach(
-            dataSegmentChange -> publishedSegmentsCopy.put(
-                dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
-                dataSegmentChange.getSegmentStatusInCluster()
-            ));
-      }
+      dataSegmentChanges.forEach(
+          dataSegmentChange -> publishedSegmentsCopy.put(
+              dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
+              dataSegmentChange.getSegmentStatusInCluster()
+          ));
     } else {
       runSegmentCallbacks(
           input -> input.deltaSync(dataSegmentChanges)
       );
 
-      if (isCacheEnabled) {
-        publishedSegments.stream().iterator().forEachRemaining(
-            segment -> publishedSegmentsCopy.put(segment.getDataSegment().getId(), segment));
-        dataSegmentChanges.forEach(dataSegmentChange -> {
-          if (!dataSegmentChange.isRemoved()) {
-            publishedSegmentsCopy.put(
-                dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
-                dataSegmentChange.getSegmentStatusInCluster()
-            );
-          } else {
-            publishedSegmentsCopy.remove(dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId());
-          }
-        });
-      }
+      publishedSegments.stream().iterator().forEachRemaining(
+          segment -> publishedSegmentsCopy.put(segment.getDataSegment().getId(), segment));
+      dataSegmentChanges.forEach(dataSegmentChange -> {
+        if (!dataSegmentChange.isRemoved()) {
+          publishedSegmentsCopy.put(
+              dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId(),
+              dataSegmentChange.getSegmentStatusInCluster()
+          );
+        } else {
+          publishedSegmentsCopy.remove(dataSegmentChange.getSegmentStatusInCluster().getDataSegment().getId());
+        }
+      });
     }
 
     if (initializationLatch.getCount() > 0) {
       initializationLatch.countDown();
       log.info("synced segments metadata successfully for the first time.");
-      runSegmentCallbacks(ServerView.HandedOffSegmentCallback::segmentViewInitialized);
+      runSegmentCallbacks(PublishedSegmentCallback::segmentViewInitialized);
     }
 
-    if (isCacheEnabled) {
-      ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
-      builder.addAll(publishedSegmentsCopy.values());
-      publishedSegments = builder.build();
-      cachePopulated.countDown();
-    }
+    ImmutableSortedSet.Builder<SegmentStatusInCluster> builder = ImmutableSortedSet.naturalOrder();
+    builder.addAll(publishedSegmentsCopy.values());
+    publishedSegments = builder.build();
+    cachePopulated.countDown();
   }
 
   @Nullable
@@ -393,6 +377,20 @@ public class MetadataSegmentView
     return changeRequestsSnapshot;
   }
 
+  private void runSegmentCallbacks(final Consumer<PublishedSegmentCallback> fn)
+  {
+    for (final Map.Entry<PublishedSegmentCallback, Executor> entry : segmentCallbacks.entrySet()) {
+      entry.getValue().execute(
+          () -> fn.accept(entry.getKey())
+      );
+    }
+  }
+
+  private boolean cacheSegments()
+  {
+    return isCacheEnabled || detectUnavailableSegments;
+  }
+
   private class PollTask implements Runnable
   {
     @Override
@@ -420,5 +418,26 @@ public class MetadataSegmentView
         }
       }
     }
+  }
+
+  /**
+   * Callback invoked when segment metadata is polled from the Coordinator.
+   */
+  interface PublishedSegmentCallback
+  {
+    /**
+     * Called when complete set of segments is polled.
+     */
+    void fullSync(List<DataSegmentChange> segments);
+
+    /**
+     * Called when delta segments are polled.
+     */
+    void deltaSync(List<DataSegmentChange> segments);
+
+    /**
+     * Called when segment view is initialized after full set of segments is polled from the Coordinator.
+     */
+    void segmentViewInitialized();
   }
 }

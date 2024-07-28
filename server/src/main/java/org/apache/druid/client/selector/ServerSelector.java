@@ -49,6 +49,8 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final AtomicReference<DataSegment> segment;
 
+  // This property is true for a used segment which has been once loaded on a historical server.
+  // This is set when metadata for the segment is polled from the Coordinator.
   private boolean isQueryable;
 
   public ServerSelector(DataSegment segment, TierSelectorStrategy strategy)
