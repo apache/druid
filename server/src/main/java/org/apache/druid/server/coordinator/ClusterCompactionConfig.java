@@ -101,15 +101,4 @@ public class ClusterCompactionConfig
   {
     return Objects.hash(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots, engine);
   }
-
-  @Override
-  public String toString()
-  {
-    return "ClusterCompactionConfig{" +
-           "compactionTaskSlotRatio=" + compactionTaskSlotRatio +
-           ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
-           ", useAutoScaleSlots=" + useAutoScaleSlots +
-           ", engine=" + engine +
-           '}';
-  }
 }

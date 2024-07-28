@@ -73,6 +73,13 @@ public class DruidCompactionConfig
     );
   }
 
+  public DruidCompactionConfig withDatasourceConfig(DataSourceCompactionConfig dataSourceConfig)
+  {
+    final Map<String, DataSourceCompactionConfig> configs = dataSourceToCompactionConfig();
+    configs.put(dataSourceConfig.getDataSource(), dataSourceConfig);
+    return withDatasourceConfigs(new ArrayList<>(configs.values()));
+  }
+
   public static DruidCompactionConfig empty()
   {
     return EMPTY_INSTANCE;
@@ -151,13 +158,6 @@ public class DruidCompactionConfig
       }
     }
     return Optional.absent();
-  }
-
-  public DruidCompactionConfig withDatasourceConfig(DataSourceCompactionConfig dataSourceConfig)
-  {
-    final Map<String, DataSourceCompactionConfig> configs = dataSourceToCompactionConfig();
-    configs.put(dataSourceConfig.getDataSource(), dataSourceConfig);
-    return withDatasourceConfigs(new ArrayList<>(configs.values()));
   }
 
   @Override
