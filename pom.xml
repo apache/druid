@@ -87,6 +87,7 @@
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
+        <bcpkix.version>1.78.1</bcpkix.version>
         <calcite.version>1.37.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
         <datasketches.version>4.2.0</datasketches.version>
@@ -409,7 +410,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.78.1</version>
+                <version>${bcpkix.version}</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
