@@ -63,7 +63,61 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- *
+ * <p>
+ * Maintains a timeline of segments per datasource.
+ * This timeline is populated by callback received from datanodes when they load a segment
+ * or when realtime segments are created in a task.
+ * Downstream classes can also register timeline callback on this class, for example BrokerSegmentMetadataCache.
+ * </p>
+ * <p>
+ * There is a second flow which is enabled only when unavailabe segment detection is turned on.
+ * {@link MetadataSegmentView} polls published segment metadata from the Coordinator. This class listens for published
+ * segment updates.
+ * The segment which are marked as `loaded` (used segment with non-zero replication factor which
+ * has been once loaded onto some historical) is added to the timeline. This is basically the set of segments that
+ * should be available for querying.
+ * </p>
+ * <p>
+ * Lifecycle for a segment s,
+ * <br>- s is created at time t1, ie. metadata for it is published in the database at time t1
+ * <br>- coordinator polls it at time t2, at this point the segment s is not considered as loaded
+ * <br>- broker polls coordinator at time t3 and finds segment s, but it is not added to the timeline since it is not loaded
+ * <br>- historical loads s at time t4
+ * <br>- coordinator and broker both receives callback from the historical
+ * <br>- coordinator marks the segment as `loaded` at time t5
+ * </p>
+ * now, lets consider two possibilities,
+ * <ol>
+ * <li>Broker receives segment metadata for s from coordinator before the callback from historical
+ * <ul>
+ *   <li>
+ *     broker adds s to the timeline at t6 with `queryable` field set to true,
+ *     at this point any query that uses s would find that s is unavailable
+ *   </li>
+ *   <li>
+ *     broker recieves callback for s from some historical at t7,
+ *     now on queries using s would run fine
+ *   </li>
+ *   <li>
+ *     if all historicals serving s goes down, the segment would still be present in the timeline marked as `queryable`
+ *     and all queries using s would find s to be unavailable
+ *   </li>
+ * </ul>
+ * </li>
+ * <li>Broker first receives callback from historical and then segment metadata from the coordinator
+ * <ul>
+ *   <li>
+ *     s is added to the timeline at t6 but it is not marked as `queryable`, however this doesn't affect queries using it
+ *   </li>
+ *   <li>Broker receives metadata from coordinator at t7, at this point it is marked as `queryable`</li>
+ *   <li>
+ *     if all historicals serving s goes down, the segment would still be present in the timeline marked as `queryable`
+ *     and all queries using s would find s to be unavailable
+ *   </li>
+ * </ul>
+ * </li>
+ * </ol>
+ * </p>
  */
 @ManageLifecycle
 public class BrokerServerView implements TimelineServerView
@@ -176,31 +230,30 @@ public class BrokerServerView implements TimelineServerView
         }
     );
 
-    metadataSegmentView.registerSegmentCallback(
-        exec,
-        new PublishedSegmentCallback()
-        {
-          @Override
-          public void fullSync(List<DataSegmentChange> segments)
-          {
-            publishedSegmentsFullSync(segments);
-          }
-
-          @Override
-          public void deltaSync(List<DataSegmentChange> segments)
-          {
-            publishedSegmentsDeltaSync(segments);
-          }
-
-          @Override
-          public void segmentViewInitialized()
-          {
-            publishedSegmentsMetadataInitialized.countDown();
-          }
-        }
-    );
-
     if (segmentWatcherConfig.detectUnavailableSegments()) {
+      metadataSegmentView.registerSegmentCallback(
+          exec,
+          new PublishedSegmentCallback()
+          {
+            @Override
+            public void fullSync(List<DataSegmentChange> segments)
+            {
+              publishedSegmentsFullSync(segments);
+            }
+
+            @Override
+            public void deltaSync(List<DataSegmentChange> segments)
+            {
+              publishedSegmentsDeltaSync(segments);
+            }
+
+            @Override
+            public void segmentViewInitialized()
+            {
+              publishedSegmentsMetadataInitialized.countDown();
+            }
+          }
+      );
       publishedSegmentsMetadataInitialized = new CountDownLatch(1);
     } else {
       publishedSegmentsMetadataInitialized = new CountDownLatch(0);
@@ -434,7 +487,6 @@ public class BrokerServerView implements TimelineServerView
        // To sync the timeline with the state of segments in the cluster,
        // Get rid of unused segments, remove `timelineSegments` - `loadedSegments` from the timeline
        // Add loaded but unavailable segments, add `loadedSegments` - `timelineSegments` to the timeline
-
       for (Map.Entry<String, Map<SegmentId, SegmentStatusInCluster>> entry : loadedSegmentsPerDataSource.entrySet()) {
         String dataSource = entry.getKey();
         Map<SegmentId, SegmentStatusInCluster> loadedSegments = entry.getValue();

@@ -47,35 +47,35 @@ import java.util.concurrent.ExecutorService;
 
 public class ChangeRequestHistory<T>
 {
-  private static int MAX_SIZE = 1000;
-
-  /**
-   * size of the bounded queue
-   */
-  private final int maxSize;
+  private static final int MAX_SIZE = 1000;
 
   private final boolean asyncMode;
 
   /**
-   * queue to hold the changes
+   * Size of the bounded queue
+   */
+  private final int maxSize;
+
+  /**
+   * Queue to hold the changes
    */
   private final CircularBuffer<Holder<T>> changes;
 
   /**
-   * map to hold the change request for a given counter, required in async mode
-   */
-  @VisibleForTesting
-  LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
-
-  /**
-   * executor to resolve the waiting futures, required in async mode
+   * Executor to resolve the waiting futures, required in async mode
    */
   private ExecutorService singleThreadedExecutor;
 
   /**
-   * runnable to resolve the waiting futures, required in async mode
+   * Runnable to resolve the waiting futures, required in async mode
    */
   private Runnable resolveWaitingFuturesRunnable;
+
+  /**
+   * Map to hold change request for a given counter, required in async mode
+   */
+  @VisibleForTesting
+  LinkedHashMap<CustomSettableFuture<T>, Counter> waitingFutures;
 
   public ChangeRequestHistory()
   {
