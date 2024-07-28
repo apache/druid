@@ -120,7 +120,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     LOG.info("Running CompactSegments duty");
 
-    final DruidCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
+    final DruidCompactionConfig dynamicConfig = params.getCompactionConfig();
     final int maxCompactionTaskSlots = dynamicConfig.getMaxCompactionTaskSlots();
     if (maxCompactionTaskSlots <= 0) {
       LOG.info("Skipping compaction as maxCompactionTaskSlots is [%d].", maxCompactionTaskSlots);

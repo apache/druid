@@ -24,9 +24,8 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -44,7 +43,6 @@ import org.testng.annotations.Test;
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
 {
-  private static final Logger LOG = new Logger(ITAutoCompactionUpgradeTest.class);
   private static final String UPGRADE_DATASOURCE_NAME = "upgradeTest";
 
   @Inject
@@ -67,41 +65,38 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
     PartitionsSpec newPartitionsSpec = new DynamicPartitionsSpec(4000, null);
     Period newSkipOffset = Period.seconds(0);
 
-    DataSourceCompactionConfig compactionConfig = new DataSourceCompactionConfig(
-        UPGRADE_DATASOURCE_NAME,
-        null,
-        null,
-        null,
-        newSkipOffset,
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            new MaxSizeSplitHintSpec(null, 1),
-            newPartitionsSpec,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            1,
-            null
-        ),
-        new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null),
-        null,
-        null,
-        null,
-        new UserCompactionTaskIOConfig(true),
-        null,
-        null
-    );
+    DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(UPGRADE_DATASOURCE_NAME)
+        .withSkipOffsetFromLatest(newSkipOffset)
+        .withTuningConfig(
+            new UserCompactionTaskQueryTuningConfig(
+                null,
+                null,
+                null,
+                null,
+                new MaxSizeSplitHintSpec(null, 1),
+                newPartitionsSpec,
+                null,
+                null,
+                null,
+                null,
+                null,
+                1,
+                null,
+                null,
+                null,
+                null,
+                null,
+                1,
+                null
+            )
+        )
+        .withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+        )
+        .withIoConfig(new UserCompactionTaskIOConfig(true))
+        .build();
     compactionResource.submitCompactionConfig(compactionConfig);
 
     // Wait for compaction config to persist

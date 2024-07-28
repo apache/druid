@@ -151,7 +151,7 @@ public class DruidCoordinatorRuntimeParams
     return coordinatorDynamicConfig;
   }
 
-  public DruidCompactionConfig getCoordinatorCompactionConfig()
+  public DruidCompactionConfig getCompactionConfig()
   {
     return compactionConfig;
   }
