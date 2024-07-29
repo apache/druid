@@ -101,7 +101,7 @@ public class WorkerResource
     MSQResourceUtils.authorizeQueryRequest(permissionMapper, authorizerMapper, req, queryId);
 
     final ListenableFuture<InputStream> dataFuture =
-        worker.readChannel(new StageId(queryId, stageNumber), partitionNumber, offset);
+        worker.readStageOutput(new StageId(queryId, stageNumber), partitionNumber, offset);
 
     final AsyncContext asyncContext = req.startAsync();
     asyncContext.setTimeout(GET_CHANNEL_DATA_TIMEOUT);

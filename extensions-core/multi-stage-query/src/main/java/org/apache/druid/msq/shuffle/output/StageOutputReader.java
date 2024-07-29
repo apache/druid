@@ -21,35 +21,49 @@ package org.apache.druid.msq.shuffle.output;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
+import org.apache.druid.frame.file.FrameFile;
+import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.shuffle.input.WorkerOrLocalInputChannelFactory;
 
 import java.io.Closeable;
 import java.io.InputStream;
 
 /**
- * Interface for remotely reading output channels for a particular stage. Each instance of this interface represents a
- * stream from a single {@link org.apache.druid.msq.kernel.StagePartition} in
- * {@link org.apache.druid.frame.file.FrameFile} format.
+ * Interface for reading output channels for a particular stage. Each instance of this interface represents a
+ * stream from a single {@link org.apache.druid.msq.kernel.StagePartition} in {@link FrameFile} format.
+ *
+ * @see FileStageOutputReader implementation backed by {@link FrameFile}
+ * @see ChannelStageOutputReader implementation backed by {@link ReadableFrameChannel}
+ * @see NilStageOutputReader implementation for an empty channel
  */
 public interface StageOutputReader extends Closeable
 {
   /**
-   * Returns an {@link InputStream} starting from a particular point in the
-   * {@link org.apache.druid.frame.file.FrameFile}. Length of the stream is implementation-dependent; it may or may
-   * not go all the way to the end of the file. Zero-length stream indicates EOF. Any nonzero length means you should
-   * call this method again with a higher offset.
+   * Method for remote reads.
    *
-   * @param offset offset into the frame file
+   * This method ultimately backs {@link Worker#readStageOutput(StageId, int, long)}. Refer to that method's
+   * documentation for details about behavior of the returned future.
    *
-   * @see org.apache.druid.msq.exec.WorkerImpl#readChannel(StageId, int, long)
+   * Callers are responsible for closing the returned {@link InputStream}. This input stream may encapsulate
+   * resources that are not closed by this class's {@link #close()} method.
+   *
+   * @param offset offset into the stage output file
+   *
+   * @see StageOutputHolder#readRemotelyFrom(long) which uses this method
+   * @see Worker#readStageOutput(StageId, int, long) for documentation on behavior of the returned future
    */
   ListenableFuture<InputStream> readRemotelyFrom(long offset);
 
   /**
-   * Returns a {@link ReadableFrameChannel} for local reading.
+   * Method for local reads.
    *
-   * @see WorkerOrLocalInputChannelFactory#openChannel(StageId, int, int)
+   * Depending on implementation, this method may or may not be able to be called multiple times, and may or may not
+   * be able to be mixed with {@link #readRemotelyFrom(long)}. Refer to the specific implementation for more details.
+   *
+   * Callers are responsible for closing the returned channel. The returned channel may encapsulate resources that
+   * are not closed by this class's {@link #close()} method.
+   *
+   * @see StageOutputHolder#readLocally() which uses this method
    */
   ReadableFrameChannel readLocally();
 }

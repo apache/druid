@@ -43,7 +43,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * Reader for {@link ReadableFrameChannel}.
+ * Reader for the case where stage output is a generic {@link ReadableFrameChannel}.
  *
  * Because this reader returns an underlying channel directly, it must only be used when it is certain that
  * only a single consumer exists, i.e., when using output mode {@link OutputChannelMode#MEMORY}. See
@@ -98,6 +98,20 @@ public class ChannelStageOutputReader implements StageOutputReader
     this.writer = FrameFileWriter.open(new ChunkAcceptor(), null, ByteTracker.unboundedTracker());
   }
 
+  /**
+   * Returns an input stream starting at the provided offset.
+   *
+   * The returned {@link InputStream} is non-blocking, and is slightly buffered (up to one frame). It does not
+   * necessarily contain the complete remaining dataset; this means that multiple calls to this method are necessary
+   * to fetch the complete dataset.
+   *
+   * The provided offset must be greater than, or equal to, the offset provided to the prior call.
+   *
+   * This class supports either remote or local reads, but not both. Calling both this method and {@link #readLocally()}
+   * on the same instance of this class is an error.
+   *
+   * @param offset offset into the stage output stream
+   */
   @Override
   public synchronized ListenableFuture<InputStream> readRemotelyFrom(final long offset)
   {
@@ -179,6 +193,17 @@ public class ChannelStageOutputReader implements StageOutputReader
     return Futures.immediateFuture(new ByteChunksInputStream(ImmutableList.copyOf(chunks), positionWithinFirstChunk));
   }
 
+  /**
+   * Returns the {@link ReadableFrameChannel} that backs this reader.
+   *
+   * Callers are responsible for closing the returned channel. Once this method is called, the caller becomes the
+   * owner of the channel, and this class's {@link #close()} method will no longer close the channel.
+   *
+   * Only a single reader is supported. Once this method is called, it cannot be called again.
+   *
+   * This class supports either remote or local reads, but not both. Calling both this method and
+   * {@link #readRemotelyFrom(long)} on the same instance of this class is an error.
+   */
   @Override
   public synchronized ReadableFrameChannel readLocally()
   {
@@ -195,6 +220,10 @@ public class ChannelStageOutputReader implements StageOutputReader
     }
   }
 
+  /**
+   * Closes the {@link ReadableFrameChannel} backing this reader, unless {@link #readLocally()} has been called.
+   * In that case, the caller of {@link #readLocally()} is responsible for closing the channel.
+   */
   @Override
   public synchronized void close()
   {

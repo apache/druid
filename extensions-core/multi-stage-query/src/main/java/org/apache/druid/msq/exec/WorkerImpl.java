@@ -547,7 +547,7 @@ public class WorkerImpl implements Worker
   }
 
   @Override
-  public ListenableFuture<InputStream> readChannel(
+  public ListenableFuture<InputStream> readStageOutput(
       final StageId stageId,
       final int partitionNumber,
       final long offset

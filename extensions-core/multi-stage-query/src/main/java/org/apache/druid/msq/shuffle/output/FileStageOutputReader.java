@@ -33,7 +33,7 @@ import java.io.RandomAccessFile;
 import java.nio.channels.Channels;
 
 /**
- * Reader for {@link FrameFile} on disk.
+ * Reader for the case where stage output is stored in a {@link FrameFile} on disk.
  */
 public class FileStageOutputReader implements StageOutputReader
 {
@@ -44,6 +44,16 @@ public class FileStageOutputReader implements StageOutputReader
     this.frameFile = frameFile;
   }
 
+  /**
+   * Returns an input stream starting at the provided offset. The file is opened and seeked in-line with this method
+   * call, so the returned future is always immediately resolved. Callers are responsible for closing the returned
+   * input stream.
+   *
+   * This class supports remote and local reads from the same {@link FrameFile}, which, for example, is useful when
+   * broadcasting the output of a stage.
+   *
+   * @param offset offset into the stage output file
+   */
   @Override
   public ListenableFuture<InputStream> readRemotelyFrom(long offset)
   {
@@ -63,12 +73,24 @@ public class FileStageOutputReader implements StageOutputReader
     }
   }
 
+  /**
+   * Returns a channel pointing to a fresh {@link FrameFile#newReference()} of the underlying frame file. Callers are
+   * responsible for closing the returned channel.
+   *
+   * This class supports remote and local reads from the same {@link FrameFile}, which, for example, is useful when
+   * broadcasting the output of a stage.
+   */
   @Override
   public ReadableFrameChannel readLocally()
   {
     return new ReadableFileFrameChannel(frameFile.newReference());
   }
 
+  /**
+   * Closes the initial reference to the underlying {@link FrameFile}. Does not close additional references created by
+   * calls to {@link #readLocally()}; those references are closed when the channel(s) returned by {@link #readLocally()}
+   * are closed.
+   */
   @Override
   public void close() throws IOException
   {

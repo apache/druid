@@ -33,7 +33,7 @@ import java.io.InputStream;
 import java.nio.channels.Channels;
 
 /**
- * Reader for empty channel.
+ * Reader for the case where stage output is known to be empty.
  */
 public class NilStageOutputReader implements StageOutputReader
 {

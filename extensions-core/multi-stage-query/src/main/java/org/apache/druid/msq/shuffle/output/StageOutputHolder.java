@@ -27,8 +27,12 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.rpc.WorkerResource;
 import org.apache.druid.utils.CloseableUtils;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.Closeable;
 import java.io.InputStream;
 
@@ -46,16 +50,35 @@ public class StageOutputHolder implements Closeable
     this.readerFuture = FutureUtils.transform(channelFuture, StageOutputHolder::createReader);
   }
 
+  /**
+   * Method for remote reads.
+   *
+   * Provides the implementation for {@link Worker#readStageOutput(StageId, int, long)}, which is in turn used by
+   * {@link WorkerResource#httpGetChannelData(String, int, int, long, HttpServletRequest)}.
+   *
+   * @see StageOutputReader#readRemotelyFrom(long) for details on behavior
+   */
   public ListenableFuture<InputStream> readRemotelyFrom(final long offset)
   {
     return FutureUtils.transformAsync(readerFuture, reader -> reader.readRemotelyFrom(offset));
   }
 
+  /**
+   * Method for local reads.
+   *
+   * Used instead of {@link #readRemotelyFrom(long)} when a worker is reading a channel from itself, to avoid needless
+   * HTTP calls to itself.
+   *
+   * @see StageOutputReader#readLocally() for details on behavior
+   */
   public ReadableFrameChannel readLocally()
   {
     return new FutureReadableFrameChannel(FutureUtils.transform(readerFuture, StageOutputReader::readLocally));
   }
 
+  /**
+   * Sets the channel that backs {@link #readLocally()} and {@link #readRemotelyFrom(long)}.
+   */
   public void setChannel(final ReadableFrameChannel channel)
   {
     if (!channelFuture.set(channel)) {

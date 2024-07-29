@@ -181,7 +181,7 @@ public class WorkerChatHandlerTest
 
     @Nullable
     @Override
-    public ListenableFuture<InputStream> readChannel(StageId stageId, int partitionNumber, long offset)
+    public ListenableFuture<InputStream> readStageOutput(StageId stageId, int partitionNumber, long offset)
     {
       return null;
     }

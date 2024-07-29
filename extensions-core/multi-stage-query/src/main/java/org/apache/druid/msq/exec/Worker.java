@@ -26,7 +26,6 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 /**
@@ -100,14 +99,16 @@ public interface Worker
    * If the channel is finished, an empty {@link InputStream} is returned.
    *
    * With {@link OutputChannelMode#MEMORY}, once this method is called with a certain offset, workers are free to
-   * delete data prior to that offset. (It will not be re-requested.)
+   * delete data prior to that offset. (Already-requested offsets will not be re-requested, because
+   * {@link OutputChannelMode#MEMORY} requires a single reader.) In this mode, if an already-requested offset is
+   * re-requested for some reason, an error future is returned.
    *
-   * Returns future that resolves to null if worker output for a particular queryId, stageNumber, and
+   * The returned future resolves to null if stage output for a particular queryId, stageNumber, and
    * partitionNumber is not found.
    *
-   * @throws IOException when the worker output is found but there is an error while reading it.
+   * Throws an exception when worker output is found, but there is an error while reading it.
    */
-  ListenableFuture<InputStream> readChannel(StageId stageId, int partitionNumber, long offset);
+  ListenableFuture<InputStream> readStageOutput(StageId stageId, int partitionNumber, long offset);
 
   /**
    * Returns a snapshot of counters.

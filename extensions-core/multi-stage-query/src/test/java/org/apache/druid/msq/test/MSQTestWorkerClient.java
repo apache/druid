@@ -118,7 +118,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     try (InputStream inputStream =
-             inMemoryWorkers.get(workerTaskId).readChannel(stageId, partitionNumber, offset).get()) {
+             inMemoryWorkers.get(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
       byte[] buffer = new byte[8 * 1024];
       boolean didRead = false;
       int bytesRead;
