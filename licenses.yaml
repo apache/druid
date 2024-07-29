@@ -5197,6 +5197,16 @@ license_file_path: licenses/bin/@emotion-weak-memoize.MIT
 
 ---
 
+name: "@fontsource/open-sans"
+license_category: binary
+module: web-console
+license_name: SIL Open Font License 1.1
+copyright: Google Inc.
+version: 5.0.28
+license_file_path: licenses/bin/@fontsource-open-sans.OFL
+
+---
+
 name: "@juggle/resize-observer"
 license_category: binary
 module: web-console
@@ -5740,16 +5750,6 @@ license_name: MIT License
 copyright: Ruben Verborgh
 version: 1.15.6
 license_file_path: licenses/bin/follow-redirects.MIT
-
----
-
-name: "fontsource-open-sans"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Lotus
-version: 3.0.9
-license_file_path: licenses/bin/fontsource-open-sans.MIT
 
 ---
 

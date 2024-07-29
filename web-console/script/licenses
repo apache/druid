@@ -139,6 +139,11 @@ checker.init(
             licenseExt = '0BSD';
             break;
 
+          case  'OFL-1.1':
+            properLicenseName = 'SIL Open Font License 1.1';
+            licenseExt = 'OFL';
+            break;
+
           default:
             throw new Error(`Unknown license '${licenses}' in ${p}`);
         }
