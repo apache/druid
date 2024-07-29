@@ -52,6 +52,7 @@ import org.apache.druid.discovery.LookupNodeService;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -120,7 +121,6 @@ import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
@@ -686,7 +686,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             ),
             new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
-                               .withMaxRowsPerSegment(10000)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
                                .withMaxRowsInMemory(100)
                                .withIndexSpec(indexSpec)
                                .withMaxPendingPersists(3)
@@ -749,7 +749,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             ),
             new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
-                               .withMaxRowsPerSegment(10000)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
                                .withMaxRowsInMemory(10)
                                .withIndexSpec(indexSpec)
                                .withMaxPendingPersists(3)
@@ -1179,7 +1179,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             ),
             new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
-                               .withMaxRowsPerSegment(10000)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
                                .withMaxRowsInMemory(10)
                                .withIndexSpec(indexSpec)
                                .build()
@@ -1235,7 +1235,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     UnifiedIndexerAppenderatorsManager unifiedIndexerAppenderatorsManager = new UnifiedIndexerAppenderatorsManager(
         new ForwardingQueryProcessingPool(exec),
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new WorkerConfig(),
         MapCache.create(2048),
         new CacheConfig(),
@@ -1267,7 +1266,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             ),
             new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
-                               .withMaxRowsPerSegment(10000)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
                                .withMaxRowsInMemory(10)
                                .withIndexSpec(indexSpec)
                                .withMaxPendingPersists(3)

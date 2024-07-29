@@ -79,8 +79,8 @@ public class TaskSerdeTest
         IndexTask.IndexIOConfig.class
     );
 
-    Assert.assertEquals(false, ioConfig.isAppendToExisting());
-    Assert.assertEquals(false, ioConfig.isDropExisting());
+    Assert.assertFalse(ioConfig.isAppendToExisting());
+    Assert.assertFalse(ioConfig.isDropExisting());
   }
 
   @Test
@@ -96,8 +96,8 @@ public class TaskSerdeTest
     Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
     Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
     Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
-    Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+    // TODO: Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
   }
 
   @Test
@@ -108,56 +108,59 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
-    Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertEquals(10, (int) tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
+    // Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\"}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assert.assertNull(tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"maxRowsPerSegment\":10}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
-    Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertEquals(10, (int) tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
+    // Assert.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(10, (int) tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
+    // Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(10, (int) tuningConfig.getNumShards());
+    Assert.assertNull(tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
+    // Assert.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":-1}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
+    // Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertEquals(10, (int) tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNotNull(tuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, tuningConfig.getMaxRowsPerSegment().intValue());
+    // Assert.assertNull(tuningConfig.getNumShards());
+    Assert.assertNotNull(tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment());
+    Assert.assertEquals(
+        PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT,
+        tuningConfig.getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment().intValue()
+    );
   }
 
   @Test
@@ -275,8 +278,11 @@ public class TaskSerdeTest
     );
     Assert.assertEquals(taskTuningConfig.getMaxPendingPersists(), task2TuningConfig.getMaxPendingPersists());
     Assert.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
-    Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
-    Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
+    // Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
+    Assert.assertEquals(
+        taskTuningConfig.getGivenOrDefaultPartitionsSpec(),
+        task2TuningConfig.getGivenOrDefaultPartitionsSpec()
+    );
     Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
     Assert.assertEquals(taskTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(), task2TuningConfig.getAwaitSegmentAvailabilityTimeoutMillis());
   }

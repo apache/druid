@@ -37,14 +37,10 @@ import org.joda.time.Duration;
  */
 public abstract class TuningConfigBuilder<C>
 {
-  protected Integer targetPartitionSize;
-  protected Integer maxRowsPerSegment;
   protected AppendableIndexSpec appendableIndexSpec;
   protected Integer maxRowsInMemory;
   protected Long maxBytesInMemory;
   protected Boolean skipBytesInMemoryOverheadCheck;
-  protected Long maxTotalRows;
-  protected Integer numShards;
   protected SplitHintSpec splitHintSpec;
   protected PartitionsSpec partitionsSpec;
   protected IndexSpec indexSpec;
@@ -52,7 +48,6 @@ public abstract class TuningConfigBuilder<C>
   protected Integer maxPendingPersists;
   protected Boolean forceGuaranteedRollup;
   protected Boolean reportParseExceptions;
-  protected Long publishTimeout;
   protected Long pushTimeout;
   protected SegmentWriteOutMediumFactory segmentWriteOutMediumFactory;
   protected Integer maxNumSubTasks;
@@ -70,18 +65,6 @@ public abstract class TuningConfigBuilder<C>
   protected Long awaitSegmentAvailabilityTimeoutMillis;
   protected Integer maxAllowedLockCount;
   protected Integer numPersistThreads;
-
-  public TuningConfigBuilder<C> withTargetPartitionSize(Integer targetPartitionSize)
-  {
-    this.targetPartitionSize = targetPartitionSize;
-    return this;
-  }
-
-  public TuningConfigBuilder<C> withMaxRowsPerSegment(Integer maxRowsPerSegment)
-  {
-    this.maxRowsPerSegment = maxRowsPerSegment;
-    return this;
-  }
 
   public TuningConfigBuilder<C> withAppendableIndexSpec(AppendableIndexSpec appendableIndexSpec)
   {
@@ -104,18 +87,6 @@ public abstract class TuningConfigBuilder<C>
   public TuningConfigBuilder<C> withSkipBytesInMemoryOverheadCheck(Boolean skipBytesInMemoryOverheadCheck)
   {
     this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck;
-    return this;
-  }
-
-  public TuningConfigBuilder<C> withMaxTotalRows(Long maxTotalRows)
-  {
-    this.maxTotalRows = maxTotalRows;
-    return this;
-  }
-
-  public TuningConfigBuilder<C> withNumShards(Integer numShards)
-  {
-    this.numShards = numShards;
     return this;
   }
 
@@ -164,12 +135,6 @@ public abstract class TuningConfigBuilder<C>
   public TuningConfigBuilder<C> withPushTimeout(Long pushTimeout)
   {
     this.pushTimeout = pushTimeout;
-    return this;
-  }
-
-  public TuningConfigBuilder<C> withPublishTimeout(Long publishTimeout)
-  {
-    this.publishTimeout = publishTimeout;
     return this;
   }
 
@@ -301,23 +266,16 @@ public abstract class TuningConfigBuilder<C>
     public IndexTask.IndexTuningConfig build()
     {
       return new IndexTask.IndexTuningConfig(
-          targetPartitionSize,
-          maxRowsPerSegment,
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           skipBytesInMemoryOverheadCheck,
-          maxTotalRows,
-          null,
-          numShards,
-          null,
           partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
-          publishTimeout,
           pushTimeout,
           segmentWriteOutMediumFactory,
           logParseExceptions,
@@ -336,14 +294,10 @@ public abstract class TuningConfigBuilder<C>
     public ParallelIndexTuningConfig build()
     {
       return new ParallelIndexTuningConfig(
-          targetPartitionSize,
-          maxRowsPerSegment,
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           skipBytesInMemoryOverheadCheck,
-          maxTotalRows,
-          numShards,
           splitHintSpec,
           partitionsSpec,
           indexSpec,
@@ -378,14 +332,10 @@ public abstract class TuningConfigBuilder<C>
     public CompactionTask.CompactionTuningConfig build()
     {
       return new CompactionTask.CompactionTuningConfig(
-          targetPartitionSize,
-          maxRowsPerSegment,
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           skipBytesInMemoryOverheadCheck,
-          maxTotalRows,
-          numShards,
           splitHintSpec,
           partitionsSpec,
           indexSpec,

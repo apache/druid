@@ -46,7 +46,6 @@ import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
@@ -76,7 +75,6 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
   private final WorkerConfig workerConfig = new WorkerConfig();
   private final UnifiedIndexerAppenderatorsManager manager = new UnifiedIndexerAppenderatorsManager(
       DirectQueryProcessingPool.INSTANCE,
-      JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
       workerConfig,
       MapCache.create(10),
       new CacheConfig(),

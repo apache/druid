@@ -402,7 +402,6 @@ public class MSQCompactionRunnerTest
         .forCompactionTask()
         .withMaxRowsInMemory(500000)
         .withMaxBytesInMemory(1000000L)
-        .withMaxTotalRows(Long.MAX_VALUE)
         .withPartitionsSpec(partitionsSpec)
         .withIndexSpec(indexSpec)
         .withForceGuaranteedRollup(!(partitionsSpec instanceof DynamicPartitionsSpec))

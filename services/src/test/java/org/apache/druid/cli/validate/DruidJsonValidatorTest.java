@@ -150,13 +150,7 @@ public class DruidJsonValidatorTest
 
             new IndexTask.IndexTuningConfig(
                 null,
-                null,
-                null,
                 10,
-                null,
-                null,
-                null,
-                null,
                 null,
                 null,
                 new DynamicPartitionsSpec(10000, null),
@@ -164,7 +158,6 @@ public class DruidJsonValidatorTest
                 null,
                 3,
                 false,
-                null,
                 null,
                 null,
                 null,

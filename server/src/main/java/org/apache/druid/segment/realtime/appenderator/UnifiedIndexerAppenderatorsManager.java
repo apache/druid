@@ -60,7 +60,6 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -110,7 +109,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   private final Map<String, DatasourceBundle> datasourceBundles = new HashMap<>();
 
   private final QueryProcessingPool queryProcessingPool;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final WorkerConfig workerConfig;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -124,7 +122,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @Inject
   public UnifiedIndexerAppenderatorsManager(
       QueryProcessingPool queryProcessingPool,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       WorkerConfig workerConfig,
       Cache cache,
       CacheConfig cacheConfig,
@@ -135,7 +132,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   )
   {
     this.queryProcessingPool = queryProcessingPool;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.workerConfig = workerConfig;
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -438,13 +434,6 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     public int getMaxPendingPersists()
     {
       return baseConfig.getMaxPendingPersists();
-    }
-
-    @Nullable
-    @Override
-    public Integer getMaxRowsPerSegment()
-    {
-      return baseConfig.getMaxRowsPerSegment();
     }
 
     @Nullable

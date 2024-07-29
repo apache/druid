@@ -104,24 +104,16 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
-        null,
-        null,
-        null,
-        null,
         null
     );
   }
 
   @JsonCreator
   public ParallelIndexTuningConfig(
-      @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
       @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
-      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
-      @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
       @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
@@ -149,23 +141,16 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   )
   {
     super(
-        targetPartitionSize,
-        maxRowsPerSegment,
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
         skipBytesInMemoryOverheadCheck,
-        maxTotalRows,
-        null,
-        numShards,
-        null,
         partitionsSpec,
         indexSpec,
         indexSpecForIntermediatePersists,
         maxPendingPersists,
         forceGuaranteedRollup,
         reportParseExceptions,
-        null,
         pushTimeout,
         segmentWriteOutMediumFactory,
         logParseExceptions,

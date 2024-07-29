@@ -43,15 +43,6 @@ public interface AppenderatorConfig extends TuningConfig
   }
 
   /**
-   * Maximum number of rows in a single segment before pushing to deep storage
-   */
-  @Nullable
-  default Integer getMaxRowsPerSegment()
-  {
-    return Integer.MAX_VALUE;
-  }
-
-  /**
    * Maximum number of rows across all segments before pushing to deep storage
    */
   @Nullable

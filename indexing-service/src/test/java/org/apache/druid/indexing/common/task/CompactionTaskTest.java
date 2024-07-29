@@ -55,6 +55,7 @@ import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -586,7 +587,6 @@ public class CompactionTaskTest
             )
             .withForceGuaranteedRollup(true)
             .withReportParseExceptions(false)
-            .withPublishTimeout(5000L)
             .build(),
         null,
         toolbox.getJsonMapper(),
@@ -782,75 +782,13 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException
-  {
-    final CompactionTask.CompactionTuningConfig tuningConfig = TuningConfigBuilder
-        .forCompactionTask()
-        .withTargetPartitionSize(100000)
-        .withMaxRowsInMemory(500000)
-        .withMaxBytesInMemory(1000000L)
-        .withIndexSpec(
-            IndexSpec.builder()
-                     .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.LZF)
-                     .withLongEncoding(LongEncodingStrategy.LONGS)
-                     .build()
-        )
-        .withForceGuaranteedRollup(true)
-        .withReportParseExceptions(false)
-        .withMaxNumConcurrentSubTasks(10)
-        .build();
-
-    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
-        toolbox,
-        LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        null,
-        null,
-        null,
-        null,
-        METRIC_BUILDER
-    );
-
-    final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
-        dataSchemasForIntervals,
-        toolbox,
-        new CompactionIOConfig(null, false, null),
-        new PartitionConfigurationManager(tuningConfig),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory
-    );
-
-    final List<DimensionsSpec> expectedDimensionsSpec = getExpectedDimensionsSpecForAutoGeneration();
-
-    ingestionSpecs.sort(
-        (s1, s2) -> Comparators.intervalsByStartThenEnd().compare(
-            s1.getDataSchema().getGranularitySpec().inputIntervals().get(0),
-            s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
-        )
-    );
-    Assert.assertEquals(6, ingestionSpecs.size());
-    assertIngestionSchema(
-        ingestionSpecs,
-        expectedDimensionsSpec,
-        AGGREGATORS.stream().map(AggregatorFactory::getCombiningFactory).collect(Collectors.toList()),
-        SEGMENT_INTERVALS,
-        tuningConfig,
-        Granularities.MONTH,
-        Granularities.NONE,
-        BatchIOConfig.DEFAULT_DROP_EXISTING
-    );
-  }
-
-  @Test
   public void testCreateIngestionSchemaWithMaxTotalRows() throws IOException
   {
     final CompactionTask.CompactionTuningConfig tuningConfig = TuningConfigBuilder
         .forCompactionTask()
         .withMaxRowsInMemory(500000)
         .withMaxBytesInMemory(1000000L)
-        .withMaxTotalRows(1000000L)
+        .withPartitionsSpec(new DynamicPartitionsSpec(null, 1000000L))
         .withIndexSpec(
             IndexSpec.builder()
                      .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
@@ -1641,7 +1579,6 @@ public class CompactionTaskTest
             .forCompactionTask()
             .withMaxRowsInMemory(500000)
             .withMaxBytesInMemory(1000000L)
-            .withMaxTotalRows(Long.MAX_VALUE)
             .withPartitionsSpec(new HashedPartitionsSpec(5000000, null, null))
             .withIndexSpec(
                 IndexSpec.builder()

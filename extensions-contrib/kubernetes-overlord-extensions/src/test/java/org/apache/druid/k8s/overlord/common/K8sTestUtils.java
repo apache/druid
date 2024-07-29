@@ -86,8 +86,6 @@ public class K8sTestUtils
             ),
             new IndexTask.IndexTuningConfig(
                 null,
-                null,
-                null,
                 10,
                 null,
                 null,
