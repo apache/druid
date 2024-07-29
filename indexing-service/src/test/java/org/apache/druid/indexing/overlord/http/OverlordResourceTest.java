@@ -61,8 +61,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.metadata.ActiveTaskLockInfo;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -1058,21 +1058,65 @@ public class OverlordResourceTest
   }
 
   @Test
-  public void testGetConflictingLockInfos() throws Exception
+  public void testGetLockedIntervals() throws Exception
   {
     final List<LockFilterPolicy> lockFilterPolicies = ImmutableList.of(
         new LockFilterPolicy("ds1", 25, null, null)
     );
-    final Map<String, List<TaskLockInfo>> expectedLocks = Collections.singletonMap(
+    final Map<String, List<Interval>> expectedIntervals = Collections.singletonMap(
         "ds1",
         Arrays.asList(
-            new TaskLockInfo(
+            Intervals.of("2012-01-01/2012-01-02"),
+            Intervals.of("2012-01-01/2012-01-02")
+        )
+    );
+
+    EasyMock.expect(taskLockbox.getLockedIntervals(lockFilterPolicies))
+            .andReturn(expectedIntervals);
+    replayAll();
+
+    final Response response = overlordResource.getDatasourceLockedIntervals(lockFilterPolicies);
+    Assert.assertEquals(200, response.getStatus());
+
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Map<String, List<Interval>> observedIntervals = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(response.getEntity()),
+        new TypeReference<Map<String, List<Interval>>>()
+        {
+        }
+    );
+
+    Assert.assertEquals(expectedIntervals, observedIntervals);
+  }
+
+  @Test
+  public void testGetLockedIntervalsWithEmptyBody()
+  {
+    replayAll();
+
+    Response response = overlordResource.getDatasourceLockedIntervals(null);
+    Assert.assertEquals(400, response.getStatus());
+
+    response = overlordResource.getDatasourceLockedIntervals(Collections.emptyList());
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
+  public void testGetActiveLocks() throws Exception
+  {
+    final List<LockFilterPolicy> lockFilterPolicies = ImmutableList.of(
+        new LockFilterPolicy("ds1", 25, null, null)
+    );
+    final Map<String, List<ActiveTaskLockInfo>> expectedLocks = Collections.singletonMap(
+        "ds1",
+        Arrays.asList(
+            new ActiveTaskLockInfo(
                 "TIME_CHUNK",
                 "EXCLUSIVE",
                 25,
                 Intervals.of("2012-01-01/2012-01-02")
             ),
-            new TaskLockInfo(
+            new ActiveTaskLockInfo(
                 "TIME_CHUNK",
                 "EXCLUSIVE",
                 75,
@@ -1081,33 +1125,33 @@ public class OverlordResourceTest
         )
     );
 
-    EasyMock.expect(taskLockbox.getConflictingLockInfos(lockFilterPolicies))
+    EasyMock.expect(taskLockbox.getActiveLocks(lockFilterPolicies))
             .andReturn(expectedLocks);
     replayAll();
 
-    final Response response = overlordResource.getConflictingLockInfos(lockFilterPolicies);
+    final Response response = overlordResource.getActiveLocks(lockFilterPolicies);
     Assert.assertEquals(200, response.getStatus());
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    Map<String, List<TaskLockInfo>> observedLocks = jsonMapper.readValue(
+    Map<String, List<ActiveTaskLockInfo>> observedLocks = jsonMapper.readValue(
         jsonMapper.writeValueAsString(response.getEntity()),
         new TypeReference<TaskLockResponse>()
         {
         }
-    ).getTaskLocks();
+    ).getDatasourceToLocks();
 
     Assert.assertEquals(expectedLocks, observedLocks);
   }
 
   @Test
-  public void testGetConflictingLockInfosWithEmptyBody()
+  public void testGetActiveLocksWithEmptyBody()
   {
     replayAll();
 
-    Response response = overlordResource.getConflictingLockInfos(null);
+    Response response = overlordResource.getActiveLocks(null);
     Assert.assertEquals(400, response.getStatus());
 
-    response = overlordResource.getConflictingLockInfos(Collections.emptyList());
+    response = overlordResource.getActiveLocks(Collections.emptyList());
     Assert.assertEquals(400, response.getStatus());
   }
 

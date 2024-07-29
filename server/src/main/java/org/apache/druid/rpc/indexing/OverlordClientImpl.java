@@ -41,12 +41,10 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.http.TaskLockResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -192,36 +190,28 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<TaskLockInfo>>> findConflictingLockInfos(
+  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
       List<LockFilterPolicy> lockFilterPolicies
   )
   {
-    final String path = "/druid/indexer/v1/conflictingLocks";
+    final String path = "/druid/indexer/v1/lockedIntervals/v2";
 
-    try {
-      return FutureUtils.transform(
-          client.asyncRequest(
-              new RequestBuilder(HttpMethod.POST, path)
-                  .jsonContent(jsonMapper, lockFilterPolicies),
-              new BytesFullResponseHandler()
-          ),
-          holder -> {
-            final Map<String, List<TaskLockInfo>> response = JacksonUtils.readValue(
-                jsonMapper,
-                holder.getContent(),
-                new TypeReference<TaskLockResponse>()
-                {
-                }
-            ).getTaskLocks();
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, lockFilterPolicies),
+            new BytesFullResponseHandler()
+        ),
+        holder -> {
+          final Map<String, List<Interval>> response = JacksonUtils.readValue(
+              jsonMapper,
+              holder.getContent(),
+              new TypeReference<Map<String, List<Interval>>>() {}
+          );
 
-            return response == null ? Collections.emptyMap() : response;
-          }
-      );
-    }
-    catch (Exception e) {
-      // If there is an exception due to Overlord and Coordinator master version mismatch
-      return Futures.immediateFuture(Collections.emptyMap());
-    }
+          return response == null ? Collections.emptyMap() : response;
+        }
+    );
   }
 
   @Override

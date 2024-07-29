@@ -28,7 +28,7 @@ import java.util.Objects;
 /**
  * Contains information about an active task lock for a given datasource
  */
-public class TaskLockInfo
+public class ActiveTaskLockInfo
 {
   private final String granularity;
   private final String type;
@@ -36,7 +36,7 @@ public class TaskLockInfo
   private final Interval interval;
 
   @JsonCreator
-  public TaskLockInfo(
+  public ActiveTaskLockInfo(
       @JsonProperty("granularity") String granularity,
       @JsonProperty("type") String type,
       @JsonProperty("priority") int priority,
@@ -82,7 +82,7 @@ public class TaskLockInfo
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TaskLockInfo that = (TaskLockInfo) o;
+    ActiveTaskLockInfo that = (ActiveTaskLockInfo) o;
     return Objects.equals(granularity, that.granularity)
            && Objects.equals(type, that.type)
            && priority == that.priority
@@ -98,7 +98,7 @@ public class TaskLockInfo
   @Override
   public String toString()
   {
-    return "TaskLockInfo{" +
+    return "ActiveTaskLockInfo{" +
            "granularity=" + granularity +
            ", type=" + type +
            ", interval=" + interval +

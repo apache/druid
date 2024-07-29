@@ -25,12 +25,12 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testsEx.categories.BatchIndex;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -345,22 +345,21 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
 
       // Wait until it acquires a lock
       final List<LockFilterPolicy> lockFilterPolicies = Collections.singletonList(new LockFilterPolicy(datasourceName, 0, null, null));
-      final Map<String, List<TaskLockInfo>> locks = new HashMap<>();
+      final Map<String, List<Interval>> lockedIntervals = new HashMap<>();
       ITRetryUtil.retryUntilFalse(
           () -> {
-            locks.clear();
-            locks.putAll(indexer.getConflictingLocks(lockFilterPolicies));
-            return locks.isEmpty();
+            lockedIntervals.clear();
+            lockedIntervals.putAll(indexer.getLockedIntervals(lockFilterPolicies));
+            return lockedIntervals.isEmpty();
           },
           "Verify Intervals are Locked"
       );
 
       // Verify the locked intervals for this datasource
-      Assert.assertEquals(locks.size(), 1);
-      Assert.assertEquals(locks.get(datasourceName).size(), 1);
+      Assert.assertEquals(lockedIntervals.size(), 1);
       Assert.assertEquals(
-          locks.get(datasourceName).get(0).getInterval(),
-          Intervals.of("2013-08-31/2013-09-02")
+          lockedIntervals.get(datasourceName),
+          Collections.singletonList(Intervals.of("2013-08-31/2013-09-02"))
       );
 
       ITRetryUtil.retryUntilTrue(

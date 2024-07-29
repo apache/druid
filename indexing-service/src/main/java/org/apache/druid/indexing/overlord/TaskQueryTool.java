@@ -37,8 +37,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.ActiveTaskLockInfo;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.Duration;
@@ -86,12 +86,21 @@ public class TaskQueryTool
   }
 
   /**
-   * @param lockFilterPolicies Requests for conflicing locks for various datasources
+   * @param lockFilterPolicies Requests for conflicing lock intervals for various datasources
+   * @return Map from datasource to intervals locked by tasks that have a conflicting lock type that cannot be revoked
+   */
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    return taskLockbox.getLockedIntervals(lockFilterPolicies);
+  }
+
+  /**
+   * @param lockFilterPolicies Requests for active locks for various datasources
    * @return Map from datasource to conflicting lock infos
    */
-  public Map<String, List<TaskLockInfo>> getConflictingLockInfos(List<LockFilterPolicy> lockFilterPolicies)
+  public Map<String, List<ActiveTaskLockInfo>> getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
   {
-    return taskLockbox.getConflictingLockInfos(lockFilterPolicies);
+    return taskLockbox.getActiveLocks(lockFilterPolicies);
   }
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)

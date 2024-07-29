@@ -21,54 +21,34 @@ package org.apache.druid.server.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.metadata.TaskLockInfo;
+import org.apache.druid.metadata.ActiveTaskLockInfo;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class TaskLockResponse
 {
-  private final Map<String, List<TaskLockInfo>> taskLocks;
+  private final Map<String, List<ActiveTaskLockInfo>> datasourceToLocks;
 
   @JsonCreator
   public TaskLockResponse(
-      @JsonProperty("taskLocks") final Map<String, List<TaskLockInfo>> taskLocks
+      @JsonProperty("datasourceToLocks") final Map<String, List<ActiveTaskLockInfo>> datasourceToLocks
   )
   {
-    this.taskLocks = taskLocks;
+    this.datasourceToLocks = datasourceToLocks;
   }
 
   @JsonProperty
-  public Map<String, List<TaskLockInfo>> getTaskLocks()
+  public Map<String, List<ActiveTaskLockInfo>> getDatasourceToLocks()
   {
-    return taskLocks;
-  }
-
-  @Override
-  public boolean equals(final Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    final TaskLockResponse that = (TaskLockResponse) o;
-    return Objects.equals(taskLocks, that.taskLocks);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(taskLocks);
+    return datasourceToLocks;
   }
 
   @Override
   public String toString()
   {
     return "TaskLockResponse{" +
-           "taskLocks='" + taskLocks +
+           "datasourceToLocks='" + datasourceToLocks +
            '}';
   }
 }

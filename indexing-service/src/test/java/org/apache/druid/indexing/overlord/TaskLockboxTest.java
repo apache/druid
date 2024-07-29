@@ -37,6 +37,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
@@ -51,11 +52,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.ActiveTaskLockInfo;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -1175,28 +1176,134 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testGetConflictingLockInfos()
+  public void testGetLockedIntervalsForHigherPriorityExclusiveLock()
   {
-    final Set<TaskLockInfo> expectedConflicts = new HashSet<>();
-    final TaskLockInfo overlappingReplaceLock =
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        75,
+        null,
+        null
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
+  @Test
+  public void testGetLockedIntervalsForLowerPriorityExclusiveLock()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        null,
+        null
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assert.assertEquals(1, conflictingIntervals.size());
+    Assert.assertEquals(
+        Collections.singletonList(Intervals.of("2017/2018")),
+        conflictingIntervals.get(task.getDataSource())
+    );
+  }
+
+  @Test
+  public void testGetLockedIntervalsForLowerPriorityReplaceLock()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForReplaceLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        null,
+        ImmutableMap.of(Tasks.TASK_LOCK_TYPE, TaskLockType.REPLACE.name())
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForReplaceLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
+  @Test
+  public void testGetLockedIntervalsForLowerPriorityUseConcurrentLocks()
+  {
+    final Task task = NoopTask.ofPriority(50);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.APPEND,
+        task,
+        Intervals.of("2017/2018")
+    );
+
+    LockFilterPolicy requestForReplaceLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        null,
+        ImmutableMap.of(
+            Tasks.TASK_LOCK_TYPE,
+            TaskLockType.EXCLUSIVE.name(),
+            Tasks.USE_CONCURRENT_LOCKS,
+            true
+        )
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForReplaceLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
+
+  @Test
+  public void testGetActiveLocks()
+  {
+    final Set<ActiveTaskLockInfo> expectedConflicts = new HashSet<>();
+    final ActiveTaskLockInfo overlappingReplaceLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.REPLACE, Intervals.of("2024/2025"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingReplaceLock);
 
     //Lower priority
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024/2025"), 25);
 
-    final TaskLockInfo overlappingAppendLock =
+    final ActiveTaskLockInfo overlappingAppendLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-01-01/2024-02-01"), 75)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingAppendLock);
 
     // Non-overlapping interval
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-12-01/2025-01-01"), 75);
 
-    final TaskLockInfo overlappingExclusiveLock =
+    final ActiveTaskLockInfo overlappingExclusiveLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.EXCLUSIVE, Intervals.of("2020/2021"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingExclusiveLock);
 
     LockFilterPolicy policy = new LockFilterPolicy(
@@ -1213,19 +1320,19 @@ public class TaskLockboxTest
         null
     );
 
-    Map<String, List<TaskLockInfo>> conflictingLocks =
-        lockbox.getConflictingLockInfos(ImmutableList.of(policy, policyForNonExistentDatasource));
+    Map<String, List<ActiveTaskLockInfo>> conflictingLocks =
+        lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
     Assert.assertEquals(1, conflictingLocks.size());
     Assert.assertEquals(expectedConflicts, new HashSet<>(conflictingLocks.get("none")));
   }
 
   @Test
-  public void testGetConflictingLockInfosWithAppendLockIgnoresAppendLocks()
+  public void testGetActiveLocksWithAppendLockIgnoresAppendLocks()
   {
-    final Set<TaskLockInfo> expectedConflicts = new HashSet<>();
-    final TaskLockInfo overlappingReplaceLock =
+    final Set<ActiveTaskLockInfo> expectedConflicts = new HashSet<>();
+    final ActiveTaskLockInfo overlappingReplaceLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.REPLACE, Intervals.of("2024/2025"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingReplaceLock);
 
     //Lower priority
@@ -1236,9 +1343,9 @@ public class TaskLockboxTest
     // Non-overlapping interval
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-12-01/2025-01-01"), 75);
 
-    final TaskLockInfo overlappingExclusiveLock =
+    final ActiveTaskLockInfo overlappingExclusiveLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.EXCLUSIVE, Intervals.of("2020/2021"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingExclusiveLock);
 
     LockFilterPolicy policy = new LockFilterPolicy(
@@ -1255,19 +1362,19 @@ public class TaskLockboxTest
         null
     );
 
-    Map<String, List<TaskLockInfo>> conflictingLocks =
-        lockbox.getConflictingLockInfos(ImmutableList.of(policy, policyForNonExistentDatasource));
+    Map<String, List<ActiveTaskLockInfo>> conflictingLocks =
+        lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
     Assert.assertEquals(1, conflictingLocks.size());
     Assert.assertEquals(expectedConflicts, new HashSet<>(conflictingLocks.get("none")));
   }
 
   @Test
-  public void testGetConflictingLockInfosWithConcurrentLocksIgnoresAppendLocks()
+  public void testGetActiveLocksWithConcurrentLocksIgnoresAppendLocks()
   {
-    final Set<TaskLockInfo> expectedConflicts = new HashSet<>();
-    final TaskLockInfo overlappingReplaceLock =
+    final Set<ActiveTaskLockInfo> expectedConflicts = new HashSet<>();
+    final ActiveTaskLockInfo overlappingReplaceLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.REPLACE, Intervals.of("2024/2025"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingReplaceLock);
 
     //Lower priority
@@ -1278,9 +1385,9 @@ public class TaskLockboxTest
     // Non-overlapping interval
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-12-01/2025-01-01"), 75);
 
-    final TaskLockInfo overlappingExclusiveLock =
+    final ActiveTaskLockInfo overlappingExclusiveLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.EXCLUSIVE, Intervals.of("2020/2021"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingExclusiveLock);
 
     LockFilterPolicy policy = new LockFilterPolicy(
@@ -1297,35 +1404,36 @@ public class TaskLockboxTest
         null
     );
 
-    Map<String, List<TaskLockInfo>> conflictingLocks =
-        lockbox.getConflictingLockInfos(ImmutableList.of(policy, policyForNonExistentDatasource));
+    Map<String, List<ActiveTaskLockInfo>> conflictingLocks =
+        lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
     Assert.assertEquals(1, conflictingLocks.size());
     Assert.assertEquals(expectedConflicts, new HashSet<>(conflictingLocks.get("none")));
   }
 
   @Test
-  public void testGetConflictingLockInfosWithoutConcurrentLocksConsidersAppendLocks()
+  public void testGetActiveLocksWithoutConcurrentLocksConsidersAppendLocks()
   {
-    final Set<TaskLockInfo> expectedConflicts = new HashSet<>();
-    final TaskLockInfo overlappingReplaceLock =
+    final Set<ActiveTaskLockInfo> expectedConflicts = new HashSet<>();
+    final ActiveTaskLockInfo overlappingReplaceLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.REPLACE, Intervals.of("2024/2025"), 50)
-                 .toTaskLockInfo();
+    );
+
     expectedConflicts.add(overlappingReplaceLock);
 
     //Lower priority
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024/2025"), 25);
 
-    final TaskLockInfo overlappingAppendLock =
+    final ActiveTaskLockInfo overlappingAppendLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-01-01/2024-02-01"), 75)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingAppendLock);
 
     // Non-overlapping interval
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-12-01/2025-01-01"), 75);
 
-    final TaskLockInfo overlappingExclusiveLock =
+    final ActiveTaskLockInfo overlappingExclusiveLock = TaskLocks.toLockInfo(
         validator.expectLockCreated(TaskLockType.EXCLUSIVE, Intervals.of("2020/2021"), 50)
-                 .toTaskLockInfo();
+    );
     expectedConflicts.add(overlappingExclusiveLock);
 
     LockFilterPolicy policy = new LockFilterPolicy(
@@ -1342,8 +1450,8 @@ public class TaskLockboxTest
         null
     );
 
-    Map<String, List<TaskLockInfo>> conflictingLocks =
-        lockbox.getConflictingLockInfos(ImmutableList.of(policy, policyForNonExistentDatasource));
+    Map<String, List<ActiveTaskLockInfo>> conflictingLocks =
+        lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
     Assert.assertEquals(1, conflictingLocks.size());
     Assert.assertEquals(expectedConflicts, new HashSet<>(conflictingLocks.get("none")));
   }

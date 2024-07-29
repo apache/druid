@@ -44,17 +44,16 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
-import org.apache.druid.server.http.TaskLockResponse;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -221,56 +220,46 @@ public class OverlordClientImplTest
   }
 
   @Test
-  public void test_findConflictingLockInfos() throws Exception
+  public void test_findLockedIntervals() throws Exception
   {
-    final Map<String, List<TaskLockInfo>> lockMap =
-        ImmutableMap.of(
-            "foo",
-            Collections.singletonList(
-                new TaskLockInfo(
-                    "TIME_CHUNK",
-                    "EXCLUSIVE",
-                    50,
-                    Intervals.of("2000/2001")
-                )
-            )
-        );
+    final Map<String, List<Interval>> lockMap =
+        ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
     final List<LockFilterPolicy> requests = ImmutableList.of(
         new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/conflictingLocks")
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
             .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(new TaskLockResponse(lockMap))
+        jsonMapper.writeValueAsBytes(lockMap)
     );
 
     Assert.assertEquals(
         lockMap,
-        overlordClient.findConflictingLockInfos(requests).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
   @Test
-  public void test_findConflictingLockInfos_nullReturn() throws Exception
+  public void test_findLockedIntervals_nullReturn() throws Exception
   {
     final List<LockFilterPolicy> requests = ImmutableList.of(
         new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/conflictingLocks")
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
             .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(new TaskLockResponse(null))
+        jsonMapper.writeValueAsBytes(null)
     );
 
     Assert.assertEquals(
         Collections.emptyMap(),
-        overlordClient.findConflictingLockInfos(requests).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 

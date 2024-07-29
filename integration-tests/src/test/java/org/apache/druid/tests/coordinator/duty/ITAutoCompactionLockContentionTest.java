@@ -19,13 +19,13 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -55,12 +55,10 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Integration Test to verify behaviour when there is a lock contention between
@@ -274,14 +272,9 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
         () -> {
           lockedIntervals.clear();
 
-          Map<String, List<TaskLockInfo>> locks = indexer.getConflictingLocks(Collections.singletonList(lockFilterPolicy));
-          if (locks.containsKey(fullDatasourceName)) {
-            lockedIntervals.addAll(
-                locks.get(fullDatasourceName)
-                     .stream()
-                     .map(TaskLockInfo::getInterval)
-                     .collect(Collectors.toList())
-            );
+          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(ImmutableList.of(lockFilterPolicy));
+          if (allIntervals.containsKey(fullDatasourceName)) {
+            lockedIntervals.addAll(allIntervals.get(fullDatasourceName));
           }
 
           LOG.info("Locked intervals: %s", lockedIntervals);
