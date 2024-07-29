@@ -143,7 +143,7 @@ public class MSQCompactionRunner implements CompactionRunner
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
-                            .orElse(new CompactionConfigValidationResult(true, null));
+                            .orElse(CompactionConfigValidationResult.success());
   }
 
   @Override
@@ -359,7 +359,6 @@ public class MSQCompactionRunner implements CompactionRunner
                                         .virtualColumns(getVirtualColumns(dataSchema, interval))
                                         .columnTypes(rowSignature.getColumnTypes())
                                         .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
-                                        .legacy(false)
                                         .filters(dataSchema.getTransformSpec().getFilter())
                                         .context(compactionTask.getContext())
                                         .build();

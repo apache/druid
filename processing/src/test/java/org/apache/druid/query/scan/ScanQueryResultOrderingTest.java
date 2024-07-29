@@ -190,10 +190,7 @@ public class ScanQueryResultOrderingTest
   public void setUp()
   {
     queryRunnerFactory = new ScanQueryRunnerFactory(
-        new ScanQueryQueryToolChest(
-            new ScanQueryConfig(),
-            new DefaultGenericQueryMetricsFactory()
-        ),
+        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
         new ScanQueryEngine(),
         new ScanQueryConfig()
     );

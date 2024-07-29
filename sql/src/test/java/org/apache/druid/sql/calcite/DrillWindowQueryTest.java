@@ -4426,7 +4426,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_7")
   @Test
   public void test_nestedAggs_emtyOvrCls_7()
@@ -7274,7 +7274,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_8")
   @Test
   public void test_nestedAggs_emtyOvrCls_8()
@@ -7530,6 +7530,244 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("nestedAggs/multiWin_8")
   @Test
   public void test_nestedAggs_multiWin_8()
+  {
+    windowQueryTest();
+  }
+
+  /*
+  Druid query tests
+   */
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1")
+  @Test
+  public void test_same_window_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1_named_window")
+  @Test
+  public void test_same_window_wikipedia_query_1_named_window()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1_named_windows")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1_named_windows()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_1")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_2")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_1")
+  @Test
+  public void test_empty_over_single_empty_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_2")
+  @Test
+  public void test_empty_over_single_empty_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/multiple_empty_over_1")
+  @Test
+  public void test_empty_over_multiple_empty_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_1")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_2")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_multiple_sort_columns")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_multiple_sort_columns()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_same_sort_column")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_same_sort_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_different_sort_column")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_different_sort_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_multiple_sort_columns_1")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_multiple_sort_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_multiple_sort_columns_2")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_multiple_sort_columns_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_1")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_2")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_multiple_partition_columns")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_multiple_partition_columns()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_same_partition_column")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_same_partition_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_different_partition_column")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_different_partition_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_multiple_partition_columns_1")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_multiple_partition_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_multiple_partition_columns_2")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_multiple_partition_columns_2()
+  {
+    windowQueryTest();
+  }
+
+  // This test gives the following error on sql-native engine:
+  // Column[w0] of type[class org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn] cannot be sorted.
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_1")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_1()
+  {
+    sqlNativeIncompatible();
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_2")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_3")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_1")
+  @Test
+  public void test_partition_by_array_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_2")
+  @Test
+  public void test_partition_by_array_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_3")
+  @Test
+  public void test_partition_by_array_wikipedia_query_3()
   {
     windowQueryTest();
   }

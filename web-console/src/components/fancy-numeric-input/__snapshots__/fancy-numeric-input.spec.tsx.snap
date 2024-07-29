@@ -1,32 +1,32 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`FancyNumericInput matches snapshot 1`] = `
-<Blueprint4.ControlGroup
-  className="fancy-numeric-input bp4-numeric-input"
+<Blueprint5.ControlGroup
+  className="fancy-numeric-input bp5-numeric-input"
 >
-  <Blueprint4.InputGroup
+  <Blueprint5.InputGroup
     autoComplete="off"
     onBlur={[Function]}
     onChange={[Function]}
     onKeyDown={[Function]}
     value="5"
   />
-  <Blueprint4.ButtonGroup
-    className="bp4-fixed"
+  <Blueprint5.ButtonGroup
+    className="bp5-fixed"
     vertical={true}
   >
-    <Blueprint4.Button
+    <Blueprint5.Button
       aria-label="increment"
       disabled={false}
       icon="chevron-up"
       onMouseDown={[Function]}
     />
-    <Blueprint4.Button
+    <Blueprint5.Button
       aria-label="decrement"
       disabled={false}
       icon="chevron-down"
       onMouseDown={[Function]}
     />
-  </Blueprint4.ButtonGroup>
-</Blueprint4.ControlGroup>
+  </Blueprint5.ButtonGroup>
+</Blueprint5.ControlGroup>
 `;

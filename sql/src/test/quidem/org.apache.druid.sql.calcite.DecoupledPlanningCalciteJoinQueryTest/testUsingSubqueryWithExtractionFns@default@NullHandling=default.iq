@@ -62,11 +62,11 @@ DruidAggregate(group=[{0}], EXPR$1=[COUNT()], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim2", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {

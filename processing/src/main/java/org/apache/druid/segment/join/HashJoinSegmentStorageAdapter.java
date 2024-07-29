@@ -227,6 +227,12 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     return clauses.isEmpty() && baseAdapter.canVectorize(baseFilterAnd(filter), virtualColumns, descending);
   }
 
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseAdapter.isFromTombstone();
+  }
+
   @Nullable
   @Override
   public VectorCursor makeVectorCursor(

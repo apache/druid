@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -64,6 +65,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -72,6 +74,9 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SqlTestFrameworkConfig.ComponentSupplier(VarianceComponentSupplier.class)
 public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
@@ -712,8 +717,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             + "group by dim4, dim5, mod(m1, 3)")
         .queryContext(ImmutableMap.of(
             PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true,
-            QueryContexts.WINDOWING_STRICT_VALIDATION, false
+            QueryContexts.ENABLE_DEBUG, true
         ))
         .expectedResults(ImmutableList.of(
             new Object[]{"a", "aa", 1.0D, 0.0D},
@@ -724,5 +728,24 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{"b", "ad", 1.0D, 0.6666666666666666D}
         ))
         .run();
+  }
+
+  @Test
+  public void testStddevNotSupportedOverWindow()
+  {
+    assumeFeatureAvailable(EngineFeature.WINDOW_FUNCTIONS);
+
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
+            .sql("SELECT stddev(m1) OVER () from numfoo")
+            .run()
+    );
+
+    assertEquals(
+        "Query could not be planned. A possible reason is [Aggregation [STDDEV] is currently not supported for window functions]",
+        e.getMessage()
+    );
   }
 }
