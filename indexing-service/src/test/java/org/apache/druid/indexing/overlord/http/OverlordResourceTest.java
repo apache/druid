@@ -36,6 +36,9 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -61,14 +64,12 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.metadata.ActiveTaskLockInfo;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.http.TaskLockResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -1107,21 +1108,25 @@ public class OverlordResourceTest
     final List<LockFilterPolicy> lockFilterPolicies = ImmutableList.of(
         new LockFilterPolicy("ds1", 25, null, null)
     );
-    final Map<String, List<ActiveTaskLockInfo>> expectedLocks = Collections.singletonMap(
+    final Map<String, List<TaskLock>> expectedLocks = Collections.singletonMap(
         "ds1",
         Arrays.asList(
-            new ActiveTaskLockInfo(
-                "TIME_CHUNK",
-                "EXCLUSIVE",
-                25,
-                Intervals.of("2012-01-01/2012-01-02")
+            new TimeChunkLock(
+                TaskLockType.REPLACE,
+                "groupId",
+                "datasource",
+                Intervals.of("2012-01-01/2012-01-02"),
+                "version",
+                25
             ),
-            new ActiveTaskLockInfo(
-                "TIME_CHUNK",
-                "EXCLUSIVE",
-                75,
-                Intervals.of("2012-01-01/2012-01-02")
-            )
+            new TimeChunkLock(
+                TaskLockType.EXCLUSIVE,
+                "groupId",
+                "datasource",
+                Intervals.of("2012-01-02/2012-01-03"),
+                "version",
+                75
+                )
         )
     );
 
@@ -1133,7 +1138,7 @@ public class OverlordResourceTest
     Assert.assertEquals(200, response.getStatus());
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    Map<String, List<ActiveTaskLockInfo>> observedLocks = jsonMapper.readValue(
+    Map<String, List<TaskLock>> observedLocks = jsonMapper.readValue(
         jsonMapper.writeValueAsString(response.getEntity()),
         new TypeReference<TaskLockResponse>()
         {

@@ -17,29 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server.http;
+package org.apache.druid.indexing.overlord.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.metadata.ActiveTaskLockInfo;
+import org.apache.druid.indexing.common.TaskLock;
 
 import java.util.List;
 import java.util.Map;
 
 public class TaskLockResponse
 {
-  private final Map<String, List<ActiveTaskLockInfo>> datasourceToLocks;
+  private final Map<String, List<TaskLock>> datasourceToLocks;
 
   @JsonCreator
   public TaskLockResponse(
-      @JsonProperty("datasourceToLocks") final Map<String, List<ActiveTaskLockInfo>> datasourceToLocks
+      @JsonProperty("datasourceToLocks") final Map<String, List<TaskLock>> datasourceToLocks
   )
   {
     this.datasourceToLocks = datasourceToLocks;
   }
 
   @JsonProperty
-  public Map<String, List<ActiveTaskLockInfo>> getDatasourceToLocks()
+  public Map<String, List<TaskLock>> getDatasourceToLocks()
   {
     return datasourceToLocks;
   }

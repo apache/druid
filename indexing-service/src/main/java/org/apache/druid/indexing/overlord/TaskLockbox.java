@@ -38,7 +38,6 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
-import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -49,7 +48,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.ActiveTaskLockInfo;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.query.QueryContexts;
@@ -999,9 +997,9 @@ public class TaskLockbox
    * @param lockFilterPolicies Lock filters for the given datasources
    * @return Map from datasource to list of non-revoked locks with at least as much priority and an overlapping interval
    */
-  public Map<String, List<ActiveTaskLockInfo>> getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
+  public Map<String, List<TaskLock>> getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
   {
-    final Map<String, List<ActiveTaskLockInfo>> datasourceToLocks = new HashMap<>();
+    final Map<String, List<TaskLock>> datasourceToLocks = new HashMap<>();
 
     // Take a lock and populate the maps
     giant.lock();
@@ -1059,7 +1057,7 @@ public class TaskLockbox
                             for (Interval filterInterval : intervals) {
                               if (interval.overlaps(filterInterval)) {
                                 datasourceToLocks.computeIfAbsent(datasource, ds -> new ArrayList<>())
-                                                 .add(TaskLocks.toLockInfo(taskLockPosse.getTaskLock()));
+                                                 .add(taskLockPosse.getTaskLock());
                                 break;
                               }
                             }

@@ -31,7 +31,6 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.metadata.ActiveTaskLockInfo;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -253,15 +252,5 @@ public class TaskLocks
     taskLocks.forEach(taskLock -> taskLockMap.computeIfAbsent(taskLock.getInterval().getStart(), k -> new ArrayList<>())
                                              .add(taskLock));
     return taskLockMap;
-  }
-
-  public static ActiveTaskLockInfo toLockInfo(TaskLock taskLock)
-  {
-    return new ActiveTaskLockInfo(
-        taskLock.getGranularity().name(),
-        taskLock.getType().name(),
-        taskLock.getNonNullPriority(),
-        taskLock.getInterval()
-    );
   }
 }
