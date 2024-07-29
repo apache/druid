@@ -618,7 +618,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     final ExistingSegmentAnalyzer existingSegmentAnalyzer = new ExistingSegmentAnalyzer(
         segments,
         // For MSQ, always need rollup to check if there are some rollup segments already present.
-        compactionRunner == null || compactionRunner instanceof NativeCompactionRunner
+        compactionRunner instanceof NativeCompactionRunner
         ? (granularitySpec.isRollup() == null)
         : true,
         granularitySpec.getQueryGranularity() == null,

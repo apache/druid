@@ -183,9 +183,8 @@ public class MSQCompactionRunner implements CompactionRunner
               // the aggregated column name. This is because the aggregated values would then get overwritten by new
               // values and the existing values would be lost. Note that if no rollup is specified in an index spec,
               // the default value is true.
-              return new CompactionConfigValidationResult(
-                  false,
-                  "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
+              return CompactionConfigValidationResult.failure(
+                  "MSQ: Rolled-up segments in compaction interval[%s].",
                   intervalDataSchema.getKey()
               );
             }
@@ -193,7 +192,7 @@ public class MSQCompactionRunner implements CompactionRunner
         }
       }
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   @Override
