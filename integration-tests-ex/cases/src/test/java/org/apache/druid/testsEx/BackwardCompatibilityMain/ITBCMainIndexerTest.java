@@ -26,7 +26,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
-@Category({BackwardCompatibilityMain.class})
-public class ITBackwardCompatibilityMainMainIndexerTest extends IndexerTest
+@Category(BackwardCompatibilityMain.class)
+public class ITBCMainIndexerTest extends IndexerTest
 {
 }
