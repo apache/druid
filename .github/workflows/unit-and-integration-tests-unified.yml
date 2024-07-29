@@ -49,8 +49,6 @@ env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
   DRUID_PREVIOUS_VERSION: 30.0.0
   DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: https://dlcdn.apache.org/druid/30.0.0/apache-druid-30.0.0-bin.tar.gz
-  #BACKWARD_COMPATIBILITY_IT_ENABLED: true
-  #DRUID_PREVIOUS_IT_IMAGE_NAME: org.apache.druid.integration-tests/test:30.0.0
 
 jobs:
   set-env-var:
@@ -187,28 +185,6 @@ jobs:
     needs: unit-tests
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     uses: ./.github/workflows/standard-its.yml
-
-#  expose-vars:
-#    runs-on: ubuntu-latest
-#    outputs:
-#      DRUID_PREVIOUS_VERSION: ${{ env.DRUID_PREVIOUS_VERSION }}
-#      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ env.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-#      BACKWARD_COMPATIBILITY_IT_ENABLED: $BACKWARD_COMPATIBILITY_IT_ENABLED
-#      DRUID_PREVIOUS_IT_IMAGE_NAME: $DRUID_PREVIOUS_IT_IMAGE_NAME
-#    steps:
-#      - run: echo "Exposing env vars"
-
-  print-env-vars:
-    needs: set-env-var
-    runs-on: ubuntu-latest
-    steps:
-      - name: print env vars
-        id: test
-        run: |
-          echo ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-          echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
 
   revised-its:
     needs: [unit-tests, set-env-var]
