@@ -31,7 +31,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Objects;
 
 public class SqlStatementResult
 {
@@ -184,48 +183,6 @@ public class SqlStatementResult
   public List<MSQErrorReport> getWarnings()
   {
     return warnings;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    SqlStatementResult that = (SqlStatementResult) o;
-    return Objects.equals(queryId, that.queryId) && state == that.state && Objects.equals(
-        createdAt,
-        that.createdAt
-    ) && Objects.equals(sqlRowSignature, that.sqlRowSignature) && Objects.equals(
-        durationMs,
-        that.durationMs
-    ) && Objects.equals(resultSetInformation, that.resultSetInformation) && Objects.equals(
-        errorResponse == null ? null : errorResponse.getAsMap(),
-        that.errorResponse == null ? null : that.errorResponse.getAsMap()
-    ) && Objects.equals(stages, that.stages) && Objects.equals(counters, that.counters) && Objects.equals(
-        warnings,
-        that.warnings
-    );
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(
-        queryId,
-        state,
-        createdAt,
-        sqlRowSignature,
-        durationMs,
-        resultSetInformation,
-        errorResponse == null ? null : errorResponse.getAsMap(),
-        stages,
-        counters,
-        warnings
-    );
   }
 
   @Override
