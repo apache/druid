@@ -1415,7 +1415,7 @@ public class TaskLockboxTest
 
     final TaskLock overlappingAppendLock =
         validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-01-01/2024-02-01"), 75);
-    expectedLocks.add(overlappingReplaceLock);
+    expectedLocks.add(overlappingAppendLock);
 
     // Non-overlapping interval
     validator.expectLockCreated(TaskLockType.APPEND, Intervals.of("2024-12-01/2025-01-01"), 75);

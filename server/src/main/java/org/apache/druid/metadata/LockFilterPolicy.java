@@ -77,26 +77,4 @@ public class LockFilterPolicy
   {
     return intervals;
   }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    LockFilterPolicy that = (LockFilterPolicy) o;
-    return Objects.equals(datasource, that.datasource)
-           && priority == that.priority
-           && Objects.equals(intervals, that.intervals)
-           && Objects.equals(context, that.context);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(datasource, priority, intervals, context);
-  }
 }
