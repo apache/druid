@@ -756,7 +756,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
             },
             "tuningConfig": {
                 "type": "index_parallel",
-                "maxRowsPerSegment": 5000000,
                 "appendableIndexSpec": {
                     "type": "onheap",
                     "preserveExistingMetrics": false
@@ -764,8 +763,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "maxRowsInMemory": 25000,
                 "maxBytesInMemory": 0,
                 "skipBytesInMemoryOverheadCheck": false,
-                "maxTotalRows": null,
-                "numShards": null,
                 "splitHintSpec": null,
                 "partitionsSpec": {
                     "type": "dynamic",
@@ -1282,7 +1279,6 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task" \
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }
   }
@@ -1334,7 +1330,6 @@ Content-Length: 952
     },
     "tuningConfig" : {
       "type" : "index_parallel",
-      "maxRowsPerSegment" : 5000000,
       "maxRowsInMemory" : 25000
     }
   }
