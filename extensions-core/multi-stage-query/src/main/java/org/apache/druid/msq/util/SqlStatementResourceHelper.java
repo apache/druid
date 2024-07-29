@@ -360,7 +360,7 @@ public class SqlStatementResourceHelper
   }
 
   @Nullable
-  public static MSQStagesReport.Stage getFinalStage(MSQTaskReportPayload msqTaskReportPayload)
+  public static MSQStagesReport.Stage getFinalStage(@Nullable MSQTaskReportPayload msqTaskReportPayload)
   {
     if (msqTaskReportPayload == null || msqTaskReportPayload.getStages().getStages() == null) {
       return null;
@@ -376,25 +376,25 @@ public class SqlStatementResourceHelper
   }
 
   @Nullable
-  private static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
+  private static MSQErrorReport getQueryExceptionDetails(@Nullable MSQTaskReportPayload payload)
   {
     return payload == null ? null : payload.getStatus().getErrorReport();
   }
 
   @Nullable
-  public static List<MSQErrorReport> getQueryWarningDetails(MSQTaskReportPayload payload)
+  public static List<MSQErrorReport> getQueryWarningDetails(@Nullable MSQTaskReportPayload payload)
   {
     return payload == null ? null : new ArrayList<>(payload.getStatus().getWarningReports());
   }
 
   @Nullable
-  public static MSQStagesReport getQueryStagesReport(MSQTaskReportPayload payload)
+  public static MSQStagesReport getQueryStagesReport(@Nullable MSQTaskReportPayload payload)
   {
     return payload == null ? null : payload.getStages();
   }
 
   @Nullable
-  public static CounterSnapshotsTree getQueryCounters(MSQTaskReportPayload payload)
+  public static CounterSnapshotsTree getQueryCounters(@Nullable MSQTaskReportPayload payload)
   {
     return payload == null ? null : payload.getCounters();
   }
