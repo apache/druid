@@ -37,17 +37,20 @@ public class LockFilterPolicy
   private final String datasource;
   private final int priority;
   private final List<Interval> intervals;
+  private final Map<String, Object> context;
 
   @JsonCreator
   public LockFilterPolicy(
       @JsonProperty("datasource") String datasource,
       @JsonProperty("priority") int priority,
-      @JsonProperty("intervals") @Nullable List<Interval> intervals
+      @JsonProperty("intervals") @Nullable List<Interval> intervals,
+      @JsonProperty("context") @Nullable Map<String, Object> context
   )
   {
     this.datasource = datasource;
     this.priority = priority;
     this.intervals = intervals;
+    this.context = context == null ? Collections.emptyMap() : context;
   }
 
   @JsonProperty
@@ -62,11 +65,10 @@ public class LockFilterPolicy
     return priority;
   }
 
-  @Deprecated
   @JsonProperty
   public Map<String, Object> getContext()
   {
-    return Collections.emptyMap();
+    return context;
   }
 
   @Nullable
@@ -88,12 +90,13 @@ public class LockFilterPolicy
     LockFilterPolicy that = (LockFilterPolicy) o;
     return Objects.equals(datasource, that.datasource)
            && priority == that.priority
-           && Objects.equals(intervals, that.intervals);
+           && Objects.equals(intervals, that.intervals)
+           && Objects.equals(context, that.context);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(datasource, priority, intervals);
+    return Objects.hash(datasource, priority, intervals, context);
   }
 }

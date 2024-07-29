@@ -68,6 +68,7 @@ import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.http.TaskLockResponse;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -1060,7 +1061,7 @@ public class OverlordResourceTest
   public void testGetConflictingLockInfos() throws Exception
   {
     final List<LockFilterPolicy> lockFilterPolicies = ImmutableList.of(
-        new LockFilterPolicy("ds1", 25, null)
+        new LockFilterPolicy("ds1", 25, null, null)
     );
     final Map<String, List<TaskLockInfo>> expectedLocks = Collections.singletonMap(
         "ds1",
@@ -1090,10 +1091,10 @@ public class OverlordResourceTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Map<String, List<TaskLockInfo>> observedLocks = jsonMapper.readValue(
         jsonMapper.writeValueAsString(response.getEntity()),
-        new TypeReference<Map<String, List<TaskLockInfo>>>()
+        new TypeReference<TaskLockResponse>()
         {
         }
-    );
+    ).getTaskLocks();
 
     Assert.assertEquals(expectedLocks, observedLocks);
   }

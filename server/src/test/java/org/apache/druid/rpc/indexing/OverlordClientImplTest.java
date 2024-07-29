@@ -48,6 +48,7 @@ import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.server.http.TaskLockResponse;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -235,7 +236,7 @@ public class OverlordClientImplTest
             )
         );
     final List<LockFilterPolicy> requests = ImmutableList.of(
-        new LockFilterPolicy("foo", 3, null)
+        new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
@@ -243,7 +244,7 @@ public class OverlordClientImplTest
             .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(lockMap)
+        jsonMapper.writeValueAsBytes(new TaskLockResponse(lockMap))
     );
 
     Assert.assertEquals(
@@ -256,7 +257,7 @@ public class OverlordClientImplTest
   public void test_findConflictingLockInfos_nullReturn() throws Exception
   {
     final List<LockFilterPolicy> requests = ImmutableList.of(
-        new LockFilterPolicy("foo", 3, null)
+        new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
@@ -264,7 +265,7 @@ public class OverlordClientImplTest
             .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
-        jsonMapper.writeValueAsBytes(null)
+        jsonMapper.writeValueAsBytes(new TaskLockResponse(null))
     );
 
     Assert.assertEquals(

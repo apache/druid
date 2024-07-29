@@ -64,6 +64,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.server.http.HttpMediaType;
 import org.apache.druid.server.http.ServletResourceUtils;
+import org.apache.druid.server.http.TaskLockResponse;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -252,7 +253,7 @@ public class OverlordResource
     }
 
     // Build the response
-    return Response.ok(taskQueryTool.getConflictingLockInfos(lockFilterPolicies)).build();
+    return Response.ok(new TaskLockResponse(taskQueryTool.getConflictingLockInfos(lockFilterPolicies))).build();
   }
 
   @GET

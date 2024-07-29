@@ -46,6 +46,7 @@ import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.server.http.TaskLockResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -197,22 +198,30 @@ public class OverlordClientImpl implements OverlordClient
   {
     final String path = "/druid/indexer/v1/conflictingLocks";
 
-    return FutureUtils.transform(
-        client.asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path)
-                .jsonContent(jsonMapper, lockFilterPolicies),
-            new BytesFullResponseHandler()
-        ),
-        holder -> {
-          final Map<String, List<TaskLockInfo>> response = JacksonUtils.readValue(
-              jsonMapper,
-              holder.getContent(),
-              new TypeReference<Map<String, List<TaskLockInfo>>>() {}
-          );
+    try {
+      return FutureUtils.transform(
+          client.asyncRequest(
+              new RequestBuilder(HttpMethod.POST, path)
+                  .jsonContent(jsonMapper, lockFilterPolicies),
+              new BytesFullResponseHandler()
+          ),
+          holder -> {
+            final Map<String, List<TaskLockInfo>> response = JacksonUtils.readValue(
+                jsonMapper,
+                holder.getContent(),
+                new TypeReference<TaskLockResponse>()
+                {
+                }
+            ).getTaskLocks();
 
-          return response == null ? Collections.emptyMap() : response;
-        }
-    );
+            return response == null ? Collections.emptyMap() : response;
+          }
+      );
+    }
+    catch (Exception e) {
+      // If there is an exception due to Overlord and Coordinator master version mismatch
+      return Futures.immediateFuture(Collections.emptyMap());
+    }
   }
 
   @Override

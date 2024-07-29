@@ -281,7 +281,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     final List<LockFilterPolicy> lockFilterPolicies = compactionConfigs
         .stream()
-        .map(config -> new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), null))
+        .map(config ->
+                 new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), null, config.getTaskContext()))
         .collect(Collectors.toList());
     final Map<String, List<TaskLockInfo>> datasourceToLocks =
         FutureUtils.getUnchecked(overlordClient.findConflictingLockInfos(lockFilterPolicies), true);

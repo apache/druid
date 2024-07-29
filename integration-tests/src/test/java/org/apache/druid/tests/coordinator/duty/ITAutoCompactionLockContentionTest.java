@@ -24,6 +24,8 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.TaskLockInfo;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -58,6 +60,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Integration Test to verify behaviour when there is a lock contention between
@@ -265,15 +268,20 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void ensureLockedIntervals(Interval... intervals)
   {
-    final Map<String, Integer> minTaskPriority = Collections.singletonMap(fullDatasourceName, 0);
+    final LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
     final List<Interval> lockedIntervals = new ArrayList<>();
     ITRetryUtil.retryUntilTrue(
         () -> {
           lockedIntervals.clear();
 
-          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(minTaskPriority);
-          if (allIntervals.containsKey(fullDatasourceName)) {
-            lockedIntervals.addAll(allIntervals.get(fullDatasourceName));
+          Map<String, List<TaskLockInfo>> locks = indexer.getConflictingLocks(Collections.singletonList(lockFilterPolicy));
+          if (locks.containsKey(fullDatasourceName)) {
+            lockedIntervals.addAll(
+                locks.get(fullDatasourceName)
+                     .stream()
+                     .map(TaskLockInfo::getInterval)
+                     .collect(Collectors.toList())
+            );
           }
 
           LOG.info("Locked intervals: %s", lockedIntervals);
