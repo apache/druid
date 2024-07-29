@@ -701,7 +701,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   {
     Response response = resource.doGetStatus(ACCEPTED_SELECT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertSqlStatementResult(
+    Assert.assertEquals(
         new SqlStatementResult(
             ACCEPTED_SELECT_MSQ_QUERY,
             SqlStatementState.ACCEPTED,
@@ -711,7 +711,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        (SqlStatementResult) response.getEntity()
+        response.getEntity()
     );
 
     assertExceptionMessage(
@@ -735,7 +735,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
     Response response = resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertSqlStatementResult(
+    Assert.assertEquals(
         new SqlStatementResult(
             RUNNING_SELECT_MSQ_QUERY,
             SqlStatementState.RUNNING,
@@ -745,7 +745,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        (SqlStatementResult) response.getEntity()
+        response.getEntity()
     );
 
     assertExceptionMessage(
@@ -782,9 +782,9 @@ public class SqlStatementResourceTest extends MSQTestBase
         new ArrayList<>(selectTaskReport.get().getPayload().getStatus().getWarningReports())
     );
 
-    assertSqlStatementResult(
+    Assert.assertEquals(
         expectedSqlStatementResult,
-        (SqlStatementResult) response.getEntity()
+        response.getEntity()
     );
 
     Assert.assertEquals(
@@ -886,7 +886,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   {
     Response response = resource.doGetStatus(FINISHED_INSERT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertSqlStatementResult(new SqlStatementResult(
+    Assert.assertEquals(new SqlStatementResult(
         FINISHED_INSERT_MSQ_QUERY,
         SqlStatementState.SUCCESS,
         CREATED_TIME,
@@ -894,7 +894,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         100L,
         new ResultSetInformation(null, null, null, "test", null, null),
         null
-    ), (SqlStatementResult) response.getEntity());
+    ), response.getEntity());
 
     Assert.assertEquals(
         Response.Status.OK.getStatusCode(),
@@ -926,7 +926,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   {
     Response response = resource.doGetStatus(ACCEPTED_INSERT_MSQ_TASK, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertSqlStatementResult(
+    Assert.assertEquals(
         new SqlStatementResult(
             ACCEPTED_INSERT_MSQ_TASK,
             SqlStatementState.ACCEPTED,
@@ -936,7 +936,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        (SqlStatementResult) response.getEntity()
+        response.getEntity()
     );
 
     assertExceptionMessage(
@@ -959,7 +959,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   {
     Response response = resource.doGetStatus(RUNNING_INSERT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    assertSqlStatementResult(
+    Assert.assertEquals(
         new SqlStatementResult(
             RUNNING_INSERT_MSQ_QUERY,
             SqlStatementState.RUNNING,
@@ -969,7 +969,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        (SqlStatementResult) response.getEntity()
+        response.getEntity()
     );
 
     assertExceptionMessage(
@@ -1167,29 +1167,5 @@ public class SqlStatementResourceTest extends MSQTestBase
   public void testIsEnabled()
   {
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.isEnabled(makeOkRequest()).getStatus());
-  }
-
-  private void assertSqlStatementResult(SqlStatementResult expected, SqlStatementResult actual)
-  {
-    Assert.assertEquals(expected.getQueryId(), actual.getQueryId());
-    Assert.assertEquals(expected.getCreatedAt(), actual.getCreatedAt());
-    Assert.assertEquals(expected.getSqlRowSignature(), actual.getSqlRowSignature());
-    Assert.assertEquals(expected.getDurationMs(), actual.getDurationMs());
-    Assert.assertEquals(expected.getStages(), actual.getStages());
-    Assert.assertEquals(expected.getState(), actual.getState());
-    Assert.assertEquals(expected.getWarnings(), actual.getWarnings());
-    Assert.assertEquals(expected.getResultSetInformation(), actual.getResultSetInformation());
-
-    if (actual.getCounters() == null || expected.getCounters() == null) {
-      Assert.assertEquals(expected.getCounters(), actual.getCounters());
-    } else {
-      Assert.assertEquals(expected.getCounters().toString(), actual.getCounters().toString());
-    }
-
-    if (actual.getErrorResponse() == null || expected.getErrorResponse() == null) {
-      Assert.assertEquals(expected.getErrorResponse(), actual.getErrorResponse());
-    } else {
-      Assert.assertEquals(expected.getErrorResponse().getAsMap(), actual.getErrorResponse().getAsMap());
-    }
   }
 }
