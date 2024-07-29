@@ -101,9 +101,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
-import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -195,6 +193,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
@@ -1559,7 +1558,7 @@ public class ControllerImpl implements Controller
         if (!destination.isReplaceTimeChunks()) {
           // Store compaction state only for replace queries.
           log.warn(
-              "storeCompactionState flag set for a non-REPLACE query [%s]. Ignoring the flag for now.",
+              "Ignoring storeCompactionState flag since it is set for a non-REPLACE query[%s].",
               queryDef.getQueryId()
           );
         } else {
@@ -1659,9 +1658,11 @@ public class ControllerImpl implements Controller
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        dataSchema.getGranularitySpec().getQueryGranularity(),
+        QueryContext.of(querySpec.getQuery().getContext())
+                    .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
-        dataSchema.getGranularitySpec().inputIntervals()
+        // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+        ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks()
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
@@ -1673,9 +1674,9 @@ public class ControllerImpl implements Controller
     List<Object> metricsSpec = dataSchema.getAggregators() == null
                                ? null
                                : jsonMapper.convertValue(
-                                   dataSchema.getAggregators(), new TypeReference<List<Object>>()
-                                   {
-                                   });
+                                   dataSchema.getAggregators(),
+                                   new TypeReference<List<Object>>() {}
+                               );
 
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
@@ -1828,9 +1829,9 @@ public class ControllerImpl implements Controller
       );
 
       return builder.build();
-    } else if (querySpec.getDestination() instanceof TaskReportMSQDestination) {
+    } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
       return queryDef;
-    } else if (querySpec.getDestination() instanceof DurableStorageMSQDestination) {
+    } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
 
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
@@ -2933,12 +2934,12 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeResultsToDurableStorage(querySpec)) {
+      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
             closer,
-            MSQControllerTask.writeResultsToDurableStorage(querySpec)
+            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)
         );
       } else {
         inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);

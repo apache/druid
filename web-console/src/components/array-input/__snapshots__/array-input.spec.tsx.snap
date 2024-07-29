@@ -5,23 +5,23 @@ exports[`ArrayInput matches snapshot 1`] = `
   class="array-input test"
 >
   <textarea
-    class="bp4-input bp4-fill test"
+    class="bp5-input bp5-text-area bp5-fill test"
     placeholder="test"
   >
     apple, banana, pear
   </textarea>
   <span
-    aria-haspopup="true"
-    class="suggestion-button bp4-popover2-target"
+    class="suggestion-button bp5-popover-target"
   >
     <button
-      class="bp4-button bp4-minimal"
+      aria-expanded="false"
+      aria-haspopup="menu"
+      class="bp5-button bp5-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-plus"
-        icon="plus"
+        class="bp5-icon bp5-icon-plus"
       >
         <svg
           data-icon="plus"

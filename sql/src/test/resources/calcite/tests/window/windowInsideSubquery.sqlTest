@@ -1,0 +1,19 @@
+type: "operatorValidation"
+
+sql: |
+  select
+    c
+  from
+    (
+      select channel, row_number() over () as c
+      from wikipedia
+      group by channel
+    )
+  LIMIT 5
+
+expectedResults:
+  - [1]
+  - [2]
+  - [3]
+  - [4]
+  - [5]

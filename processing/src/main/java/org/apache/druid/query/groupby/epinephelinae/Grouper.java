@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby.epinephelinae;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -231,6 +232,16 @@ public interface Grouper<KeyType> extends Closeable
      * @return comparator for keys + aggs
      */
     BufferComparator bufferComparatorWithAggregators(AggregatorFactory[] aggregatorFactories, int[] aggregatorOffsets);
+
+    /**
+     * Decorates the object mapper enabling it to read and write query results' grouping keys. It is used by the
+     * {@link SpillingGrouper} to preserve the types of the dimensions after serializing and deserializing them on the
+     * spilled files.
+     */
+    default ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
+    {
+      return spillMapper;
+    }
 
     /**
      * Reset the keySerde to its initial state. After this method is called, {@link #readFromByteBuffer}

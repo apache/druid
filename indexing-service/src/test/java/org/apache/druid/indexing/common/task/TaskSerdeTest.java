@@ -19,19 +19,14 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -70,14 +65,9 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
-        new NamedType(IndexTuningConfig.class, "index"),
-        new NamedType(MockFirehoseFactory.class, "mock")
+        new NamedType(IndexTuningConfig.class, "index")
     );
   }
 
@@ -242,34 +232,15 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                9999,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                1L,
-                null
-            )
+            new IndexIOConfig(new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .withAwaitSegmentAvailabilityTimeoutMillis(1L)
+                               .build()
         ),
         null
     );
@@ -329,41 +300,17 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new IndexIOConfig(new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withForceGuaranteedRollup(false)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .build()
         ),
         null
     );
-
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
 
     final String json = jsonMapper.writeValueAsString(task);
 
@@ -499,15 +446,6 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
-  }
-
-  private static class MockFirehoseFactory implements FirehoseFactory
-  {
-    @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
-    {
-      return null;
-    }
   }
 
   @Test

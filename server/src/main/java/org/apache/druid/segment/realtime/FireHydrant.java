@@ -44,6 +44,7 @@ public class FireHydrant
 {
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
+  @Nullable
   private volatile IncrementalIndex index;
 
   public FireHydrant(IncrementalIndex index, int count, SegmentId segmentId)
@@ -62,6 +63,7 @@ public class FireHydrant
     this.count = count;
   }
 
+  @Nullable
   public IncrementalIndex getIndex()
   {
     return index;

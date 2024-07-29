@@ -473,4 +473,21 @@ public interface IndexerMetadataStorageCoordinator
    * @return List of pending segment records
    */
   List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
+
+  /**
+   * Map from a segment ID to the segment ID from which it was upgraded
+   * There should be no entry in the map for an original non-upgraded segment
+   * @param dataSource data source
+   * @param segmentIds ids of segments
+   */
+  Map<String, String> retrieveUpgradedFromSegmentIds(String dataSource, Set<String> segmentIds);
+
+  /**
+   * Map from a segment ID to a set containing
+   * 1) all segment IDs that were upgraded from it AND are still present in the metadata store
+   * 2) the segment ID itself if and only if it is still present in the metadata store
+   * @param dataSource data source
+   * @param segmentIds ids of the first segments which had the corresponding load spec
+   */
+  Map<String, Set<String>> retrieveUpgradedToSegmentIds(String dataSource, Set<String> segmentIds);
 }

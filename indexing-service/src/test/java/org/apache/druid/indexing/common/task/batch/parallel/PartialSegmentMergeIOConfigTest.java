@@ -64,15 +64,6 @@ public class PartialSegmentMergeIOConfigTest
   }
 
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
-  private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
-      ParallelIndexTestingFactory.HOST,
-      ParallelIndexTestingFactory.PORT,
-      ParallelIndexTestingFactory.USE_HTTPS,
-      ParallelIndexTestingFactory.SUBTASK_ID,
-      ParallelIndexTestingFactory.INTERVAL,
-      ParallelIndexTestingFactory.HASH_BASED_NUMBERED_SHARD_SPEC
-  );
-
   private PartialSegmentMergeIOConfig target;
 
   @Before
