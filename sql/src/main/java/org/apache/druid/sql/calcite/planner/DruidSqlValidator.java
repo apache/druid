@@ -797,6 +797,22 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
   }
 
   @Override
+  protected void validateWindowClause(SqlSelect select)
+  {
+    SqlNodeList windows = select.getWindowList();
+    for (SqlNode sqlNode : windows) {
+      if (SqlUtil.containsAgg(sqlNode)) {
+        throw buildCalciteContextException(
+            "Aggregation inside window is currently not supported with syntax WINDOW W AS <DEF>. "
+            + "Try providing window definition directly without alias",
+            sqlNode
+        );
+      }
+    }
+    super.validateWindowClause(select);
+  }
+
+  @Override
   protected SqlNode performUnconditionalRewrites(SqlNode node, final boolean underFrom)
   {
     if (node != null && (node.getKind() == SqlKind.IN || node.getKind() == SqlKind.NOT_IN)) {

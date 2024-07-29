@@ -47,12 +47,7 @@ public class ScanQuerySpecTest
         + "\"limit\":3}";
 
     String current =
-        "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
-        + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"resultFormat\":\"list\","
-        + "\"limit\":3,"
-        + "\"columns\":[\"market\",\"quality\",\"index\"],"
-        + "\"granularity\":{\"type\":\"all\"}}";
+        "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},\"resultFormat\":\"list\",\"limit\":3,\"columns\":[\"market\",\"quality\",\"index\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false}";
 
     ScanQuery query = new ScanQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -80,13 +75,7 @@ public class ScanQuerySpecTest
   public void testSerializationWithTimeOrder() throws Exception
   {
     String originalJson =
-        "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
-        + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"resultFormat\":\"list\","
-        + "\"limit\":3,"
-        + "\"order\":\"ascending\","
-        + "\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],"
-        + "\"granularity\":{\"type\":\"all\"}}";
+        "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},\"resultFormat\":\"list\",\"limit\":3,\"order\":\"ascending\",\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false}";
 
     ScanQuery expectedQuery = new ScanQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -118,13 +107,7 @@ public class ScanQuerySpecTest
   public void testSerializationWithOrderBy() throws Exception
   {
     String originalJson =
-        "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},"
-        + "\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},"
-        + "\"resultFormat\":\"list\","
-        + "\"limit\":3,"
-        + "\"orderBy\":[{\"columnName\":\"quality\",\"order\":\"ascending\"}],"
-        + "\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],"
-        + "\"granularity\":{\"type\":\"all\"}}";
+        "{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},\"intervals\":{\"type\":\"LegacySegmentSpec\",\"intervals\":[\"2011-01-12T00:00:00.000Z/2011-01-14T00:00:00.000Z\"]},\"resultFormat\":\"list\",\"limit\":3,\"orderBy\":[{\"columnName\":\"quality\",\"order\":\"ascending\"}],\"columns\":[\"market\",\"quality\",\"index\",\"__time\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false}";
 
     ScanQuery expectedQuery = new ScanQuery(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
