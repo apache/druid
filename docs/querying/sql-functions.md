@@ -413,7 +413,7 @@ Converts the bits of a long value to IEEE 754 floating-point double.
 
 <details><summary>Example</summary>
 
-The following example returns the long representation of `4643176031446892544` as an IEEE 754 floating-point double. 
+The following example returns the long representation of `4643176031446892544` as an IEEE 754 floating-point double.
 
 ```sql
 SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee_754_double"
