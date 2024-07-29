@@ -46,7 +46,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -140,8 +139,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                              queryToRun,
                              queryToRun.getOperators(),
                              rowSignature,
-                             maxRowsMaterialized,
-                             Collections.emptyList()
+                             maxRowsMaterialized
                          ))
       );
     } else {
@@ -156,8 +154,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       for (int i = 0; i < signatureFromInput.getColumnNames().size(); i++) {
         bob.add(signatureFromInput.getColumnName(i), signatureFromInput.getColumnType(i).get());
       }
-
-      List<String> partitionColumnNames = new ArrayList<>();
 
       /*
       operatorList is a List<List<OperatorFactory>>, where each List<OperatorFactory> corresponds to the operator factories
@@ -210,26 +206,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
         log.info("Using row signature [%s] for window stage.", stageRowSignature);
 
-        boolean partitionOperatorExists = false;
-        List<String> currentPartitionColumns = new ArrayList<>();
-        for (OperatorFactory of : operatorList.get(i)) {
-          if (of instanceof NaivePartitioningOperatorFactory) {
-            for (String s : ((NaivePartitioningOperatorFactory) of).getPartitionColumns()) {
-              currentPartitionColumns.add(s);
-              partitionOperatorExists = true;
-            }
-          }
-        }
-
-        if (partitionOperatorExists) {
-          partitionColumnNames = currentPartitionColumns;
-        }
-
-        log.info(
-            "Columns which would be used to define partitioning boundaries for this window stage are [%s]",
-            partitionColumnNames
-        );
-
         queryDefBuilder.add(
             StageDefinition.builder(firstStageNumber + i)
                            .inputs(new StageInputSpec(firstStageNumber + i - 1))
@@ -240,8 +216,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                queryToRun,
                                operatorList.get(i),
                                stageRowSignature,
-                               maxRowsMaterialized,
-                               partitionColumnNames
+                               maxRowsMaterialized
                            ))
         );
       }
