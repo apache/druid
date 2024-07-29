@@ -382,7 +382,7 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(validationResult.getReason(), StringUtils.format(
-        "Rolled-up segments in interval[%s] for compaction not supported by MSQ engine.",
+        "MSQ: Rolled-up segments in compaction interval[%s].",
         COMPACTION_INTERVAL
     ));
   }
