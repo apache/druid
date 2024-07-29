@@ -91,7 +91,7 @@ public class ClientCompactionRunnerInfo
   {
     CompactionEngine compactionEngine = newConfig.getEngine() == null ? defaultCompactionEngine : newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
-      return new CompactionConfigValidationResult(true, null);
+      return CompactionConfigValidationResult.success();
     } else {
       return compactionConfigSupportedByMSQEngine(newConfig);
     }
@@ -123,7 +123,7 @@ public class ClientCompactionRunnerInfo
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
-                            .orElse(new CompactionConfigValidationResult(true, null));
+                            .orElse(CompactionConfigValidationResult.success());
   }
 
   /**
@@ -133,22 +133,19 @@ public class ClientCompactionRunnerInfo
   {
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
-      return new CompactionConfigValidationResult(
-          false,
-          "Invalid partitionsSpec type[%s] for MSQ engine. Type must be either 'dynamic' or 'range'.",
+      return CompactionConfigValidationResult.failure(
+          "MSQ: Invalid partitioning type[%s]. Must be either 'dynamic' or 'range'",
           partitionsSpec.getClass().getSimpleName()
 
       );
     }
     if (partitionsSpec instanceof DynamicPartitionsSpec
         && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-      return new CompactionConfigValidationResult(
-          false,
-          "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ engine.",
-          ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
+      return CompactionConfigValidationResult.failure(
+          "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning"
       );
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
@@ -160,12 +157,11 @@ public class ClientCompactionRunnerInfo
   )
   {
     if (metricsSpec != null && isRollup != null && !isRollup) {
-      return new CompactionConfigValidationResult(
-          false,
-          "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine."
+      return CompactionConfigValidationResult.failure(
+          "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified"
       );
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
@@ -177,13 +173,12 @@ public class ClientCompactionRunnerInfo
       int maxNumTasks = QueryContext.of(context)
                                     .getInt(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
       if (maxNumTasks < 2) {
-        return new CompactionConfigValidationResult(false,
-                                                    "MSQ context maxNumTasks [%,d] cannot be less than 2, "
-                                                    + "since at least 1 controller and 1 worker is necessary.",
-                                                    maxNumTasks
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Context maxNumTasks[%,d] must be at least 2 (1 controller + 1 worker)",
+            maxNumTasks
         );
       }
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 }

@@ -64,8 +64,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "Invalid partitionsSpec type[HashedPartitionsSpec] for MSQ engine."
-        + " Type must be either 'dynamic' or 'range'.",
+        "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either 'dynamic' or 'range'",
         validationResult.getReason()
     );
   }
@@ -85,7 +84,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "maxTotalRows[100] in DynamicPartitionsSpec not supported for MSQ engine.",
+        "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning",
         validationResult.getReason()
     );
   }
@@ -144,7 +143,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine.",
+        "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified",
         validationResult.getReason()
     );
   }

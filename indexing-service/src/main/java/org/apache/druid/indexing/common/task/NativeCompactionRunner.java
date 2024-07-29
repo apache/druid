@@ -89,7 +89,7 @@ public class NativeCompactionRunner implements CompactionRunner
       Map<Interval, DataSchema> intervalToDataSchemaMap
   )
   {
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
