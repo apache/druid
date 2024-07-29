@@ -45,6 +45,7 @@ import java.util.function.Supplier;
 
 public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndColumns, WindowOperatorQuery>
 {
+
   @Override
   @SuppressWarnings("unchecked")
   public QueryRunner<RowsAndColumns> mergeResults(QueryRunner<RowsAndColumns> runner)

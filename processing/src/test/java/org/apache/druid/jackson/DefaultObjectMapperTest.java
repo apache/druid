@@ -128,5 +128,4 @@ public class DefaultObjectMapperTest
     ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
     assertEquals(frc, frc2);
   }
-
 }

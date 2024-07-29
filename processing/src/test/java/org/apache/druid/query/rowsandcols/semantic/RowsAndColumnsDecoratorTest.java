@@ -364,5 +364,4 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       }
     }
   }
-
 }
