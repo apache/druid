@@ -336,7 +336,7 @@ Performs a bitwise XOR operation on all input values.
 
 ## BITWISE_AND
 
-Returns the bitwise AND between two expressions, that is, `expr1 & expr2`. 
+Returns the bitwise AND between two expressions: `expr1 & expr2`. 
 
 * **Syntax:** `BITWISE_AND(expr1, expr2)`
 * **Function type:** Scalar, numeric
@@ -359,7 +359,7 @@ Returns the following:
 
 ## BITWISE_COMPLEMENT
 
-Returns the bitwise complement (bitwise not) for the expression, that is, `~expr`.
+Returns the bitwise complement (bitwise not) for the expression: `~expr`.
 
 * **Syntax:** `BITWISE_COMPLEMENT(expr)`
 * **Function type:** Scalar, numeric
@@ -406,7 +406,7 @@ Returns the following:
 
 ## BITWISE_CONVERT_LONG_BITS_TO_DOUBLE
 
-Converts the bits of a long value to IEEE 754 floating-point double.
+Converts a long to the IEEE 754 floating-point double specified by the bits stored in the long.
 
 * **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
 * **Function type:** Scalar, numeric
@@ -429,7 +429,7 @@ Returns the following:
 
 ## BITWISE_OR
 
-Returns the bitwise OR between the two expressions, that is, `expr1 | expr2`.
+Returns the bitwise OR between the two expressions: `expr1 | expr2`.
 
 * **Syntax:** `BITWISE_OR(expr1, expr2)`
 * **Function type:** Scalar, numeric
@@ -452,7 +452,7 @@ Returns the following:
 
 ## BITWISE_SHIFT_LEFT
 
-Returns the bitwise left shift by x positions of an expr, that is, `expr << x`.
+Returns the bitwise left shift by x positions of an expr: `expr << x`.
 
 * **Syntax:** `BITWISE_SHIFT_LEFT(expr, x)`
 * **Function type:** Scalar, numeric
@@ -475,7 +475,7 @@ Returns the following:
 
 ## BITWISE_SHIFT_RIGHT
 
-Returns the bitwise right shift by x positions of an expr, that is, `expr >> x`.
+Returns the bitwise right shift by x positions of an expr: `expr >> x`.
 
 * **Syntax:** `BITWISE_SHIFT_RIGHT(expr, x)`
 * **Function type:** Scalar, numeric
@@ -498,7 +498,7 @@ Returns the following:
 
 ## BITWISE_XOR
 
-Returns the bitwise exclusive OR between the two expressions, that is, `expr1 ^ expr2`.
+Returns the bitwise exclusive OR between the two expressions: `expr1 ^ expr2`.
 
 * **Syntax:** `BITWISE_XOR(expr1, expr2)`
 * **Function type:** Scalar, numeric
