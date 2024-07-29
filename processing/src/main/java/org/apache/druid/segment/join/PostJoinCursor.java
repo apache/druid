@@ -26,6 +26,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
@@ -137,6 +138,19 @@ public class PostJoinCursor implements Cursor
   public boolean isDoneOrInterrupted()
   {
     return baseCursor.isDoneOrInterrupted();
+  }
+
+  @Override
+  public void mark(DateTime mark)
+  {
+    baseCursor.mark(mark);
+  }
+
+  @Override
+  public void resetMark()
+  {
+    baseCursor.resetMark();
+    advanceToMatch();
   }
 
   @Override

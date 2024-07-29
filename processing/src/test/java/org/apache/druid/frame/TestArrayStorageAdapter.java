@@ -38,6 +38,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
@@ -206,6 +207,18 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
     public boolean isDoneOrInterrupted()
     {
       return cursor.isDoneOrInterrupted();
+    }
+
+    @Override
+    public void mark(DateTime mark)
+    {
+      cursor.mark(mark);
+    }
+
+    @Override
+    public void resetMark()
+    {
+      cursor.resetMark();
     }
 
     @Override

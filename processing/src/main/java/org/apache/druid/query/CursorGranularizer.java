@@ -136,26 +136,6 @@ public class CursorGranularizer
     return currentBucketStart <= currentTime && currentTime < currentBucketEnd;
   }
 
-  public void resetBucket()
-  {
-    cursor.reset();
-    if (timeSelector == null) {
-      return;
-    }
-    long currentTime = timeSelector.getLong();
-    if (descending) {
-      while (currentTime >= currentBucketEnd && !cursor.isDone()) {
-        cursor.advance();
-        currentTime = timeSelector.getLong();
-      }
-    } else {
-      while (currentTime < currentBucketStart && !cursor.isDone()) {
-        cursor.advance();
-        currentTime = timeSelector.getLong();
-      }
-    }
-  }
-
   public boolean advanceCursorWithinBucket()
   {
     if (cursor.isDone()) {

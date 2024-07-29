@@ -53,6 +53,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.utils.CloseableUtils;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -487,6 +488,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
   {
     private final Offset cursorOffset;
     private final ColumnSelectorFactory columnSelectorFactory;
+    private int markOffset = 0;
 
     QueryableIndexCursor(Offset cursorOffset, ColumnSelectorFactory columnSelectorFactory)
     {
@@ -537,9 +539,26 @@ public class QueryableIndexCursorMaker implements CursorMaker
     }
 
     @Override
+    public void mark(DateTime mark)
+    {
+      markOffset = cursorOffset.getOffset();
+    }
+
+    @Override
+    public void resetMark()
+    {
+      cursorOffset.reset();
+      // todo (clint): this kind of sucks, add a seek to offset to cursor...
+      while (markOffset > cursorOffset.getOffset()) {
+        advance();
+      }
+    }
+
+    @Override
     public void reset()
     {
       cursorOffset.reset();
+      markOffset = cursorOffset.getOffset();
     }
   }
 

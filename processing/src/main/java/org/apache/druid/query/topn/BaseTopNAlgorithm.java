@@ -123,7 +123,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       resetAggregators(aggregatesStore);
 
       numProcessed += numToProcess;
-      params.getGranularizer().resetBucket();
+      params.getCursor().resetMark();
     }
     if (queryMetrics != null) {
       queryMetrics.addProcessedRows(processedRows);
@@ -152,7 +152,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     long processedRows = scanAndAggregate(params, null, aggregatesStore);
     updateResults(params, null, aggregatesStore, resultBuilder);
     resetAggregators(aggregatesStore);
-    params.getGranularizer().resetBucket();
+    params.getCursor().resetMark();
     if (queryMetrics != null) {
       queryMetrics.addProcessedRows(processedRows);
       queryMetrics.stopRecordingScanTime();

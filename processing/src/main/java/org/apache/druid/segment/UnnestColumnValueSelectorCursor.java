@@ -24,6 +24,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -63,6 +64,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private Object currentVal;
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
+  private int markIndex = 0;
 
 
   public UnnestColumnValueSelectorCursor(
@@ -241,9 +243,28 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   }
 
   @Override
+  public void mark(DateTime mark)
+  {
+    markIndex = index;
+    baseCursor.mark(mark);
+  }
+
+  @Override
+  public void resetMark()
+  {
+    index = markIndex;
+    baseCursor.resetMark();
+    getNextRow();
+    if (unnestListForCurrentRow.isEmpty()) {
+      moveToNextNonEmptyRow();
+    }
+  }
+
+  @Override
   public void reset()
   {
     index = 0;
+    markIndex = 0;
     needInitialization = true;
     baseCursor.reset();
   }

@@ -21,9 +21,11 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -35,6 +37,59 @@ import java.util.Optional;
 @PublicApi
 public interface StorageAdapter extends CursorFactory, ColumnInspector
 {
+
+  /**
+   * Build a {@link CursorMaker} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
+   * scanning segments and creating {@link ColumnSelectorFactory} and
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values.
+   */
+  @Override
+  default CursorMaker asCursorMaker(CursorBuildSpec spec)
+  {
+    return new CursorMaker()
+    {
+      @Override
+      public boolean canVectorize()
+      {
+        return StorageAdapter.this.canVectorize(spec.getFilter(), spec.getVirtualColumns(), spec.isDescending());
+      }
+
+      @Override
+      public Cursor makeCursor()
+      {
+        return Iterables.getOnlyElement(
+            StorageAdapter.this.makeCursors(
+                spec.getFilter(),
+                spec.getInterval(),
+                spec.getVirtualColumns(),
+                Granularities.ALL,
+                spec.isDescending(),
+                spec.getQueryMetrics()
+            ).toList()
+        );
+      }
+
+      @Override
+      public VectorCursor makeVectorCursor()
+      {
+        return StorageAdapter.this.makeVectorCursor(
+            spec.getFilter(),
+            spec.getInterval(),
+            spec.getVirtualColumns(),
+            spec.isDescending(),
+            spec.getQueryContext().getVectorSize(),
+            spec.getQueryMetrics()
+        );
+      }
+
+      @Override
+      public void close()
+      {
+        // consuming sequences of CursorFactory are expected to close themselves.
+      }
+    };
+  }
+
   Interval getInterval();
   Indexed<String> getAvailableDimensions();
   Iterable<String> getAvailableMetrics();

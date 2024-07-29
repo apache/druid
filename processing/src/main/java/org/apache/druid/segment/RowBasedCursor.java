@@ -24,6 +24,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.ValueMatchers;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -44,6 +45,8 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ValueMatcher valueMatcher;
 
   private long rowId = 0;
+  private long markId = 0;
+  private DateTime markDate;
 
   public RowBasedCursor(
       final RowWalker<RowType> rowWalker,
@@ -114,11 +117,29 @@ public class RowBasedCursor<RowType> implements Cursor
   }
 
   @Override
+  public void mark(DateTime mark)
+  {
+    markId = rowId;
+    markDate = mark;
+  }
+
+  @Override
+  public void resetMark()
+  {
+    rowId = markId;
+    rowWalker.reset();
+    rowWalker.skipToDateTime(markDate, descending);
+    advanceToMatchingRow();
+  }
+
+  @Override
   public void reset()
   {
     rowId = 0;
+    markId = 0;
+    markDate = descending ? interval.getEnd().minus(1) : interval.getStart();
     rowWalker.reset();
-    rowWalker.skipToDateTime(descending ? interval.getEnd().minus(1) : interval.getStart(), descending);
+    rowWalker.skipToDateTime(markDate, descending);
     advanceToMatchingRow();
   }
 

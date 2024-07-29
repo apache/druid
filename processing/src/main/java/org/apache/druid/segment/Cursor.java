@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import org.joda.time.DateTime;
+
 /**
  * Cursor is an interface for iteration over a range of data points, used during query execution. {@link
  * QueryableIndexCursorMaker.QueryableIndexCursor} is an implementation for historical segments, and {@link
@@ -41,5 +43,7 @@ public interface Cursor
   boolean isDone();
   boolean isDoneOrInterrupted();
 
+  void mark(DateTime mark);
+  void resetMark();
   void reset();
 }

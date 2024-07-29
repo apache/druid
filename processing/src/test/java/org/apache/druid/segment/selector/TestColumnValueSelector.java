@@ -42,6 +42,8 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
 
   private Iterator<Object> iterator;
   private Object value;
+  private int rowCounter = 0;
+  private int markCounter = 0;
 
   public static <T> TestColumnValueSelector<T> of(Class<T> clazz, Collection<Object> collection, DateTime time)
   {
@@ -91,6 +93,7 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
   public void advance()
   {
     value = iterator.next();
+    rowCounter++;
   }
 
   @Override
@@ -112,8 +115,26 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
   }
 
   @Override
+  public void mark(DateTime mark)
+  {
+    markCounter = rowCounter;
+  }
+
+  @Override
+  public void resetMark()
+  {
+    rowCounter = markCounter;
+    iterator = iteratorSupplier.get();
+    for (int i = 0; i < markCounter; i++) {
+      iterator.next();
+    }
+  }
+
+  @Override
   public void reset()
   {
+    rowCounter = 0;
+    markCounter = 0;
     iterator = iteratorSupplier.get();
   }
 

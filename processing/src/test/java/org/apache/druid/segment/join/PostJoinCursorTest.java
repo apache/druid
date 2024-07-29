@@ -34,6 +34,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -134,9 +135,21 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         }
 
         @Override
+        public void mark(DateTime mark)
+        {
+          cursor.mark(mark);
+        }
+
+        @Override
+        public void resetMark()
+        {
+          cursor.resetMark();
+        }
+
+        @Override
         public void reset()
         {
-
+          cursor.reset();
         }
       }
     }

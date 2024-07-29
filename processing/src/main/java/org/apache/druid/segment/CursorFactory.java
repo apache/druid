@@ -19,9 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Iterables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.QueryMetrics;
@@ -38,53 +36,6 @@ import javax.annotation.Nullable;
  */
 public interface CursorFactory extends CursorMakerFactory
 {
-  @Override
-  default CursorMaker asCursorMaker(CursorBuildSpec spec)
-  {
-    return new CursorMaker()
-    {
-      @Override
-      public boolean canVectorize()
-      {
-        return CursorFactory.this.canVectorize(spec.getFilter(), spec.getVirtualColumns(), spec.isDescending());
-      }
-
-      @Override
-      public Cursor makeCursor()
-      {
-        return Iterables.getOnlyElement(
-            CursorFactory.this.makeCursors(
-                spec.getFilter(),
-                spec.getInterval(),
-                spec.getVirtualColumns(),
-                Granularities.ALL,
-                spec.isDescending(),
-                spec.getQueryMetrics()
-            ).toList()
-        );
-      }
-
-      @Override
-      public VectorCursor makeVectorCursor()
-      {
-        return CursorFactory.this.makeVectorCursor(
-            spec.getFilter(),
-            spec.getInterval(),
-            spec.getVirtualColumns(),
-            spec.isDescending(),
-            spec.getQueryContext().getVectorSize(),
-            spec.getQueryMetrics()
-        );
-      }
-
-      @Override
-      public void close()
-      {
-        // consuming sequences of CursorFactory are expected to close themselves.
-      }
-    };
-  }
-
   /**
    * Returns true if the provided combination of parameters can be handled by "makeVectorCursor".
    *

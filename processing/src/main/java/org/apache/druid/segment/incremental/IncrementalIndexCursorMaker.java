@@ -29,6 +29,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.ValueMatchers;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -88,11 +89,16 @@ public class IncrementalIndexCursorMaker implements CursorMaker
     private final ColumnSelectorFactory columnSelectorFactory;
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
+    private final IncrementalIndex.FactsHolder facts;
+    private final Interval interval;
+    private final boolean isDescending;
     private Iterator<IncrementalIndexRow> baseIter;
     private Iterable<IncrementalIndexRow> cursorIterable;
     private boolean emptyRange;
     private int numAdvanced;
     private boolean done;
+    private DateTime markDate;
+    private int markAdvanced = 0;
 
     IncrementalIndexCursor(
         IncrementalIndexStorageAdapter storageAdapter,
@@ -114,7 +120,11 @@ public class IncrementalIndexCursorMaker implements CursorMaker
       maxRowIndex = index.getLastRowIndex();
       filterMatcher = filter == null ? ValueMatchers.allTrue() : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
-      cursorIterable = index.getFacts().timeRangeIterable(
+      facts = index.getFacts();
+      interval = actualInterval;
+      isDescending = descending;
+      markDate = isDescending ? interval.getEnd() : interval.getStart();
+      cursorIterable = facts.timeRangeIterable(
           descending,
           actualInterval.getStartMillis(),
           actualInterval.getEndMillis()
@@ -197,8 +207,30 @@ public class IncrementalIndexCursorMaker implements CursorMaker
     }
 
     @Override
+    public void mark(DateTime mark)
+    {
+      markDate = mark;
+      markAdvanced = numAdvanced;
+    }
+
+    @Override
+    public void resetMark()
+    {
+      numAdvanced = markAdvanced;
+      baseIter = facts.timeRangeIterable(
+          isDescending,
+          isDescending ? interval.getStartMillis() : markDate.getMillis(),
+          isDescending ? markDate.getMillis() : interval.getEndMillis()
+      ).iterator();
+
+      seekNextOffset();
+    }
+
+    @Override
     public void reset()
     {
+      markAdvanced = 0;
+      markDate = isDescending ? interval.getEnd() : interval.getStart();
       baseIter = cursorIterable.iterator();
 
       if (numAdvanced == -1) {
@@ -207,6 +239,11 @@ public class IncrementalIndexCursorMaker implements CursorMaker
         Iterators.advance(baseIter, numAdvanced);
       }
 
+      seekNextOffset();
+    }
+
+    private void seekNextOffset()
+    {
       BaseQuery.checkInterrupted();
 
       boolean foundMatched = false;
