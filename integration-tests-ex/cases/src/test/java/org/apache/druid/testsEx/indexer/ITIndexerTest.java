@@ -25,7 +25,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
-@Category({BatchIndex.class})
+@Category(BatchIndex.class)
 public class ITIndexerTest extends IndexerTest
 {
 }

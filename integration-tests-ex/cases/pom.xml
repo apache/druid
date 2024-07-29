@@ -460,12 +460,12 @@
             </properties>
         </profile>
         <profile>
-            <id>IT-BackwardCompatibility</id>
+            <id>IT-BackwardCompatibilityMain</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
             </activation>
             <properties>
-                <it.category>BackwardCompatibility</it.category>
+                <it.category>BackwardCompatibilityMain</it.category>
             </properties>
         </profile>
         <profile>

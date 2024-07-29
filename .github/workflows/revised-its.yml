@@ -106,8 +106,8 @@ jobs:
       build_jdk: 8
       runtime_jdk: 8
       use_indexer: MiddleManager
-      script: ./it.sh github BackwardCompatibility
-      it: BackwardIncompatibility
+      script: ./it.sh github BackwardCompatibilityMain
+      it: BackwardCompatibilityMain
       mysql_driver: com.mysql.jdbc.Driver
       BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
       DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
