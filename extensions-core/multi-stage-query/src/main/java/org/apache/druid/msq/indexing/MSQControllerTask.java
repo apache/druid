@@ -52,6 +52,7 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -141,6 +142,22 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     this.nativeTypeNames = nativeTypeNames;
 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
+  }
+
+  public MSQControllerTask(
+      @Nullable String id,
+      MSQSpec querySpec,
+      @Nullable String sqlQuery,
+      @Nullable Map<String, Object> sqlQueryContext,
+      @Nullable SqlResults.Context sqlResultsContext,
+      @Nullable List<SqlTypeName> sqlTypeNames,
+      @Nullable List<ColumnType> nativeTypeNames,
+      @Nullable Map<String, Object> context,
+      Injector injector
+  )
+  {
+    this(id, querySpec, sqlQuery, sqlQueryContext, sqlResultsContext, sqlTypeNames, nativeTypeNames, context);
+    this.injector = injector;
   }
 
   @Override
@@ -305,14 +322,36 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     return querySpec.getDestination().getDestinationResource();
   }
 
+  /**
+   * Checks whether the task is an ingestion into a Druid datasource.
+   */
   public static boolean isIngestion(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof DataSourceMSQDestination;
   }
 
+  /**
+   * Checks whether the task is an export into external files.
+   */
   public static boolean isExport(final MSQSpec querySpec)
   {
     return querySpec.getDestination() instanceof ExportMSQDestination;
+  }
+
+  /**
+   * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
+   */
+  public static boolean writeFinalStageResultsToDurableStorage(final MSQSpec querySpec)
+  {
+    return querySpec.getDestination() instanceof DurableStorageMSQDestination;
+  }
+
+  /**
+   * Checks whether the task is an async query which writes frame files containing the final results into durable storage.
+   */
+  public static boolean writeFinalResultsToTaskReport(final MSQSpec querySpec)
+  {
+    return querySpec.getDestination() instanceof TaskReportMSQDestination;
   }
 
   /**
@@ -328,11 +367,6 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     } else {
       return false;
     }
-  }
-
-  public static boolean writeResultsToDurableStorage(final MSQSpec querySpec)
-  {
-    return querySpec.getDestination() instanceof DurableStorageMSQDestination;
   }
 
   @Override

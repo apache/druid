@@ -24,7 +24,6 @@ import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
-import org.apache.druid.indexing.common.actions.TaskAuditLogConfig;
 import org.apache.druid.indexing.overlord.TaskStorage;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,7 +41,7 @@ public class CountingLocalTaskActionClientForTest implements TaskActionClient
       TaskActionToolbox toolbox
   )
   {
-    delegate = new LocalTaskActionClient(task, storage, toolbox, new TaskAuditLogConfig(false));
+    delegate = new LocalTaskActionClient(task, toolbox);
   }
 
   @Override

@@ -27,7 +27,6 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
@@ -89,7 +88,6 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     }
 
     final AggregatorFactory aggregatorFactory;
-    final String histogramName = StringUtils.format("%s:agg", name);
     final int k;
 
     if (aggregateCall.getArgList().size() >= 2) {
@@ -108,7 +106,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
     // No existing match found. Create a new one.
     if (input.isDirectColumnAccess()) {
       aggregatorFactory = new DoublesSketchAggregatorFactory(
-          histogramName,
+          name,
           input.getDirectColumn(),
           k,
           DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),
@@ -120,7 +118,7 @@ public class DoublesSketchObjectSqlAggregator implements SqlAggregator
           ColumnType.FLOAT
       );
       aggregatorFactory = new DoublesSketchAggregatorFactory(
-          histogramName,
+          name,
           virtualColumnName,
           k,
           DoublesSketchApproxQuantileSqlAggregator.getMaxStreamLengthFromQueryContext(plannerContext.queryContext()),

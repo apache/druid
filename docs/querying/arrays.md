@@ -71,45 +71,9 @@ The following shows an example `dimensionsSpec` for native ingestion of the data
 
 ### SQL-based ingestion
 
-#### `arrayIngestMode`
-
-Arrays can be inserted with [SQL-based ingestion](../multi-stage-query/index.md) when you include the query context
-parameter `arrayIngestMode: array`.
-
-When `arrayIngestMode` is `array`, SQL ARRAY types are stored using Druid array columns. This is recommended for new
-tables.
-
-When `arrayIngestMode` is `mvd`, SQL `VARCHAR ARRAY` are implicitly wrapped in [`ARRAY_TO_MV`](sql-functions.md#array_to_mv).
-This causes them to be stored as [multi-value strings](multi-value-dimensions.md), using the same `STRING` column type
-as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`. This
-is the default behavior when `arrayIngestMode` is not provided in your query context, although the default behavior
-may change to `array` in a future release.
-
-When `arrayIngestMode` is `none`, Druid throws an exception when trying to store any type of arrays. This mode is most
-useful when set in the system default query context with `druid.query.default.context.arrayIngestMode = none`, in cases
-where the cluster administrator wants SQL query authors to explicitly provide one or the other in their query context.
-
-The following table summarizes the differences in SQL ARRAY handling between `arrayIngestMode: array` and
-`arrayIngestMode: mvd`.
-
-| SQL type | Stored type when `arrayIngestMode: array` | Stored type when `arrayIngestMode: mvd` (default) |
-|---|---|---|
-|`VARCHAR ARRAY`|`ARRAY<STRING>`|[multi-value `STRING`](multi-value-dimensions.md)|
-|`BIGINT ARRAY`|`ARRAY<LONG>`|not possible (validation error)|
-|`DOUBLE ARRAY`|`ARRAY<DOUBLE>`|not possible (validation error)|
-
-In either mode, you can explicitly wrap string arrays in `ARRAY_TO_MV` to cause them to be stored as
-[multi-value strings](multi-value-dimensions.md).
-
-When validating a SQL INSERT or REPLACE statement that contains arrays, Druid checks whether the statement would lead
-to mixing string arrays and multi-value strings in the same column. If this condition is detected, the statement fails
-validation unless the column is named under the `skipTypeVerification` context parameter. This parameter can be either
-a comma-separated list of column names, or a JSON array in string form. This validation is done to prevent accidentally
-mixing arrays and multi-value strings in the same column.
+Arrays can be inserted with [SQL-based ingestion](../multi-stage-query/index.md).
 
 #### Examples
-
-Set [`arrayIngestMode: array`](#arrayingestmode) in your query context to run the following examples.
 
 ```sql
 REPLACE INTO "array_example" OVERWRITE ALL
@@ -169,6 +133,35 @@ GROUP BY 1,2,3,4,5
 PARTITIONED BY DAY
 ```
 
+#### `arrayIngestMode`
+
+For seamless backwards compatible behavior with Druid versions older than 31, there is an `arrayIngestMode` query context flag.
+
+When `arrayIngestMode` is `array`, SQL ARRAY types are stored using Druid array columns. This is recommended for new
+tables and the default configuration for Druid 31 and newer.
+
+When `arrayIngestMode` is `mvd` (legacy), SQL `VARCHAR ARRAY` are implicitly wrapped in [`ARRAY_TO_MV`](sql-functions.md#array_to_mv).
+This causes them to be stored as [multi-value strings](multi-value-dimensions.md), using the same `STRING` column type
+as regular scalar strings. SQL `BIGINT ARRAY` and `DOUBLE ARRAY` cannot be loaded under `arrayIngestMode: mvd`. This
+mode is not recommended and will be removed in a future release, but provided for backwards compatibility.
+
+The following table summarizes the differences in SQL ARRAY handling between `arrayIngestMode: array` and
+`arrayIngestMode: mvd`.
+
+| SQL type | Stored type when `arrayIngestMode: array` (default) | Stored type when `arrayIngestMode: mvd` |
+|---|---|---|
+|`VARCHAR ARRAY`|`ARRAY<STRING>`|[multi-value `STRING`](multi-value-dimensions.md)|
+|`BIGINT ARRAY`|`ARRAY<LONG>`|not possible (validation error)|
+|`DOUBLE ARRAY`|`ARRAY<DOUBLE>`|not possible (validation error)|
+
+In either mode, you can explicitly wrap string arrays in `ARRAY_TO_MV` to cause them to be stored as
+[multi-value strings](multi-value-dimensions.md).
+
+When validating a SQL INSERT or REPLACE statement that contains arrays, Druid checks whether the statement would lead
+to mixing string arrays and multi-value strings in the same column. If this condition is detected, the statement fails
+validation unless the column is named under the `skipTypeVerification` context parameter. This parameter can be either
+a comma-separated list of column names, or a JSON array in string form. This validation is done to prevent accidentally
+mixing arrays and multi-value strings in the same column.
 
 ## Querying arrays
 
@@ -284,9 +277,9 @@ Avoid confusing string arrays with [multi-value dimensions](multi-value-dimensio
 
 Use care during ingestion to ensure you get the type you want.
 
-To get arrays when performing an ingestion using JSON ingestion specs, such as [native batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../ingestion/kafka-ingestion.md), use dimension type `auto` or enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), write a query that generates arrays and set the context parameter `"arrayIngestMode": "array"`. Arrays may contain strings or numbers.
+To get arrays when performing an ingestion using JSON ingestion specs, such as [native batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../ingestion/kafka-ingestion.md), use dimension type `auto` or enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), write a query that generates arrays. Arrays may contain strings or numbers.
 
-To get multi-value dimensions when performing an ingestion using JSON ingestion specs, use dimension type `string` and do not enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), wrap arrays in [`ARRAY_TO_MV`](multi-value-dimensions.md#sql-based-ingestion), which ensures you get multi-value dimensions in any `arrayIngestMode`. Multi-value dimensions can only contain strings.
+To get multi-value dimensions when performing an ingestion using JSON ingestion specs, use dimension type `string` and do not enable `useSchemaDiscovery`. When performing a [SQL-based ingestion](../multi-stage-query/index.md), wrap arrays in [`ARRAY_TO_MV`](multi-value-dimensions.md#sql-based-ingestion), which ensures you get multi-value dimensions. Multi-value dimensions can only contain strings.
 
 You can tell which type you have by checking the `INFORMATION_SCHEMA.COLUMNS` table, using a query like:
 

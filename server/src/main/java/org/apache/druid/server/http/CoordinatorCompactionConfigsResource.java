@@ -26,15 +26,21 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -64,7 +70,7 @@ public class CoordinatorCompactionConfigsResource
 {
   private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
   private static final long UPDATE_RETRY_DELAY = 1000;
-  static final int UPDATE_NUM_RETRY = 5;
+  static final int MAX_UPDATE_RETRIES = 5;
 
   private final CoordinatorConfigManager configManager;
   private final AuditManager auditManager;
@@ -81,9 +87,44 @@ public class CoordinatorCompactionConfigsResource
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig()
+  public Response getClusterCompactionConfig()
   {
     return Response.ok(configManager.getCurrentCompactionConfig()).build();
+  }
+
+  @POST
+  @Path("/global")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response updateClusterCompactionConfig(
+      CompactionConfigUpdateRequest updatePayload,
+      @Context HttpServletRequest req
+  )
+  {
+    UnaryOperator<CoordinatorCompactionConfig> operator = current -> {
+      final CoordinatorCompactionConfig newConfig = CoordinatorCompactionConfig.from(current, updatePayload);
+
+      final List<DataSourceCompactionConfig> datasourceConfigs = newConfig.getCompactionConfigs();
+      if (CollectionUtils.isNullOrEmpty(datasourceConfigs)
+          || current.getEngine() == newConfig.getEngine()) {
+        return newConfig;
+      }
+
+      // Validate all the datasource configs against the new engine
+      for (DataSourceCompactionConfig datasourceConfig : datasourceConfigs) {
+        CompactionConfigValidationResult validationResult =
+            ClientCompactionRunnerInfo.validateCompactionConfig(datasourceConfig, newConfig.getEngine());
+        if (!validationResult.isValid()) {
+          throw InvalidInput.exception(
+              "Cannot update engine to [%s] as it does not support"
+              + " compaction config of DataSource[%s]. Reason[%s].",
+              newConfig.getEngine(), datasourceConfig.getDataSource(), validationResult.getReason()
+          );
+        }
+      }
+
+      return newConfig;
+    };
+    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
   @POST
@@ -96,19 +137,20 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    UnaryOperator<CoordinatorCompactionConfig> operator =
-        current -> CoordinatorCompactionConfig.from(
-            current,
+    return updateClusterCompactionConfig(
+        new CompactionConfigUpdateRequest(
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
-            useAutoScaleSlots
-        );
-    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
+            useAutoScaleSlots,
+            null
+        ),
+        req
+    );
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response addOrUpdateCompactionConfig(
+  public Response addOrUpdateDatasourceCompactionConfig(
       final DataSourceCompactionConfig newConfig,
       @Context HttpServletRequest req
   )
@@ -119,6 +161,12 @@ public class CoordinatorCompactionConfigsResource
           .getCompactionConfigs()
           .stream()
           .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
+      CompactionConfigValidationResult validationResult =
+          ClientCompactionRunnerInfo.validateCompactionConfig(newConfig, current.getEngine());
+      if (!validationResult.isValid()) {
+        throw InvalidInput.exception("Compaction config not supported. Reason[%s].", validationResult.getReason());
+      }
+      // Don't persist config with the default engine if engine not specified, to enable update of the default.
       newConfigs.put(newConfig.getDataSource(), newConfig);
       newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
 
@@ -133,7 +181,7 @@ public class CoordinatorCompactionConfigsResource
   @GET
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
+  public Response getDatasourceCompactionConfig(@PathParam("dataSource") String dataSource)
   {
     final CoordinatorCompactionConfig current = configManager.getCurrentCompactionConfig();
     final Map<String, DataSourceCompactionConfig> configs = current
@@ -206,7 +254,7 @@ public class CoordinatorCompactionConfigsResource
 
       final DataSourceCompactionConfig config = configs.remove(dataSource);
       if (config == null) {
-        throw new NoSuchElementException("datasource not found");
+        throw NotFound.exception("datasource not found");
       }
 
       return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values()));
@@ -222,7 +270,7 @@ public class CoordinatorCompactionConfigsResource
     int attemps = 0;
     SetResult setResult = null;
     try {
-      while (attemps < UPDATE_NUM_RETRY) {
+      while (attemps < MAX_UPDATE_RETRIES) {
         setResult = configManager.getAndUpdateCompactionConfig(configOperator, auditInfo);
         if (setResult.isOk() || !setResult.isRetryable()) {
           break;
@@ -231,9 +279,8 @@ public class CoordinatorCompactionConfigsResource
         updateRetryDelay();
       }
     }
-    catch (NoSuchElementException e) {
-      LOG.warn(e, "Update compaction config failed");
-      return Response.status(Response.Status.NOT_FOUND).build();
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
       LOG.warn(e, "Update compaction config failed");
