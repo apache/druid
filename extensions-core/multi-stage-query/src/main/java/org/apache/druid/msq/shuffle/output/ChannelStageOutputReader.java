@@ -200,6 +200,7 @@ public class ChannelStageOutputReader implements StageOutputReader
   {
     // Call channel.close() unless readLocally() has been called. In that case, we expect the caller to close it.
     if (state != State.LOCAL) {
+      state = State.CLOSED;
       channel.close();
     }
   }

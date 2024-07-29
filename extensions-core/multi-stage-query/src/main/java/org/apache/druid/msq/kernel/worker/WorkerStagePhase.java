@@ -71,6 +71,8 @@ public enum WorkerStagePhase
     @Override
     public boolean canTransitionFrom(final WorkerStagePhase priorPhase)
     {
+      // Stages can transition to FINISHED even if they haven't generated all output yet. For example, this is
+      // possible if the downstream stage is applying a limit.
       return priorPhase.compareTo(FINISHED) < 0;
     }
   },

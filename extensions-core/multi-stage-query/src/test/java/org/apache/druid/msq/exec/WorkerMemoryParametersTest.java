@@ -42,12 +42,12 @@ public class WorkerMemoryParametersTest
         MSQException.class,
         () -> create(1_000_000_000, 1, 32, 1, 1, 0, 0)
     );
-    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32), e.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32, 1), e.getFault());
 
     final MSQFault fault = Assert.assertThrows(MSQException.class, () -> create(1_000_000_000, 2, 32, 1, 1, 0, 0))
                                  .getFault();
 
-    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32), fault);
+    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32, 1), fault);
   }
 
   @Test
@@ -63,12 +63,12 @@ public class WorkerMemoryParametersTest
         () -> create(1_000_000_000, 1, 12, 2, 1, 0, 0)
     );
 
-    Assert.assertEquals(new NotEnoughMemoryFault(1_736_034_666, 1_000_000_000, 750_000_000, 1, 12), e.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(1_736_034_666, 1_000_000_000, 750_000_000, 1, 12, 2), e.getFault());
 
     final MSQFault fault = Assert.assertThrows(MSQException.class, () -> create(1_000_000_000, 2, 32, 2, 1, 0, 0))
                                  .getFault();
 
-    Assert.assertEquals(new NotEnoughMemoryFault(4_048_090_666L, 1_000_000_000, 750_000_000, 2, 32), fault);
+    Assert.assertEquals(new NotEnoughMemoryFault(4_048_090_666L, 1_000_000_000, 750_000_000, 2, 32, 2), fault);
   }
 
   @Test
@@ -149,18 +149,18 @@ public class WorkerMemoryParametersTest
         MSQException.class,
         () -> create(1_000_000_000, 1, 32, 1, 1, 0, 0)
     );
-    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32), e.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32, 1), e.getFault());
 
     final MSQException e2 = Assert.assertThrows(
         MSQException.class,
         () -> create(128_000_000, 1, 4, 1, 1, 0, 0)
     );
-    Assert.assertEquals(new NotEnoughMemoryFault(580_006_666, 12_8000_000, 96_000_000, 1, 4), e2.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(580_006_666, 12_8000_000, 96_000_000, 1, 4, 1), e2.getFault());
 
     final MSQFault fault = Assert.assertThrows(MSQException.class, () -> create(1_000_000_000, 2, 32, 1, 1, 0, 0))
                                  .getFault();
 
-    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32), fault);
+    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32, 1), fault);
   }
 
   @Test
@@ -197,7 +197,7 @@ public class WorkerMemoryParametersTest
         () -> WorkerMemoryParameters.createInstance(1, 1, 1, 1, 32, 1, 1)
     );
 
-    Assert.assertEquals(new NotEnoughMemoryFault(554669334, 1, 1, 1, 1), e.getFault());
+    Assert.assertEquals(new NotEnoughMemoryFault(554669334, 1, 1, 1, 1, 1), e.getFault());
   }
 
   @Test

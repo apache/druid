@@ -93,6 +93,7 @@ import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.utils.CloseableUtils;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -123,11 +124,17 @@ public class RunWorkOrder
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final AtomicBoolean started = new AtomicBoolean();
 
+  @MonotonicNonNull
   private InputSliceReader inputSliceReader;
+  @MonotonicNonNull
   private OutputChannelFactory workOutputChannelFactory;
+  @MonotonicNonNull
   private OutputChannelFactory shuffleOutputChannelFactory;
+  @MonotonicNonNull
   private ResultAndChannels<?> workResultAndOutputChannels;
+  @MonotonicNonNull
   private SettableFuture<ClusterByPartitions> stagePartitionBoundariesFuture;
+  @MonotonicNonNull
   private ListenableFuture<OutputChannels> stageOutputChannelsFuture;
 
   public RunWorkOrder(

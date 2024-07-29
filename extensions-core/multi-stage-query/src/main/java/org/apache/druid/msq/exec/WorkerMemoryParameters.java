@@ -277,7 +277,8 @@ public class WorkerMemoryParameters
                 maxMemoryInJvm,
                 usableMemoryInJvm,
                 numWorkersInJvm,
-                numProcessingThreadsInJvm
+                numProcessingThreadsInJvm,
+                maxConcurrentStages
             )
         );
       }
@@ -300,7 +301,8 @@ public class WorkerMemoryParameters
               maxMemoryInJvm,
               usableMemoryInJvm,
               numWorkersInJvm,
-              numProcessingThreadsInJvm
+              numProcessingThreadsInJvm,
+              maxConcurrentStages
           )
       );
     }
@@ -336,7 +338,8 @@ public class WorkerMemoryParameters
               maxMemoryInJvm,
               usableMemoryInJvm,
               numWorkersInJvm,
-              numProcessingThreadsInJvm
+              numProcessingThreadsInJvm,
+              maxConcurrentStages
           )
       );
     }
@@ -533,6 +536,8 @@ public class WorkerMemoryParameters
       final int numProcessingThreadsInJvm
   )
   {
+    // One bundle per worker + one per processor. The worker bundles are used for sorting (SuperSorter) and the
+    // processing bundles are used for reading input and doing per-partition processing.
     final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
 
     // Need to subtract memoryForWorkers off the top of usableMemoryInJvm, since this is reserved for

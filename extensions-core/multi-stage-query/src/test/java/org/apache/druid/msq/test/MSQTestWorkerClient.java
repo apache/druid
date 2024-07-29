@@ -138,6 +138,6 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public void close()
   {
-    inMemoryWorkers.forEach((k, v) -> v.stop());
+    inMemoryWorkers.forEach((k, v) -> v.awaitStop());
   }
 }
