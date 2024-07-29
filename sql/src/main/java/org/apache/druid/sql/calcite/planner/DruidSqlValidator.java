@@ -36,6 +36,7 @@ import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.SqlOperatorTable;
+import org.apache.calcite.sql.SqlOverOperator;
 import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.SqlSelectKeyword;
 import org.apache.calcite.sql.SqlUpdate;
@@ -46,6 +47,8 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.sql.type.SqlTypeUtil;
+import org.apache.calcite.sql.util.SqlBasicVisitor;
+import org.apache.calcite.sql.util.SqlVisitor;
 import org.apache.calcite.sql.validate.IdentifierNamespace;
 import org.apache.calcite.sql.validate.SelectNamespace;
 import org.apache.calcite.sql.validate.SqlNonNullableAccessors;
@@ -83,6 +86,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /**
@@ -902,4 +906,50 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
            && call.getFunctionQuantifier() != null
            && call.getFunctionQuantifier().getValue() == SqlSelectKeyword.DISTINCT;
   }
+
+  @Override
+  protected void validateHavingClause(SqlSelect select)
+  {
+    super.validateHavingClause(select);
+    SqlNode having = select.getHaving();
+    if (containsOver(having)) {
+      throw buildCalciteContextException("Window functions are not allowed in HAVING", having);
+    }
+  }
+
+  private boolean containsOver(SqlNode having)
+  {
+    if (having == null) {
+      return false;
+    }
+    final Predicate<SqlCall> callPredicate = call -> call.getOperator() instanceof SqlOverOperator;
+    return containsCall(having, callPredicate);
+  }
+
+  // copy of SqlUtil#containsCall
+  /** Returns whether an AST tree contains a call that matches a given
+   * predicate. */
+  private static boolean containsCall(SqlNode node,
+      Predicate<SqlCall> callPredicate)
+  {
+    try {
+      SqlVisitor<Void> visitor =
+          new SqlBasicVisitor<Void>() {
+            @Override public Void visit(SqlCall call)
+            {
+              if (callPredicate.test(call)) {
+                throw new Util.FoundOne(call);
+              }
+              return super.visit(call);
+            }
+          };
+      node.accept(visitor);
+      return false;
+    }
+    catch (Util.FoundOne e) {
+      Util.swallow(e, null);
+      return true;
+    }
+  }
+
 }
