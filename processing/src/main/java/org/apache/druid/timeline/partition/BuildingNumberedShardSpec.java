@@ -61,8 +61,8 @@ public class BuildingNumberedShardSpec implements BuildingShardSpec<NumberedShar
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
   {
-    // This method can be called in AppenderatorImpl to create a sinkTimeline.
-    // The sinkTimeline doesn't seem in use in batch ingestion, let's set 'chunks' to 0 for now.
+    // This method can be called in StreamAppenderator to create a sinkTimeline.
+    // The sinkTimeline isn't used in batch ingestion, let's set 'chunks' to 0 for now.
     return new NumberedPartitionChunk<>(partitionId, 0, obj);
   }
 

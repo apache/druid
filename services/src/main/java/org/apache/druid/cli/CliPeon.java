@@ -48,7 +48,6 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
-import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
@@ -116,11 +115,11 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
@@ -343,7 +342,6 @@ public class CliPeon extends GuiceRunnable
           }
         },
         new QueryablePeonModule(),
-        new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),

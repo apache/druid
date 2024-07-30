@@ -383,13 +383,13 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
     try {
-      String jsonBody = jsonMapper.writeValueAsString(minTaskPriority);
+      String jsonBody = jsonMapper.writeValueAsString(lockFilterPolicies);
 
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals"))
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals/v2"))
               .setContent(
                   "application/json",
                   StringUtils.toUtf8(jsonBody)

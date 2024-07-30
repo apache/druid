@@ -30,12 +30,18 @@ The guides in this section outline breaking changes introduced in Druid 25.0.0 a
 
 ## Migrate from multi-value dimensions to arrays
 
-Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See [Migration guide: MVDs to arrays](migr-mvd-array.md).
+Druid now supports SQL-compliant array types. Whenever possible, you should use the array type over multi-value dimensions. See [Migration guide: MVDs to arrays](./migr-mvd-array.md).
 
 ## Migrate to front-coded dictionary encoding
 
-Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front-coded dictionaries](migr-front-coded-dict.md) for more information.
+Druid encodes string columns into dictionaries for better compression. Front-coded dictionary encoding reduces storage and improves performance by optimizing for strings that share similar beginning substrings. See [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md) for more information.
 
 ## Migrate from `maxSubqueryRows` to `maxSubqueryBytes`
 
-Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0.0. See [Migration guide: subquery limit](migr-subquery-limit.md) for more information.
+Druid allows you to set a byte-based limit on subquery size to prevent Brokers from running out of memory when handling large subqueries. The byte-based subquery limit overrides Druid's row-based subquery limit. We recommend that you move towards using byte-based limits starting in Druid 30.0.0. See [Migration guide: subquery limit](./migr-subquery-limit.md) for more information.
+
+## Migrate to SQL compliant null handling mode
+
+By default, the Druid [null handling](../querying/sql-data-types.md#null-values) mode is now compliant with ANSI SQL.
+This guide provides strategies for Druid operators and users who rely on the legacy Druid null handling behavior in their applications to transition to ANSI SQL compliant mode.  See [Migration guide: SQL compliant mode](./migr-ansi-sql-null.md
+) for more information.

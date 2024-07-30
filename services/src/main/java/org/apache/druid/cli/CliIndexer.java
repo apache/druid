@@ -36,7 +36,6 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.IndexerServiceModule;
-import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
@@ -238,7 +237,6 @@ public class CliIndexer extends ServerRunnable
           }
         },
         new ShuffleModule(),
-        new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTaskLogsModule(),
         new IndexingServiceTuningConfigModule(),
