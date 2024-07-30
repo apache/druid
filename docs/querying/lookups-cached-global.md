@@ -174,7 +174,7 @@ We strongly recommended that you set `druid.lookup.namespace.numBufferedEntries`
 
 ## Supported lookups
 
-For information on additional lookups, please see the [extensions list](../configuration/extensions.md).
+For information on additional lookups, refer to the [extensions list](../configuration/extensions.md).
 
 ### URI lookup
 
