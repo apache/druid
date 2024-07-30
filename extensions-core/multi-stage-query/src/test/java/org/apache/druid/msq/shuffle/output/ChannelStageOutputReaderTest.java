@@ -68,7 +68,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
   private List<Frame> frameList;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     final IncrementalIndex index = TestIndex.getIncrementalTestIndex();
     final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
@@ -81,7 +81,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     reader.close();
   }
