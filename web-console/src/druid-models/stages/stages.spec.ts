@@ -27,8 +27,7 @@ describe('Stages', () => {
 
   describe('#getByPartitionCountersForStage', () => {
     it('works for input', () => {
-      expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'input'))
-        .toMatchInlineSnapshot(`
+      expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'in')).toMatchInlineSnapshot(`
         [
           {
             "index": 0,
@@ -45,8 +44,7 @@ describe('Stages', () => {
     });
 
     it('works for output', () => {
-      expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'output'))
-        .toMatchInlineSnapshot(`
+      expect(STAGES.getByPartitionCountersForStage(STAGES.stages[2], 'out')).toMatchInlineSnapshot(`
         [
           {
             "index": 0,

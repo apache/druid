@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 
 /**
  * A BufferAggregator that delegates everything. It is used by BufferAggregator wrappers e.g.
- * {@link StringColumnDoubleBufferAggregatorWrapper} that modify some behavior of a delegate.
+ * {@link ObjectColumnDoubleBufferAggregatorWrapper} that modify some behavior of a delegate.
  */
 public abstract class DelegatingBufferAggregator implements BufferAggregator
 {

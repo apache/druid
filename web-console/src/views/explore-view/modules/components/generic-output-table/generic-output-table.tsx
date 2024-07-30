@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { SqlColumn, SqlLiteral, trimString } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -479,7 +478,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               return {
                 Header() {
                   return (
-                    <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                    <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                       <div className="clickable-cell">
                         <div className="output-name">
                           {icon && <Icon className="type-icon" icon={icon} size={12} />}
@@ -487,7 +486,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                           {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
                       </div>
-                    </Popover2>
+                    </Popover>
                   );
                 },
                 headerClassName: getHeaderClassName(h),
@@ -497,9 +496,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                   const formatter = columnHints?.get(h)?.formatter || formatNumber;
                   return (
                     <div>
-                      <Popover2
-                        content={<Deferred content={() => getCellMenu(column, i, value)} />}
-                      >
+                      <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                         {numericColumnBraces[i] ? (
                           <BracedText
                             className="table-padding"
@@ -510,7 +507,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                         ) : (
                           <TableCell value={value} unlimited />
                         )}
-                      </Popover2>
+                      </Popover>
                     </div>
                   );
                 },

@@ -41,10 +41,12 @@ code and country name, and also use cases where multiple IDs map to the same val
 
 Lookups always use current data and can't access historical data. This means that if the chief account manager for a particular app ID changes, and you issue a query with a lookup to store the app ID to account manager relationship, Druid returns the current account manager for that app ID regardless of the time range you specify in the query.
 
-Lookups are generally preloaded in-memory on all servers, although Druid can also pass very small lookups (a maximum of a few hundred entries) in native queries using the `map` lookup type. Refer to the
-[dimension specs](./dimensionspecs.md) documentation for details.
+:::info
+[Multi-value dimensions](multi-value-dimensions.md) (MVDs) are not supported as keys in lookups. For example, to map the MVD `["A", "B", "C"]` to the value `x` in your lookup, flatten the MVD and map each element of the MVD to the value. Your lookup will have separate key-value pairs for each element of the MVD: `"A": "x"`, `"B": "x"`, and `"C": "x"`.
+:::
 
-## Lookups query syntax
+Query Syntax
+------------
 
 You can query lookups using the [`LOOKUP`](sql-scalar.md#string-functions) function in [Druid SQL](sql.md). For example:
 

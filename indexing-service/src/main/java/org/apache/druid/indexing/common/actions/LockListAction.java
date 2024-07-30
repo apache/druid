@@ -40,12 +40,6 @@ public class LockListAction implements TaskAction<List<TaskLock>>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public String toString()
   {
     return "LockListAction{}";

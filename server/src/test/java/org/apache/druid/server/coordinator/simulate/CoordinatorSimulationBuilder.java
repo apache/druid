@@ -37,9 +37,9 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
@@ -512,11 +512,11 @@ public class CoordinatorSimulationBuilder
 
       EasyMock.expect(
           jacksonConfigManager.watch(
-              EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-              EasyMock.eq(CoordinatorCompactionConfig.class),
+              EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
+              EasyMock.eq(DruidCompactionConfig.class),
               EasyMock.anyObject()
           )
-      ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+      ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
 
       return jacksonConfigManager;
     }

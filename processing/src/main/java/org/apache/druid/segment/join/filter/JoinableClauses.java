@@ -32,8 +32,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class JoinableClauses
@@ -88,19 +90,20 @@ public class JoinableClauses
     return joinableClauses;
   }
 
-  public void splitVirtualColumns(
-      final VirtualColumns virtualColumns,
-      final List<VirtualColumn> preJoinVirtualColumns,
-      final List<VirtualColumn> postJoinVirtualColumns
+  /**
+   * Retrieve subset of virtual columns which require inputs which are only present on the join table
+   */
+  public Set<VirtualColumn> getPostJoinVirtualColumns(
+      final VirtualColumns virtualColumns
   )
   {
+    final Set<VirtualColumn> postJoinVirtualColumns = new HashSet<>();
     for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
       if (areSomeColumnsFromJoin(virtualColumn.requiredColumns())) {
         postJoinVirtualColumns.add(virtualColumn);
-      } else {
-        preJoinVirtualColumns.add(virtualColumn);
       }
     }
+    return postJoinVirtualColumns;
   }
 
   public boolean areSomeColumnsFromJoin(

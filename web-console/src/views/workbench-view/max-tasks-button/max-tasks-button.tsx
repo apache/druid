@@ -17,9 +17,8 @@
  */
 
 import type { ButtonProps } from '@blueprintjs/core';
-import { Button, Menu, MenuDivider, MenuItem, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { NumericInputDialog } from '../../../dialogs';
@@ -40,14 +39,28 @@ const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
   auto: `Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.`,
 };
 
+const DEFAULT_MAX_NUM_LABEL_FN = (maxNum: number) => {
+  if (maxNum === 2) return { text: formatInteger(maxNum), label: '(1 controller + 1 worker)' };
+  return { text: formatInteger(maxNum), label: `(1 controller + max ${maxNum - 1} workers)` };
+};
+
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
   clusterCapacity: number | undefined;
   queryContext: QueryContext;
   changeQueryContext(queryContext: QueryContext): void;
+  menuHeader?: JSX.Element;
+  maxNumLabelFn?: (maxNum: number) => { text: string; label?: string };
 }
 
 export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps) {
-  const { clusterCapacity, queryContext, changeQueryContext, ...rest } = props;
+  const {
+    clusterCapacity,
+    queryContext,
+    changeQueryContext,
+    menuHeader,
+    maxNumLabelFn = DEFAULT_MAX_NUM_LABEL_FN,
+    ...rest
+  } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
 
   const maxNumTasks = getMaxNumTasks(queryContext);
@@ -64,11 +77,12 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
 
   return (
     <>
-      <Popover2
+      <Popover
         className="max-tasks-button"
         position={Position.BOTTOM_LEFT}
         content={
           <Menu>
+            {menuHeader}
             <MenuDivider title="Maximum number of tasks to launch" />
             {Boolean(fullClusterCapacity) && (
               <MenuItem
@@ -77,15 +91,19 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, undefined))}
               />
             )}
-            {shownMaxNumTaskOptions.map(m => (
-              <MenuItem
-                key={String(m)}
-                icon={tickIcon(m === maxNumTasks)}
-                text={formatInteger(m)}
-                label={`(1 controller + ${m === 2 ? '1 worker' : `max ${m - 1} workers`})`}
-                onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, m))}
-              />
-            ))}
+            {shownMaxNumTaskOptions.map(m => {
+              const { text, label } = maxNumLabelFn(m);
+
+              return (
+                <MenuItem
+                  key={String(m)}
+                  icon={tickIcon(m === maxNumTasks)}
+                  text={text}
+                  label={label}
+                  onClick={() => changeQueryContext(changeMaxNumTasks(queryContext, m))}
+                />
+              );
+            })}
             <MenuItem
               icon={tickIcon(
                 typeof maxNumTasks === 'number' && !shownMaxNumTaskOptions.includes(maxNumTasks),
@@ -124,7 +142,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
           }`}
           rightIcon={IconNames.CARET_DOWN}
         />
-      </Popover2>
+      </Popover>
       {customMaxNumTasksDialogOpen && (
         <NumericInputDialog
           title="Custom max task number"

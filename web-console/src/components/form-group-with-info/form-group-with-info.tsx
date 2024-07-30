@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { FormGroup, Icon } from '@blueprintjs/core';
+import { FormGroup, Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -37,9 +36,9 @@ export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
   const { label, info, inlineInfo, children } = props;
 
   const popover = (
-    <Popover2 className="info-popover" content={info} position="left-bottom">
+    <Popover className="info-popover" content={info} position="left-bottom">
       <Icon icon={IconNames.INFO_SIGN} size={14} />
-    </Popover2>
+    </Popover>
   );
 
   return (

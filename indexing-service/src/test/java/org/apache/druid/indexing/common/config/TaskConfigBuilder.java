@@ -36,8 +36,6 @@ public class TaskConfigBuilder
   private Period directoryLockTimeout;
   private List<StorageLocationConfig> shuffleDataLocations;
   private boolean ignoreTimestampSpecForDruidInputSource;
-  private boolean batchMemoryMappedIndex; // deprecated; only set to true to fall back to older behavior
-  private String batchProcessingMode;
   private Boolean storeEmptyColumns;
   private boolean enableTaskLevelLogPush;
   private Long tmpStorageBytesPerTask;
@@ -102,18 +100,6 @@ public class TaskConfigBuilder
     return this;
   }
 
-  public TaskConfigBuilder setBatchMemoryMappedIndex(boolean batchMemoryMappedIndex)
-  {
-    this.batchMemoryMappedIndex = batchMemoryMappedIndex;
-    return this;
-  }
-
-  public TaskConfigBuilder setBatchProcessingMode(String batchProcessingMode)
-  {
-    this.batchProcessingMode = batchProcessingMode;
-    return this;
-  }
-
   public TaskConfigBuilder setStoreEmptyColumns(Boolean storeEmptyColumns)
   {
     this.storeEmptyColumns = storeEmptyColumns;
@@ -145,8 +131,6 @@ public class TaskConfigBuilder
         directoryLockTimeout,
         shuffleDataLocations,
         ignoreTimestampSpecForDruidInputSource,
-        batchMemoryMappedIndex,
-        batchProcessingMode,
         storeEmptyColumns,
         enableTaskLevelLogPush,
         tmpStorageBytesPerTask

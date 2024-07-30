@@ -18,6 +18,7 @@
 
 import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
 
+import { maybeGetClusterCapacity } from '../../helpers';
 import {
   deepGet,
   deleteKeys,
@@ -192,7 +193,12 @@ export interface ExecutionValue {
 }
 
 export class Execution {
+  static USE_TASK_PAYLOAD = true;
+  static USE_TASK_REPORTS = true;
   static INLINE_DATASOURCE_MARKER = '__query_select';
+
+  static getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined =
+    maybeGetClusterCapacity;
 
   static validAsyncState(status: string | undefined): status is AsyncState {
     return oneOf(status, 'ACCEPTED', 'RUNNING', 'FINISHED', 'FAILED');
