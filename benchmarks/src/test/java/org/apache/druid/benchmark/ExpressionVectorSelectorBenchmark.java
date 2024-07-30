@@ -174,7 +174,6 @@ public class ExpressionVectorSelectorBenchmark
             cursor.advance();
           }
         }
-        closer.register(cursor);
       }
     } else {
       final Cursor cursor = cursorMaker.makeCursor();

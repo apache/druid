@@ -57,9 +57,8 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testRead()
   {
-    try (final CursorMaker maker = makeCursor();
-         final VectorCursor cursor = maker.makeVectorCursor()
-    ) {
+    try (final CursorMaker maker = makeCursor()) {
+      final VectorCursor cursor = maker.makeVectorCursor();
       final Supplier<Object[]> qualitySupplier = ColumnProcessors.makeVectorProcessor(
           "quality",
           ToObjectVectorColumnProcessorFactory.INSTANCE,
@@ -186,9 +185,8 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
 
   private List<Object> readColumn(final String column, final int limit)
   {
-    try (final CursorMaker maker = makeCursor();
-         final VectorCursor cursor = maker.makeVectorCursor()
-    ) {
+    try (final CursorMaker maker = makeCursor()) {
+      final VectorCursor cursor = maker.makeVectorCursor();
       final Supplier<Object[]> supplier = ColumnProcessors.makeVectorProcessor(
           column,
           ToObjectVectorColumnProcessorFactory.INSTANCE,

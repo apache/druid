@@ -130,8 +130,6 @@ public class TimeseriesQueryEngine
     }
 
     final Closer closer = Closer.create();
-    closer.register(cursor);
-
     try {
       final VectorCursorGranularizer granularizer = VectorCursorGranularizer.create(
           adapter,

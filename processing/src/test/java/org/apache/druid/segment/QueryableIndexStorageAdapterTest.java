@@ -70,9 +70,7 @@ public class QueryableIndexStorageAdapterTest
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
       final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
       if (vectorize) {
-        final VectorCursor cursor = closer.register(
-            adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeVectorCursor()
-        );
+        final VectorCursor cursor = closer.register(adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)).makeVectorCursor();
 
         final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

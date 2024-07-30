@@ -22,8 +22,6 @@ package org.apache.druid.segment.vector;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndexCursorMaker;
 
-import java.io.Closeable;
-
 /**
  * Vectorized cursor used during query execution. VectorCursors are returned by
  * {@link org.apache.druid.segment.StorageAdapter#asCursorMaker(CursorBuildSpec)} and are created by
@@ -48,7 +46,7 @@ import java.io.Closeable;
  *
  * @see org.apache.druid.segment.Cursor, the non-vectorized version.
  */
-public interface VectorCursor extends VectorSizeInspector, Closeable
+public interface VectorCursor extends VectorSizeInspector
 {
   /**
    * Returns a vectorized column selector factory.
@@ -70,10 +68,4 @@ public interface VectorCursor extends VectorSizeInspector, Closeable
    */
   @SuppressWarnings("unused") /* Not currently used, but anticipated to be used by topN in the future. */
   void reset();
-
-  /**
-   * Close the cursor and release its resources.
-   */
-  @Override
-  void close();
 }

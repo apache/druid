@@ -94,5 +94,6 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
     };
     iterator.close();
     Mockito.verify(grouperCaptor.getValue()).close();
+    maker.close();
   }
 }

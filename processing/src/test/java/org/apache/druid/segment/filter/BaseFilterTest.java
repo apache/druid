@@ -870,8 +870,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     );
 
 
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(null));
-         final VectorCursor cursor = maker.makeVectorCursor()) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(null))) {
+      final VectorCursor cursor = maker.makeVectorCursor();
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
           maybeOptimize(dimFilter)
@@ -997,8 +997,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(postFilteringFilter));
-         final VectorCursor cursor = maker.makeVectorCursor()) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(postFilteringFilter))) {
+      final VectorCursor cursor = maker.makeVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1022,8 +1022,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)));
-         final VectorCursor cursor = maker.makeVectorCursor()) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+      final VectorCursor cursor = maker.makeVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1049,8 +1049,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)));
-         final VectorCursor cursor = maker.makeVectorCursor()) {
+    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+      final VectorCursor cursor = maker.makeVectorCursor();
 
       final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
       final List<String> values = new ArrayList<>();

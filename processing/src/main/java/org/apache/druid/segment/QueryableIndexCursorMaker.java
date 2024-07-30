@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -118,20 +117,15 @@ public class QueryableIndexCursorMaker implements CursorMaker
     }
 
     final CursorResources resources = resourcesSupplier.get();
-    try {
-      final FilterBundle filterBundle = resources.filterBundle;
-      if (filterBundle != null) {
-        if (!filterBundle.canVectorizeMatcher()) {
-          return false;
-        }
+    final FilterBundle filterBundle = resources.filterBundle;
+    if (filterBundle != null) {
+      if (!filterBundle.canVectorizeMatcher()) {
+        return false;
       }
+    }
 
-      // vector cursors can't iterate backwards yet
-      return !descending;
-    }
-    catch (ISE rethrow) {
-      throw CloseableUtils.closeInCatch(rethrow, resources);
-    }
+    // vector cursors can't iterate backwards yet
+    return !descending;
   }
 
   @Override
@@ -226,78 +220,62 @@ public class QueryableIndexCursorMaker implements CursorMaker
     // Wrap the remainder of cursor setup in a try, so if an error is encountered while setting it up, we don't
     // leak columns in the ColumnCache.
 
-    try {
-
-      // sanity check
-      if (!canVectorize()) {
-        close();
-        throw new IllegalStateException("canVectorize()");
-      }
-      if (metrics != null) {
-        metrics.vectorized(true);
-      }
+    // sanity check
+    if (!canVectorize()) {
+      close();
+      throw new IllegalStateException("canVectorize()");
+    }
+    if (metrics != null) {
+      metrics.vectorized(true);
+    }
 
 
-      final int startOffset;
-      final int endOffset;
+    final int startOffset;
+    final int endOffset;
 
-      if (interval.getStartMillis() > minDataTimestamp) {
-        startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
-      } else {
-        startOffset = 0;
-      }
+    if (interval.getStartMillis() > minDataTimestamp) {
+      startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
+    } else {
+      startOffset = 0;
+    }
 
-      if (interval.getEndMillis() <= maxDataTimestamp) {
-        endOffset = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
-      } else {
-        endOffset = index.getNumRows();
-      }
+    if (interval.getEndMillis() <= maxDataTimestamp) {
+      endOffset = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
+    } else {
+      endOffset = index.getNumRows();
+    }
 
-      // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter can use
-      // an index
-      final VectorOffset baseOffset =
-          filterBundle == null || filterBundle.getIndex() == null
-          ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
-          : new BitmapVectorOffset(vectorSize, filterBundle.getIndex().getBitmap(), startOffset, endOffset);
+    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter can use
+    // an index
+    final VectorOffset baseOffset =
+        filterBundle == null || filterBundle.getIndex() == null
+        ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
+        : new BitmapVectorOffset(vectorSize, filterBundle.getIndex().getBitmap(), startOffset, endOffset);
 
-      // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
-      final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
-          columnCache,
-          baseOffset
+    // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
+    final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
+        columnCache,
+        baseOffset
+    );
+
+    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter needs to use
+    // a value matcher
+    if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
+      final VectorValueMatcher vectorValueMatcher = filterBundle.getMatcherBundle()
+                                                                .vectorMatcher(baseColumnSelectorFactory, baseOffset);
+      final VectorOffset filteredOffset = FilteredVectorOffset.create(
+          baseOffset,
+          vectorValueMatcher
       );
 
-      // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter needs to use
-      // a value matcher
-      if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
-        final VectorValueMatcher vectorValueMatcher = filterBundle.getMatcherBundle()
-                                                                  .vectorMatcher(baseColumnSelectorFactory, baseOffset);
-        final VectorOffset filteredOffset = FilteredVectorOffset.create(
-            baseOffset,
-            vectorValueMatcher
-        );
-
-        // Now create the cursor and column selector that will be returned to the caller.
-        final VectorColumnSelectorFactory filteredColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
-            columnCache,
-            filteredOffset
-        );
-        return new QueryableIndexVectorCursor(
-            filteredColumnSelectorFactory,
-            filteredOffset,
-            vectorSize,
-            resources
-        );
-      } else {
-        return new QueryableIndexVectorCursor(
-            baseColumnSelectorFactory,
-            baseOffset,
-            vectorSize,
-            resources
-        );
-      }
-    }
-    catch (Throwable t) {
-      throw CloseableUtils.closeAndWrapInCatch(t, resources);
+      // Now create the cursor and column selector that will be returned to the caller.
+      final VectorColumnSelectorFactory filteredColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
+          columnCache,
+          filteredOffset
+      );
+      return new QueryableIndexVectorCursor(filteredColumnSelectorFactory, filteredOffset, vectorSize);
+    } else {
+      return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize);
     }
   }
 
@@ -417,7 +395,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
 
   private static class QueryableIndexVectorCursor implements VectorCursor
   {
-    private final Closeable closer;
     private final int vectorSize;
     private final VectorOffset offset;
     private final VectorColumnSelectorFactory columnSelectorFactory;
@@ -425,14 +402,12 @@ public class QueryableIndexCursorMaker implements CursorMaker
     public QueryableIndexVectorCursor(
         final VectorColumnSelectorFactory vectorColumnSelectorFactory,
         final VectorOffset offset,
-        final int vectorSize,
-        final Closeable closer
+        final int vectorSize
     )
     {
       this.columnSelectorFactory = vectorColumnSelectorFactory;
       this.vectorSize = vectorSize;
       this.offset = offset;
-      this.closer = closer;
     }
 
     @Override
@@ -470,17 +445,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
     public void reset()
     {
       offset.reset();
-    }
-
-    @Override
-    public void close()
-    {
-      try {
-        closer.close();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
     }
   }
 

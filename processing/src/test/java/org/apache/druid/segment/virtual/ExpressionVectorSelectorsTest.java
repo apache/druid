@@ -312,7 +312,6 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
           cursor.advance();
         }
       }
-      closer.register(cursor);
 
 
       final Cursor nonVectorized = maker.makeCursor();

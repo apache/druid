@@ -120,48 +120,37 @@ public class VectorGroupByEngine
               };
             }
 
-            try {
-              final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-              final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
-                  dimensionSpec -> {
-                    if (dimensionSpec instanceof DefaultDimensionSpec) {
-                      // Delegate creation of GroupByVectorColumnSelector to the column selector factory, so that
-                      // virtual columns (like ExpressionVirtualColumn) can control their own grouping behavior.
-                      return columnSelectorFactory.makeGroupByVectorColumnSelector(
-                          dimensionSpec.getDimension(),
-                          config.getDeferExpressionDimensions()
-                      );
-                    } else {
-                      return ColumnProcessors.makeVectorProcessor(
-                          dimensionSpec,
-                          GroupByVectorColumnProcessorFactory.instance(),
-                          columnSelectorFactory
-                      );
-                    }
+            final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+            final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
+                dimensionSpec -> {
+                  if (dimensionSpec instanceof DefaultDimensionSpec) {
+                    // Delegate creation of GroupByVectorColumnSelector to the column selector factory, so that
+                    // virtual columns (like ExpressionVirtualColumn) can control their own grouping behavior.
+                    return columnSelectorFactory.makeGroupByVectorColumnSelector(
+                        dimensionSpec.getDimension(),
+                        config.getDeferExpressionDimensions()
+                    );
+                  } else {
+                    return ColumnProcessors.makeVectorProcessor(
+                        dimensionSpec,
+                        GroupByVectorColumnProcessorFactory.instance(),
+                        columnSelectorFactory
+                    );
                   }
-              ).collect(Collectors.toList());
+                }
+            ).collect(Collectors.toList());
 
-              return new VectorGroupByEngineIterator(
-                  query,
-                  config,
-                  processingConfig,
-                  storageAdapter,
-                  cursor,
-                  interval,
-                  dimensions,
-                  processingBuffer,
-                  fudgeTimestamp
-              );
-            }
-            catch (Throwable e) {
-              try {
-                cursor.close();
-              }
-              catch (Throwable e2) {
-                e.addSuppressed(e2);
-              }
-              throw e;
-            }
+            return new VectorGroupByEngineIterator(
+                query,
+                config,
+                processingConfig,
+                storageAdapter,
+                cursor,
+                interval,
+                dimensions,
+                processingBuffer,
+                fudgeTimestamp
+            );
           }
 
           @Override
@@ -323,7 +312,6 @@ public class VectorGroupByEngine
       if (delegate != null) {
         closer.register(delegate);
       }
-      closer.register(cursor);
       closer.close();
     }
 

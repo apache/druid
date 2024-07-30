@@ -338,46 +338,41 @@ public class FrameTestUtil
 
   public static Sequence<List<Object>> readRowsFromVectorCursor(final VectorCursor cursor, final RowSignature signature)
   {
-    try {
-      final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+    final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-      final List<Supplier<Object[]>> columnReaders = new ArrayList<>();
+    final List<Supplier<Object[]>> columnReaders = new ArrayList<>();
 
-      for (int i = 0; i < signature.size(); i++) {
-        final String columnName = signature.getColumnName(i);
-        final Supplier<Object[]> columnReader = ColumnProcessors.makeVectorProcessor(
-            columnName,
-            RowReadingVectorColumnProcessorFactory.INSTANCE,
-            columnSelectorFactory
-        );
+    for (int i = 0; i < signature.size(); i++) {
+      final String columnName = signature.getColumnName(i);
+      final Supplier<Object[]> columnReader = ColumnProcessors.makeVectorProcessor(
+          columnName,
+          RowReadingVectorColumnProcessorFactory.INSTANCE,
+          columnSelectorFactory
+      );
 
-        columnReaders.add(columnReader);
-      }
+      columnReaders.add(columnReader);
+    }
 
-      final List<List<Object>> retVal = new ArrayList<>();
+    final List<List<Object>> retVal = new ArrayList<>();
 
-      while (!cursor.isDone()) {
-        final int vectorSize = cursor.getCurrentVectorSize();
-        final List<Object[]> columns = columnReaders.stream().map(Supplier::get).collect(Collectors.toList());
+    while (!cursor.isDone()) {
+      final int vectorSize = cursor.getCurrentVectorSize();
+      final List<Object[]> columns = columnReaders.stream().map(Supplier::get).collect(Collectors.toList());
 
-        for (int i = 0; i < vectorSize; i++) {
-          final List<Object> row = new ArrayList<>();
+      for (int i = 0; i < vectorSize; i++) {
+        final List<Object> row = new ArrayList<>();
 
-          for (final Object[] column : columns) {
-            row.add(column[i]);
-          }
-
-          retVal.add(row);
+        for (final Object[] column : columns) {
+          row.add(column[i]);
         }
 
-        cursor.advance();
+        retVal.add(row);
       }
 
-      return Sequences.simple(retVal);
+      cursor.advance();
     }
-    finally {
-      cursor.close();
-    }
+
+    return Sequences.simple(retVal);
   }
 
   private static Supplier<Object> dimensionSelectorReader(final DimensionSelector selector)

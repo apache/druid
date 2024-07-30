@@ -373,8 +373,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, segments.size());
     StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build();
-    VectorCursor cursor = storageAdapter.asCursorMaker(buildSpec).makeVectorCursor();
-    closer.register(cursor);
+    VectorCursor cursor = closer.register(storageAdapter.asCursorMaker(buildSpec)).makeVectorCursor();
     return cursor.getColumnSelectorFactory();
   }
 }

@@ -394,9 +394,9 @@ public class FrameStorageAdapterTest
       if (frameMaker.canVectorize()) {
         final RowSignature signature = frameAdapter.getRowSignature();
         final Sequence<List<Object>> queryableRows =
-            FrameTestUtil.readRowsFromVectorCursor(maker.makeVectorCursor(), signature);
+            FrameTestUtil.readRowsFromVectorCursor(maker.makeVectorCursor(), signature).withBaggage(maker);
         final Sequence<List<Object>> frameRows =
-            FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameMaker.makeVectorCursor()), signature);
+            FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameMaker.makeVectorCursor()), signature).withBaggage(frameMaker);
         FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
       } else {
         maker.close();

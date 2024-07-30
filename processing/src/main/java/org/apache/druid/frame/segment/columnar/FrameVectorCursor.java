@@ -26,8 +26,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
 
-import java.io.IOException;
-
 /**
  * A {@link VectorCursor} that is based on a {@link Frame}.
  *
@@ -73,17 +71,6 @@ public class FrameVectorCursor implements VectorCursor
   public void reset()
   {
     offset.reset();
-  }
-
-  @Override
-  public void close()
-  {
-    try {
-      closer.close();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @Override
