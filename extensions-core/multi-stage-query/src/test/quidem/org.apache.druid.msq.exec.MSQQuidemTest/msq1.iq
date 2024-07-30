@@ -94,7 +94,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "959637f0-a795-41f2-9cf0-f12e29361401",
+          "sqlQueryId" : "1e9ae92b-02e5-4506-be2e-8d89ce1dc77d",
           "sqlStringifyArrays" : false
         }
       }
@@ -127,8 +127,8 @@ order by 1;
   "partitionCount" : 1,
   "shuffle" : "globalSort",
   "output" : "localStorage",
-  "startTime" : "2024-07-25T03:33:28.256Z",
-  "duration" : 754,
+  "startTime" : "2024-07-26T04:26:29.003Z",
+  "duration" : 724,
   "sort" : true
 }, {
   "stageNumber" : 1,
@@ -200,7 +200,7 @@ order by 1;
           "finalize" : true,
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "959637f0-a795-41f2-9cf0-f12e29361401",
+          "sqlQueryId" : "1e9ae92b-02e5-4506-be2e-8d89ce1dc77d",
           "sqlStringifyArrays" : false
         }
       }
@@ -221,12 +221,11 @@ order by 1;
   "workerCount" : 1,
   "partitionCount" : 1,
   "output" : "localStorage",
-  "startTime" : "2024-07-25T03:33:29.010Z",
+  "startTime" : "2024-07-26T04:26:29.727Z",
   "duration" : 2
 } ]
 !msqPlan
 # 227
-
 LogicalSort(sort0=[$0], dir0=[ASC])
   LogicalAggregate(group=[{0}], cnt=[COUNT($1)], aall=[COUNT()])
     LogicalProject(cityName=[$2], $f1=[CASE(>($17, 0), $1, null:VARCHAR)])
@@ -304,4 +303,6 @@ DruidAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()], druid=[lo
   }
 }
 !nativePlan
+
+
 
