@@ -21,6 +21,8 @@ package org.apache.druid.sql.hook;
 
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.quidem.DruidConnectionExtras;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 
 import java.io.Closeable;
@@ -29,24 +31,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Dispatcher for Druid hooks.
+ *
+ * A single instance should live in the system and be used to dispatch hooks.
+ * Usual way to dispatch should be via
+ * {@link PlannerContext#dispatchHook(HookKey, Object)}. Access to this class is
+ * also possible thru {@link DruidConnectionExtras}.
+ */
 @LazySingleton
 public class DruidHookDispatcher
 {
+  Map<HookKey<?>, List<DruidHook<?>>> hooks = new HashMap<>();
+
   @Inject
   public DruidHookDispatcher()
   {
   }
 
-  Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
-
   public void register(HookKey<?> label, DruidHook<?> hook)
   {
-    GLOBAL.computeIfAbsent(label, k -> new ArrayList<>()).add(hook);
+    hooks.computeIfAbsent(label, k -> new ArrayList<>()).add(hook);
   }
 
   public void unregister(HookKey<?> key, DruidHook<?> hook)
   {
-    GLOBAL.get(key).remove(hook);
+    hooks.get(key).remove(hook);
   }
 
   public <T> Closeable withHook(HookKey<T> key, DruidHook<T> hook)
@@ -65,9 +75,9 @@ public class DruidHookDispatcher
   @SuppressWarnings({"rawtypes", "unchecked"})
   public <T> void dispatch(HookKey<T> key, T object)
   {
-    List<DruidHook<?>> hooks = GLOBAL.get(key);
-    if (hooks != null) {
-      for (DruidHook hook : hooks) {
+    List<DruidHook<?>> currentHooks = hooks.get(key);
+    if (currentHooks != null) {
+      for (DruidHook hook : currentHooks) {
         hook.invoke(key, object);
       }
     }

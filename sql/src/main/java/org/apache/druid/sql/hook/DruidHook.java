@@ -21,15 +21,13 @@ package org.apache.druid.sql.hook;
 
 import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
-import org.apache.druid.annotations.SuppressFBWarnings;
-
-import java.io.Closeable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Interface for hooks that can be invoked by {@link DruidHookDispatcher}.
+ *
+ * HookKey should be added at every place a new hook is needed.
+ */
 @FunctionalInterface
 public interface DruidHook<T>
 {
@@ -74,41 +72,4 @@ public interface DruidHook<T>
   }
 
   void invoke(HookKey<T> key, T object);
-
-  @SuppressFBWarnings({"MS_OOI_PKGPROTECT"})
-  Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
-
-  static void register1(HookKey<?> label, DruidHook<?> hook)
-  {
-    GLOBAL.computeIfAbsent(label, k -> new ArrayList<>()).add(hook);
-  }
-
-  static void unregister1(HookKey<?> key, DruidHook<?> hook)
-  {
-    GLOBAL.get(key).remove(hook);
-  }
-
-  static <T> Closeable withHook1(HookKey<T> key, DruidHook<T> hook)
-  {
-    register1(key, hook);
-    return new Closeable()
-    {
-      @Override
-      public void close()
-      {
-        unregister1(key, hook);
-      }
-    };
-  }
-
-  @SuppressWarnings({"rawtypes", "unchecked"})
-  static <T> void dispatch12(HookKey<T> key, T object)
-  {
-    List<DruidHook<?>> hooks = GLOBAL.get(key);
-    if (hooks != null) {
-      for (DruidHook hook : hooks) {
-        hook.invoke(key, object);
-      }
-    }
-  }
 }
