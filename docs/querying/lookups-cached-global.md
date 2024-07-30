@@ -351,7 +351,7 @@ Example `namespaceParseSpec`:
 
 ### JDBC lookup
 
-The JDBC lookups polls a database to populate its local cache. If the `tsColumn` is defined it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. 
+The JDBC lookups polls a database to populate the local cache. If the `tsColumn` is defined it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. 
 
 For example, the following must be valid SQL for the table:  
 `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`.  
