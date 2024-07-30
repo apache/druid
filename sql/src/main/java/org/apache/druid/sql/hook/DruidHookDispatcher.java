@@ -37,17 +37,17 @@ public class DruidHookDispatcher
 
   Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
 
-  void register(HookKey<?> label, DruidHook<?> hook)
+  public void register(HookKey<?> label, DruidHook<?> hook)
   {
     GLOBAL.computeIfAbsent(label, k -> new ArrayList<>()).add(hook);
   }
 
-  void unregister(HookKey<?> key, DruidHook<?> hook)
+  public void unregister(HookKey<?> key, DruidHook<?> hook)
   {
     GLOBAL.get(key).remove(hook);
   }
 
-  <T> Closeable withHook(HookKey<T> key, DruidHook<T> hook)
+  public <T> Closeable withHook(HookKey<T> key, DruidHook<T> hook)
   {
     register(key, hook);
     return new Closeable()
@@ -61,7 +61,7 @@ public class DruidHookDispatcher
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
-  <T> void dispatch(HookKey<T> key, T object)
+  public <T> void dispatch(HookKey<T> key, T object)
   {
     List<DruidHook<?>> hooks = GLOBAL.get(key);
     if (hooks != null) {

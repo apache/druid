@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Map;
 import java.util.Properties;
@@ -65,6 +66,7 @@ public class PlannerFactory extends PlannerToolbox
       .setConformance(DruidConformance.instance())
       .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
+  private final DruidHookDispatcher hookDispatcher;
 
   @Inject
   public PlannerFactory(
@@ -78,7 +80,8 @@ public class PlannerFactory extends PlannerToolbox
       final CalciteRulesManager calciteRuleManager,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      final DruidHookDispatcher hookDispatcher
   )
   {
     super(
@@ -94,6 +97,7 @@ public class PlannerFactory extends PlannerToolbox
         authorizerMapper,
         authConfig
     );
+    this.hookDispatcher = hookDispatcher;
   }
 
   /**
@@ -113,7 +117,7 @@ public class PlannerFactory extends PlannerToolbox
         queryContext,
         hook
     );
-    DruidHook.dispatch(DruidHook.SQL, sql);
+    hookDispatcher.dispatch(DruidHook.SQL, sql);
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
