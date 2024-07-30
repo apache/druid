@@ -91,7 +91,6 @@ public class FrameFilteredOffset extends SimpleSettableOffset
   public void resetMark()
   {
     baseOffset.resetMark();
-    incrementIfNeededOnCreationOrReset();
   }
 
   @Override
