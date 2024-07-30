@@ -452,7 +452,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
   {
     private final Offset cursorOffset;
     private final ColumnSelectorFactory columnSelectorFactory;
-    private int markOffset = 0;
 
     QueryableIndexCursor(Offset cursorOffset, ColumnSelectorFactory columnSelectorFactory)
     {
@@ -505,7 +504,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
     @Override
     public void mark(DateTime mark)
     {
-//      markOffset = cursorOffset.getOffset();
       cursorOffset.mark();
     }
 
@@ -513,17 +511,12 @@ public class QueryableIndexCursorMaker implements CursorMaker
     public void resetMark()
     {
       cursorOffset.resetMark();
-//      cursorOffset.reset();
-//      while (markOffset > cursorOffset.getOffset()) {
-//        advance();
-//      }
     }
 
     @Override
     public void reset()
     {
       cursorOffset.reset();
-//      markOffset = cursorOffset.getOffset();
     }
   }
 
