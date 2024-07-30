@@ -96,6 +96,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -127,6 +128,11 @@ public class WorkerImpl implements Worker
    * Pair of {workerNumber, stageId} -> counters.
    */
   private final ConcurrentHashMap<IntObjectPair<StageId>, CounterTracker> stageCounters = new ConcurrentHashMap<>();
+
+  /**
+   * Atomic that is set to true when {@link #run()} starts (or when {@link #stop()} is called before {@link #run()}).
+   */
+  private final AtomicBoolean didRun = new AtomicBoolean();
 
   /**
    * Future that resolves when {@link #run()} completes.
@@ -165,6 +171,10 @@ public class WorkerImpl implements Worker
   @Override
   public void run()
   {
+    if (!didRun.compareAndSet(false, true)) {
+      throw new ISE("already run");
+    }
+
     try (final Closer closer = Closer.create()) {
       final KernelHolders kernelHolders = KernelHolders.create(context, closer);
       controllerClient = kernelHolders.getControllerClient();
@@ -526,7 +536,13 @@ public class WorkerImpl implements Worker
   {
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
     log.info("Worker id[%s] canceled.", context.workerId());
-    doCancel();
+
+    if (didRun.compareAndSet(false, true)) {
+      // run() hasn't been called yet. Set runFuture so awaitStop() still works.
+      runFuture.set(null);
+    } else {
+      doCancel();
+    }
   }
 
   @Override
