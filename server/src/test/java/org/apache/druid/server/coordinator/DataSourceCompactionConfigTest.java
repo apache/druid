@@ -53,20 +53,12 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeBasic() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        null,
-        new Period(3600),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -83,20 +75,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithMaxRowsPerSegment() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        CompactionEngine.MSQ,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withEngine(CompactionEngine.MSQ)
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -112,39 +98,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithMaxTotalRows() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        CompactionEngine.NATIVE,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withEngine(CompactionEngine.NATIVE)
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -160,40 +121,13 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeMaxTotalRowsWithMaxRowsPerSegment() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
-
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -284,20 +218,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpec() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -313,20 +241,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpecWithQueryGranularity() throws Exception
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(null, Granularities.YEAR, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(null, Granularities.YEAR, null))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -345,20 +267,13 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeWithNullGranularitySpec() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -374,20 +289,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpecWithNullValues() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(null, null, null),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(null, null, null))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -403,20 +312,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeGranularitySpecWithRollup() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(null, null, true),
-        null,
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(null, null, true))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -435,20 +338,15 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeIOConfigWithNonNullDropExisting() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        new UserCompactionTaskIOConfig(true),
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withIoConfig(new UserCompactionTaskIOConfig(true))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -465,20 +363,15 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeIOConfigWithNullDropExisting() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null),
-        null,
-        null,
-        null,
-        new UserCompactionTaskIOConfig(null),
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .withIoConfig(new UserCompactionTaskIOConfig(null))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -495,20 +388,18 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeDimensionsSpec() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        null,
-        new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-        null,
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withDimensionsSpec(
+            new UserCompactionTaskDimensionsConfig(
+                DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))
+            )
+        )
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -525,20 +416,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   public void testSerdeTransformSpec() throws IOException
   {
     NullHandling.initializeForTests();
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        null,
-        null,
-        null,
-        new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)),
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withTransformSpec(new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)))
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
@@ -554,20 +439,14 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeMetricsSpec() throws IOException
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "dataSource",
-        null,
-        500L,
-        new Period(3600),
-        null,
-        null,
-        null,
-        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
-        null,
-        null,
-        null,
-        ImmutableMap.of("key", "val")
-    );
+    final DataSourceCompactionConfig config = DataSourceCompactionConfig
+        .builder()
+        .forDataSource("dataSource")
+        .withInputSegmentSizeBytes(500L)
+        .withSkipOffsetFromLatest(new Period(3600))
+        .withMetricsSpec(new AggregatorFactory[]{new CountAggregatorFactory("cnt")})
+        .withTaskContext(ImmutableMap.of("key", "val"))
+        .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);
     final DataSourceCompactionConfig fromJson = OBJECT_MAPPER.readValue(json, DataSourceCompactionConfig.class);
 
