@@ -95,7 +95,7 @@ public class KinesisInputReader implements InputEntityReader
   private Map<String, Object> extractHeaders(KinesisRecordEntity record)
   {
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
-    // Add kafka record timestamp to the mergelist, we will skip record timestamp if the same key exists already in
+    // Add kinesis record timestamp to the mergelist, we will skip record timestamp if the same key exists already in
     // the header list
     mergedHeaderMap.putIfAbsent(timestampColumnName, record.getRecord().getApproximateArrivalTimestamp().getTime());
 
@@ -112,7 +112,7 @@ public class KinesisInputReader implements InputEntityReader
           final HashSet<String> newDimensions = new HashSet<>(r.getDimensions());
           final Map<String, Object> event = buildBlendedEventMap(r::getRaw, newDimensions, headerKeyList);
           newDimensions.addAll(headerKeyList.keySet());
-          // Remove the dummy timestamp added in KafkaInputFormat
+          // Remove the dummy timestamp added in KinesisInputFormat
           newDimensions.remove(KinesisInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
 
           final DateTime timestamp = MapInputRowParser.parseTimestamp(inputRowSchema.getTimestampSpec(), event);
@@ -160,7 +160,7 @@ public class KinesisInputReader implements InputEntityReader
                   headerKeyList
               );
               newDimensions.addAll(headerKeyList.keySet());
-              // Remove the dummy timestamp added in KafkaInputFormat
+              // Remove the dummy timestamp added in KinesisInputFormat
               newDimensions.remove(KinesisInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
               newInputRows.add(
                   new MapBasedInputRow(
