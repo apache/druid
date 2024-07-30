@@ -32,6 +32,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.MultiValueConfigHandling;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocation;
@@ -60,6 +61,7 @@ public class StorageNodeModule implements Module
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+    binder.requestStaticInjection(MultiValueConfigHandling.class);
   }
 
   @Provides

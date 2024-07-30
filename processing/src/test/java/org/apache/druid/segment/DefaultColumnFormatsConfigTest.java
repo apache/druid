@@ -33,7 +33,7 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testDefaultsSerde() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(null);
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(null, null);
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
     Assert.assertEquals(defaultColumnFormatConfig, andBack);
@@ -43,7 +43,7 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testDefaultsSerdeOverride() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(4);
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(4, null);
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
     Assert.assertEquals(defaultColumnFormatConfig, andBack);

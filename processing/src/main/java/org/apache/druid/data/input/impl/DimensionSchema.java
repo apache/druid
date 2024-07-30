@@ -32,6 +32,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.MultiValueConfigHandling;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -110,10 +111,9 @@ public abstract class DimensionSchema
       return name == null ? ofDefault() : valueOf(StringUtils.toUpperCase(name));
     }
 
-    // this can be system configuration
     public static MultiValueHandling ofDefault()
     {
-      return SORTED_ARRAY;
+      return MultiValueConfigHandling.getDefaultMultiValueHandlingMode();
     }
   }
 
