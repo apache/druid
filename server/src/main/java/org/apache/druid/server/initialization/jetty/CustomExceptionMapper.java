@@ -22,6 +22,8 @@ package org.apache.druid.server.initialization.jetty;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
+import org.apache.druid.server.initialization.ServerConfig;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -30,14 +32,26 @@ import javax.ws.rs.ext.Provider;
 @Provider
 public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
 {
+  private final ServerConfig config;
+
+  @Inject
+  public CustomExceptionMapper(ServerConfig config)
+  {
+    this.config = config;
+  }
+
   @Override
   public Response toResponse(JsonMappingException exception)
   {
+    final ImmutableMap.Builder<Object, Object> builder = ImmutableMap.builder()
+        .put("error", "unable to process JSON input");
+
+    if (config.isShowDetailedJettyErrors()) {
+      builder.put("errorMessage", exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
+    }
+
     return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(ImmutableMap.of(
-                       "error",
-                       exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage()
-                   ))
+                   .entity(builder.build())
                    .build();
   }
 }
