@@ -68,8 +68,8 @@ import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
-import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -395,7 +395,8 @@ public class CalciteRulesManager
     public RelNode run(RelOptPlanner planner, RelNode rel, RelTraitSet requiredOutputTraits,
         List<RelOptMaterialization> materializations, List<RelOptLattice> lattices)
     {
-      DruidHook.dispatch(DruidHook.LOGICAL_PLAN, rel);
+      PlannerContext pctx = planner.getContext().unwrapOrThrow(PlannerContext.class);
+      pctx.dispatchHook(DruidHook.LOGICAL_PLAN, rel);
       return rel;
     }
   }

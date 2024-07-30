@@ -72,10 +72,10 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
-import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;
@@ -155,7 +155,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     isPrepared = true;
     SqlNode validatedQueryNode = validatedQueryNode();
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
-    DruidHook.dispatch(DruidHook.CONVERTED_PLAN, rootQueryRel.rel);
+    handlerContext.plannerContext().dispatchHook(DruidHook.CONVERTED_PLAN, rootQueryRel.rel);
     handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = handlerContext.planner().getValidator();
@@ -563,7 +563,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
-      DruidHook.dispatch(DruidHook.DRUID_PLAN, newRoot);
+
+      plannerContext.dispatchHook(DruidHook.DRUID_PLAN, newRoot);
 
       DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
       DruidQuery baseQuery = generator.buildQuery();
@@ -591,7 +592,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
       handlerContext.hook().captureDruidRel(druidRel);
 
-      DruidHook.dispatch(DruidHook.DRUID_PLAN, druidRel);
+      plannerContext.dispatchHook(DruidHook.DRUID_PLAN, druidRel);
 
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, druidRel, true);

@@ -131,7 +131,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     task = newTask(
         Intervals.of("2017/2018"),
         new ParallelIndexIOConfig(
-            null,
             new TestInputSource(IntStream.range(0, NUM_SUB_TASKS).boxed().collect(Collectors.toList())),
             new NoopInputFormat(),
             false,
@@ -519,7 +518,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
-                  null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting(),

@@ -28,7 +28,7 @@ OPTS+=" -Dsurefire.rerunFailingTestsCount=0"
 OPTS+=" -Dorg.slf4j.simpleLogger.log.org.apache.maven.plugin.surefire.SurefirePlugin=INFO"
 [[ $@ =~ "-q" ]] && OPTS+=" -Dsurefire.trimStackTrace=true"
 
-OPTS+=" -pl quidem-it -Dtest=QTest"
+OPTS+=" -pl quidem-ut -Dtest=QTest"
 OPTS+=" org.apache.maven.plugins:maven-surefire-plugin:test"
 
 case "$1" in

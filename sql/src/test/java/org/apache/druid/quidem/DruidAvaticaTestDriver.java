@@ -51,6 +51,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.server.Server;
 
@@ -119,9 +120,9 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper)
+    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher)
     {
-      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper);
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher);
     }
 
     @Provides

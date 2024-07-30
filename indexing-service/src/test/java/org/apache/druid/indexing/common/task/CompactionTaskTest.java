@@ -123,9 +123,9 @@ import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -749,7 +749,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -810,7 +811,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -872,7 +874,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -935,7 +938,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1005,7 +1009,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1055,7 +1060,8 @@ public class CompactionTaskTest
         null,
         customMetricsSpec,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1098,7 +1104,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1148,7 +1155,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1178,7 +1186,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1219,7 +1228,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1263,7 +1273,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
@@ -1308,7 +1319,8 @@ public class CompactionTaskTest
             new PeriodGranularity(Period.months(3), null, null),
             null
         ),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1355,7 +1367,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1400,7 +1413,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1445,7 +1459,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1475,7 +1490,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1769,7 +1785,6 @@ public class CompactionTaskTest
     };
 
     final TaskConfig config = new TaskConfigBuilder()
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     return new TaskToolbox.Builder()
         .config(config)

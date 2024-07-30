@@ -69,6 +69,7 @@ import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.inject.Named;
@@ -503,7 +504,8 @@ public class SqlTestFramework
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
-          authConfig != null ? authConfig : new AuthConfig()
+          authConfig != null ? authConfig : new AuthConfig(),
+          new DruidHookDispatcher()
       );
       componentSupplier.finalizePlanner(this);
       this.statementFactory = QueryFrameworkUtils.createSqlStatementFactory(

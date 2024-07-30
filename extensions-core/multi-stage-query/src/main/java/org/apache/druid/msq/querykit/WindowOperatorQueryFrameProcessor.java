@@ -51,6 +51,7 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -59,7 +60,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -84,7 +84,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
-  private final boolean isOverEmpty;
+
+  // List of type strategies to compare the partition columns across rows.
+  // Type strategies are pushed in the same order as column types in frameReader.signature()
+  private final NullableTypeStrategy[] typeStrategies;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -95,7 +98,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       ObjectMapper jsonMapper,
       final List<OperatorFactory> operatorFactoryList,
       final RowSignature rowSignature,
-      final boolean isOverEmpty,
       final int maxRowsMaterializedInWindow,
       final List<String> partitionColumnNames
   )
@@ -105,14 +107,18 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
     this.jsonMapper = jsonMapper;
-    this.frameReader = frameReader;
     this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.objectsOfASingleRac = new ArrayList<>();
-    this.isOverEmpty = isOverEmpty;
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
     this.partitionColumnNames = partitionColumnNames;
+
+    this.frameReader = frameReader;
+    this.typeStrategies = new NullableTypeStrategy[frameReader.signature().size()];
+    for (int i = 0; i < frameReader.signature().size(); i++) {
+      typeStrategies[i] = frameReader.signature().getColumnType(i).get().getNullableStrategy();
+    }
   }
 
   @Override
@@ -162,7 +168,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      *
      *
      * The flow would look like:
-     * 1. Validate if the operator has an empty OVER clause
+     * 1. Validate if the operator doesn't have any OVER() clause with PARTITION BY for this stage.
      * 2. If 1 is true make a giant rows and columns (R&C) using concat as shown above
      *    Let all operators run amok on that R&C
      * 3. If 1 is false
@@ -187,14 +193,12 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      *     We might think to reimplement them in the MSQ way so that we do not have to materialize so much data
      */
 
-    // Phase 1 of the execution
-    // eagerly validate presence of empty OVER() clause
-    if (isOverEmpty) {
-      // if OVER() found
-      // have to bring all data to a single executor for processing
-      // convert each frame to rac
-      // concat all the racs to make a giant rac
-      // let all operators run on the giant rac when channel is finished
+    if (partitionColumnNames.isEmpty()) {
+      // If we do not have any OVER() clause with PARTITION BY for this stage.
+      // Bring all data to a single executor for processing.
+      // Convert each frame to RAC.
+      // Concatenate all the racs to make a giant RAC.
+      // Let all operators run on the giant RAC until channel is finished.
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         convertRowFrameToRowsAndColumns(frame);
@@ -484,7 +488,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   /**
    * Compare two rows based on the columns in partitionColumnNames.
-   * If the partitionColumnNames is empty or null, compare entire row.
+   * If the partitionColumnNames is empty, the method will end up returning true.
    * <p>
    * For example, say:
    * <ul>
@@ -501,17 +505,13 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
    */
   private boolean comparePartitionKeys(ResultRow row1, ResultRow row2, List<String> partitionColumnNames)
   {
-    if (partitionColumnNames == null || partitionColumnNames.isEmpty()) {
-      return row1.equals(row2);
-    } else {
-      int match = 0;
-      for (String columnName : partitionColumnNames) {
-        int i = frameReader.signature().indexOf(columnName);
-        if (Objects.equals(row1.get(i), row2.get(i))) {
-          match++;
-        }
+    int match = 0;
+    for (String columnName : partitionColumnNames) {
+      int i = frameReader.signature().indexOf(columnName);
+      if (typeStrategies[i].compare(row1.get(i), row2.get(i)) == 0) {
+        match++;
       }
-      return match == partitionColumnNames.size();
     }
+    return match == partitionColumnNames.size();
   }
 }
