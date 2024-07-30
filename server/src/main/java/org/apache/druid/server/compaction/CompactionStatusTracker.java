@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.joda.time.Interval;
 
 import java.util.HashMap;
@@ -109,7 +109,7 @@ public class CompactionStatusTracker
     return compactionStatus;
   }
 
-  public void onCompactionConfigUpdated(CoordinatorCompactionConfig compactionConfig)
+  public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)
   {
     final Set<String> compactionEnabledDatasources = new HashSet<>();
     if (compactionConfig.getCompactionConfigs() != null) {

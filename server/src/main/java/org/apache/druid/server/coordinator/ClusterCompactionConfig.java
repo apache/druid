@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.http;
+package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -25,34 +25,35 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
- * Payload to update the cluster-level compaction config.
- * All fields of this class must be nullable. A non-value indicates that the
- * corresponding field is being updated.
+ * Cluster-level compaction configs.
+ * All fields of this class are nullable. A non-null value denotes that the
+ * corresponding field has been explicitly specified.
  */
-public class CompactionConfigUpdateRequest
+public class ClusterCompactionConfig
 {
   private final Double compactionTaskSlotRatio;
   private final Integer maxCompactionTaskSlots;
   private final Boolean useAutoScaleSlots;
-  private final CompactionEngine compactionEngine;
+  private final CompactionEngine engine;
   private final CompactionSegmentSearchPolicy compactionPolicy;
 
   @JsonCreator
-  public CompactionConfigUpdateRequest(
+  public ClusterCompactionConfig(
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine,
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("compactionPolicy") @Nullable CompactionSegmentSearchPolicy compactionPolicy
   )
   {
     this.compactionTaskSlotRatio = compactionTaskSlotRatio;
     this.maxCompactionTaskSlots = maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots;
-    this.compactionEngine = compactionEngine;
     this.compactionPolicy = compactionPolicy;
+    this.engine = engine;
   }
 
   @Nullable
@@ -78,9 +79,9 @@ public class CompactionConfigUpdateRequest
 
   @Nullable
   @JsonProperty
-  public CompactionEngine getCompactionEngine()
+  public CompactionEngine getEngine()
   {
-    return compactionEngine;
+    return engine;
   }
 
   @Nullable
@@ -90,4 +91,32 @@ public class CompactionConfigUpdateRequest
     return compactionPolicy;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ClusterCompactionConfig that = (ClusterCompactionConfig) o;
+    return Objects.equals(compactionTaskSlotRatio, that.compactionTaskSlotRatio)
+           && Objects.equals(maxCompactionTaskSlots, that.maxCompactionTaskSlots)
+           && Objects.equals(useAutoScaleSlots, that.useAutoScaleSlots)
+           && Objects.equals(compactionPolicy, that.compactionPolicy)
+           && engine == that.engine;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        useAutoScaleSlots,
+        compactionPolicy,
+        engine
+    );
+  }
 }
