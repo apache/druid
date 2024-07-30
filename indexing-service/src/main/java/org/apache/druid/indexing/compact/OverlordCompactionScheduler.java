@@ -22,7 +22,6 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -36,15 +35,20 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.server.compaction.CompactionRunSimulator;
+import org.apache.druid.server.compaction.CompactionScheduler;
+import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
-import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.http.CompactionConfigUpdateRequest;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Duration;
 
 import java.util.Map;
@@ -54,25 +58,25 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * TODO: pending items
- *  - [x] make config static.
- *  - [?] bind scheduler only when enabled
- *  - [x] route compaction status API to overlord if scheduler is enabled
- *  - [x] skip run on coordinator if scheduler is enabled
- *  - [x] task state listener
- *  - [x] handle success and failure inside CompactionStatusTracker
- *  - [x] make policy serializable
- *  - [x] handle priority datasource in policy
  *  - [x] add another policy - smallestSegmentFirst
- *  - [ ] add policy auto
- *  - [ ] handle skipping turns if no more intervals in datasource
- *  - [x] enable segments polling if overlord is standalone
+ *  - [ ] come up with better policy names
+ *  - [?] poll status of recently completed tasks in CompactSegments duty
+ *  - [?] BasePolicy.shouldCompact(): locked and skip offset intervals will always be skipped
+ *  - [ ] finalize logic of skipping turns of successful and failed
+ *  - [ ] compaction status should have last compacted time
+ *  - [ ] compaction status should have num uncompacted segments, bytes
  *  - [ ] test on cluster - standalone, coordinator-overlord
  *  - [ ] unit tests
  *  - [ ] integration tests
  */
-public class CompactionSchedulerImpl implements CompactionScheduler
+
+/**
+ * Compaction Scheduler that runs on the Overlord if
+ * {@code druid.compaction.scheduler.enabled=true}.
+ */
+public class OverlordCompactionScheduler implements CompactionScheduler
 {
-  private static final Logger log = new Logger(CompactionSchedulerImpl.class);
+  private static final Logger log = new Logger(OverlordCompactionScheduler.class);
 
   private final TaskMaster taskMaster;
   private final JacksonConfigManager configManager;
@@ -100,10 +104,9 @@ public class CompactionSchedulerImpl implements CompactionScheduler
   private final CompactionSchedulerConfig schedulerConfig;
 
   @Inject
-  public CompactionSchedulerImpl(
+  public OverlordCompactionScheduler(
       TaskMaster taskMaster,
       TaskQueryTool taskQueryTool,
-      CompactionStatusTracker statusTracker,
       SegmentsMetadataManager segmentManager,
       JacksonConfigManager configManager,
       CompactionSchedulerConfig schedulerConfig,
@@ -116,7 +119,7 @@ public class CompactionSchedulerImpl implements CompactionScheduler
     this.taskMaster = taskMaster;
     this.configManager = configManager;
     this.segmentManager = segmentManager;
-    this.statusTracker = statusTracker;
+    this.statusTracker = new CompactionStatusTracker(objectMapper);
     this.emitter = emitter;
     this.schedulerConfig = schedulerConfig;
     this.executor = executorFactory.create(1, "CompactionScheduler-%s");
@@ -210,7 +213,7 @@ public class CompactionSchedulerImpl implements CompactionScheduler
     }
   }
 
-  public boolean isEnabled()
+  private boolean isEnabled()
   {
     return schedulerConfig.isEnabled();
   }
@@ -234,13 +237,11 @@ public class CompactionSchedulerImpl implements CompactionScheduler
       CoordinatorCompactionConfig currentConfig
   )
   {
-    DataSourcesSnapshot dataSourcesSnapshot
-        = segmentManager.getSnapshotOfDataSourcesWithAllUsedSegments();
     final CoordinatorRunStats stats = new CoordinatorRunStats();
 
     duty.run(
         currentConfig,
-        dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource(),
+        getCurrentDatasourceTimelines(),
         stats
     );
 
@@ -275,6 +276,12 @@ public class CompactionSchedulerImpl implements CompactionScheduler
     ).get();
   }
 
+  private Map<String, SegmentTimeline> getCurrentDatasourceTimelines()
+  {
+    return segmentManager.getSnapshotOfDataSourcesWithAllUsedSegments()
+                         .getUsedSegmentsTimelinesPerDataSource();
+  }
+
   @Override
   public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
   {
@@ -282,7 +289,7 @@ public class CompactionSchedulerImpl implements CompactionScheduler
   }
 
   @Override
-  public Long getSegmentBytesYetToBeCompacted(String dataSource)
+  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
   {
     return duty.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
@@ -293,4 +300,13 @@ public class CompactionSchedulerImpl implements CompactionScheduler
     return duty.getAutoCompactionSnapshot();
   }
 
+  @Override
+  public CompactionSimulateResult simulateRunWithConfigUpdate(CompactionConfigUpdateRequest updateRequest)
+  {
+    return new CompactionRunSimulator(
+        statusTracker,
+        getLatestConfig(),
+        getCurrentDatasourceTimelines()
+    ).simulateRunWithConfigUpdate(updateRequest);
+  }
 }

@@ -29,7 +29,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
-import org.apache.druid.indexing.compact.CompactionScheduler;
+import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
@@ -88,7 +88,7 @@ public class DruidOverlord
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
-      final CompactionScheduler compactionScheduler,
+      final OverlordCompactionScheduler compactionScheduler,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )

@@ -32,7 +32,6 @@ import org.apache.druid.common.config.TestConfigManagerConfig;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -40,17 +39,10 @@ import org.apache.druid.metadata.TestMetadataStorageConnector;
 import org.apache.druid.metadata.TestMetadataStorageTablesConfig;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
-import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
-import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
-import org.apache.druid.server.coordinator.compact.CompactionDutySimulator;
-import org.apache.druid.server.coordinator.compact.CompactionSimulateResult;
-import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.config.DataSourceCompactionConfigBuilder;
-import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
-import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -92,7 +84,7 @@ public class CoordinatorCompactionConfigsResourceTest
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
     final AuditManager auditManager = new TestAuditManager();
     configManager = TestCoordinatorConfigManager.create(auditManager);
-    resource = new CoordinatorCompactionConfigsResource(configManager, null, auditManager);
+    resource = new CoordinatorCompactionConfigsResource(configManager, auditManager);
     configManager.delegate.start();
   }
 
@@ -447,6 +439,7 @@ public class CoordinatorCompactionConfigsResourceTest
   private static class TestCoordinatorConfigManager extends CoordinatorConfigManager
   {
     private final ConfigManager delegate;
+    private final JacksonConfigManager jackson;
     private int numUpdateAttempts;
     private ConfigManager.SetResult configUpdateResult;
 
@@ -468,22 +461,24 @@ public class CoordinatorCompactionConfigsResourceTest
           Suppliers.ofInstance(new TestConfigManagerConfig())
       );
 
-      return new TestCoordinatorConfigManager(configManager, dbConnector, tablesConfig, auditManager);
-    }
-
-    TestCoordinatorConfigManager(
-        ConfigManager configManager,
-        TestDBConnector dbConnector,
-        MetadataStorageTablesConfig tablesConfig,
-        AuditManager auditManager
-    )
-    {
-      super(
+      return new TestCoordinatorConfigManager(
           new JacksonConfigManager(configManager, OBJECT_MAPPER, auditManager),
+          configManager,
           dbConnector,
           tablesConfig
       );
+    }
+
+    TestCoordinatorConfigManager(
+        JacksonConfigManager jackson,
+        ConfigManager configManager,
+        TestDBConnector dbConnector,
+        MetadataStorageTablesConfig tablesConfig
+    )
+    {
+      super(jackson, dbConnector, tablesConfig);
       this.delegate = configManager;
+      this.jackson = jackson;
     }
 
     @Override
@@ -551,57 +546,5 @@ public class CoordinatorCompactionConfigsResourceTest
   private static class DS
   {
     static final String WIKI = "wiki";
-  }
-
-  @Test
-  public void testSimulateClusterCompactionConfigUpdate()
-  {
-    resource.addOrUpdateDatasourceCompactionConfig(
-        DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).build(),
-        mockHttpServletRequest
-    );
-
-    final TestSegmentsMetadataManager segmentsMetadataManager = new TestSegmentsMetadataManager();
-    final MetadataManager metadataManager = new MetadataManager(
-        null,
-        configManager, segmentsMetadataManager, null, null, null, null
-    );
-
-    // Add some segments to the timeline
-    final List<DataSegment> wikiSegments
-        = CreateDataSegments.ofDatasource(DS.WIKI)
-                            .forIntervals(10, Granularities.DAY)
-                            .withNumPartitions(10)
-                            .startingAt("2013-01-01")
-                            .eachOfSizeInMb(100);
-    wikiSegments.forEach(segmentsMetadataManager::addSegment);
-
-    resource = new CoordinatorCompactionConfigsResource(
-        null,
-        new CompactionDutySimulator(new CompactionStatusTracker(OBJECT_MAPPER), metadataManager, OBJECT_MAPPER),
-        null
-    );
-    Response response = resource.simulateClusterCompactionConfigUpdate(
-        new CompactionConfigUpdateRequest(null, null, null, null, null)
-    );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof CompactionSimulateResult);
-
-    CompactionSimulateResult simulateResult = (CompactionSimulateResult) response.getEntity();
-    Assert.assertEquals(
-        Arrays.asList(
-            Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
-            Arrays.asList("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-08/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-04/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, "not compacted yet"),
-            Arrays.asList("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "not compacted yet")
-        ),
-        simulateResult.getIntervalsToCompact()
-    );
   }
 }

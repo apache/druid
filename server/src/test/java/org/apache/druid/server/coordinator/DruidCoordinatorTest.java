@@ -50,9 +50,9 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -96,6 +96,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private static final Duration LOAD_TIMEOUT = Duration.standardMinutes(15);
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -192,7 +193,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionSchedulerConfig(true),
-        statusTracker
+        OBJECT_MAPPER
     );
   }
 
@@ -624,7 +625,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         CompactionSchedulerConfig.defaultConfig(),
-        statusTracker
+        OBJECT_MAPPER
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -665,7 +666,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         CompactionSchedulerConfig.defaultConfig(),
-        statusTracker
+        OBJECT_MAPPER
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -706,7 +707,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         CompactionSchedulerConfig.defaultConfig(),
-        statusTracker
+        OBJECT_MAPPER
     );
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -812,7 +813,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionSchedulerConfig(true),
-        statusTracker
+        OBJECT_MAPPER
     );
     coordinator.start();
 

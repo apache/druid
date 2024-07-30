@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -323,7 +323,7 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
         compactedSegmentStats.increment(candidates.getStats());
       } else if (compactionStatus.isSkipped()) {
         skippedSegmentStats.increment(candidates.getStats());
-        statusTracker.onIntervalSkipped(candidates, compactionStatus);
+        statusTracker.onSegmentsSkipped(candidates, compactionStatus);
         log.warn(
             "Skipping compaction for datasource[%s], interval[%s] due to reason[%s].",
             dataSource, interval, compactionStatus.getReason()
@@ -390,7 +390,7 @@ public class DataSourceCompactibleSegmentIterator implements Iterator<SegmentsTo
         } else {
           reason = CompactionStatus.skipped("interval locked by another task");
         }
-        statusTracker.onIntervalSkipped(candidates, reason);
+        statusTracker.onSegmentsSkipped(candidates, reason);
       }
     }
 

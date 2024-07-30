@@ -103,8 +103,6 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
-import org.apache.druid.server.coordinator.compact.CompactionDutySimulator;
-import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -257,11 +255,9 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(LookupCoordinatorManager.class).in(LazySingleton.class);
 
-            binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
             binder.bind(CoordinatorConfigManager.class);
             binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
-            binder.bind(CompactionDutySimulator.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);

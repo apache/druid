@@ -70,7 +70,7 @@ public class CompactionResourceTest
         expectedSnapshot
     );
 
-    EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
+    EasyMock.expect(mock.getAllCompactionSnapshots()).andReturn(expected).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource("");
@@ -87,7 +87,7 @@ public class CompactionResourceTest
         expectedSnapshot
     );
 
-    EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
+    EasyMock.expect(mock.getAllCompactionSnapshots()).andReturn(expected).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(null);
@@ -100,7 +100,7 @@ public class CompactionResourceTest
   {
     String dataSourceName = "datasource_1";
 
-    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(expectedSnapshot).once();
+    EasyMock.expect(mock.getCompactionSnapshot(dataSourceName)).andReturn(expectedSnapshot).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
@@ -113,7 +113,7 @@ public class CompactionResourceTest
   {
     String dataSourceName = "invalid_datasource";
 
-    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(null).once();
+    EasyMock.expect(mock.getCompactionSnapshot(dataSourceName)).andReturn(null).once();
     EasyMock.replay(mock);
 
     final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);

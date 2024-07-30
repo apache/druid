@@ -22,7 +22,7 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
 
 import javax.annotation.Nullable;
 

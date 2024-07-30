@@ -49,7 +49,6 @@ import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyF
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -213,7 +212,7 @@ public class CoordinatorSimulationBuilder
         null,
         CentralizedDatasourceSchemaConfig.create(),
         CompactionSchedulerConfig.defaultConfig(),
-        new CompactionStatusTracker(OBJECT_MAPPER)
+        OBJECT_MAPPER
     );
 
     return new SimulationImpl(coordinator, env);

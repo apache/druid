@@ -38,7 +38,6 @@ import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
-import org.apache.druid.server.coordinator.compact.CompactionDutySimulator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.utils.CollectionUtils;
@@ -74,18 +73,15 @@ public class CoordinatorCompactionConfigsResource
   static final int MAX_UPDATE_RETRIES = 5;
 
   private final CoordinatorConfigManager configManager;
-  private final CompactionDutySimulator simulator;
   private final AuditManager auditManager;
 
   @Inject
   public CoordinatorCompactionConfigsResource(
       CoordinatorConfigManager configManager,
-      CompactionDutySimulator simulator,
       AuditManager auditManager
   )
   {
     this.configManager = configManager;
-    this.simulator = simulator;
     this.auditManager = auditManager;
   }
 
@@ -129,16 +125,6 @@ public class CoordinatorCompactionConfigsResource
       return newConfig;
     };
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
-  }
-
-  @POST
-  @Path("/simulate")
-  @Consumes(MediaType.APPLICATION_JSON)
-  public Response simulateClusterCompactionConfigUpdate(
-      CompactionConfigUpdateRequest updatePayload
-  )
-  {
-    return Response.ok().entity(simulator.simulateRunWithConfigUpdate(updatePayload)).build();
   }
 
   @POST

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.JodaUtils;

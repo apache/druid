@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;

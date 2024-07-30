@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -61,10 +60,7 @@ public class CompactionStatusTracker
   private final Map<String, DatasourceStatus> datasourceStatuses = new HashMap<>();
   private final Map<String, SegmentsToCompact> submittedTaskIdToSegments = new HashMap<>();
 
-  @Inject
-  public CompactionStatusTracker(
-      ObjectMapper objectMapper
-  )
+  public CompactionStatusTracker(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
   }
@@ -89,10 +85,10 @@ public class CompactionStatusTracker
 
     final Interval compactionInterval = candidate.getUmbrellaInterval();
 
-    final IntervalStatus intervalStatus
-        = datasourceStatuses.getOrDefault(config.getDataSource(), DatasourceStatus.EMPTY)
-                            .getIntervalStatuses()
-                            .get(compactionInterval);
+    final IntervalStatus intervalStatus = datasourceStatuses
+        .getOrDefault(config.getDataSource(), DatasourceStatus.EMPTY)
+        .intervalStatus
+        .get(compactionInterval);
 
     if (intervalStatus == null) {
       return compactionStatus;
@@ -131,7 +127,12 @@ public class CompactionStatusTracker
     });
   }
 
-  public void onIntervalSkipped(
+  public void onSegmentsCompacted(SegmentsToCompact candidateSegments)
+  {
+    // do nothing
+  }
+
+  public void onSegmentsSkipped(
       SegmentsToCompact candidateSegments,
       CompactionStatus status
   )
@@ -222,11 +223,6 @@ public class CompactionStatusTracker
       });
 
       readyIntervals.forEach(intervalStatus::remove);
-    }
-
-    Map<Interval, IntervalStatus> getIntervalStatuses()
-    {
-      return intervalStatus;
     }
   }
 

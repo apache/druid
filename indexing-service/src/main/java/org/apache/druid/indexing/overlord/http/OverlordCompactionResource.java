@@ -21,12 +21,14 @@ package org.apache.druid.indexing.overlord.http;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.indexing.compact.CompactionScheduler;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
@@ -37,22 +39,19 @@ import java.util.Collections;
 
 /**
  * Contains the same logic as {@code CompactionResource} but the APIs are served
- * by {@link CompactionScheduler} instead of {@code DruidCoordinator}.
+ * by {@link OverlordCompactionScheduler} instead of {@code DruidCoordinator}.
  */
 @Path("/druid/indexer/v1/compaction")
 public class OverlordCompactionResource
 {
-  private static final Logger log = new Logger(OverlordCompactionResource.class);
-
-  private final CompactionScheduler scheduler;
+  private final OverlordCompactionScheduler scheduler;
 
   @Inject
   public OverlordCompactionResource(
-      CompactionScheduler scheduler
+      OverlordCompactionScheduler scheduler
   )
   {
     this.scheduler = scheduler;
-    log.info("Creating the new overlord compaction resource.");
   }
 
   @GET
@@ -63,7 +62,7 @@ public class OverlordCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    final Long notCompactedSegmentSizeBytes = scheduler.getSegmentBytesYetToBeCompacted(dataSource);
+    final Long notCompactedSegmentSizeBytes = scheduler.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
     if (notCompactedSegmentSizeBytes == null) {
       return Response.status(Response.Status.NOT_FOUND)
                      .entity(Collections.singletonMap("error", "Unknown DataSource"))
@@ -95,5 +94,17 @@ public class OverlordCompactionResource
       snapshots = Collections.singleton(autoCompactionSnapshot);
     }
     return Response.ok(Collections.singletonMap("latestStatus", snapshots)).build();
+  }
+
+  @POST
+  @Path("/simulate")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response simulateClusterCompactionConfigUpdate(
+      CompactionConfigUpdateRequest updatePayload
+  )
+  {
+    return Response.ok().entity(
+        scheduler.simulateRunWithConfigUpdate(updatePayload)
+    ).build();
   }
 }

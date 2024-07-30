@@ -56,7 +56,7 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * Dummy Overlord client used by the {@link CompactionSchedulerImpl} to fetch
+ * Dummy Overlord client used by the {@link OverlordCompactionScheduler} to fetch
  * task related info. This client simply redirects all queries to the
  * {@link TaskQueryTool} and all updates to the {@link TaskQueue}.
  */

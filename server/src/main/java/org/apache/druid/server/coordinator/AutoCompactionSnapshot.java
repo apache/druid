@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.server.coordinator.compact.CompactionStatistics;
+import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.validation.constraints.NotNull;
 import java.util.Objects;

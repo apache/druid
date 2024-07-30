@@ -17,26 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.compact;
+package org.apache.druid.server.compaction;
 
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Ordering;
 
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.Comparator;
 
 /**
- * Compaction Scheduler that runs on the Overlord if
- * {@code druid.compaction.scheduler.enabled=true}.
+ * This policy searches segments for compaction from smallest to largest.
  */
-public interface CompactionScheduler
+public class SmallestSegmentFirstPolicy extends BaseSegmentSearchPolicy
 {
-  void becomeLeader();
+  @JsonCreator
+  public SmallestSegmentFirstPolicy(
+      @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
+  )
+  {
+    super(priorityDatasource);
+  }
 
-  void stopBeingLeader();
-
-  Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots();
-
-  AutoCompactionSnapshot getCompactionSnapshot(String dataSource);
-
-  Long getSegmentBytesYetToBeCompacted(String dataSource);
-
+  @Override
+  protected Comparator<SegmentsToCompact> getSegmentComparator()
+  {
+    return Ordering.natural()
+                   .onResultOf(entry -> entry.getTotalBytes() / entry.size());
+  }
 }

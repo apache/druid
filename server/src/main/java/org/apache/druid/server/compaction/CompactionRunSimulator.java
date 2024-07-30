@@ -17,12 +17,10 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
@@ -39,7 +37,6 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.http.CompactionConfigUpdateRequest;
@@ -56,26 +53,25 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Simulates runs of auto-compaction duty to verify the expected list of
+ * Simulates runs of auto-compaction duty to obtain the expected list of
  * compaction tasks that would be submitted by the actual compaction duty.
  */
-public class CompactionDutySimulator
+public class CompactionRunSimulator
 {
-  private final ObjectMapper objectMapper;
-  private final MetadataManager metadataManager;
+  private final CoordinatorCompactionConfig compactionConfig;
   private final CompactionStatusTracker statusTracker;
+  private final Map<String, SegmentTimeline> datasourceTimelines;
   private final OverlordClient emptyOverlordClient = new EmptyOverlordClient();
 
-  @Inject
-  public CompactionDutySimulator(
+  public CompactionRunSimulator(
       CompactionStatusTracker statusTracker,
-      MetadataManager metadataManager,
-      ObjectMapper objectMapper
+      CoordinatorCompactionConfig compactionConfig,
+      Map<String, SegmentTimeline> datasourceTimelines
   )
   {
     this.statusTracker = statusTracker;
-    this.objectMapper = objectMapper;
-    this.metadataManager = metadataManager;
+    this.datasourceTimelines = datasourceTimelines;
+    this.compactionConfig = compactionConfig;
   }
 
   /**
@@ -93,18 +89,13 @@ public class CompactionDutySimulator
         updateRequest.getCompactionEngine(),
         updateRequest.getCompactionPolicy()
     );
-    final CoordinatorCompactionConfig configWithUnlimitedTaskSlots = CoordinatorCompactionConfig.from(
-        metadataManager.configs().getCurrentCompactionConfig(),
-        updateWithUnlimitedSlots
-    );
-    final Map<String, SegmentTimeline> datasourceTimelines
-        = metadataManager.segments()
-                         .getSnapshotOfDataSourcesWithAllUsedSegments()
-                         .getUsedSegmentsTimelinesPerDataSource();
+    final CoordinatorCompactionConfig configWithUnlimitedTaskSlots
+        = CoordinatorCompactionConfig.from(compactionConfig, updateWithUnlimitedSlots);
 
     final List<List<Object>> tableOfCompactibleIntervals = new ArrayList<>();
     final List<List<Object>> tableOfSkippedIntervals = new ArrayList<>();
-    final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(objectMapper) {
+    final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(null)
+    {
       @Override
       public CompactionStatus computeCompactionStatus(
           SegmentsToCompact candidateSegments,
@@ -115,7 +106,7 @@ public class CompactionDutySimulator
       }
 
       @Override
-      public void onIntervalSkipped(SegmentsToCompact candidateSegments, CompactionStatus status)
+      public void onSegmentsSkipped(SegmentsToCompact candidateSegments, CompactionStatus status)
       {
         // Add a row for each skipped interval
         tableOfSkippedIntervals.add(

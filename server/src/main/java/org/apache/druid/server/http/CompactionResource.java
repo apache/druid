@@ -29,6 +29,7 @@ import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -90,14 +91,26 @@ public class CompactionResource
   {
     final Collection<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
-      snapshots = coordinator.getAutoCompactionSnapshot().values();
+      snapshots = coordinator.getAllCompactionSnapshots().values();
     } else {
-      AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
+      AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getCompactionSnapshot(dataSource);
       if (autoCompactionSnapshot == null) {
         return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
     return Response.ok(ImmutableMap.of("latestStatus", snapshots)).build();
+  }
+
+  @POST
+  @Path("/simulate")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response simulateClusterCompactionConfigUpdate(
+      CompactionConfigUpdateRequest updatePayload
+  )
+  {
+    return Response.ok().entity(
+        coordinator.simulateRunWithConfigUpdate(updatePayload)
+    ).build();
   }
 }

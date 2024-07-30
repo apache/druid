@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
@@ -54,8 +55,11 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionRunSimulator;
+import org.apache.druid.server.compaction.CompactionScheduler;
+import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
@@ -88,6 +92,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -111,7 +116,7 @@ import java.util.stream.Collectors;
  *
  */
 @ManageLifecycle
-public class DruidCoordinator
+public class DruidCoordinator implements CompactionScheduler
 {
   /**
    * Orders newest segments (i.e. segments with most recent intervals) first.
@@ -153,6 +158,7 @@ public class DruidCoordinator
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
+  private final CompactionStatusTracker compactionStatusTracker;
   private final CompactSegments compactSegments;
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
@@ -204,7 +210,7 @@ public class DruidCoordinator
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionSchedulerConfig compactionSchedulerConfig,
-      CompactionStatusTracker compactionStatusTracker
+      ObjectMapper objectMapper
   )
   {
     this.config = config;
@@ -222,7 +228,8 @@ public class DruidCoordinator
     this.balancerStrategyFactory = config.getBalancerStrategyFactory();
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-    this.compactSegments = initializeCompactSegmentsDuty(compactionStatusTracker);
+    this.compactionStatusTracker = new CompactionStatusTracker(objectMapper);
+    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
@@ -344,21 +351,36 @@ public class DruidCoordinator
     return replicaCountsInCluster == null ? null : replicaCountsInCluster.required();
   }
 
+  @Override
   @Nullable
   public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
   {
     return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
+  @Override
   @Nullable
-  public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
+  public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
   {
     return compactSegments.getAutoCompactionSnapshot(dataSource);
   }
 
-  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
+  @Override
+  public Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots()
   {
     return compactSegments.getAutoCompactionSnapshot();
+  }
+
+  @Override
+  public CompactionSimulateResult simulateRunWithConfigUpdate(CompactionConfigUpdateRequest updateRequest)
+  {
+    return new CompactionRunSimulator(
+        compactionStatusTracker,
+        metadataManager.configs().getCurrentCompactionConfig(),
+        metadataManager.segments()
+                       .getSnapshotOfDataSourcesWithAllUsedSegments()
+                       .getUsedSegmentsTimelinesPerDataSource()
+    ).simulateRunWithConfigUpdate(updateRequest);
   }
 
   public String getCurrentLeader()
@@ -435,7 +457,8 @@ public class DruidCoordinator
     }
   }
 
-  private void becomeLeader()
+  @Override
+  public void becomeLeader()
   {
     synchronized (lock) {
       if (!started) {
@@ -527,7 +550,8 @@ public class DruidCoordinator
     }
   }
 
-  private void stopBeingLeader()
+  @Override
+  public void stopBeingLeader()
   {
     synchronized (lock) {
 
@@ -536,6 +560,7 @@ public class DruidCoordinator
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStop();
       }
+      compactionStatusTracker.reset();
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();

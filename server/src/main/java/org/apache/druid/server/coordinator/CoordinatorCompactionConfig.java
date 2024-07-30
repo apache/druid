@@ -24,8 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 
 import javax.annotation.Nullable;
