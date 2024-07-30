@@ -23,17 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
-import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class CompactionRunSimulatorTest
@@ -56,15 +55,13 @@ public class CompactionRunSimulatorTest
 
     final CompactionSimulateResult simulateResult = new CompactionRunSimulator(
         new CompactionStatusTracker(OBJECT_MAPPER),
-        CoordinatorCompactionConfig.from(
-            Collections.singletonList(
-                DataSourceCompactionConfig.builder().forDataSource("wiki").build()
-            )
+        DruidCompactionConfig.empty().withDatasourceConfig(
+            DataSourceCompactionConfig.builder().forDataSource("wiki").build()
         ),
         segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
                                .getUsedSegmentsTimelinesPerDataSource()
     ).simulateRunWithConfigUpdate(
-        new CompactionConfigUpdateRequest(null, null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null, null)
     );
     Assert.assertNotNull(simulateResult);
 

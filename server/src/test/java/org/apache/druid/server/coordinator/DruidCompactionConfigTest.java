@@ -62,7 +62,8 @@ public class DruidCompactionConfigTest
         null,
         null,
         null,
-        CompactionEngine.MSQ
+        CompactionEngine.MSQ,
+        null
     );
 
     final String json = MAPPER.writeValueAsString(config);
@@ -75,7 +76,8 @@ public class DruidCompactionConfigTest
   {
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
 
-    final ClusterCompactionConfig clusterConfig = new ClusterCompactionConfig(0.5, 10, false, CompactionEngine.MSQ);
+    final ClusterCompactionConfig clusterConfig
+        = new ClusterCompactionConfig(0.5, 10, false, CompactionEngine.MSQ, null);
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
     Assert.assertEquals(clusterConfig, copy.clusterConfig());

@@ -92,7 +92,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -372,7 +371,7 @@ public class DruidCoordinator implements CompactionScheduler
   }
 
   @Override
-  public CompactionSimulateResult simulateRunWithConfigUpdate(CompactionConfigUpdateRequest updateRequest)
+  public CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest)
   {
     return new CompactionRunSimulator(
         compactionStatusTracker,

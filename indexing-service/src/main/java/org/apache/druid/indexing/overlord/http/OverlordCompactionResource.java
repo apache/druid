@@ -23,7 +23,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.http.CompactionConfigUpdateRequest;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.Consumes;
@@ -100,7 +100,7 @@ public class OverlordCompactionResource
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response simulateClusterCompactionConfigUpdate(
-      CompactionConfigUpdateRequest updatePayload
+      ClusterCompactionConfig updatePayload
   )
   {
     return Response.ok().entity(

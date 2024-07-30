@@ -40,14 +40,14 @@ import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Duration;
 
@@ -234,7 +234,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   private synchronized void processCompactionQueue(
-      CoordinatorCompactionConfig currentConfig
+      DruidCompactionConfig currentConfig
   )
   {
     final CoordinatorRunStats stats = new CoordinatorRunStats();
@@ -267,12 +267,12 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     emitter.emit(eventBuilder.setMetric(stat.getMetricName(), value));
   }
 
-  private CoordinatorCompactionConfig getLatestConfig()
+  private DruidCompactionConfig getLatestConfig()
   {
     return configManager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
+        DruidCompactionConfig.CONFIG_KEY,
+        DruidCompactionConfig.class,
+        DruidCompactionConfig.empty()
     ).get();
   }
 
@@ -301,7 +301,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   @Override
-  public CompactionSimulateResult simulateRunWithConfigUpdate(CompactionConfigUpdateRequest updateRequest)
+  public CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest)
   {
     return new CompactionRunSimulator(
         statusTracker,

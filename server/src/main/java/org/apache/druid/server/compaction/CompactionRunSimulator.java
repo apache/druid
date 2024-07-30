@@ -35,11 +35,11 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.http.CompactionConfigUpdateRequest;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
@@ -58,14 +58,14 @@ import java.util.Set;
  */
 public class CompactionRunSimulator
 {
-  private final CoordinatorCompactionConfig compactionConfig;
+  private final DruidCompactionConfig compactionConfig;
   private final CompactionStatusTracker statusTracker;
   private final Map<String, SegmentTimeline> datasourceTimelines;
   private final OverlordClient emptyOverlordClient = new EmptyOverlordClient();
 
   public CompactionRunSimulator(
       CompactionStatusTracker statusTracker,
-      CoordinatorCompactionConfig compactionConfig,
+      DruidCompactionConfig compactionConfig,
       Map<String, SegmentTimeline> datasourceTimelines
   )
   {
@@ -79,18 +79,18 @@ public class CompactionRunSimulator
    * assuming unlimited compaction task slots.
    */
   public CompactionSimulateResult simulateRunWithConfigUpdate(
-      CompactionConfigUpdateRequest updateRequest
+      ClusterCompactionConfig updateRequest
   )
   {
-    final CompactionConfigUpdateRequest updateWithUnlimitedSlots = new CompactionConfigUpdateRequest(
+    final ClusterCompactionConfig updateWithUnlimitedSlots = new ClusterCompactionConfig(
         1.0,
         Integer.MAX_VALUE,
         updateRequest.getUseAutoScaleSlots(),
-        updateRequest.getCompactionEngine(),
+        updateRequest.getEngine(),
         updateRequest.getCompactionPolicy()
     );
-    final CoordinatorCompactionConfig configWithUnlimitedTaskSlots
-        = CoordinatorCompactionConfig.from(compactionConfig, updateWithUnlimitedSlots);
+    final DruidCompactionConfig configWithUnlimitedTaskSlots
+        = compactionConfig.withClusterConfig(updateWithUnlimitedSlots);
 
     final List<List<Object>> tableOfCompactibleIntervals = new ArrayList<>();
     final List<List<Object>> tableOfSkippedIntervals = new ArrayList<>();

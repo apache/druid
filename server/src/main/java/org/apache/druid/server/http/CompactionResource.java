@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -106,7 +107,7 @@ public class CompactionResource
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response simulateClusterCompactionConfigUpdate(
-      CompactionConfigUpdateRequest updatePayload
+      ClusterCompactionConfig updatePayload
   )
   {
     return Response.ok().entity(

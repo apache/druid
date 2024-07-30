@@ -20,7 +20,7 @@
 package org.apache.druid.server.compaction;
 
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.http.CompactionConfigUpdateRequest;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 
 import java.util.Map;
 
@@ -36,6 +36,6 @@ public interface CompactionScheduler
 
   Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource);
 
-  CompactionSimulateResult simulateRunWithConfigUpdate(CompactionConfigUpdateRequest updateRequest);
+  CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);
 
 }
