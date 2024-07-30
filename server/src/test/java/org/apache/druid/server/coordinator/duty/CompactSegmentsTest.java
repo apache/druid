@@ -720,10 +720,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -778,10 +776,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -828,10 +824,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -878,10 +872,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -939,10 +931,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -992,10 +982,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1042,10 +1030,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1153,10 +1139,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1274,10 +1258,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1325,10 +1307,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1378,10 +1358,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1459,10 +1437,8 @@ public class CompactSegmentsTest
             dataSourceName,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1546,10 +1522,8 @@ public class CompactSegmentsTest
             dataSourceName,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1604,10 +1578,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1657,10 +1629,8 @@ public class CompactSegmentsTest
             dataSource,
             0,
             500L,
-            null,
             new Period("PT0H"), // smaller than segment interval
             new UserCompactionTaskQueryTuningConfig(
-                null,
                 null,
                 null,
                 null,
@@ -1985,10 +1955,8 @@ public class CompactSegmentsTest
               dataSource,
               0,
               50L,
-              null,
               new Period("PT1H"), // smaller than segment interval
               new UserCompactionTaskQueryTuningConfig(
-                  null,
                   null,
                   null,
                   null,

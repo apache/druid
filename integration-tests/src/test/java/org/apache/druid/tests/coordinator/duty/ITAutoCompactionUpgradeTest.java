@@ -75,10 +75,8 @@ public class ITAutoCompactionUpgradeTest extends AbstractIndexerTest
         UPGRADE_DATASOURCE_NAME,
         null,
         null,
-        null,
         newSkipOffset,
         new UserCompactionTaskQueryTuningConfig(
-            null,
             null,
             null,
             null,

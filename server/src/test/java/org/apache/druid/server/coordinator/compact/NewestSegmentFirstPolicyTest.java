@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -1517,7 +1518,7 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec()
   {
     NullHandling.initializeForTests();
-    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
+    final PartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, 1000L);
     final SegmentTimeline timeline = createTimeline(
         new SegmentGenerateSpec(
             Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
@@ -1545,7 +1546,6 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 new OnheapIncrementalIndex.Spec(true),
                 null,
-                1000L,
                 null,
                 partitionsSpec,
                 IndexSpec.DEFAULT,
@@ -1580,7 +1580,6 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 new OnheapIncrementalIndex.Spec(false),
                 null,
-                1000L,
                 null,
                 partitionsSpec,
                 IndexSpec.DEFAULT,
@@ -2015,7 +2014,6 @@ public class NewestSegmentFirstPolicyTest
         DATA_SOURCE,
         0,
         inputSegmentSizeBytes,
-        null,
         skipOffsetFromLatest,
         tuningConfig,
         granularitySpec,

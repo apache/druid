@@ -304,11 +304,9 @@ public class ClientCompactionTaskQuerySerdeTest
             new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true
         ),
         new ClientCompactionTaskQueryTuningConfig(
-            100,
             new OnheapIncrementalIndex.Spec(true),
             40000,
             2000L,
-            30000L,
             SEGMENTS_SPLIT_HINT_SPEC,
             DYNAMIC_PARTITIONS_SPEC,
             INDEX_SPEC,

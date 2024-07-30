@@ -41,7 +41,7 @@ public class CompactionStatusTest
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(null);
     Assert.assertEquals(
-        new DynamicPartitionsSpec(null, Long.MAX_VALUE),
+        new DynamicPartitionsSpec(null, null),
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
   }
@@ -83,52 +83,6 @@ public class CompactionStatusTest
   }
 
   @Test
-  public void testFindPartitionsSpecFromConfigWithDeprecatedMaxRowsPerSegmentAndMaxTotalRowsReturnGivenValues()
-  {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
-        "datasource",
-        null,
-        null,
-        100,
-        null,
-        new UserCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            null,
-            1000L,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ),
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-    Assert.assertEquals(
-        new DynamicPartitionsSpec(100, 1000L),
-        CompactionStatus.findPartitionsSpecFromConfig(
-            ClientCompactionTaskQueryTuningConfig.from(config)
-        )
-    );
-  }
-
-  @Test
   public void testFindPartitionsSpecWhenGivenIsHashed()
   {
     final PartitionsSpec partitionsSpec =
@@ -160,7 +114,7 @@ public class CompactionStatusTest
   {
     return new DataSourceCompactionConfig(
         DS_WIKI,
-        null, null, null, null, createTuningConfig(partitionsSpec),
+        null, null, null, createTuningConfig(partitionsSpec),
         null, null, null, null, null, null, null
     );
   }
@@ -171,7 +125,7 @@ public class CompactionStatusTest
   {
     return new UserCompactionTaskQueryTuningConfig(
         null,
-        null, null, null, null, partitionsSpec, null, null, null,
+        null, null, null, partitionsSpec, null, null, null,
         null, null, null, null, null, null, null, null, null, null
     );
   }

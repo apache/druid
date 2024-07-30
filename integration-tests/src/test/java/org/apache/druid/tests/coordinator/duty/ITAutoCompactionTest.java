@@ -1800,10 +1800,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         fullDatasourceName,
         null,
         null,
-        null,
         skipOffsetFromLatest,
         new UserCompactionTaskQueryTuningConfig(
-            null,
             null,
             null,
             null,
