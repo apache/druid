@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
-import org.apache.druid.extendedset.intset.EmptyIntIterator;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
@@ -260,12 +259,5 @@ public class BitmapOffset extends Offset
   {
     inspector.visit("iterator", iterator);
     inspector.visit("fullness", fullness);
-  }
-
-  private static IntIterator safeClone(IntIterator iterator)
-  {
-    // Calling clone() on empty iterators from RoaringBitmap library sometimes fails with NPE,
-    // see https://github.com/apache/druid/issues/4709, https://github.com/RoaringBitmap/RoaringBitmap/issues/177
-    return iterator.clone();
   }
 }
