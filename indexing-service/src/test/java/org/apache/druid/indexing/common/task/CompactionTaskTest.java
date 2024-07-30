@@ -749,7 +749,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -810,7 +811,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -873,7 +875,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -943,7 +946,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -993,7 +997,8 @@ public class CompactionTaskTest
         null,
         customMetricsSpec,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1036,7 +1041,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1086,7 +1092,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1116,7 +1123,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1157,7 +1165,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1201,7 +1210,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
@@ -1246,7 +1256,8 @@ public class CompactionTaskTest
             new PeriodGranularity(Period.months(3), null, null),
             null
         ),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1293,7 +1304,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1338,7 +1350,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1383,7 +1396,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1413,7 +1427,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        null
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
