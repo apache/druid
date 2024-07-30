@@ -42,7 +42,6 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -169,7 +168,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected final void executeExplain(Context x) throws IOException, SQLException
+    protected final void executeExplain(Context x) throws IOException
     {
       DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
       List<RelNode> logged = new ArrayList<>();
