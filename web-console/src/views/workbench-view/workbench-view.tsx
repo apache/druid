@@ -90,7 +90,11 @@ function externalDataTabId(tabId: string | undefined): boolean {
   return String(tabId).startsWith('connect-external-data');
 }
 
-export interface WorkbenchViewProps {
+export interface WorkbenchViewProps
+  extends Pick<
+    ComponentProps<typeof QueryTab>,
+    'enginesLabelFn' | 'maxTaskLabelFn' | 'defaultSelectDestinationFn'
+  > {
   capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
@@ -102,8 +106,6 @@ export interface WorkbenchViewProps {
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   maxTaskMenuHeader?: JSX.Element;
-  enginesLabelFn?: ComponentProps<typeof QueryTab>['enginesLabelFn'];
-  maxTaskLabelFn?: ComponentProps<typeof QueryTab>['maxTaskLabelFn'];
   hideToolbar?: boolean;
 }
 
@@ -657,6 +659,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       maxTaskMenuHeader,
       enginesLabelFn,
       maxTaskLabelFn,
+      defaultSelectDestinationFn,
     } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
@@ -684,6 +687,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           maxTaskMenuHeader={maxTaskMenuHeader}
           enginesLabelFn={enginesLabelFn}
           maxTaskLabelFn={maxTaskLabelFn}
+          defaultSelectDestinationFn={defaultSelectDestinationFn}
           runMoreMenu={
             <Menu>
               {allowExplain &&

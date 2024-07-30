@@ -60,7 +60,7 @@ import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
 import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
-import { RunPanel } from '../run-panel/run-panel';
+import { DEFAULT_SELECT_DESTINATION_FN, RunPanel } from '../run-panel/run-panel';
 import { workStateStore } from '../work-state-store';
 
 import './query-tab.scss';
@@ -69,7 +69,11 @@ const queryRunner = new QueryRunner({
   inflateDateStrategy: 'none',
 });
 
-export interface QueryTabProps {
+export interface QueryTabProps
+  extends Pick<
+    ComponentProps<typeof RunPanel>,
+    'enginesLabelFn' | 'maxTaskLabelFn' | 'defaultSelectDestinationFn'
+  > {
   query: WorkbenchQuery;
   id: string;
   mandatoryQueryContext: QueryContext | undefined;
@@ -83,8 +87,6 @@ export interface QueryTabProps {
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   maxTaskMenuHeader?: JSX.Element;
-  enginesLabelFn?: ComponentProps<typeof RunPanel>['enginesLabelFn'];
-  maxTaskLabelFn?: ComponentProps<typeof RunPanel>['maxTaskLabelFn'];
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -104,6 +106,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     maxTaskMenuHeader,
     enginesLabelFn,
     maxTaskLabelFn,
+    defaultSelectDestinationFn = DEFAULT_SELECT_DESTINATION_FN,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -338,6 +341,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         .changePrefixLines(querySlice.startRowColumn.row);
     }
 
+    if (!effectiveQuery.queryContext.selectDestination) {
+      effectiveQuery = effectiveQuery.changeQueryContext({
+        ...effectiveQuery.queryContext,
+        selectDestination: defaultSelectDestinationFn(effectiveQuery.getEffectiveEngine()),
+      });
+    }
+
     if (effectiveQuery.getEffectiveEngine() === 'sql-msq-task') {
       effectiveQuery = preview
         ? effectiveQuery.makePreview()
@@ -408,6 +418,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               maxTaskMenuHeader={maxTaskMenuHeader}
               enginesLabelFn={enginesLabelFn}
               maxTaskLabelFn={maxTaskLabelFn}
+              defaultSelectDestinationFn={defaultSelectDestinationFn}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel
