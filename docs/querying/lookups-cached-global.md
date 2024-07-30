@@ -225,7 +225,7 @@ You can specify remapping values for each globally cached lookup with a JSON obj
 
 The `pollPeriod` value specifies the period in ISO 8601 format between checks for replacement data for the lookup. If the source of the lookup provides a timestamp, Druid only updates the lookup when the lookup has changed since the prior `pollPeriod` timestamp. A value of 0, an absent parameter, or `null` all direct Druid to populate the lookup once without attempting to check again for new data. 
 
-Whenever a poll occurs, the updating system looks for a file with the most recent timestamp and assumes that is the one with the most recent data set, using it to replace the local cache of the lookup data.
+When Druid polls the lookup source, the updating system treats the file with the most recent timestamp as the one with the most recent data set and replace the local cache of the lookup data with the file contents.
 
 The `namespaceParseSpec` can be one of a number of values. The examples below rename `foo` to `bar`, `baz` to `bat`, and `buck` to `truck`. All `parseSpec` types assume each input is delimited by a new line.
 
