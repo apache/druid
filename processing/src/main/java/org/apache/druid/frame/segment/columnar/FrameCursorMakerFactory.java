@@ -140,7 +140,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
         );
 
         if (filterToUse == null) {
-          return new FrameVectorCursor(baseOffset, baseColumnSelectorFactory, closer);
+          return new FrameVectorCursor(baseOffset, baseColumnSelectorFactory);
         } else {
           final VectorValueMatcher matcher = filterToUse.makeVectorMatcher(baseColumnSelectorFactory);
           final FilteredVectorOffset filteredOffset = FilteredVectorOffset.create(
@@ -155,7 +155,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
               spec.getVirtualColumns()
           );
 
-          return new FrameVectorCursor(filteredOffset, filteredColumnSelectorFactory, closer);
+          return new FrameVectorCursor(filteredOffset, filteredColumnSelectorFactory);
         }
       }
 
