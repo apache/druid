@@ -783,17 +783,19 @@ public class IndexTaskTest extends IngestionTestBase
         final List<Integer> hashes = new ArrayList<>();
         final DimensionSelector selector = cursor.getColumnSelectorFactory()
                                                  .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-        final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
-            HashBasedNumberedShardSpec.serializeGroupKey(
-                jsonMapper,
-                Collections.singletonList(selector.getObject())
-            ),
-            hashBasedNumberedShardSpec.getNumBuckets()
-        );
-        hashes.add(hash);
-        cursor.advance();
+        while (!cursor.isDone()) {
+          final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+              HashBasedNumberedShardSpec.serializeGroupKey(
+                  jsonMapper,
+                  // list of list because partitioning extractKeys uses InputRow.getDimension which always returns a List<String>
+                  Collections.singletonList(Collections.singletonList(selector.getObject()))
+              ),
+              hashBasedNumberedShardSpec.getNumBuckets()
+          );
+          hashes.add(hash);
+          cursor.advance();
+        }
 
-        // todo (clint): wtf does this mean
         Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
       }
     }
