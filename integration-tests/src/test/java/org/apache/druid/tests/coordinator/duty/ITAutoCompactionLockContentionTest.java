@@ -19,11 +19,13 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -53,7 +55,6 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -265,13 +266,13 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void ensureLockedIntervals(Interval... intervals)
   {
-    final Map<String, Integer> minTaskPriority = Collections.singletonMap(fullDatasourceName, 0);
+    final LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
     final List<Interval> lockedIntervals = new ArrayList<>();
     ITRetryUtil.retryUntilTrue(
         () -> {
           lockedIntervals.clear();
 
-          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(minTaskPriority);
+          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(ImmutableList.of(lockFilterPolicy));
           if (allIntervals.containsKey(fullDatasourceName)) {
             lockedIntervals.addAll(allIntervals.get(fullDatasourceName));
           }
