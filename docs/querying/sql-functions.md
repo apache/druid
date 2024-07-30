@@ -396,67 +396,188 @@ Performs a bitwise XOR operation on all input values.
 
 ## BITWISE_AND
 
-`BITWISE_AND(expr1, expr2)`
+Returns the bitwise AND between two expressions: `expr1 & expr2`. 
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `BITWISE_AND(expr1, expr2)`
+* **Function type:** Scalar, numeric
 
-Returns the bitwise AND between the two expressions, that is, `expr1 & expr2`.
+<details><summary>Example</summary>
+
+The following example performs the bitwise AND operation `12 & 10`.
+
+```sql
+SELECT BITWISE_AND(12, 10) AS "bitwise_and"
+```
+Returns the following:
+
+| `bitwise_and` | 
+| -- |
+| 8 | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_COMPLEMENT
 
-`BITWISE_COMPLEMENT(expr)`
+Returns the bitwise complement (bitwise not) for the expression: `~expr`.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `BITWISE_COMPLEMENT(expr)`
+* **Function type:** Scalar, numeric
 
-Returns the bitwise NOT for the expression, that is, `~expr`.
+<details><summary>Example</summary>
+
+The following example performs the bitwise complement operation `~12`.
+
+```sql
+SELECT BITWISE_COMPLEMENT(12) AS "bitwise_complement"
+```
+Returns the following:
+
+| `bitwise_complement` | 
+| -- |
+| -13 | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_CONVERT_DOUBLE_TO_LONG_BITS
 
-`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
+Converts the bits of an IEEE 754 floating-point double value to long.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:**`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
+* **Function type:** Scalar, numeric
 
-Converts the bits of an IEEE 754 floating-point double value to a long.
+<details><summary>Example</summary>
+
+The following example returns the IEEE 754 floating-point double representation of `255` as a long. 
+
+```sql
+SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
+```
+Returns the following:
+
+| `ieee_754_double_to_long` | 
+| -- |
+| `4643176031446892544` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
+
 
 ## BITWISE_CONVERT_LONG_BITS_TO_DOUBLE
 
-`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Converts a long to the IEEE 754 floating-point double specified by the bits stored in the long.
+
+* **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+The following example returns the long representation of `4643176031446892544` as an IEEE 754 floating-point double.
+
+```sql
+SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee_754_double"
+```
+Returns the following:
+
+| `long_to_ieee_754_double` | 
+| -- |
+| `255` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_OR
 
-`BITWISE_OR(expr1, expr2)`
+Returns the bitwise OR between the two expressions: `expr1 | expr2`.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `BITWISE_OR(expr1, expr2)`
+* **Function type:** Scalar, numeric
 
-Returns the bitwise OR between the two expressions, that is, `expr1 | expr2`.
+<details><summary>Example</summary>
+
+The following example performs the bitwise OR operation `12 | 10`.
+
+```sql
+SELECT BITWISE_OR(12, 10) AS "bitwise_or"
+```
+Returns the following:
+
+| `bitwise_or` | 
+| -- |
+| `14` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_SHIFT_LEFT
 
-`BITWISE_SHIFT_LEFT(expr1, expr2)`
+Returns the bitwise left shift by x positions of an expr: `expr << x`.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `BITWISE_SHIFT_LEFT(expr, x)`
+* **Function type:** Scalar, numeric
 
-Returns a bitwise left shift of expr1, that is, `expr1 << expr2`.
+<details><summary>Example</summary>
+
+The following example performs the bitwise SHIFT operation `2 << 3`.
+
+```sql
+SELECT BITWISE_SHIFT_LEFT(2, 3) AS "bitwise_shift_left"
+```
+Returns the following:
+
+| `bitwise_shift_left` | 
+| -- |
+| `16` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_SHIFT_RIGHT
 
-`BITWISE_SHIFT_RIGHT(expr1, expr2)`
+Returns the bitwise right shift by x positions of an expr: `expr >> x`.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `BITWISE_SHIFT_RIGHT(expr, x)`
+* **Function type:** Scalar, numeric
 
-Returns a bitwise right shift of expr1, that is, `expr1 >> expr2`.
+<details><summary>Example</summary>
+
+The following example performs the bitwise SHIFT operation `16 >> 3`.
+
+```sql
+SELECT BITWISE_SHIFT_RIGHT(16, 3) AS "bitwise_shift_right"
+```
+Returns the following:
+
+| `bitwise_shift_right` | 
+| -- |
+| `2` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_XOR
 
-`BITWISE_XOR(expr1, expr2)`
+Returns the bitwise exclusive OR between the two expressions: `expr1 ^ expr2`.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `BITWISE_XOR(expr1, expr2)`
+* **Function type:** Scalar, numeric
 
-Returns the bitwise exclusive OR between the two expressions, that is, `expr1 ^ expr2`.
+<details><summary>Example</summary>
+
+The following example performs the bitwise XOR operation `12 ^ 10`.
+
+```sql
+SELECT BITWISE_XOR(12, 10) AS "bitwise_xor"
+```
+Returns the following:
+
+| `bitwise_xor` | 
+| -- |
+| `6` | 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## BLOOM_FILTER
 
