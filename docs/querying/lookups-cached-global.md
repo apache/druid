@@ -26,7 +26,7 @@ import {DRUIDVERSION} from "@site/static/js/versions.js"
   ~ under the License.
   -->
 
-Globally cached lookups all draw from the same cache pool, allowing each Druid process to have a fixed cache pool that can be used by cached lookups.
+Globally cached lookups all draw from the same cache pool, allowing each Druid service to have a fixed cache pool that can be used by cached lookups.
 
 To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` in the extensions load list.
 
