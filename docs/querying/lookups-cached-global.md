@@ -331,7 +331,7 @@ With `customJson` parsing, if the value field for a particular row is missing or
 
 #### simpleJson lookupParseSpec
 
-The `simpleJson` `lookupParseSpec` doesn't take any parameters. It's simply a line-delimited JSON file where the field is the key, and the field's value is the value.
+The `simpleJson` `lookupParseSpec` doesn't take any parameters. It's simply a newline-delimited JSON file where the field is the key, and the field's value is the value.
 
 Example input:
 
