@@ -167,7 +167,7 @@ setting namespaces (Broker, Peon, Historical)
 Druid populates the cache in different ways depending on the following settings. In general, most namespaces employ
 a `pollPeriod` at the end of which they poll the remote resource of interest for updates.
 
-`onHeap` uses `ConcurrentMap`s in the java heap, and therefore affects garbage collection and heap sizing.
+`onHeap` uses `ConcurrentMap`s in the java heap which affects garbage collection and heap sizing.
 `offHeap` uses an on-heap buffer and MapDB using memory-mapped files in the java temporary directory.
 Therefore, if the total number of entries in the `cachedNamespace` exceeds the buffer's configured capacity, the extra entries are kept in memory as page cache, and paged in and out by general OS tunings.
 We strongly recommended that you set `druid.lookup.namespace.numBufferedEntries` when using `offHeap`. Select a value between 10% and 50% of the number of entries in the lookup.
