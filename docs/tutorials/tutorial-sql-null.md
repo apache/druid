@@ -118,7 +118,7 @@ Druid returns the following:
 |`another_value`|1|1|
 |`some_value`|1|1|
 
-Also note that GROUP BY expressions yields distinct entries for `null` and the empty string.
+Also note that GROUP BY expressions yield distinct entries for `null` and the empty string.
 
 ### Filter for empty strings in addition to null
 

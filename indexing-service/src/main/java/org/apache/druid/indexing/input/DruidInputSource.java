@@ -51,7 +51,6 @@ import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
-import org.apache.druid.indexing.firehose.WindowedSegmentId;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -133,7 +132,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
 
   private final String dataSource;
   // Exactly one of interval and segmentIds should be non-null. Typically 'interval' is specified directly
-  // by the user creating this firehose and 'segmentIds' is used for sub-tasks if it is split for parallel
+  // by the user creating this input source and 'segmentIds' is used for sub-tasks if it is split for parallel
   // batch ingestion.
   @Nullable
   private final Interval interval;
@@ -164,7 +163,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
   public DruidInputSource(
       @JsonProperty("dataSource") final String dataSource,
       @JsonProperty("interval") @Nullable Interval interval,
-      // Specifying "segments" is intended only for when this FirehoseFactory has split itself,
+      // Specifying "segments" is intended only for when this input source has split itself,
       // not for direct end user use.
       @JsonProperty("segments") @Nullable List<WindowedSegmentId> segmentIds,
       @JsonProperty("filter") DimFilter dimFilter,

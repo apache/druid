@@ -27,11 +27,11 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Position,
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { SqlExpression } from '@druid-toolkit/query';
 import {
   C,
@@ -179,6 +179,8 @@ export interface ColumnTreeState {
   searchString: string;
   searchMode: SearchMode;
   prevSearchHash?: string;
+  expandedTables: Map<string, boolean>;
+  prevExpandedTables: Map<string, boolean>;
 }
 
 function computeSearchHash(searchString: string, searchMode: SearchMode): string {
@@ -218,12 +220,14 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       onQueryChange,
       highlightTable,
     } = props;
-    const { searchString, searchMode } = state;
+    const { searchString, searchMode, expandedTables, prevExpandedTables } = state;
     const searchHash = computeSearchHash(searchString, searchMode);
 
     if (
       columnMetadata &&
-      (columnMetadata !== state.prevColumnMetadata || searchHash !== state.prevSearchHash)
+      (columnMetadata !== state.prevColumnMetadata ||
+        searchHash !== state.prevSearchHash ||
+        expandedTables.size !== prevExpandedTables.size)
     ) {
       const lowerSearchString = searchString.toLowerCase();
       const isSearching = Boolean(lowerSearchString);
@@ -252,11 +256,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
               icon: IconNames.TH,
               className: tableName === highlightTable ? 'highlight' : undefined,
               isExpanded:
-                isSearching &&
-                (searchMode === 'columns-only' ||
-                  !tableName.toLowerCase().includes(lowerSearchString)),
+                expandedTables.has(tableName) ||
+                (isSearching &&
+                  (searchMode === 'columns-only' ||
+                    !tableName.toLowerCase().includes(lowerSearchString))),
               label: (
-                <Popover2
+                <Popover
                   position={Position.RIGHT}
                   content={
                     <Deferred
@@ -460,7 +465,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   }
                 >
                   {tableName}
-                </Popover2>
+                </Popover>
               ),
               childNodes: metadata.map(
                 (columnData): TreeNodeInfo => ({
@@ -475,7 +480,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     />
                   ),
                   label: (
-                    <Popover2
+                    <Popover
                       position={Position.RIGHT}
                       autoFocus={false}
                       content={
@@ -554,7 +559,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                       }
                     >
                       {columnData.COLUMN_NAME}
-                    </Popover2>
+                    </Popover>
                   ),
                 }),
               ),
@@ -595,6 +600,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         selectedTreeIndex,
         currentSchemaSubtree,
         prevSearchHash: searchHash,
+        prevExpandedTables: expandedTables,
       };
     }
     return null;
@@ -606,6 +612,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       selectedTreeIndex: -1,
       searchString: '',
       searchMode: 'tables-and-columns',
+      expandedTables: new Map(),
+      prevExpandedTables: new Map(),
     };
   }
 
@@ -646,7 +654,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
             {searchString !== '' && (
               <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
             )}
-            <Popover2
+            <Popover
               position="bottom-left"
               content={
                 <Menu>
@@ -663,7 +671,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
               }
             >
               <Button icon={IconNames.SETTINGS} />
-            </Popover2>
+            </Popover>
           </ButtonGroup>
         }
       />
@@ -686,13 +694,19 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   };
 
   private readonly handleNodeCollapse = (nodeData: TreeNodeInfo) => {
-    nodeData.isExpanded = false;
-    this.forceUpdate();
+    const expandedTables = new Map(this.state.expandedTables);
+    expandedTables.delete(String(nodeData.id));
+    this.setState({
+      expandedTables,
+    });
   };
 
   private readonly handleNodeExpand = (nodeData: TreeNodeInfo) => {
-    nodeData.isExpanded = true;
-    this.forceUpdate();
+    const expandedTables = new Map(this.state.expandedTables);
+    expandedTables.set(String(nodeData.id), true);
+    this.setState({
+      expandedTables,
+    });
   };
 
   render() {

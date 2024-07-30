@@ -406,7 +406,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 new SettableSplittableLocalInputSource(inputDir, VALID_INPUT_SOURCE_FILTER, true),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -460,7 +459,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 new SettableSplittableLocalInputSource(inputDir, VALID_INPUT_SOURCE_FILTER, true),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -803,7 +801,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 new SettableSplittableLocalInputSource(inputDir, "*.json", true),
                 new JsonInputFormat(
                     new JSONPathSpec(true, null),
@@ -887,7 +884,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 null
             ),
             new ParallelIndexIOConfig(
-                null,
                 new SettableSplittableLocalInputSource(inputDir, "*.json", true),
                 new JsonInputFormat(
                     new JSONPathSpec(true, null),
@@ -967,7 +963,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               null
           ),
           new ParallelIndexIOConfig(
-              null,
               new SettableSplittableLocalInputSource(inputDir, inputSourceFilter, splittableInputSource),
               DEFAULT_INPUT_FORMAT,
               appendToExisting,
@@ -990,7 +985,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
               null
           ),
           new ParallelIndexIOConfig(
-              null,
               new LocalInputSource(inputDir, inputSourceFilter),
               createInputFormatFromParseSpec(DEFAULT_PARSE_SPEC),
               appendToExisting,

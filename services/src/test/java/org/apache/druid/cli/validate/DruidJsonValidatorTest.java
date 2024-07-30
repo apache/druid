@@ -142,7 +142,6 @@ public class DruidJsonValidatorTest
                 jsonMapper
             ),
             new IndexTask.IndexIOConfig(
-                null,
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),
                 false,

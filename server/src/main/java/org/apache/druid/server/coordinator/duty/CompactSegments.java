@@ -49,8 +49,8 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentIterator;
 import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
@@ -120,7 +120,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     LOG.info("Running CompactSegments duty");
 
-    final CoordinatorCompactionConfig dynamicConfig = params.getCoordinatorCompactionConfig();
+    final DruidCompactionConfig dynamicConfig = params.getCompactionConfig();
     final int maxCompactionTaskSlots = dynamicConfig.getMaxCompactionTaskSlots();
     if (maxCompactionTaskSlots <= 0) {
       LOG.info("Skipping compaction as maxCompactionTaskSlots is [%d].", maxCompactionTaskSlots);
@@ -278,7 +278,8 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     final List<LockFilterPolicy> lockFilterPolicies = compactionConfigs
         .stream()
-        .map(config -> new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), config.getTaskContext()))
+        .map(config ->
+                 new LockFilterPolicy(config.getDataSource(), config.getTaskPriority(), null, config.getTaskContext()))
         .collect(Collectors.toList());
     final Map<String, List<Interval>> datasourceToLockedIntervals =
         new HashMap<>(FutureUtils.getUnchecked(overlordClient.findLockedIntervals(lockFilterPolicies), true));
@@ -343,7 +344,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     return tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
   }
 
-  private int getCompactionTaskCapacity(CoordinatorCompactionConfig dynamicConfig)
+  private int getCompactionTaskCapacity(DruidCompactionConfig dynamicConfig)
   {
     int totalWorkerCapacity = CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient);
 
