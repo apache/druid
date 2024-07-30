@@ -56,10 +56,9 @@ public interface DruidConnectionExtras
 
   static DruidConnectionExtras unwrapOrThrow(Connection connection)
   {
-    if(connection instanceof DruidConnectionExtras ) {
+    if (connection instanceof DruidConnectionExtras) {
       return (DruidConnectionExtras) connection;
     }
     throw new UnsupportedOperationException("Expected DruidConnectionExtras to be implemented by connection!");
   }
-
 }

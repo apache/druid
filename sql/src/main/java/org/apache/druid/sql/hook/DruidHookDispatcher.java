@@ -21,7 +21,6 @@ package org.apache.druid.sql.hook;
 
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.quidem.DruidConnectionExtras;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 
@@ -37,7 +36,7 @@ import java.util.Map;
  * A single instance should live in the system and be used to dispatch hooks.
  * Usual way to dispatch should be via
  * {@link PlannerContext#dispatchHook(HookKey, Object)}. Access to this class is
- * also possible thru {@link DruidConnectionExtras}.
+ * also possible thru DruidConnectionExtras.
  */
 @LazySingleton
 public class DruidHookDispatcher

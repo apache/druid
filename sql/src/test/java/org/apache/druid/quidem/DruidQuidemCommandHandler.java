@@ -188,7 +188,8 @@ public class DruidQuidemCommandHandler implements CommandHandler
       }
     }
 
-    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x) {
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+    {
       return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
     }
   }
