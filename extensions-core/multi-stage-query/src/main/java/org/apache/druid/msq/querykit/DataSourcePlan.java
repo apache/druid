@@ -426,8 +426,8 @@ public class DataSourcePlan
   {
     // check if parentContext has a window operator
     final Map<String, Object> windowShuffleMap = new HashMap<>();
-    if (parentContext != null && parentContext.containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC)) {
-      windowShuffleMap.put(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC, parentContext.get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC));
+    if (parentContext != null && parentContext.containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      windowShuffleMap.put(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL, parentContext.get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL));
     }
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,

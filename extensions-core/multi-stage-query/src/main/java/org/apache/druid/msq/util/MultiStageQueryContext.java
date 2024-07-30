@@ -167,7 +167,7 @@ public class MultiStageQueryContext
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
   public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.MVD;
 
-  public static final String NEXT_WINDOW_SHUFFLE_SPEC = "__windowShuffleSpec";
+  public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 

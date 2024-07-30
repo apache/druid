@@ -132,22 +132,17 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     // Update partition by of next window
     final RowSignature signatureSoFar = signatureBuilder.build();
     boolean addShuffle = true;
-    boolean windowHasEmptyOver = false;
-    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC)) {
-      if (originalQuery.getContext().get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC) instanceof MixShuffleSpec) {
-        windowHasEmptyOver = true;
-      } else {
-        final ShuffleSpec shuffleSpec = (ShuffleSpec) originalQuery.getContext()
-                                                                   .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC);
-        for (KeyColumn c : shuffleSpec.clusterBy().getColumns()) {
-          if (!signatureSoFar.contains(c.columnName())) {
-            addShuffle = false;
-            break;
-          }
+    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+      for (KeyColumn c : windowClusterBy.getColumns()) {
+        if (!signatureSoFar.contains(c.columnName())) {
+          addShuffle = false;
+          break;
         }
-        if (addShuffle) {
-          clusterByColumns.addAll(shuffleSpec.clusterBy().getColumns());
-        }
+      }
+      if (addShuffle) {
+        clusterByColumns.addAll(windowClusterBy.getColumns());
       }
     } else {
       // Add partition boosting column.
@@ -181,11 +176,6 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         // need it to be populated to do its own shuffling later.
         scanShuffleSpec = MixShuffleSpec.instance();
       }
-    }
-
-    // If window has an empty over, we want a single worker to process entire data for window function evaluation.
-    if (windowHasEmptyOver) {
-      scanShuffleSpec = MixShuffleSpec.instance();
     }
 
     queryDefBuilder.add(

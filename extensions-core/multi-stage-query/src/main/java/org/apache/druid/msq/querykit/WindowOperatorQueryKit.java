@@ -91,11 +91,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
     // add this shuffle spec to the last stage of the inner query
 
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
     if (nextShuffleSpec != null) {
+      final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
       originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
-          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC,
-          nextShuffleSpec
+          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL,
+          windowClusterBy
       ));
     }
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
@@ -111,7 +111,24 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         false
     );
 
-    dataSourcePlan.getSubQueryDefBuilder().ifPresent(queryDefBuilder::addAll);
+    final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+    dataSourcePlan.getSubQueryDefBuilder().ifPresent(builder::addAll);
+
+    QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    if (isEmptyOverPresent) {
+      // If window has an empty over, we want a single worker to process entire data for window function evaluation.
+      // To achieve that, we are overriding the shuffle spec of the last stage to MixShuffleSpec.
+      int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
+      for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
+        if (stageDef.getStageNumber() == previousStageNumber) {
+          queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(MixShuffleSpec.instance()));
+        } else {
+          queryDefBuilder.add(StageDefinition.builder(stageDef));
+        }
+      }
+    } else {
+      queryDefBuilder = builder;
+    }
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
@@ -308,14 +325,10 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
     }
 
-    if (partition == null) {
+    if (partition == null || partition.getPartitionColumns().isEmpty()) {
       // If operatorFactories doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
       // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
       return null;
-    }
-
-    if (partition.getPartitionColumns().isEmpty()) {
-      return MixShuffleSpec.instance();
     }
 
     List<KeyColumn> keyColsOfWindow = new ArrayList<>();

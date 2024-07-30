@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -251,10 +252,18 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
    */
   private ShuffleSpec getShuffleSpecForNextWindow(GroupByQuery originalQuery, int maxWorkerCount)
   {
-    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC)) {
-      return (ShuffleSpec) originalQuery.getContext().get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_SPEC);
+    final ShuffleSpec nextShuffleWindowSpec;
+    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
+      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
+                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
+      nextShuffleWindowSpec = new HashShuffleSpec(
+          windowClusterBy,
+          maxWorkerCount
+      );
+    } else {
+      nextShuffleWindowSpec = null;
     }
-    return null;
+    return nextShuffleWindowSpec;
   }
 
   /**
