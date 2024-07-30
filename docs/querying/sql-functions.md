@@ -1513,7 +1513,7 @@ Returns `x` divided by `y`, guarded on division by 0.
 The following calculates divisions of integer `78` by integer `10`.
 
 ```sql
-  SELECT SAFE_DIVIDE(78, 10) AS "safe_division"
+SELECT SAFE_DIVIDE(78, 10) AS "safe_division"
 ```
 
 Returns the following:
