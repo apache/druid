@@ -111,24 +111,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         false
     );
 
-    final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
-    dataSourcePlan.getSubQueryDefBuilder().ifPresent(builder::addAll);
-
-    QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
-    if (isEmptyOverPresent) {
-      // If window has an empty over, we want a single worker to process entire data for window function evaluation.
-      // To achieve that, we are overriding the shuffle spec of the last stage to MixShuffleSpec.
-      int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
-      for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
-        if (stageDef.getStageNumber() == previousStageNumber) {
-          queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(MixShuffleSpec.instance()));
-        } else {
-          queryDefBuilder.add(StageDefinition.builder(stageDef));
-        }
-      }
-    } else {
-      queryDefBuilder = builder;
-    }
+    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryId, dataSourcePlan, isEmptyOverPresent);
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
@@ -343,5 +326,27 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     }
 
     return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), maxWorkerCount);
+  }
+
+  /**
+   * If window has an empty over, we want a single worker to process entire data for window function evaluation.
+   * To achieve that, we override the shuffle spec of the last stage to MixShuffleSpec.
+   * @param queryId
+   * @param dataSourcePlan
+   * @param isEmptyOverPresent
+   * @return
+   */
+  private QueryDefinitionBuilder makeQueryDefinitionBuilder(String queryId, DataSourcePlan dataSourcePlan, boolean isEmptyOverPresent)
+  {
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
+    for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
+      if (stageDef.getStageNumber() == previousStageNumber && isEmptyOverPresent) {
+        queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(MixShuffleSpec.instance()));
+      } else {
+        queryDefBuilder.add(StageDefinition.builder(stageDef));
+      }
+    }
+    return queryDefBuilder;
   }
 }
