@@ -452,7 +452,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
   {
     private final Offset cursorOffset;
     private final ColumnSelectorFactory columnSelectorFactory;
-    private int markOffset = 0;
 
     QueryableIndexCursor(Offset cursorOffset, ColumnSelectorFactory columnSelectorFactory)
     {
@@ -505,24 +504,19 @@ public class QueryableIndexCursorMaker implements CursorMaker
     @Override
     public void mark(DateTime mark)
     {
-      markOffset = cursorOffset.getOffset();
+      cursorOffset.mark();
     }
 
     @Override
     public void resetMark()
     {
-      cursorOffset.reset();
-      // todo (clint): this kind of sucks, add a seek to offset to cursor...
-      while (markOffset > cursorOffset.getOffset()) {
-        advance();
-      }
+      cursorOffset.resetMark();
     }
 
     @Override
     public void reset()
     {
       cursorOffset.reset();
-      markOffset = cursorOffset.getOffset();
     }
   }
 
@@ -564,6 +558,18 @@ public class QueryableIndexCursorMaker implements CursorMaker
         return true;
       }
       return timeInRange(timestamps.getLongSingleValueRow(baseOffset.getOffset()));
+    }
+
+    @Override
+    public void mark()
+    {
+      baseOffset.mark();
+    }
+
+    @Override
+    public void resetMark()
+    {
+      baseOffset.resetMark();
     }
 
     @Override

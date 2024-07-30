@@ -28,6 +28,7 @@ public class SimpleDescendingOffset extends SimpleSettableOffset
   private final int rowCount;
   private final int initialOffset;
   private int currentOffset;
+  private int markOffset;
 
   public SimpleDescendingOffset(int rowCount)
   {
@@ -39,6 +40,7 @@ public class SimpleDescendingOffset extends SimpleSettableOffset
     this.rowCount = rowCount;
     this.initialOffset = initialOffset;
     this.currentOffset = initialOffset;
+    this.markOffset = initialOffset;
   }
 
   @Override
@@ -51,6 +53,18 @@ public class SimpleDescendingOffset extends SimpleSettableOffset
   public boolean withinBounds()
   {
     return currentOffset >= 0;
+  }
+
+  @Override
+  public void mark()
+  {
+    markOffset = currentOffset;
+  }
+
+  @Override
+  public void resetMark()
+  {
+    currentOffset = markOffset;
   }
 
   @Override

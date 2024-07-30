@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.roaringbitmap.IntIterator;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -126,6 +128,9 @@ public class BitmapOffset extends Offset
   private final IntIterator iteratorForReset;
   private final int valueForReset;
   private int value;
+  @Nullable
+  private IntIterator iteratorForMark;
+  private int valueForMark;
 
   public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
   {
@@ -176,6 +181,8 @@ public class BitmapOffset extends Offset
     this.iteratorForReset = safeClone(iterator);
     this.valueForReset = value;
     this.value = value;
+    this.iteratorForMark = null;
+    this.valueForMark = value;
   }
 
   @Override
@@ -192,6 +199,20 @@ public class BitmapOffset extends Offset
   public boolean withinBounds()
   {
     return value > INVALID_VALUE;
+  }
+
+  @Override
+  public void mark()
+  {
+    iteratorForMark = safeClone(iterator);
+    valueForMark = value;
+  }
+
+  @Override
+  public void resetMark()
+  {
+    iterator = Preconditions.checkNotNull(iteratorForMark);
+    value = valueForMark;
   }
 
   @Override

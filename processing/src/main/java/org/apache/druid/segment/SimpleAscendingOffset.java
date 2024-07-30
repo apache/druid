@@ -28,6 +28,7 @@ public class SimpleAscendingOffset extends SimpleSettableOffset
   private final int rowCount;
   private final int initialOffset;
   private int currentOffset;
+  private int markOffset;
 
   public SimpleAscendingOffset(int rowCount)
   {
@@ -38,6 +39,7 @@ public class SimpleAscendingOffset extends SimpleSettableOffset
   {
     this.initialOffset = initialOffset;
     this.currentOffset = initialOffset;
+    this.markOffset = initialOffset;
     this.rowCount = rowCount;
   }
 
@@ -57,6 +59,18 @@ public class SimpleAscendingOffset extends SimpleSettableOffset
   public void setCurrentOffset(int currentOffset)
   {
     this.currentOffset = currentOffset;
+  }
+
+  @Override
+  public void mark()
+  {
+    markOffset = currentOffset;
+  }
+
+  @Override
+  public void resetMark()
+  {
+    currentOffset = markOffset;
   }
 
   @Override
