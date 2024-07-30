@@ -164,7 +164,7 @@ setting namespaces (Broker, Peon, Historical)
 |`druid.lookup.namespace.numExtractionThreads`|The number of threads in the thread pool dedicated for lookup extraction and updates. If you have a lot of lookups and they take long time to extract, increase this number to avoid timeouts.|2|
 |`druid.lookup.namespace.numBufferedEntries`|If using off-heap caching, the number of records to store on an on-heap buffer.|100,000|
 
-Druid populates the cache in different ways depending on the settings below. In general, most namespaces employ
+Druid populates the cache in different ways depending on the following settings. In general, most namespaces employ
 a `pollPeriod` at the end of which they poll the remote resource of interest for updates.
 
 `onHeap` uses `ConcurrentMap`s in the java heap, and therefore affects garbage collection and heap sizing.
