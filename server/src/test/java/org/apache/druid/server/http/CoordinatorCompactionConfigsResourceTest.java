@@ -37,12 +37,12 @@ import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestMetadataStorageConnector;
 import org.apache.druid.metadata.TestMetadataStorageTablesConfig;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigAuditEntry;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
-import org.apache.druid.server.coordinator.config.DataSourceCompactionConfigBuilder;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -97,9 +97,9 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testGetDefaultClusterConfig()
   {
-    Response response = resource.getClusterCompactionConfig();
-    final CoordinatorCompactionConfig defaultConfig
-        = verifyAndGetPayload(response, CoordinatorCompactionConfig.class);
+    Response response = resource.getCompactionConfig();
+    final DruidCompactionConfig defaultConfig
+        = verifyAndGetPayload(response, DruidCompactionConfig.class);
 
     Assert.assertEquals(0.1, defaultConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
@@ -112,14 +112,14 @@ public class CoordinatorCompactionConfigsResourceTest
   public void testUpdateGlobalConfig()
   {
     Response response = resource.updateClusterCompactionConfig(
-        new CompactionConfigUpdateRequest(0.5, 10, true, CompactionEngine.MSQ),
+        new ClusterCompactionConfig(0.5, 10, true, CompactionEngine.MSQ),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.OK, response);
 
-    final CoordinatorCompactionConfig updatedConfig = verifyAndGetPayload(
-        resource.getClusterCompactionConfig(),
-        CoordinatorCompactionConfig.class
+    final DruidCompactionConfig updatedConfig = verifyAndGetPayload(
+        resource.getCompactionConfig(),
+        DruidCompactionConfig.class
     );
 
     Assert.assertNotNull(updatedConfig);
@@ -132,14 +132,14 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testSetCompactionTaskLimit()
   {
-    final CoordinatorCompactionConfig defaultConfig
-        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
+    final DruidCompactionConfig defaultConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
 
     Response response = resource.setCompactionTaskLimit(0.5, 9, true, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
 
-    final CoordinatorCompactionConfig updatedConfig
-        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
+    final DruidCompactionConfig updatedConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
 
     // Verify that the task slot fields have been updated
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
@@ -170,8 +170,8 @@ public class CoordinatorCompactionConfigsResourceTest
         = verifyAndGetPayload(resource.getDatasourceCompactionConfig(DS.WIKI), DataSourceCompactionConfig.class);
     Assert.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
 
-    final CoordinatorCompactionConfig fullCompactionConfig
-        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
+    final DruidCompactionConfig fullCompactionConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
     Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
     Assert.assertEquals(newDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
@@ -214,8 +214,8 @@ public class CoordinatorCompactionConfigsResourceTest
         = verifyAndGetPayload(resource.getDatasourceCompactionConfig(DS.WIKI), DataSourceCompactionConfig.class);
     Assert.assertEquals(updatedDatasourceConfig, latestDatasourceConfig);
 
-    final CoordinatorCompactionConfig fullCompactionConfig
-        = verifyAndGetPayload(resource.getClusterCompactionConfig(), CoordinatorCompactionConfig.class);
+    final DruidCompactionConfig fullCompactionConfig
+        = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
     Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
     Assert.assertEquals(updatedDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
@@ -274,7 +274,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @Test
   public void testGetDatasourceConfigHistory()
   {
-    final DataSourceCompactionConfigBuilder builder
+    final DataSourceCompactionConfig.Builder builder
         = DataSourceCompactionConfig.builder().forDataSource(DS.WIKI);
 
     final DataSourceCompactionConfig configV1 = builder.build();
@@ -340,7 +340,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.OK, response);
 
     response = resource.updateClusterCompactionConfig(
-        new CompactionConfigUpdateRequest(null, null, null, CompactionEngine.MSQ),
+        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.BAD_REQUEST, response);
@@ -480,7 +480,7 @@ public class CoordinatorCompactionConfigsResourceTest
 
     @Override
     public ConfigManager.SetResult getAndUpdateCompactionConfig(
-        UnaryOperator<CoordinatorCompactionConfig> operator,
+        UnaryOperator<DruidCompactionConfig> operator,
         AuditInfo auditInfo
     )
     {

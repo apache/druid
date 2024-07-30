@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.server.coordinator.config.DataSourceCompactionConfigBuilder;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -44,9 +43,9 @@ public class DataSourceCompactionConfig
   private final int taskPriority;
   private final long inputSegmentSizeBytes;
 
-  public static DataSourceCompactionConfigBuilder builder()
+  public static Builder builder()
   {
-    return new DataSourceCompactionConfigBuilder();
+    return new Builder();
   }
 
   /**
@@ -233,5 +232,128 @@ public class DataSourceCompactionConfig
     );
     result = 31 * result + Arrays.hashCode(metricsSpec);
     return result;
+  }
+
+  public static class Builder
+  {
+    private String dataSource;
+    private Integer taskPriority;
+    private Long inputSegmentSizeBytes;
+    private Integer maxRowsPerSegment;
+    private Period skipOffsetFromLatest;
+    private UserCompactionTaskQueryTuningConfig tuningConfig;
+    private UserCompactionTaskGranularityConfig granularitySpec;
+    private UserCompactionTaskDimensionsConfig dimensionsSpec;
+    private AggregatorFactory[] metricsSpec;
+    private UserCompactionTaskTransformConfig transformSpec;
+    private UserCompactionTaskIOConfig ioConfig;
+    private CompactionEngine engine;
+    private Map<String, Object> taskContext;
+
+    public DataSourceCompactionConfig build()
+    {
+      return new DataSourceCompactionConfig(
+          dataSource,
+          taskPriority,
+          inputSegmentSizeBytes,
+          maxRowsPerSegment,
+          skipOffsetFromLatest,
+          tuningConfig,
+          granularitySpec,
+          dimensionsSpec,
+          metricsSpec,
+          transformSpec,
+          ioConfig,
+          engine,
+          taskContext
+      );
+    }
+
+    public Builder forDataSource(String dataSource)
+    {
+      this.dataSource = dataSource;
+      return this;
+    }
+
+    public Builder withTaskPriority(Integer taskPriority)
+    {
+      this.taskPriority = taskPriority;
+      return this;
+    }
+
+    public Builder withInputSegmentSizeBytes(Long inputSegmentSizeBytes)
+    {
+      this.inputSegmentSizeBytes = inputSegmentSizeBytes;
+      return this;
+    }
+
+    @Deprecated
+    public Builder withMaxRowsPerSegment(Integer maxRowsPerSegment)
+    {
+      this.maxRowsPerSegment = maxRowsPerSegment;
+      return this;
+    }
+
+    public Builder withSkipOffsetFromLatest(Period skipOffsetFromLatest)
+    {
+      this.skipOffsetFromLatest = skipOffsetFromLatest;
+      return this;
+    }
+
+    public Builder withTuningConfig(
+        UserCompactionTaskQueryTuningConfig tuningConfig
+    )
+    {
+      this.tuningConfig = tuningConfig;
+      return this;
+    }
+
+    public Builder withGranularitySpec(
+        UserCompactionTaskGranularityConfig granularitySpec
+    )
+    {
+      this.granularitySpec = granularitySpec;
+      return this;
+    }
+
+    public Builder withDimensionsSpec(
+        UserCompactionTaskDimensionsConfig dimensionsSpec
+    )
+    {
+      this.dimensionsSpec = dimensionsSpec;
+      return this;
+    }
+
+    public Builder withMetricsSpec(AggregatorFactory[] metricsSpec)
+    {
+      this.metricsSpec = metricsSpec;
+      return this;
+    }
+
+    public Builder withTransformSpec(
+        UserCompactionTaskTransformConfig transformSpec
+    )
+    {
+      this.transformSpec = transformSpec;
+      return this;
+    }
+
+    public Builder withIoConfig(UserCompactionTaskIOConfig ioConfig)
+    {
+      this.ioConfig = ioConfig;
+      return this;
+    }
+
+    public Builder withEngine(CompactionEngine engine)
+    {
+      this.engine = engine;
+      return this;
+    }
+
+    public Builder withTaskContext(Map<String, Object> taskContext)
+    {
+      this.taskContext = taskContext;
+      return this;
+    }
   }
 }

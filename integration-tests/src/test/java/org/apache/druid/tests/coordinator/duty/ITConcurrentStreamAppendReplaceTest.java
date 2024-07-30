@@ -26,6 +26,7 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -33,12 +34,12 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.CompactionUtil;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KafkaUtil;
@@ -69,13 +70,13 @@ import java.util.Set;
 
 /**
  * Integration Test to verify behaviour when there are concurrent
- * compaction tasks with on-going stream ingestion tasks.
+ * compaction tasks with ongoing stream ingestion tasks.
  */
 @Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITConcurrentAutoCompactionTest extends AbstractKafkaIndexingServiceTest
+public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingServiceTest
 {
-  private static final Logger LOG = new Logger(ITConcurrentAutoCompactionTest.class);
+  private static final Logger LOG = new Logger(ITConcurrentStreamAppendReplaceTest.class);
 
   @Inject
   private CompactionResourceTestClient compactionResource;
@@ -122,7 +123,7 @@ public class ITConcurrentAutoCompactionTest extends AbstractKafkaIndexingService
   }
 
   @Test(dataProvider = "getParameters")
-  public void testConcurrentAutoCompaction(boolean transactionEnabled) throws Exception
+  public void testConcurrentStreamAppendReplace(boolean transactionEnabled) throws Exception
   {
     if (shouldSkipTest(transactionEnabled)) {
       return;
@@ -359,8 +360,14 @@ public class ITConcurrentAutoCompactionTest extends AbstractKafkaIndexingService
    */
   private void submitAndVerifyCompactionConfig(Granularity segmentGranularity) throws Exception
   {
-    final DataSourceCompactionConfig compactionConfig = CompactionUtil
-        .createConcurrentCompactionConfig(fullDatasourceName, segmentGranularity);
+    final UserCompactionTaskGranularityConfig granularitySpec =
+        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null);
+    final DataSourceCompactionConfig compactionConfig =
+        DataSourceCompactionConfig.builder()
+                                  .forDataSource(fullDatasourceName)
+                                  .withGranularitySpec(granularitySpec)
+                                  .withTaskContext(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
+                                  .build();
     compactionResource.updateCompactionTaskSlot(0.5, 10, null);
     compactionResource.submitCompactionConfig(compactionConfig);
 
@@ -368,9 +375,9 @@ public class ITConcurrentAutoCompactionTest extends AbstractKafkaIndexingService
     Thread.sleep(2000);
 
     // Verify that the compaction config is updated correctly.
-    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
+    DruidCompactionConfig druidCompactionConfig = compactionResource.getCompactionConfig();
     DataSourceCompactionConfig observedCompactionConfig = null;
-    for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
+    for (DataSourceCompactionConfig dataSourceCompactionConfig : druidCompactionConfig.getCompactionConfigs()) {
       if (dataSourceCompactionConfig.getDataSource().equals(fullDatasourceName)) {
         observedCompactionConfig = dataSourceCompactionConfig;
       }
