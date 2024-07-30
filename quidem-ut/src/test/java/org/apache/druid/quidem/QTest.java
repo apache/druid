@@ -37,7 +37,7 @@ public class QTest extends DruidQuidemTestBase
   @Override
   protected File getTestRoot()
   {
-    return ProjectPathUtils.getPathFromProjectRoot("quidem-it/src/test/quidem/" + getClass().getName());
+    return ProjectPathUtils.getPathFromProjectRoot("quidem-ut/src/test/quidem/" + getClass().getName());
   }
 
   @Test

@@ -38,7 +38,7 @@ import java.net.URI;
 public class QuidemCaptureResource
 {
   public static final File RECORD_PATH = ProjectPathUtils
-      .getPathFromProjectRoot("quidem-it/src/test/quidem/org.apache.druid.quidem.QTest");
+      .getPathFromProjectRoot("quidem-ut/src/test/quidem/org.apache.druid.quidem.QTest");
   private URI quidemURI;
   private QuidemRecorder recorder = null;
   private DruidHookDispatcher hookDispatcher;

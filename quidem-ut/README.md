@@ -17,7 +17,7 @@
   ~ under the License.
   -->
 
-# Quidem IT
+# Quidem UT
 
 Enables to write sql level tests easily.
 Can be used to write tests against existing test backends (ComponentSupplier) - by doing so the testcases can be moved closer to the excercised codes.
@@ -55,16 +55,16 @@ git clone --branch quidem-record https://github.com/kgyrtkirk/druid
 
 * make sure to build the project first; one way to do that is:
   ```bash
-  mvn install -pl quidem-it/ -am -DskipTests -Pskip-static-checks
+  mvn install -pl quidem-ut/ -am -DskipTests -Pskip-static-checks
   ```
 * launch the broker instance with:
   ```bash
-  mvn exec:exec -pl quidem-it -Dquidem.record.autostart=true
+  mvn exec:exec -pl quidem-ut -Dquidem.record.autostart=true
   ```
   * the broker will be running at http://localhost:12345
   * the used test configuration backend can configured by supplying `quidem.uri`
     ```bash
-    mvn exec:exec -pl quidem-it -Dquidem.uri=druidtest:///?componentSupplier=ThetaSketchComponentSupplier
+    mvn exec:exec -pl quidem-ut -Dquidem.uri=druidtest:///?componentSupplier=ThetaSketchComponentSupplier
     ``` 
   * new record files can be started by calling http://localhost:12345/quidem/start
     * if `quidem.record.autostart` is omitted recording will not start

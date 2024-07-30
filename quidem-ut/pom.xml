@@ -23,9 +23,9 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>druid-quidem-it</artifactId>
-    <name>druid-quidem-it</name>
-    <description>druid-quidem-it</description>
+    <artifactId>druid-quidem-ut</artifactId>
+    <name>druid-quidem-ut</name>
+    <description>druid-quidem-ut</description>
 
     <parent>
         <groupId>org.apache.druid</groupId>
