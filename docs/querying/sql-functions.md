@@ -610,6 +610,7 @@ Returns the result of integer division of `x` by `y`.
 * **Syntax:** `DIV(x, y)`
 * **Function type:** Scalar, numeric
 
+<!--
 <details><summary>Example</summary>
 
   The following calculates integer divisions of `78` by `10`.
@@ -625,6 +626,7 @@ Returns the result of integer division of `x` by `y`.
   | `7` |
 
 </details>
+-->
 
 :::info
 
@@ -896,7 +898,7 @@ Converts an integer byte size into human-readable [IEC](https://en.wikipedia.org
 
 <details><summary>Example</summary>
 
-  Converts `1000000` into IEC format.
+  The following example converts `1000000` into IEC format.
 
   ```sql
     SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(1000000, 2) AS "iec_format"
@@ -921,7 +923,7 @@ Converts a byte size into human-readable [SI](https://en.wikipedia.org/wiki/Bina
 
 <details><summary>Example</summary>
 
-Converts `1000000` into SI format.
+The following example converts `1000000` into SI format.
 
 ```sql
 SELECT HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1000000, 2) AS "si_format"
@@ -946,7 +948,7 @@ Converts a byte size into human-readable SI format with single-character units.
 
 <details><summary>Example</summary>
 
-  Converts `1000000` into single character SI format.
+  The following example converts `1000000` into single character SI format.
 
 ```sql
 SELECT HUMAN_READABLE_DECIMAL_FORMAT(1000000, 2) AS "single_character_si_format"
@@ -1510,7 +1512,7 @@ Returns `x` divided by `y`, guarded on division by 0.
 
 <details><summary>Example</summary>
 
-The following calculates divisions of integer `78` by integer `10`.
+The following example calculates divisions of integer `78` by integer `10`.
 
 ```sql
 SELECT SAFE_DIVIDE(78, 10) AS "safe_division"
