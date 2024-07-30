@@ -31,9 +31,6 @@ public class ZkPathsConfig
   @JsonProperty
   private String announcementsPath;
   @JsonProperty
-  @Deprecated
-  private String servedSegmentsPath;
-  @JsonProperty
   private String liveSegmentsPath;
   @JsonProperty
   private String coordinatorPath;
@@ -55,12 +52,11 @@ public class ZkPathsConfig
     return (null == announcementsPath) ? defaultPath("announcements") : announcementsPath;
   }
 
-  @Deprecated
-  public String getServedSegmentsPath()
-  {
-    return (null == servedSegmentsPath) ? defaultPath("servedSegments") : servedSegmentsPath;
-  }
-
+  /**
+   * Path to announce served segments on.
+   *
+   * @deprecated Use HTTP-based segment discovery instead.
+   */
   @Deprecated
   public String getLiveSegmentsPath()
   {
@@ -110,8 +106,7 @@ public class ZkPathsConfig
         this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
         this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
         this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
-        this.getPropertiesPath().equals(otherConfig.getPropertiesPath()) &&
-        this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())) {
+        this.getPropertiesPath().equals(otherConfig.getPropertiesPath())) {
       return true;
     }
     return false;
@@ -123,7 +118,6 @@ public class ZkPathsConfig
     int result = base != null ? base.hashCode() : 0;
     result = 31 * result + (propertiesPath != null ? propertiesPath.hashCode() : 0);
     result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
-    result = 31 * result + (servedSegmentsPath != null ? servedSegmentsPath.hashCode() : 0);
     result = 31 * result + (liveSegmentsPath != null ? liveSegmentsPath.hashCode() : 0);
     result = 31 * result + (coordinatorPath != null ? coordinatorPath.hashCode() : 0);
     result = 31 * result + (connectorPath != null ? connectorPath.hashCode() : 0);

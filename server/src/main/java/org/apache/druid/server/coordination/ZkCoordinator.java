@@ -26,15 +26,16 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 
 import java.io.IOException;
 
 /**
  * Creates paths for announcing served segments on Zookeeper.
- * This class is deprected as Druid has already migrated to HTTP-based segment
- * loading and will soon migrate to HTTP-based inventory view using
- * {@code SegmentListerResource}.
+ *
+ * @deprecated as Druid has already migrated to HTTP-based segment loading and
+ * will soon migrate to HTTP-based inventory view using {@code SegmentListerResource}.
  *
  * @see org.apache.druid.server.http.SegmentListerResource
  */
@@ -48,6 +49,7 @@ public class ZkCoordinator
   private final ZkPathsConfig zkPaths;
   private final DruidServerMetadata me;
   private final CuratorFramework curator;
+  private final BatchDataSegmentAnnouncerConfig announcerConfig;
 
   private volatile boolean started = false;
 
@@ -55,12 +57,14 @@ public class ZkCoordinator
   public ZkCoordinator(
       ZkPathsConfig zkPaths,
       DruidServerMetadata me,
-      CuratorFramework curator
+      CuratorFramework curator,
+      BatchDataSegmentAnnouncerConfig announcerConfig
   )
   {
     this.zkPaths = zkPaths;
     this.me = me;
     this.curator = curator;
+    this.announcerConfig = announcerConfig;
   }
 
   @LifecycleStart
@@ -73,11 +77,16 @@ public class ZkCoordinator
 
       log.info("Starting zkCoordinator for server[%s]", me.getName());
 
-      final String servedSegmentsLocation = ZKPaths.makePath(zkPaths.getServedSegmentsPath(), me.getName());
+      if (announcerConfig.isSkipSegmentAnnouncementOnZk()) {
+        log.info("Skipping zkPath creation as segment announcement on ZK is disabled.");
+        started = true;
+        return;
+      }
+
       final String liveSegmentsLocation = ZKPaths.makePath(zkPaths.getLiveSegmentsPath(), me.getName());
+      log.info("Creating zkPath[%s] for announcing live segments.", liveSegmentsLocation);
 
       try {
-        curator.newNamespaceAwareEnsurePath(servedSegmentsLocation).ensure(curator.getZookeeperClient());
         curator.newNamespaceAwareEnsurePath(liveSegmentsLocation).ensure(curator.getZookeeperClient());
       }
       catch (Exception e) {
@@ -100,10 +109,5 @@ public class ZkCoordinator
 
       started = false;
     }
-  }
-
-  public boolean isStarted()
-  {
-    return started;
   }
 }
