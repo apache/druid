@@ -65,7 +65,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(100_000_000_000_000L, fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -80,7 +79,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
-        .withMaxRowsPerSegment(30)
         .withSkipOffsetFromLatest(new Period(3600))
         .withEngine(CompactionEngine.MSQ)
         .withTaskContext(ImmutableMap.of("key", "val"))
@@ -91,7 +89,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -115,7 +112,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -129,7 +125,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
-        .withMaxRowsPerSegment(10000)
         .withSkipOffsetFromLatest(new Period(3600))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
@@ -139,7 +134,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -151,7 +145,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
         40000,
         null,
-        2000L,
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
         new DynamicPartitionsSpec(1000, 20000L),
@@ -190,7 +183,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
         40000,
         new OnheapIncrementalIndex.Spec(true),
-        2000L,
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
         new DynamicPartitionsSpec(1000, 20000L),
@@ -240,7 +232,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -264,7 +255,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -290,7 +280,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -314,7 +303,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -338,7 +326,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -366,7 +353,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -392,7 +378,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -421,7 +406,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -446,7 +430,6 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
@@ -470,10 +453,9 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
     Assert.assertEquals(config.getDataSource(), fromJson.getDataSource());
     Assert.assertEquals(25, fromJson.getTaskPriority());
     Assert.assertEquals(config.getInputSegmentSizeBytes(), fromJson.getInputSegmentSizeBytes());
-    Assert.assertEquals(config.getMaxRowsPerSegment(), fromJson.getMaxRowsPerSegment());
     Assert.assertEquals(config.getSkipOffsetFromLatest(), fromJson.getSkipOffsetFromLatest());
     Assert.assertEquals(config.getTuningConfig(), fromJson.getTuningConfig());
     Assert.assertEquals(config.getTaskContext(), fromJson.getTaskContext());
-    Assert.assertEquals(config.getMetricsSpec(), fromJson.getMetricsSpec());
+    Assert.assertArrayEquals(config.getMetricsSpec(), fromJson.getMetricsSpec());
   }
 }

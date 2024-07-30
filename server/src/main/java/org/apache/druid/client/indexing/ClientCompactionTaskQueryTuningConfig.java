@@ -37,16 +37,10 @@ import java.util.Objects;
 
 public class ClientCompactionTaskQueryTuningConfig
 {
-  @Deprecated
-  @Nullable
-  private final Integer maxRowsPerSegment;
   @Nullable
   private final Integer maxRowsInMemory;
   @Nullable
   private final Long maxBytesInMemory;
-  @Deprecated
-  @Nullable
-  private final Long maxTotalRows;
   @Nullable
   private final SplitHintSpec splitHintSpec;
   @Nullable
@@ -85,23 +79,20 @@ public class ClientCompactionTaskQueryTuningConfig
   )
   {
     if (compactionConfig == null) {
-      return from(null, null, null);
+      return from(null, null);
     } else {
-      return from(compactionConfig.getTuningConfig(), compactionConfig.getMaxRowsPerSegment(), null);
+      return from(compactionConfig.getTuningConfig(), null);
     }
   }
 
   public static ClientCompactionTaskQueryTuningConfig from(
       @Nullable UserCompactionTaskQueryTuningConfig userCompactionTaskQueryTuningConfig,
-      @Nullable Integer maxRowsPerSegment,
       @Nullable Boolean preserveExistingMetrics
   )
   {
     if (userCompactionTaskQueryTuningConfig == null) {
       return new ClientCompactionTaskQueryTuningConfig(
-          maxRowsPerSegment,
           new OnheapIncrementalIndex.Spec(preserveExistingMetrics),
-          null,
           null,
           null,
           null,
@@ -125,11 +116,9 @@ public class ClientCompactionTaskQueryTuningConfig
                                                      ? userCompactionTaskQueryTuningConfig.getAppendableIndexSpec()
                                                      : new OnheapIncrementalIndex.Spec(preserveExistingMetrics);
       return new ClientCompactionTaskQueryTuningConfig(
-          maxRowsPerSegment,
           appendableIndexSpecToUse,
           userCompactionTaskQueryTuningConfig.getMaxRowsInMemory(),
           userCompactionTaskQueryTuningConfig.getMaxBytesInMemory(),
-          userCompactionTaskQueryTuningConfig.getMaxTotalRows(),
           userCompactionTaskQueryTuningConfig.getSplitHintSpec(),
           userCompactionTaskQueryTuningConfig.getPartitionsSpec(),
           userCompactionTaskQueryTuningConfig.getIndexSpec(),
@@ -151,11 +140,9 @@ public class ClientCompactionTaskQueryTuningConfig
 
   @JsonCreator
   public ClientCompactionTaskQueryTuningConfig(
-      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
       @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
@@ -173,11 +160,9 @@ public class ClientCompactionTaskQueryTuningConfig
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
-    this.maxRowsPerSegment = maxRowsPerSegment;
     this.appendableIndexSpec = appendableIndexSpec;
     this.maxRowsInMemory = maxRowsInMemory;
     this.maxBytesInMemory = maxBytesInMemory;
-    this.maxTotalRows = maxTotalRows;
     this.splitHintSpec = splitHintSpec;
     this.partitionsSpec = partitionsSpec;
     this.indexSpec = indexSpec;
@@ -201,14 +186,6 @@ public class ClientCompactionTaskQueryTuningConfig
     return "index_parallel";
   }
 
-  @Deprecated
-  @JsonProperty
-  @Nullable
-  public Integer getMaxRowsPerSegment()
-  {
-    return maxRowsPerSegment;
-  }
-
   @JsonProperty
   @Nullable
   public Integer getMaxRowsInMemory()
@@ -221,14 +198,6 @@ public class ClientCompactionTaskQueryTuningConfig
   public Long getMaxBytesInMemory()
   {
     return maxBytesInMemory;
-  }
-
-  @Deprecated
-  @JsonProperty
-  @Nullable
-  public Long getMaxTotalRows()
-  {
-    return maxTotalRows;
   }
 
   @JsonProperty
@@ -360,10 +329,8 @@ public class ClientCompactionTaskQueryTuningConfig
       return false;
     }
     ClientCompactionTaskQueryTuningConfig that = (ClientCompactionTaskQueryTuningConfig) o;
-    return Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
-           Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
+    return Objects.equals(maxRowsInMemory, that.maxRowsInMemory) &&
            Objects.equals(maxBytesInMemory, that.maxBytesInMemory) &&
-           Objects.equals(maxTotalRows, that.maxTotalRows) &&
            Objects.equals(splitHintSpec, that.splitHintSpec) &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(indexSpec, that.indexSpec) &&
@@ -386,10 +353,8 @@ public class ClientCompactionTaskQueryTuningConfig
   public int hashCode()
   {
     return Objects.hash(
-        maxRowsPerSegment,
         maxRowsInMemory,
         maxBytesInMemory,
-        maxTotalRows,
         splitHintSpec,
         partitionsSpec,
         indexSpec,
@@ -413,10 +378,8 @@ public class ClientCompactionTaskQueryTuningConfig
   public String toString()
   {
     return "ClientCompactionTaskQueryTuningConfig{" +
-           "maxRowsPerSegment=" + maxRowsPerSegment +
-           ", maxRowsInMemory=" + maxRowsInMemory +
+           "maxRowsInMemory=" + maxRowsInMemory +
            ", maxBytesInMemory=" + maxBytesInMemory +
-           ", maxTotalRows=" + maxTotalRows +
            ", splitHintSpec=" + splitHintSpec +
            ", partitionsSpec=" + partitionsSpec +
            ", indexSpec=" + indexSpec +

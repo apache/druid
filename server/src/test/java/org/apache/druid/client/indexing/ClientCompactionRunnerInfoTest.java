@@ -168,11 +168,10 @@ public class ClientCompactionRunnerInfoTest
       @Nullable AggregatorFactory[] metricsSpec
   )
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+    return new DataSourceCompactionConfig(
         "dataSource",
         null,
         500L,
-        10000,
         new Period(3600),
         createTuningConfig(partitionsSpec),
         granularitySpec,
@@ -183,15 +182,13 @@ public class ClientCompactionRunnerInfoTest
         CompactionEngine.MSQ,
         context
     );
-    return config;
   }
 
   private static UserCompactionTaskQueryTuningConfig createTuningConfig(PartitionsSpec partitionsSpec)
   {
-    final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
+    return new UserCompactionTaskQueryTuningConfig(
         40000,
         null,
-        2000L,
         null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), null),
         partitionsSpec,
@@ -217,6 +214,5 @@ public class ClientCompactionRunnerInfoTest
         100,
         2
     );
-    return tuningConfig;
   }
 }

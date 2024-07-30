@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.SplitHintSpec;
@@ -39,7 +38,6 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
       @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
       @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
       @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
-      @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
       @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
       @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
       @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
@@ -58,11 +56,9 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
   )
   {
     super(
-        null,
         appendableIndexSpec,
         maxRowsInMemory,
         maxBytesInMemory,
-        maxTotalRows,
         splitHintSpec,
         partitionsSpec,
         indexSpec,
@@ -79,13 +75,5 @@ public class UserCompactionTaskQueryTuningConfig extends ClientCompactionTaskQue
         totalNumMergeTasks,
         maxColumnsToMerge
     );
-  }
-
-  @Override
-  @Nullable
-  @JsonIgnore
-  public Integer getMaxRowsPerSegment()
-  {
-    throw new UnsupportedOperationException();
   }
 }

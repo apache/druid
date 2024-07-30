@@ -49,12 +49,6 @@ public class DataSourceCompactionConfig
     return new DataSourceCompactionConfigBuilder();
   }
 
-  /**
-   * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
-   */
-  @Nullable
-  private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   private final UserCompactionTaskGranularityConfig granularitySpec;
@@ -70,7 +64,6 @@ public class DataSourceCompactionConfig
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("taskPriority") @Nullable Integer taskPriority,
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
-      @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
@@ -89,7 +82,6 @@ public class DataSourceCompactionConfig
     this.inputSegmentSizeBytes = inputSegmentSizeBytes == null
                                  ? DEFAULT_INPUT_SEGMENT_SIZE_BYTES
                                  : inputSegmentSizeBytes;
-    this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
@@ -117,14 +109,6 @@ public class DataSourceCompactionConfig
   public long getInputSegmentSizeBytes()
   {
     return inputSegmentSizeBytes;
-  }
-
-  @Deprecated
-  @JsonProperty
-  @Nullable
-  public Integer getMaxRowsPerSegment()
-  {
-    return maxRowsPerSegment;
   }
 
   @JsonProperty
@@ -202,7 +186,6 @@ public class DataSourceCompactionConfig
     return taskPriority == that.taskPriority &&
            inputSegmentSizeBytes == that.inputSegmentSizeBytes &&
            Objects.equals(dataSource, that.dataSource) &&
-           Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
@@ -221,7 +204,6 @@ public class DataSourceCompactionConfig
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
-        maxRowsPerSegment,
         skipOffsetFromLatest,
         tuningConfig,
         granularitySpec,

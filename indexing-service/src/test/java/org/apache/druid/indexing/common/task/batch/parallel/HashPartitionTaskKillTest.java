@@ -329,16 +329,19 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
       // will break requiring messing with the logic below).
       // For the other two subsequent failures we need to have numShards non-null, so it bypasses
       // the first failure, so the conditions for failure in the different phase are given below:
+      final HashedPartitionsSpec partitionsSpec
+          = (HashedPartitionsSpec) getIngestionSchema().getTuningConfig().getPartitionsSpec();
+
       ParallelIndexTaskRunner<T, R> retVal;
       if (succeedsBeforeFailing == 0
-          && this.getIngestionSchema().getTuningConfig().getNumShards() == null) {
+          && partitionsSpec == null || partitionsSpec.getNumShards() == null) {
         retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, "PHASE-1");
       } else if (succeedsBeforeFailing == 0
-                 && this.getIngestionSchema().getTuningConfig().getNumShards() != null) {
+                 && partitionsSpec.getNumShards() != null) {
         retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, "PHASE-2");
       } else if (succeedsBeforeFailing == 1
                  && numRuns == 1
-                 && this.getIngestionSchema().getTuningConfig().getNumShards() != null) {
+                 && partitionsSpec == null || partitionsSpec.getNumShards() != null) {
         retVal = (ParallelIndexTaskRunner<T, R>) new TestRunner(false, "PHASE-3");
       } else {
         numRuns++;

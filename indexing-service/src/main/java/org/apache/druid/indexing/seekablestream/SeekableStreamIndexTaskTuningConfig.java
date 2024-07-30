@@ -169,7 +169,6 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
     return skipBytesInMemoryOverheadCheck;
   }
 
-  @Override
   @JsonProperty
   public Integer getMaxRowsPerSegment()
   {

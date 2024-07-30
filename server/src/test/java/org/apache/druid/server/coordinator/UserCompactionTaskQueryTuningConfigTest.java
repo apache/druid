@@ -61,7 +61,6 @@ public class UserCompactionTaskQueryTuningConfigTest
             null,
             null,
             null,
-            null,
             null
         );
     final String json = OBJECT_MAPPER.writeValueAsString(config);
@@ -79,7 +78,6 @@ public class UserCompactionTaskQueryTuningConfigTest
         40000,
         new OnheapIncrementalIndex.Spec(true),
         2000L,
-        null,
         new SegmentsSplitHintSpec(new HumanReadableBytes(42L), null),
         new DynamicPartitionsSpec(1000, 20000L),
         IndexSpec.builder()

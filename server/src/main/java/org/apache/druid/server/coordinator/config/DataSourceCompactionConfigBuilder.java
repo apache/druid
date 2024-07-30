@@ -36,7 +36,6 @@ public class DataSourceCompactionConfigBuilder
   private String dataSource;
   private Integer taskPriority;
   private Long inputSegmentSizeBytes;
-  private Integer maxRowsPerSegment;
   private Period skipOffsetFromLatest;
   private UserCompactionTaskQueryTuningConfig tuningConfig;
   private UserCompactionTaskGranularityConfig granularitySpec;
@@ -53,7 +52,6 @@ public class DataSourceCompactionConfigBuilder
         dataSource,
         taskPriority,
         inputSegmentSizeBytes,
-        maxRowsPerSegment,
         skipOffsetFromLatest,
         tuningConfig,
         granularitySpec,
@@ -81,13 +79,6 @@ public class DataSourceCompactionConfigBuilder
   public DataSourceCompactionConfigBuilder withInputSegmentSizeBytes(Long inputSegmentSizeBytes)
   {
     this.inputSegmentSizeBytes = inputSegmentSizeBytes;
-    return this;
-  }
-
-  @Deprecated
-  public DataSourceCompactionConfigBuilder withMaxRowsPerSegment(Integer maxRowsPerSegment)
-  {
-    this.maxRowsPerSegment = maxRowsPerSegment;
     return this;
   }
 

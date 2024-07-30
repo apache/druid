@@ -1287,23 +1287,16 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
   {
     return new IndexTuningConfig(
-        null,
-        null,
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
         tuningConfig.isSkipBytesInMemoryOverheadCheck(),
-        null,
-        null,
-        null,
-        null,
         tuningConfig.getPartitionsSpec(),
         tuningConfig.getIndexSpec(),
         tuningConfig.getIndexSpecForIntermediatePersists(),
         tuningConfig.getMaxPendingPersists(),
         tuningConfig.isForceGuaranteedRollup(),
         tuningConfig.isReportParseExceptions(),
-        null,
         tuningConfig.getPushTimeout(),
         tuningConfig.getSegmentWriteOutMediumFactory(),
         tuningConfig.isLogParseExceptions(),

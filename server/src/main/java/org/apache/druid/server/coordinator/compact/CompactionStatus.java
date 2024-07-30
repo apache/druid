@@ -130,8 +130,7 @@ public class CompactionStatus
   {
     final PartitionsSpec partitionsSpecFromTuningConfig = tuningConfig.getPartitionsSpec();
     if (partitionsSpecFromTuningConfig == null) {
-      final long maxTotalRows = Configs.valueOrDefault(tuningConfig.getMaxTotalRows(), Long.MAX_VALUE);
-      return new DynamicPartitionsSpec(tuningConfig.getMaxRowsPerSegment(), maxTotalRows);
+      return new DynamicPartitionsSpec(null, null);
     } else if (partitionsSpecFromTuningConfig instanceof DynamicPartitionsSpec) {
       return new DynamicPartitionsSpec(
           partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),

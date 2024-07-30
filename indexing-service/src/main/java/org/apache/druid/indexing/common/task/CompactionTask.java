@@ -253,14 +253,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     } else if (tuningConfig instanceof ParallelIndexTuningConfig) {
       final ParallelIndexTuningConfig parallelIndexTuningConfig = (ParallelIndexTuningConfig) tuningConfig;
       return new CompactionTuningConfig(
-          null,
-          parallelIndexTuningConfig.getMaxRowsPerSegment(),
           parallelIndexTuningConfig.getAppendableIndexSpec(),
           parallelIndexTuningConfig.getMaxRowsInMemory(),
           parallelIndexTuningConfig.getMaxBytesInMemory(),
           parallelIndexTuningConfig.isSkipBytesInMemoryOverheadCheck(),
-          parallelIndexTuningConfig.getMaxTotalRows(),
-          parallelIndexTuningConfig.getNumShards(),
           parallelIndexTuningConfig.getSplitHintSpec(),
           parallelIndexTuningConfig.getPartitionsSpec(),
           parallelIndexTuningConfig.getIndexSpec(),
@@ -288,14 +284,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     } else if (tuningConfig instanceof IndexTuningConfig) {
       final IndexTuningConfig indexTuningConfig = (IndexTuningConfig) tuningConfig;
       return new CompactionTuningConfig(
-          null,
-          indexTuningConfig.getMaxRowsPerSegment(),
           indexTuningConfig.getAppendableIndexSpec(),
           indexTuningConfig.getMaxRowsInMemory(),
           indexTuningConfig.getMaxBytesInMemory(),
           indexTuningConfig.isSkipBytesInMemoryOverheadCheck(),
-          indexTuningConfig.getMaxTotalRows(),
-          indexTuningConfig.getNumShards(),
           null,
           indexTuningConfig.getPartitionsSpec(),
           indexTuningConfig.getIndexSpec(),
@@ -1202,10 +1194,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           null,
           null,
           null,
-          null,
-          null,
-          null,
-          null,
           0L,
           null
       );
@@ -1213,14 +1201,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     @JsonCreator
     public CompactionTuningConfig(
-        @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-        @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
         @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
-        @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
-        @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
         @JsonProperty("splitHintSpec") @Nullable SplitHintSpec splitHintSpec,
         @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
@@ -1248,14 +1232,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     )
     {
       super(
-          targetPartitionSize,
-          maxRowsPerSegment,
           appendableIndexSpec,
           maxRowsInMemory,
           maxBytesInMemory,
           skipBytesInMemoryOverheadCheck,
-          maxTotalRows,
-          numShards,
           splitHintSpec,
           partitionsSpec,
           indexSpec,
@@ -1294,14 +1274,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     public CompactionTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
     {
       return new CompactionTuningConfig(
-          null,
-          null,
           getAppendableIndexSpec(),
           getMaxRowsInMemory(),
           getMaxBytesInMemory(),
           isSkipBytesInMemoryOverheadCheck(),
-          null,
-          null,
           getSplitHintSpec(),
           partitionsSpec,
           getIndexSpec(),

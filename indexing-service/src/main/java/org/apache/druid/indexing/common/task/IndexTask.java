@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
@@ -1120,8 +1121,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     private final InputSource inputSource;
     private final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
     private final InputFormat inputFormat;
-    private boolean appendToExisting;
-    private boolean dropExisting;
+    private final boolean appendToExisting;
+    private final boolean dropExisting;
 
     @JsonCreator
     public IndexIOConfig(
@@ -1133,8 +1134,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     {
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
+      this.appendToExisting = Configs.valueOrDefault(appendToExisting, BatchIOConfig.DEFAULT_APPEND_EXISTING);
+      this.dropExisting = Configs.valueOrDefault(dropExisting, BatchIOConfig.DEFAULT_DROP_EXISTING);
     }
 
     @Nullable
@@ -1234,33 +1235,12 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
     private final int numPersistThreads;
 
-    @Nullable
-    private static PartitionsSpec getPartitionsSpec(
+    private static void validatePartitionsSpec(
         boolean forceGuaranteedRollup,
-        @Nullable PartitionsSpec partitionsSpec,
-        @Nullable Integer maxRowsPerSegment,
-        @Nullable Long maxTotalRows,
-        @Nullable Integer numShards,
-        @Nullable List<String> partitionDimensions
+        PartitionsSpec partitionsSpec
     )
     {
-      if (partitionsSpec == null) {
-        if (forceGuaranteedRollup) {
-          if (maxRowsPerSegment != null
-              || numShards != null
-              || (partitionDimensions != null && !partitionDimensions.isEmpty())) {
-            return new HashedPartitionsSpec(maxRowsPerSegment, numShards, partitionDimensions);
-          } else {
-            return null;
-          }
-        } else {
-          if (maxRowsPerSegment != null || maxTotalRows != null) {
-            return new DynamicPartitionsSpec(maxRowsPerSegment, maxTotalRows);
-          } else {
-            return null;
-          }
-        }
-      } else {
+      if (partitionsSpec != null) {
         if (forceGuaranteedRollup) {
           if (!partitionsSpec.isForceGuaranteedRollupCompatibleType()) {
             throw new IAE(partitionsSpec.getClass().getSimpleName() + " cannot be used for perfect rollup");
@@ -1270,29 +1250,21 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
             throw new IAE("DynamicPartitionsSpec must be used for best-effort rollup");
           }
         }
-        return partitionsSpec;
       }
     }
 
     @JsonCreator
     public IndexTuningConfig(
-        @JsonProperty("targetPartitionSize") @Deprecated @Nullable Integer targetPartitionSize,
-        @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
         @JsonProperty("appendableIndexSpec") @Nullable AppendableIndexSpec appendableIndexSpec,
         @JsonProperty("maxRowsInMemory") @Nullable Integer maxRowsInMemory,
         @JsonProperty("maxBytesInMemory") @Nullable Long maxBytesInMemory,
         @JsonProperty("skipBytesInMemoryOverheadCheck") @Nullable Boolean skipBytesInMemoryOverheadCheck,
-        @JsonProperty("maxTotalRows") @Deprecated @Nullable Long maxTotalRows,
-        @JsonProperty("rowFlushBoundary") @Deprecated @Nullable Integer rowFlushBoundary_forBackCompatibility,
-        @JsonProperty("numShards") @Deprecated @Nullable Integer numShards,
-        @JsonProperty("partitionDimensions") @Deprecated @Nullable List<String> partitionDimensions,
         @JsonProperty("partitionsSpec") @Nullable PartitionsSpec partitionsSpec,
         @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
         @JsonProperty("indexSpecForIntermediatePersists") @Nullable IndexSpec indexSpecForIntermediatePersists,
         @JsonProperty("maxPendingPersists") @Nullable Integer maxPendingPersists,
         @JsonProperty("forceGuaranteedRollup") @Nullable Boolean forceGuaranteedRollup,
         @JsonProperty("reportParseExceptions") @Deprecated @Nullable Boolean reportParseExceptions,
-        @JsonProperty("publishTimeout") @Deprecated @Nullable Long publishTimeout,
         @JsonProperty("pushTimeout") @Nullable Long pushTimeout,
         @JsonProperty("segmentWriteOutMediumFactory") @Nullable
             SegmentWriteOutMediumFactory segmentWriteOutMediumFactory,
@@ -1306,23 +1278,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     {
       this(
           appendableIndexSpec,
-          maxRowsInMemory != null ? maxRowsInMemory : rowFlushBoundary_forBackCompatibility,
-          maxBytesInMemory != null ? maxBytesInMemory : 0,
-          skipBytesInMemoryOverheadCheck != null ? skipBytesInMemoryOverheadCheck : DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK,
-          getPartitionsSpec(
-              forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup,
-              partitionsSpec,
-              maxRowsPerSegment == null ? targetPartitionSize : maxRowsPerSegment,
-              maxTotalRows,
-              numShards,
-              partitionDimensions
-          ),
+          maxRowsInMemory,
+          maxBytesInMemory,
+          skipBytesInMemoryOverheadCheck,
+          partitionsSpec,
           indexSpec,
           indexSpecForIntermediatePersists,
           maxPendingPersists,
           forceGuaranteedRollup,
           reportParseExceptions,
-          pushTimeout != null ? pushTimeout : publishTimeout,
+          pushTimeout,
           null,
           segmentWriteOutMediumFactory,
           logParseExceptions,
@@ -1331,11 +1296,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           maxColumnsToMerge,
           awaitSegmentAvailabilityTimeoutMillis,
           numPersistThreads
-      );
-
-      Preconditions.checkArgument(
-          targetPartitionSize == null || maxRowsPerSegment == null,
-          "Can't use targetPartitionSize and maxRowsPerSegment together"
       );
     }
 
@@ -1366,26 +1326,23 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         @Nullable Integer numPersistThreads
     )
     {
-      this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
+      this.appendableIndexSpec = Configs.valueOrDefault(appendableIndexSpec, DEFAULT_APPENDABLE_INDEX);
+      this.maxRowsInMemory = Configs.valueOrDefault(maxRowsInMemory, TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY_BATCH);
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
-      this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
-      this.skipBytesInMemoryOverheadCheck = skipBytesInMemoryOverheadCheck == null ?
-                                            DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK : skipBytesInMemoryOverheadCheck;
-      this.maxColumnsToMerge = maxColumnsToMerge == null
-                               ? IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE
-                               : maxColumnsToMerge;
+      this.maxBytesInMemory = Configs.valueOrDefault(maxBytesInMemory, 0);
+      this.skipBytesInMemoryOverheadCheck = Configs.valueOrDefault(
+          skipBytesInMemoryOverheadCheck,
+          DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK
+      );
+      this.maxColumnsToMerge = Configs.valueOrDefault(maxColumnsToMerge, IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE);
       this.partitionsSpec = partitionsSpec;
-      this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-      this.indexSpecForIntermediatePersists = indexSpecForIntermediatePersists == null ?
-                                              this.indexSpec : indexSpecForIntermediatePersists;
-      this.maxPendingPersists = maxPendingPersists == null ? DEFAULT_MAX_PENDING_PERSISTS : maxPendingPersists;
-      this.forceGuaranteedRollup = forceGuaranteedRollup == null ? DEFAULT_GUARANTEE_ROLLUP : forceGuaranteedRollup;
-      this.reportParseExceptions = reportParseExceptions == null
-                                   ? DEFAULT_REPORT_PARSE_EXCEPTIONS
-                                   : reportParseExceptions;
-      this.pushTimeout = pushTimeout == null ? DEFAULT_PUSH_TIMEOUT : pushTimeout;
+      this.indexSpec = Configs.valueOrDefault(indexSpec, DEFAULT_INDEX_SPEC);
+      this.indexSpecForIntermediatePersists = Configs.valueOrDefault(indexSpecForIntermediatePersists, this.indexSpec);
+      this.maxPendingPersists = Configs.valueOrDefault(maxPendingPersists, DEFAULT_MAX_PENDING_PERSISTS);
+      this.forceGuaranteedRollup = Configs.valueOrDefault(forceGuaranteedRollup, DEFAULT_GUARANTEE_ROLLUP);
+      this.reportParseExceptions = Configs.valueOrDefault(reportParseExceptions, DEFAULT_REPORT_PARSE_EXCEPTIONS);
+      this.pushTimeout = Configs.valueOrDefault(pushTimeout, DEFAULT_PUSH_TIMEOUT);
       this.basePersistDirectory = basePersistDirectory;
 
       this.segmentWriteOutMediumFactory = segmentWriteOutMediumFactory;
@@ -1394,16 +1351,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         this.maxParseExceptions = 0;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
       } else {
-        this.maxParseExceptions = maxParseExceptions == null
-                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
-                                  : maxParseExceptions;
-        this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
-                                       : maxSavedParseExceptions;
+        this.maxParseExceptions = Configs.valueOrDefault(
+            maxParseExceptions,
+            TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+        );
+        this.maxSavedParseExceptions = Configs.valueOrDefault(
+            maxSavedParseExceptions,
+            TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+        );
       }
-      this.logParseExceptions = logParseExceptions == null
-                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
-                                : logParseExceptions;
+      this.logParseExceptions = Configs.valueOrDefault(logParseExceptions, TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS);
       if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
         this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
       } else {
@@ -1411,6 +1368,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
       }
       this.numPersistThreads = numPersistThreads == null ?
                                 DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
+
+      validatePartitionsSpec(this.forceGuaranteedRollup, this.partitionsSpec);
     }
 
     @Override
@@ -1557,53 +1516,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     public int getMaxSavedParseExceptions()
     {
       return maxSavedParseExceptions;
-    }
-
-    /**
-     * Return the max number of rows per segment. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
-     */
-    @Nullable
-    @Override
-    @Deprecated
-    @JsonProperty
-    public Integer getMaxRowsPerSegment()
-    {
-      return partitionsSpec == null ? null : partitionsSpec.getMaxRowsPerSegment();
-    }
-
-    /**
-     * Return the max number of total rows in appenderator. This returns null if it's not specified in tuningConfig.
-     * Deprecated in favor of {@link #getGivenOrDefaultPartitionsSpec()}.
-     */
-    @Override
-    @Nullable
-    @Deprecated
-    @JsonProperty
-    public Long getMaxTotalRows()
-    {
-      return partitionsSpec instanceof DynamicPartitionsSpec
-             ? ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
-             : null;
-    }
-
-    @Deprecated
-    @Nullable
-    @JsonProperty
-    public Integer getNumShards()
-    {
-      return partitionsSpec instanceof HashedPartitionsSpec
-             ? ((HashedPartitionsSpec) partitionsSpec).getNumShards()
-             : null;
-    }
-
-    @Deprecated
-    @JsonProperty
-    public List<String> getPartitionDimensions()
-    {
-      return partitionsSpec instanceof HashedPartitionsSpec
-             ? ((HashedPartitionsSpec) partitionsSpec).getPartitionDimensions()
-             : Collections.emptyList();
     }
 
     @Override
