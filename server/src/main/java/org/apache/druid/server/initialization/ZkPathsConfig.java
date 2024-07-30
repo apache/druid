@@ -38,8 +38,6 @@ public class ZkPathsConfig
   @JsonProperty
   private String coordinatorPath;
   @JsonProperty
-  private String loadQueuePath;
-  @JsonProperty
   private String connectorPath;
 
   public String getBase()
@@ -63,6 +61,7 @@ public class ZkPathsConfig
     return (null == servedSegmentsPath) ? defaultPath("servedSegments") : servedSegmentsPath;
   }
 
+  @Deprecated
   public String getLiveSegmentsPath()
   {
     return (null == liveSegmentsPath) ? defaultPath("segments") : liveSegmentsPath;
@@ -76,11 +75,6 @@ public class ZkPathsConfig
   public String getOverlordPath()
   {
     return defaultPath("overlord");
-  }
-
-  public String getLoadQueuePath()
-  {
-    return (null == loadQueuePath) ? defaultPath("loadQueue") : loadQueuePath;
   }
 
   public String getConnectorPath()
@@ -116,7 +110,6 @@ public class ZkPathsConfig
         this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
         this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
         this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
-        this.getLoadQueuePath().equals(otherConfig.getLoadQueuePath()) &&
         this.getPropertiesPath().equals(otherConfig.getPropertiesPath()) &&
         this.getServedSegmentsPath().equals(otherConfig.getServedSegmentsPath())) {
       return true;
@@ -133,7 +126,6 @@ public class ZkPathsConfig
     result = 31 * result + (servedSegmentsPath != null ? servedSegmentsPath.hashCode() : 0);
     result = 31 * result + (liveSegmentsPath != null ? liveSegmentsPath.hashCode() : 0);
     result = 31 * result + (coordinatorPath != null ? coordinatorPath.hashCode() : 0);
-    result = 31 * result + (loadQueuePath != null ? loadQueuePath.hashCode() : 0);
     result = 31 * result + (connectorPath != null ? connectorPath.hashCode() : 0);
     return result;
   }
