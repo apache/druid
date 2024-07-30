@@ -20,6 +20,7 @@
 package org.apache.druid.quidem;
 
 import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -34,9 +35,11 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
   private File file;
+  private DruidHookDispatcher hookDispatcher;
 
-  public QuidemRecorder(URI quidemURI, File file)
+  public QuidemRecorder(URI quidemURI, DruidHookDispatcher hookDispatcher, File file)
   {
+    this.hookDispatcher = hookDispatcher;
     this.file = file;
     try {
       this.printStream = new PrintStream(new FileOutputStream(file), true, StandardCharsets.UTF_8.name());
@@ -47,7 +50,7 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
     printStream.println("#started " + new Date());
     printStream.println("!use " + quidemURI);
     printStream.println("!set outputformat mysql");
-    DruidHook.register(DruidHook.SQL, this);
+    hookDispatcher.register(DruidHook.SQL, this);
   }
 
   @Override
@@ -57,7 +60,7 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
       printStream.close();
       printStream = null;
     }
-    DruidHook.unregister(DruidHook.SQL, this);
+    hookDispatcher.unregister(DruidHook.SQL, this);
   }
 
   @Override

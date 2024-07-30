@@ -78,31 +78,31 @@ public interface DruidHook<T>
   @SuppressFBWarnings({"MS_OOI_PKGPROTECT"})
   Map<HookKey<?>, List<DruidHook<?>>> GLOBAL = new HashMap<>();
 
-  static void register(HookKey<?> label, DruidHook<?> hook)
+  static void register1(HookKey<?> label, DruidHook<?> hook)
   {
     GLOBAL.computeIfAbsent(label, k -> new ArrayList<>()).add(hook);
   }
 
-  static void unregister(HookKey<?> key, DruidHook<?> hook)
+  static void unregister1(HookKey<?> key, DruidHook<?> hook)
   {
     GLOBAL.get(key).remove(hook);
   }
 
-  static <T> Closeable withHook(HookKey<T> key, DruidHook<T> hook)
+  static <T> Closeable withHook1(HookKey<T> key, DruidHook<T> hook)
   {
-    register(key, hook);
+    register1(key, hook);
     return new Closeable()
     {
       @Override
       public void close()
       {
-        unregister(key, hook);
+        unregister1(key, hook);
       }
     };
   }
 
   @SuppressWarnings({"rawtypes", "unchecked"})
-  static <T> void dispatch(HookKey<T> key, T object)
+  static <T> void dispatch12(HookKey<T> key, T object)
   {
     List<DruidHook<?>> hooks = GLOBAL.get(key);
     if (hooks != null) {

@@ -37,10 +37,12 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,10 +169,11 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected final void executeExplain(Context x) throws IOException
+    protected final void executeExplain(Context x) throws IOException, SQLException
     {
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
       List<RelNode> logged = new ArrayList<>();
-      try (Closeable unhook = DruidHook.withHook(hook, (key, relNode) -> {
+      try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
         logged.add(relNode);
       })) {
         executeQuery(x);
@@ -183,6 +186,10 @@ public class DruidQuidemCommandHandler implements CommandHandler
         String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
         x.echo(ImmutableList.of(str));
       }
+    }
+
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x) {
+      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
     }
   }
 

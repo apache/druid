@@ -155,7 +155,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     isPrepared = true;
     SqlNode validatedQueryNode = validatedQueryNode();
     rootQueryRel = handlerContext.planner().rel(validatedQueryNode);
-    DruidHook.dispatch(DruidHook.CONVERTED_PLAN, rootQueryRel.rel);
+    handlerContext.plannerContext().dispatchHook(DruidHook.CONVERTED_PLAN, rootQueryRel.rel);
     handlerContext.hook().captureQueryRel(rootQueryRel);
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     final SqlValidator validator = handlerContext.planner().getValidator();
@@ -592,7 +592,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
       handlerContext.hook().captureDruidRel(druidRel);
 
-      DruidHook.dispatch(DruidHook.DRUID_PLAN, druidRel);
+      plannerContext.dispatchHook(DruidHook.DRUID_PLAN, druidRel);
 
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, druidRel, true);

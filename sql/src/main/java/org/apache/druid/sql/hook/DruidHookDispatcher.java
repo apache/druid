@@ -20,6 +20,7 @@
 package org.apache.druid.sql.hook;
 
 import com.google.inject.Inject;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 
 import java.io.Closeable;
@@ -28,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@LazySingleton
 public class DruidHookDispatcher
 {
   @Inject

@@ -22,6 +22,7 @@ package org.apache.druid.quidem;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import javax.inject.Named;
 import javax.ws.rs.GET;
@@ -40,11 +41,13 @@ public class QuidemCaptureResource
       .getPathFromProjectRoot("quidem-it/src/test/quidem/org.apache.druid.quidem.QTest");
   private URI quidemURI;
   private QuidemRecorder recorder = null;
+  private DruidHookDispatcher hookDispatcher;
 
   @Inject
-  public QuidemCaptureResource(@Named("quidem") URI quidemURI)
+  public QuidemCaptureResource(@Named("quidem") URI quidemURI, DruidHookDispatcher hookDispatcher)
   {
     this.quidemURI = quidemURI;
+    this.hookDispatcher = hookDispatcher;
   }
 
   @GET
@@ -55,6 +58,7 @@ public class QuidemCaptureResource
     stopIfRunning();
     recorder = new QuidemRecorder(
         quidemURI,
+        hookDispatcher,
         genRecordFilePath()
     );
     return recorder.toString();

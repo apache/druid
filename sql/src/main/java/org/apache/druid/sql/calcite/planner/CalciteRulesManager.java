@@ -395,7 +395,8 @@ public class CalciteRulesManager
     public RelNode run(RelOptPlanner planner, RelNode rel, RelTraitSet requiredOutputTraits,
         List<RelOptMaterialization> materializations, List<RelOptLattice> lattices)
     {
-      DruidHook.dispatch(DruidHook.LOGICAL_PLAN, rel);
+      PlannerContext pctx = planner.getContext().unwrapOrThrow(PlannerContext.class);
+      pctx.dispatchHook(DruidHook.LOGICAL_PLAN, rel);
       return rel;
     }
   }
