@@ -86,7 +86,7 @@ public class FrameCursor implements Cursor
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     offset.setCurrentOffset(markOffset);
   }

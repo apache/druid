@@ -124,7 +124,7 @@ public class RowBasedCursor<RowType> implements Cursor
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     rowId = markId;
     rowWalker.reset();

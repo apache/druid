@@ -508,9 +508,9 @@ public class QueryableIndexCursorMaker implements CursorMaker
     }
 
     @Override
-    public void resetMark()
+    public void resetToMark()
     {
-      cursorOffset.resetMark();
+      cursorOffset.resetToMark();
     }
 
     @Override
@@ -567,9 +567,9 @@ public class QueryableIndexCursorMaker implements CursorMaker
     }
 
     @Override
-    public void resetMark()
+    public void resetToMark()
     {
-      baseOffset.resetMark();
+      baseOffset.resetToMark();
     }
 
     @Override

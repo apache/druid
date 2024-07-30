@@ -41,15 +41,27 @@ import org.apache.druid.query.monomorphicprocessing.CalledFromHotLoop;
 @SubclassesMustBePublic
 public abstract class Offset implements ReadableOffset, Cloneable
 {
+  /**
+   * Move to next offset
+   */
   @CalledFromHotLoop
   public abstract void increment();
 
+  /**
+   * Check if current offset position is within the valid range
+   */
   @CalledFromHotLoop
   public abstract boolean withinBounds();
 
+  /**
+   * Mark the current offset to recall later with {@link #resetToMark()}
+   */
   public abstract void mark();
 
-  public abstract void resetMark();
+  /**
+   * Reset to the offset set by {@link #mark()}
+   */
+  public abstract void resetToMark();
 
   /**
    * Resets the Offset to the position it was created or cloned with.

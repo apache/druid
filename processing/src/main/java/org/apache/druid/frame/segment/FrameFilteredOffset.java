@@ -88,9 +88,9 @@ public class FrameFilteredOffset extends SimpleSettableOffset
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
-    baseOffset.resetMark();
+    baseOffset.resetToMark();
   }
 
   @Override

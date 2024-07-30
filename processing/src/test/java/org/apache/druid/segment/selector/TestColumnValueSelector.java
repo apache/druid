@@ -121,7 +121,7 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     rowCounter = markCounter;
     iterator = iteratorSupplier.get();

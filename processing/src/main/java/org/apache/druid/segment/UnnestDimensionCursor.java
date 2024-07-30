@@ -299,10 +299,10 @@ public class UnnestDimensionCursor implements Cursor
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     index = markIndex;
-    baseCursor.resetMark();
+    baseCursor.resetToMark();
     if (!baseCursor.isDone()) {
       indexIntsForRow = new SingleIndexInts();
       indexedIntsForCurrentRow = dimSelector.getRow();

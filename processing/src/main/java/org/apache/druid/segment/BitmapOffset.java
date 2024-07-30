@@ -214,7 +214,7 @@ public class BitmapOffset extends Offset
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     iterator = Preconditions.checkNotNull(iteratorForMark).clone();
     value = valueForMark;

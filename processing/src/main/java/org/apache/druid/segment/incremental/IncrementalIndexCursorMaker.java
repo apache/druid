@@ -214,7 +214,7 @@ public class IncrementalIndexCursorMaker implements CursorMaker
     }
 
     @Override
-    public void resetMark()
+    public void resetToMark()
     {
       numAdvanced = markAdvanced;
       baseIter = facts.timeRangeIterable(

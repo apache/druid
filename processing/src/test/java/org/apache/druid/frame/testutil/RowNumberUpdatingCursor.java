@@ -79,10 +79,10 @@ public class RowNumberUpdatingCursor implements Cursor
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     rowNumberVirtualColumn.setValue(markRowNumber);
-    baseCursor.resetMark();
+    baseCursor.resetToMark();
   }
 
   @Override

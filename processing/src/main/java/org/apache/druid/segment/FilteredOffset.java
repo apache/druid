@@ -63,9 +63,9 @@ public final class FilteredOffset extends Offset
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
-    baseOffset.resetMark();
+    baseOffset.resetToMark();
   }
 
   @Override

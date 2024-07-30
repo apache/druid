@@ -250,10 +250,10 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     index = markIndex;
-    baseCursor.resetMark();
+    baseCursor.resetToMark();
     getNextRow();
     if (unnestListForCurrentRow.isEmpty()) {
       moveToNextNonEmptyRow();

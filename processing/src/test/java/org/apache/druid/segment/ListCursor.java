@@ -216,7 +216,7 @@ public class ListCursor implements Cursor
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     index = markIndex;
   }

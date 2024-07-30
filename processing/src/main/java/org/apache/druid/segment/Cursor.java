@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.QueryInterruptedException;
 import org.joda.time.DateTime;
 
 /**
@@ -35,15 +36,45 @@ import org.joda.time.DateTime;
  */
 public interface Cursor
 {
+  /**
+   * Get a {@link ColumnSelectorFactory} whose selectors will be backed by the row values at the current position of
+   * the cursor
+   */
   ColumnSelectorFactory getColumnSelectorFactory();
 
+  /**
+   * Advance to the next row in the cursor, checking if thread has been interrupted after advancing and possibly
+   * throwing {@link QueryInterruptedException} if so
+   */
   void advance();
+
+  /**
+   * Advance to the next row in the cursor
+   */
   void advanceUninterruptibly();
 
+  /**
+   * Check if there are any additional rows in the cursor
+   */
   boolean isDone();
+
+  /**
+   * Check if there are any additional rows in the cursor, or if the thread has been interrupted
+   */
   boolean isDoneOrInterrupted();
 
+  /**
+   * Mark a position on the cursor which can recalled with {@link #resetToMark()}
+   */
   void mark(DateTime mark);
-  void resetMark();
+
+  /**
+   * Reset to position set by {@link #mark(DateTime)}
+   */
+  void resetToMark();
+
+  /**
+   * Reset to start of cursor
+   */
   void reset();
 }

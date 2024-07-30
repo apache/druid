@@ -253,9 +253,9 @@ public class HashJoinEngine
       }
 
       @Override
-      public void resetMark()
+      public void resetToMark()
       {
-        leftCursor.resetMark();
+        leftCursor.resetToMark();
         joinMatcher.reset();
         joinColumnSelectorFactory.rowId = joinMarkId;
       }

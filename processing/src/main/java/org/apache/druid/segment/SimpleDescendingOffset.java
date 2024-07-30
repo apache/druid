@@ -62,7 +62,7 @@ public class SimpleDescendingOffset extends SimpleSettableOffset
   }
 
   @Override
-  public void resetMark()
+  public void resetToMark()
   {
     currentOffset = markOffset;
   }

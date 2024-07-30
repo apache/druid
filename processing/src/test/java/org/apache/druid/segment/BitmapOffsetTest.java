@@ -108,7 +108,7 @@ public class BitmapOffsetTest
   }
 
   @Test
-  public void testMarkResetMark()
+  public void testMarkResetToMark()
   {
     MutableBitmap mutable = factory.makeEmptyMutableBitmap();
     IntList rows = new IntArrayList();
@@ -144,7 +144,7 @@ public class BitmapOffsetTest
       offset.increment();
     }
 
-    offset.resetMark();
+    offset.resetToMark();
     count = mark;
     while (offset.withinBounds()) {
       Assert.assertEquals(expected.getInt(count), offset.getOffset());

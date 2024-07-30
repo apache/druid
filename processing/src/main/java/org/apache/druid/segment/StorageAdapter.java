@@ -41,7 +41,8 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   /**
    * Build a {@link CursorMaker} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
    * scanning segments and creating {@link ColumnSelectorFactory} and
-   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values.
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values at the cursor
+   * position.
    */
   @Override
   default CursorMaker asCursorMaker(CursorBuildSpec spec)
