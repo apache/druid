@@ -223,7 +223,7 @@ You can specify remapping values for each globally cached lookup with a JSON obj
 
 *Define `uri` or `uriPrefix` as either a local file system (`file://`), HDFS (`hdfs://`), S3 (`s3://`) or GCS (`gs://`) location. Druid doesn't support HTTP location.
 
-The `pollPeriod` value specifies the period in ISO 8601 format between checks for replacement data for the lookup. If the source of the lookup is capable of providing a timestamp, the lookup is only updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all direct Druid to populate the lookup once and not attempt to look for new data later. 
+The `pollPeriod` value specifies the period in ISO 8601 format between checks for replacement data for the lookup. If the source of the lookup provides a timestamp, Druid only updates the lookup when the lookup has changed since the prior `pollPeriod` timestamp. A value of 0, an absent parameter, or `null` all direct Druid to populate the lookup once without attempting to check again for new data. 
 
 Whenever a poll occurs, the updating system looks for a file with the most recent timestamp and assumes that is the one with the most recent data set, using it to replace the local cache of the lookup data.
 
