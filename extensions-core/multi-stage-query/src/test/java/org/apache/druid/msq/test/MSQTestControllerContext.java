@@ -262,6 +262,7 @@ public class MSQTestControllerContext implements ControllerContext
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
+        worker.stop();
         worker.awaitStop();
       }
       return Futures.immediateFuture(null);
