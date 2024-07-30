@@ -32,9 +32,9 @@ To use this Apache Druid extension, [include](../configuration/extensions.md#loa
 
 ## Configuration
 
-Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
-or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
-and are small enough to reasonably populate in-memory. This usually means tens to tens of thousands of entries per lookup.
+Use globally cached lookup in the following scenarios:
+- The lookup is too large to pass at query time.
+- You want the lookup data to reside in a Druid data source handled by Druid and the lookup is small enough to reasonably reside in memory--between tens and tens of thousand of entries per lookup.
 
 :::info
  Druid no longer supports static lookup configuration. You can configure lookups through
