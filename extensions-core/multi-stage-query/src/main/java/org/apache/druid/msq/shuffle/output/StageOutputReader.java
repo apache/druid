@@ -47,6 +47,10 @@ public interface StageOutputReader extends Closeable
    * Callers are responsible for closing the returned {@link InputStream}. This input stream may encapsulate
    * resources that are not closed by this class's {@link #close()} method.
    *
+   * It is implementation-dependent whether calls to this method must have monotonically increasing offsets.
+   * In particular, {@link ChannelStageOutputReader} requires monotonically increasing offsets, but
+   * {@link FileStageOutputReader} and {@link NilStageOutputReader} do not.
+   *
    * @param offset offset into the stage output file
    *
    * @see StageOutputHolder#readRemotelyFrom(long) which uses this method
@@ -62,6 +66,10 @@ public interface StageOutputReader extends Closeable
    *
    * Callers are responsible for closing the returned channel. The returned channel may encapsulate resources that
    * are not closed by this class's {@link #close()} method.
+   *
+   * It is implementation-dependent whether this method can be called multiple times. In particular,
+   * {@link ChannelStageOutputReader#readLocally()} can only be called one time, but the implementations in
+   * {@link FileStageOutputReader} and {@link NilStageOutputReader} can be called multiple times.
    *
    * @see StageOutputHolder#readLocally() which uses this method
    */
