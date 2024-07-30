@@ -75,7 +75,7 @@ public class ChannelStageOutputReader implements StageOutputReader
   private State state = State.INIT;
 
   /**
-   * Position within the overall stream.
+   * Position of {@link #positionWithinFirstChunk} in the first chunk of {@link #chunks}, within the overall stream.
    */
   @GuardedBy("this")
   private long cursor;
@@ -170,12 +170,13 @@ public class ChannelStageOutputReader implements StageOutputReader
         }
       }
 
-      // Remove first chunk if it is no longer needed. (offset is entirely past it.)
+      // Advance cursor to the provided offset, or the end of the current chunk, whichever is earlier.
       final byte[] chunk = chunks.peek();
       final long amountToAdvance = Math.min(offset - cursor, chunk.length - positionWithinFirstChunk);
       cursor += amountToAdvance;
       positionWithinFirstChunk += Ints.checkedCast(amountToAdvance);
 
+      // Remove first chunk if it is no longer needed. (i.e., if the cursor is at the end of it.)
       if (positionWithinFirstChunk == chunk.length) {
         chunks.poll();
         positionWithinFirstChunk = 0;
