@@ -25,6 +25,16 @@ In this test group, the docker compose cluster is launched with services on diff
 The docker image for the previous version is built by downloading the previous version druid tar.
 Currently, the upgrade phase where Coordinator and Overlord is on the previous version is tested. 
 
+#### Test coverage 
+Existing
+- MSQ ingestion
+- Native ingestion 
+- Stream ingestion
+- Querying 
+
+Pending
+- Compaction 
+
 #### Limitations 
 * `druid-testing-tools` jar is not published. The image for the previous version still uses the 
 extension from the current build. 

@@ -30,13 +30,9 @@ import org.apache.druid.testing.utils.KafkaAdminClient;
 import org.apache.druid.testing.utils.KafkaEventWriter;
 import org.apache.druid.testing.utils.KafkaUtil;
 import org.apache.druid.testing.utils.StreamEventWriter;
-import org.apache.druid.testsEx.categories.Query;
-import org.apache.druid.testsEx.config.DruidTestRunner;
 import org.apache.druid.testsEx.indexer.AbstractIndexerTest;
 import org.joda.time.Interval;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
