@@ -32,7 +32,6 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -121,7 +120,6 @@ public class ClientCompactionRunnerInfo
       ));
     }
     validationResults.add(validateMaxNumTasksForMSQ(newConfig.getTaskContext()));
-    validationResults.add(validateMetricsSpecForMSQ(newConfig.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -182,29 +180,5 @@ public class ClientCompactionRunnerInfo
       }
     }
     return CompactionConfigValidationResult.success();
-  }
-
-  /**
-   * Validate each metric has output column name same as the input name.
-   */
-  public static CompactionConfigValidationResult validateMetricsSpecForMSQ(AggregatorFactory[] metricsSpec)
-  {
-    if (metricsSpec == null) {
-      return CompactionConfigValidationResult.success();
-    }
-    return Arrays.stream(metricsSpec)
-                 .filter(aggregatorFactory ->
-                             !(aggregatorFactory.requiredFields().isEmpty()
-                               || aggregatorFactory.requiredFields().size() == 1
-                                  && aggregatorFactory.requiredFields()
-                                                      .get(0)
-                                                      .equals(aggregatorFactory.getName())))
-                 .findFirst()
-                 .map(aggregatorFactory ->
-                          CompactionConfigValidationResult.failure(
-                              "MSQ: Different name[%s] and fieldName(s)[%s] for aggregator",
-                              aggregatorFactory.getName(),
-                              aggregatorFactory.requiredFields()
-                          )).orElse(CompactionConfigValidationResult.success());
   }
 }
