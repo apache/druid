@@ -36,8 +36,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,7 +46,8 @@ import java.util.List;
 public class MSQDruidMeta extends DruidMeta
 {
   protected final MSQTestOverlordServiceClient overlordClient;
-  private final ObjectMapper objectMapper;
+  protected final ObjectMapper objectMapper;
+  protected final DruidHookDispatcher hookDispatcher;
 
   @Inject
   public MSQDruidMeta(
@@ -54,11 +56,14 @@ public class MSQDruidMeta extends DruidMeta
       final ErrorHandler errorHandler,
       final AuthenticatorMapper authMapper,
       final MSQTestOverlordServiceClient overlordClient,
-      final ObjectMapper objectMapper)
+      final ObjectMapper objectMapper,
+      final DruidHookDispatcher hookDispatcher
+      )
   {
     super(sqlStatementFactory, config, errorHandler, authMapper);
     this.overlordClient = overlordClient;
     this.objectMapper = objectMapper;
+    this.hookDispatcher = hookDispatcher;
   }
 
   @Override
@@ -89,10 +94,10 @@ public class MSQDruidMeta extends DruidMeta
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(payload.getStages());
       str = str.replaceAll(taskId, "<taskId>");
-      DruidHook.dispatch(DruidHook.MSQ_PLAN, str);
+      hookDispatcher.dispatch(DruidHook.MSQ_PLAN, str);
     }
     catch (JsonProcessingException e) {
-      DruidHook.dispatch(DruidHook.MSQ_PLAN, "error happened during json serialization");
+      hookDispatcher.dispatch(DruidHook.MSQ_PLAN, "error happened during json serialization");
     }
 
     Signature signature = makeSignature(druidStatement, payload.getResults().getSignature());

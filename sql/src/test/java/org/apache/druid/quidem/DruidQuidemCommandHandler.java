@@ -121,6 +121,11 @@ public class DruidQuidemCommandHandler implements CommandHandler
       }
     }
 
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+    {
+      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
+    }
+
     protected abstract void executeExplain(Context x) throws Exception;
   }
 
@@ -190,11 +195,6 @@ public class DruidQuidemCommandHandler implements CommandHandler
         x.echo(ImmutableList.of(str));
       }
     }
-
-    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
-    {
-      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
-    }
   }
 
   /**
@@ -213,8 +213,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     @Override
     protected final void executeExplain(Context x) throws IOException
     {
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
       List<String> logged = new ArrayList<>();
-      try (Closeable unhook = DruidHook.withHook(hook, (key, relNode) -> {
+      try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
         logged.add(relNode);
       })) {
         executeQuery(x);
