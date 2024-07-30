@@ -563,7 +563,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                  .plus(DruidLogicalConvention.instance()),
           newRoot
       );
-      DruidHook.dispatch(DruidHook.DRUID_PLAN, newRoot);
+
+      plannerContext.dispatchHook(DruidHook.DRUID_PLAN, newRoot);
 
       DruidQueryGenerator generator = new DruidQueryGenerator(plannerContext, (DruidLogicalNode) newRoot, rexBuilder);
       DruidQuery baseQuery = generator.buildQuery();

@@ -66,7 +66,6 @@ public class PlannerFactory extends PlannerToolbox
       .setConformance(DruidConformance.instance())
       .setParserFactory(new DruidSqlParserImplFactory()) // Custom SQL parser factory
       .build();
-  private final DruidHookDispatcher hookDispatcher;
 
   @Inject
   public PlannerFactory(
@@ -95,9 +94,9 @@ public class PlannerFactory extends PlannerToolbox
         druidSchemaName,
         calciteRuleManager,
         authorizerMapper,
-        authConfig
+        authConfig,
+        hookDispatcher
     );
-    this.hookDispatcher = hookDispatcher;
   }
 
   /**
@@ -117,7 +116,7 @@ public class PlannerFactory extends PlannerToolbox
         queryContext,
         hook
     );
-    hookDispatcher.dispatch(DruidHook.SQL, sql);
+    context.dispatchHook(DruidHook.SQL, sql);
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
