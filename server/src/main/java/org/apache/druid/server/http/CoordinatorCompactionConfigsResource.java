@@ -238,7 +238,7 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     UnaryOperator<DruidCompactionConfig> callable = current -> {
-      final Map<String, DataSourceCompactionConfig> configs = current.dataSourceToCompactionConfig();
+      final Map<String, DataSourceCompactionConfig> configs = current.dataSourceToCompactionConfigMap();
       final DataSourceCompactionConfig config = configs.remove(dataSource);
       if (config == null) {
         throw NotFound.exception("datasource not found");

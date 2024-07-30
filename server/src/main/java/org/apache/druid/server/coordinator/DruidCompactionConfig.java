@@ -75,7 +75,7 @@ public class DruidCompactionConfig
 
   public DruidCompactionConfig withDatasourceConfig(DataSourceCompactionConfig dataSourceConfig)
   {
-    final Map<String, DataSourceCompactionConfig> configs = dataSourceToCompactionConfig();
+    final Map<String, DataSourceCompactionConfig> configs = dataSourceToCompactionConfigMap();
     configs.put(dataSourceConfig.getDataSource(), dataSourceConfig);
     return withDatasourceConfigs(new ArrayList<>(configs.values()));
   }
@@ -143,7 +143,7 @@ public class DruidCompactionConfig
     );
   }
 
-  public Map<String, DataSourceCompactionConfig> dataSourceToCompactionConfig()
+  public Map<String, DataSourceCompactionConfig> dataSourceToCompactionConfigMap()
   {
     return getCompactionConfigs().stream().collect(
         Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity())
