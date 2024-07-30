@@ -2190,6 +2190,98 @@ public class MSQWindowTest extends MSQTestBase
             )
         )
         .setQueryContext(multipleWorkerContext)
+        // Stage 0
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(13).bytes(872).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4, 4, 4, 1).bytes(251, 266, 300, 105).frames(1, 1, 1, 1),
+            0, 0, "shuffle"
+        )
+        // Stage 1, Worker 0
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(251).frames(1),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(251).frames(1),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(251).frames(1),
+            1, 0, "shuffle"
+        )
+
+        // Stage 1, Worker 1
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 4).bytes(0, 266).frames(0, 1),
+            1, 1, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 4).bytes(0, 266).frames(0, 1),
+            1, 1, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(266).frames(1),
+            1, 1, "shuffle"
+        )
+
+        // Stage 1, Worker 2
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 0, 4).bytes(0, 0, 300).frames(0, 0, 1),
+            1, 2, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 0, 4).bytes(0, 0, 300).frames(0, 0, 1),
+            1, 2, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(300).frames(1),
+            1, 2, "shuffle"
+        )
+
+        // Stage 1, Worker 3
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 0, 0, 1).bytes(0, 0, 0, 105).frames(0, 0, 0, 1),
+            1, 3, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 0, 0, 1).bytes(0, 0, 0, 105).frames(0, 0, 0, 1),
+            1, 3, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(1).bytes(105).frames(1),
+            1, 3, "shuffle"
+        )
+
+        // Stage 2 (window stage)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(13).bytes(922).frames(4),
+            2, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(13).bytes(1158).frames(1),
+            2, 0, "output"
+        )
+
+        // Stage 3, Worker 0
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(13).bytes(1158).frames(1),
+            3, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(13).bytes(1379).frames(1),
+            3, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(13).bytes(1327).frames(1),
+            3, 0, "shuffle"
+        )
         .verifyResults();
   }
 }
