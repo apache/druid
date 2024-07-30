@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.run;
+package org.apache.druid.sql.hook;
 
 import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
@@ -33,6 +33,11 @@ import java.util.Objects;
 @FunctionalInterface
 public interface DruidHook<T>
 {
+  HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
+  HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
+  HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
+  HookKey<String> SQL = new HookKey<>("sql", String.class);
+
   @Immutable
   class HookKey<T>
   {
@@ -66,13 +71,7 @@ public interface DruidHook<T>
       HookKey<?> other = (HookKey<?>) obj;
       return Objects.equals(label, other.label) && Objects.equals(type, other.type);
     }
-
   }
-
-  HookKey<RelNode> CONVERTED_PLAN = new HookKey<>("converted", RelNode.class);
-  HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
-  HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
-  HookKey<String> SQL = new HookKey<>("sql", String.class);
 
   void invoke(HookKey<T> key, T object);
 

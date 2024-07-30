@@ -19,7 +19,7 @@
 
 package org.apache.druid.quidem;
 
-import org.apache.druid.sql.calcite.run.DruidHook;
+import org.apache.druid.sql.hook.DruidHook;
 
 import java.io.File;
 import java.io.FileNotFoundException;

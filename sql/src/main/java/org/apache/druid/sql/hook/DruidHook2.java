@@ -17,20 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.run;
+package org.apache.druid.sql.hook;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.sql.hook.DruidHook;
-import org.junit.Test;
-
-public class DruidHookTest
+public interface DruidHook2<T>
 {
-  @Test
-  public void testHookKeyEquals()
-  {
-    EqualsVerifier.forClass(DruidHook.HookKey.class)
-        .withNonnullFields("label", "type")
-        .usingGetClass()
-        .verify();
-  }
 }

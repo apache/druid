@@ -72,10 +72,10 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.rel.DruidUnionRel;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
-import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.utils.Throwables;
 
 import javax.annotation.Nullable;

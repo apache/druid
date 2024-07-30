@@ -46,10 +46,10 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParserImplFactory;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
-import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.Map;
 import java.util.Properties;

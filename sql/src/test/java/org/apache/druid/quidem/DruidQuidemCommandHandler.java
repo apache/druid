@@ -34,9 +34,9 @@ import org.apache.calcite.util.Util;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.run.DruidHook;
-import org.apache.druid.sql.calcite.run.DruidHook.HookKey;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHook.HookKey;
 
 import java.io.Closeable;
 import java.io.IOException;

@@ -68,8 +68,8 @@ import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
-import org.apache.druid.sql.calcite.run.DruidHook;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.ArrayList;
 import java.util.Collections;
