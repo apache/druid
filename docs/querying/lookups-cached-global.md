@@ -36,11 +36,6 @@ Use globally cached lookup in the following scenarios:
 - The lookup is too large to pass at query time.
 - You want the lookup data to reside in a Druid data source handled by Druid and the lookup is small enough to reasonably reside in memory--between tens and tens of thousand of entries per lookup.
 
-:::info
- Druid no longer supports static lookup configuration. You can configure lookups through
- [dynamic configuration](./lookups.md#configuration).
-:::
-
 Specify globally cached lookups as part of the [cluster wide config for lookups](./lookups.md) as a type of `cachedNamespace`. For example:
 
  ```json
