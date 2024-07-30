@@ -28,7 +28,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.overlord.http.TaskLockResponse;
 import org.apache.druid.indexing.overlord.http.TaskPayloadResponse;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.ISE;
@@ -336,53 +336,6 @@ public class OverlordResourceTestClient
     }
   }
 
-  public List<TaskLock> getLocksForDatasource(final String datasource)
-  {
-    try {
-      StatusResponseHolder response = httpClient.go(
-          new Request(
-              HttpMethod.GET,
-              new URL(getIndexerURL() + "datasourceLocks/" + StringUtils.urlEncode(datasource))
-          ),
-          StatusResponseHandler.getInstance()
-      ).get();
-      return jsonMapper.readValue(
-          response.getContent(),
-          new TypeReference<List<TaskLock>>()
-          {
-          }
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  public Map<String, List<Interval>> getLockedIntervalsV2(final List<LockFilterPolicy> lockFilterPolicies)
-  {
-    try {
-      String jsonBody = jsonMapper.writeValueAsString(lockFilterPolicies);
-
-      StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals/v2"))
-              .setContent(
-                  "application/json",
-                  StringUtils.toUtf8(jsonBody)
-              ),
-          StatusResponseHandler.getInstance()
-      ).get();
-      return jsonMapper.readValue(
-          response.getContent(),
-          new TypeReference<Map<String, List<Interval>>>()
-          {
-          }
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
   public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
     try {
@@ -399,6 +352,31 @@ public class OverlordResourceTestClient
       return jsonMapper.readValue(
           response.getContent(),
           new TypeReference<Map<String, List<Interval>>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public TaskLockResponse getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    try {
+      String jsonBody = jsonMapper.writeValueAsString(lockFilterPolicies);
+
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "activeLocks"))
+              .setContent(
+                  "application/json",
+                  StringUtils.toUtf8(jsonBody)
+              ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<TaskLockResponse>()
           {
           }
       );

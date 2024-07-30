@@ -19,6 +19,7 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -306,15 +307,18 @@ public class ITConcurrentAutoCompactionTest extends AbstractKafkaIndexingService
   private boolean checkNoLockContention()
   {
     final List<LockFilterPolicy> lockFilterPolicies = Collections.singletonList(
-        new LockFilterPolicy(fullDatasourceName, 0, ImmutableMap.of("useConcurrentLocks", true))
+        new LockFilterPolicy(fullDatasourceName, 0, null, ImmutableMap.of("useConcurrentLocks", true))
     );
-    Map<String, List<Interval>> allIntervals = indexer.getLockedIntervalsV2(lockFilterPolicies);
+    Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(lockFilterPolicies);
     return CollectionUtils.isNullOrEmpty(allIntervals.get(fullDatasourceName));
   }
 
   private boolean checkAndSetConcurrentLocks()
   {
-    final List<TaskLock> locks = indexer.getLocksForDatasource(fullDatasourceName);
+    LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
+    final List<TaskLock> locks = indexer.getActiveLocks(ImmutableList.of(lockFilterPolicy))
+                                        .getDatasourceToLocks()
+                                        .get(fullDatasourceName);
     Set<Interval> replaceIntervals = new HashSet<>();
     Set<Interval> appendIntervals = new HashSet<>();
     for (TaskLock lock : locks) {

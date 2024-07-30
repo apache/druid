@@ -128,12 +128,7 @@ public class TaskQueryTool
     return storage.getTask(taskId);
   }
 
-  public List<TaskLock> getLocksForDatasource(final String datasource)
-  {
-    return ImmutableList.copyOf(taskLockbox.getLocksForDatasource(datasource));
-  }
-
-  public Optional<TaskStatus> getStatus(final String taskId)
+  public Optional<TaskStatus> getTaskStatus(final String taskId)
   {
     final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     if (taskQueue.isPresent()) {
