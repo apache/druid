@@ -52,6 +52,7 @@ import org.apache.druid.tests.indexer.AbstractStreamIndexingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -62,7 +63,6 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -180,7 +180,7 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
         compactionResource.forceTriggerAutoCompaction();
         ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
         printTaskStatuses();
-        Assert.assertTrue(checkNoLockContention() || checkAndSetConcurrentLocks());
+        checkAndSetConcurrentLocks();
       }
 
       // Verify the state with minute granularity
@@ -202,7 +202,7 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
         compactionResource.forceTriggerAutoCompaction();
         ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
         printTaskStatuses();
-        Assert.assertTrue(checkNoLockContention() || checkAndSetConcurrentLocks());
+        checkAndSetConcurrentLocks();
       }
 
       // Verify the state with all granularity
@@ -227,6 +227,7 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
     ITRetryUtil.retryUntilTrue(
         () -> {
           printTaskStatuses();
+          checkAndSetConcurrentLocks();
           compactionResource.forceTriggerAutoCompaction();
           List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
           StringBuilder sb = new StringBuilder();
@@ -305,21 +306,15 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
     );
   }
 
-  private boolean checkNoLockContention()
-  {
-    final List<LockFilterPolicy> lockFilterPolicies = Collections.singletonList(
-        new LockFilterPolicy(fullDatasourceName, 0, null, ImmutableMap.of("useConcurrentLocks", true))
-    );
-    Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(lockFilterPolicies);
-    return CollectionUtils.isNullOrEmpty(allIntervals.get(fullDatasourceName));
-  }
-
-  private boolean checkAndSetConcurrentLocks()
+  private void checkAndSetConcurrentLocks()
   {
     LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
     final List<TaskLock> locks = indexer.getActiveLocks(ImmutableList.of(lockFilterPolicy))
                                         .getDatasourceToLocks()
                                         .get(fullDatasourceName);
+    if (CollectionUtils.isNullOrEmpty(locks)) {
+      return;
+    }
     Set<Interval> replaceIntervals = new HashSet<>();
     Set<Interval> appendIntervals = new HashSet<>();
     for (TaskLock lock : locks) {
@@ -334,11 +329,10 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
       for (Interval replaceInterval : replaceIntervals) {
         if (appendInterval.overlaps(replaceInterval)) {
           concurrentAppendAndReplaceLocksExisted = true;
-          return true;
+          return;
         }
       }
     }
-    return false;
   }
 
   /**
@@ -365,6 +359,7 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
     final DataSourceCompactionConfig compactionConfig =
         DataSourceCompactionConfig.builder()
                                   .forDataSource(fullDatasourceName)
+                                  .withSkipOffsetFromLatest(Period.ZERO)
                                   .withGranularitySpec(granularitySpec)
                                   .withTaskContext(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
                                   .build();
