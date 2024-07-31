@@ -831,15 +831,33 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 ## DIV
 
-`DIV(x, y)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Returns the result of integer division of `x` by `y`.
 
 :::info
 The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md#safe_divide) instead. 
 :::
+
+* **Syntax:** `DIV(x, y)`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+  The following calculates integer divisions of `78` by `10`.
+
+  ```sql
+  SELECT DIV(78, 10) as "division"
+  ``` 
+
+  Returns the following:
+
+  | `division` |
+  | -- |
+  | `7` |
+
+</details>
+
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## DS_CDF
 
@@ -1096,27 +1114,77 @@ Returns a union of HLL sketches.
 
 ## HUMAN_READABLE_BINARY_BYTE_FORMAT
 
-`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`
+Converts an integer byte size into human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`
+* **Function type:** Scalar, numeric
 
-Converts an integer byte size into human-readable IEC format.
+<details><summary>Example</summary>
+
+  The following example converts `1000000` into IEC format.
+
+  ```sql
+    SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(1000000, 2) AS "iec_format"
+  ```
+  
+  Returns the following:
+
+  | `iec_format` |
+  | -- |
+  | `976.56 KiB` |
+ 
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## HUMAN_READABLE_DECIMAL_BYTE_FORMAT
 
-`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`
+Converts a byte size into human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format.
 
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+* **Syntax:** `HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`
+* **Function type:** Scalar, numeric
 
-Converts a byte size into human-readable SI format.
+<details><summary>Example</summary>
+
+The following example converts `1000000` into SI format.
+
+```sql
+SELECT HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1000000, 2) AS "si_format"
+```
+
+Returns the following:
+
+|`si_format`|
+|--|
+|`1.00 MB`|
+
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## HUMAN_READABLE_DECIMAL_FORMAT
 
-`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Converts a byte size into human-readable SI format with single-character units.
+
+* **Syntax:** `HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`
+* **Function type:** Scalar, numeric
+
+<details><summary>Example</summary>
+
+  The following example converts `1000000` into single character SI format.
+
+```sql
+SELECT HUMAN_READABLE_DECIMAL_FORMAT(1000000, 2) AS "single_character_si_format"
+```
+
+Returns the following:
+
+|`single_character_si_format`|
+|--|
+|`1.00 M`|
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## ICONTAINS_STRING
 
@@ -1751,11 +1819,28 @@ Trims characters from the trailing end of an expression.
 
 ## SAFE_DIVIDE
 
-`SAFE_DIVIDE(x, y)`
-
-**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
-
 Returns `x` divided by `y`, guarded on division by 0.
+
+* **Syntax:** `SAFE_DIVIDE(x, y)`
+* **Function type:** Scalar, numeric 
+
+<details><summary>Example</summary>
+
+The following example calculates divisions of integer `78` by integer `10`.
+
+```sql
+SELECT SAFE_DIVIDE(78, 10) AS "safe_division"
+```
+
+Returns the following:
+
+|`safe_division`|
+|--|
+| `7` |
+
+</details>
+
+[Learn more](sql-scalar.md#numeric-functions)
 
 ## SIN
 
