@@ -169,28 +169,13 @@ public class WorkerMemoryParameters
   }
 
   /**
-   * Create a production instance for {@link org.apache.druid.msq.indexing.MSQControllerTask}.
-   */
-  public static WorkerMemoryParameters createProductionInstanceForController(final Injector injector)
-  {
-    long totalLookupFootprint = computeTotalLookupFootprint(injector);
-    return createInstance(
-        Runtime.getRuntime().maxMemory(),
-        computeNumWorkersInJvm(injector),
-        computeNumProcessorsInJvm(injector),
-        0,
-        0,
-        totalLookupFootprint
-    );
-  }
-
-  /**
    * Create a production instance for {@link org.apache.druid.msq.indexing.MSQWorkerTask}.
    */
   public static WorkerMemoryParameters createProductionInstanceForWorker(
       final Injector injector,
       final QueryDefinition queryDef,
-      final int stageNumber
+      final int stageNumber,
+      final int maxConcurrentStages
   )
   {
     final StageDefinition stageDef = queryDef.getStageDefinition(stageNumber);
@@ -212,6 +197,7 @@ public class WorkerMemoryParameters
         Runtime.getRuntime().maxMemory(),
         computeNumWorkersInJvm(injector),
         computeNumProcessorsInJvm(injector),
+        maxConcurrentStages,
         numInputWorkers,
         numHashOutputPartitions,
         totalLookupFootprint
@@ -228,6 +214,7 @@ public class WorkerMemoryParameters
    * @param numWorkersInJvm           number of workers that can run concurrently in this JVM. Generally equal to
    *                                  the task capacity.
    * @param numProcessingThreadsInJvm size of the processing thread pool in the JVM.
+   * @param maxConcurrentStages       maximum number of concurrent stages per worker.
    * @param numInputWorkers           total number of workers across all input stages.
    * @param numHashOutputPartitions   total number of output partitions, if using hash partitioning; zero if not using
    *                                  hash partitioning.
@@ -237,6 +224,7 @@ public class WorkerMemoryParameters
       final long maxMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
+      final int maxConcurrentStages,
       final int numInputWorkers,
       final int numHashOutputPartitions,
       final long totalLookupFootprint
@@ -257,7 +245,8 @@ public class WorkerMemoryParameters
     );
     final long usableMemoryInJvm = computeUsableMemoryInJvm(maxMemoryInJvm, totalLookupFootprint);
     final long workerMemory = memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
-    final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+    final long bundleMemory =
+        memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm) / maxConcurrentStages;
     final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
     final long bundleMemoryForHashPartitioning = memoryNeededForHashPartitioning(numHashOutputPartitions);
     final long bundleMemoryForProcessing =
@@ -268,6 +257,7 @@ public class WorkerMemoryParameters
           usableMemoryInJvm,
           numWorkersInJvm,
           numProcessingThreadsInJvm,
+          maxConcurrentStages,
           numHashOutputPartitions
       );
 
@@ -281,12 +271,14 @@ public class WorkerMemoryParameters
                     estimateUsableMemory(
                         numWorkersInJvm,
                         numProcessingThreadsInJvm,
-                        PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
+                        PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels,
+                        maxConcurrentStages
                     ), totalLookupFootprint),
                 maxMemoryInJvm,
                 usableMemoryInJvm,
                 numWorkersInJvm,
-                numProcessingThreadsInJvm
+                numProcessingThreadsInJvm,
+                maxConcurrentStages
             )
         );
       }
@@ -301,14 +293,16 @@ public class WorkerMemoryParameters
               calculateSuggestedMinMemoryFromUsableMemory(
                   estimateUsableMemory(
                       numWorkersInJvm,
-                      (MIN_SUPER_SORTER_FRAMES + BUFFER_BYTES_FOR_ESTIMATION) * LARGE_FRAME_SIZE
+                      (MIN_SUPER_SORTER_FRAMES + BUFFER_BYTES_FOR_ESTIMATION) * LARGE_FRAME_SIZE,
+                      maxConcurrentStages
                   ),
                   totalLookupFootprint
               ),
               maxMemoryInJvm,
               usableMemoryInJvm,
               numWorkersInJvm,
-              numProcessingThreadsInJvm
+              numProcessingThreadsInJvm,
+              maxConcurrentStages
           )
       );
     }
@@ -338,12 +332,14 @@ public class WorkerMemoryParameters
                   estimateUsableMemory(
                       numWorkersInJvm,
                       numProcessingThreadsInJvm,
-                      PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
+                      PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels,
+                      maxConcurrentStages
                   ), totalLookupFootprint),
               maxMemoryInJvm,
               usableMemoryInJvm,
               numWorkersInJvm,
-              numProcessingThreadsInJvm
+              numProcessingThreadsInJvm,
+              maxConcurrentStages
           )
       );
     }
@@ -352,7 +348,9 @@ public class WorkerMemoryParameters
         bundleMemoryForProcessing,
         superSorterMaxActiveProcessors,
         superSorterMaxChannelsPerProcessor,
-        Ints.checkedCast(workerMemory) // 100% of worker memory is devoted to partition statistics
+
+        // 100% of worker memory is devoted to partition statistics
+        Ints.checkedCast(workerMemory / maxConcurrentStages)
     );
   }
 
@@ -459,18 +457,19 @@ public class WorkerMemoryParameters
       final long usableMemoryInJvm,
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
+      final int maxConcurrentStages,
       final int numHashOutputPartitions
   )
   {
     final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
 
-    // Compute number of workers that gives us PROCESSING_MINIMUM_BYTES of memory per bundle, while accounting for
-    // memoryNeededForInputChannels + memoryNeededForHashPartitioning.
+    // Compute number of workers that gives us PROCESSING_MINIMUM_BYTES of memory per bundle per concurrent stage, while
+    // accounting for memoryNeededForInputChannels + memoryNeededForHashPartitioning.
     final int isHashing = numHashOutputPartitions > 0 ? 1 : 0;
-    return Math.max(
-        0,
-        Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / ((long) STANDARD_FRAME_SIZE * (1 + isHashing)) - 1)
-    );
+    final long bundleMemoryPerStage = bundleMemory / maxConcurrentStages;
+    final long maxWorkers =
+        (bundleMemoryPerStage - PROCESSING_MINIMUM_BYTES) / ((long) STANDARD_FRAME_SIZE * (1 + isHashing)) - 1;
+    return Math.max(0, Ints.checkedCast(maxWorkers));
   }
 
   /**
@@ -528,7 +527,8 @@ public class WorkerMemoryParameters
   }
 
   /**
-   * Compute the memory allocated to each processing bundle. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#estimateUsableMemory(int, int, long)}
+   * Compute the memory allocated to each processing bundle. Any computation changes done to this method should also be
+   * done in its corresponding method {@link WorkerMemoryParameters#estimateUsableMemory}
    */
   private static long memoryPerBundle(
       final long usableMemoryInJvm,
@@ -536,6 +536,8 @@ public class WorkerMemoryParameters
       final int numProcessingThreadsInJvm
   )
   {
+    // One bundle per worker + one per processor. The worker bundles are used for sorting (SuperSorter) and the
+    // processing bundles are used for reading input and doing per-partition processing.
     final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
 
     // Need to subtract memoryForWorkers off the top of usableMemoryInJvm, since this is reserved for
@@ -553,24 +555,28 @@ public class WorkerMemoryParameters
   private static long estimateUsableMemory(
       final int numWorkersInJvm,
       final int numProcessingThreadsInJvm,
-      final long estimatedEachBundleMemory
+      final long estimatedEachBundleMemory,
+      final int maxConcurrentStages
   )
   {
     final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
-    return estimateUsableMemory(numWorkersInJvm, estimatedEachBundleMemory * bundleCount);
-
+    return estimateUsableMemory(numWorkersInJvm, estimatedEachBundleMemory * bundleCount, maxConcurrentStages);
   }
 
   /**
    * Add overheads to the estimated bundle memoery for all the workers. Checkout {@link WorkerMemoryParameters#memoryPerWorker(long, int)}
    * for the overhead calculation outside the processing bundles.
    */
-  private static long estimateUsableMemory(final int numWorkersInJvm, final long estimatedTotalBundleMemory)
+  private static long estimateUsableMemory(
+      final int numWorkersInJvm,
+      final long estimatedTotalBundleMemory,
+      final int maxConcurrentStages
+  )
   {
-
     // Currently, we only add the partition stats overhead since it will be the single largest overhead per worker.
     final long estimateStatOverHeadPerWorker = PARTITION_STATS_MEMORY_MAX_BYTES;
-    return estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
+    final long requiredUsableMemory = estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
+    return requiredUsableMemory * maxConcurrentStages;
   }
 
   private static long memoryNeededForHashPartitioning(final int numOutputPartitions)
