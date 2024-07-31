@@ -145,8 +145,6 @@ public class CursorGranularizer
     return currentOffsetWithinBucket();
   }
 
-  /**
-   */
   public boolean advanceCursorWithinBucketUninterruptedly()
   {
     if (cursor.isDone()) {

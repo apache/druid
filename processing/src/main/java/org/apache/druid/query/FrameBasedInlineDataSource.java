@@ -87,6 +87,9 @@ public class FrameBasedInlineDataSource implements DataSource
                        Frame frame = frameSignaturePair.getFrame();
                        RowSignature frameSignature = frameSignaturePair.getRowSignature();
                        FrameReader frameReader = FrameReader.create(frameSignature);
+                       // currently FrameStorageAdapter cursor maker doesn't have any resources which need closed, but
+                       // if this changes we need to register this cursor maker with a closer as the baggage of the
+                       // sequence
                        return new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(
                            CursorBuildSpec.FULL_SCAN
                        ).makeCursor();

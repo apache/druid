@@ -30,16 +30,15 @@ import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorMaker;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -140,8 +139,8 @@ public class FrameSequenceBuilder
       throw DruidException.defensive("Unrecognized frame type");
     }
 
-    final Pair<Cursor, Closeable> cursorAndCloseable = FrameTestUtil.makeCursorForAdapter(adapter, populateRowNumber);
-    final Cursor cursor = cursorAndCloseable.lhs;
+    final CursorMaker maker = FrameTestUtil.makeCursorForAdapter(adapter, populateRowNumber);
+    final Cursor cursor = maker.makeCursor();
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Frame, Iterator<Frame>>()
         {
@@ -199,6 +198,6 @@ public class FrameSequenceBuilder
             // Nothing to do.
           }
         }
-    ).withBaggage(cursorAndCloseable.rhs);
+    ).withBaggage(maker);
   }
 }

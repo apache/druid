@@ -122,6 +122,8 @@ public class FrameBasedIndexedTable implements IndexedTable
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
               FrameStorageAdapter frameStorageAdapter =
                   new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
+              // currently FrameStorageAdapter cursor maker doesn't have any resources which need closed, but if this
+              // changes we need to register this cursor maker with a closer as the baggage of the sequence
               return frameStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursor();
             })
             .collect(Collectors.toList())

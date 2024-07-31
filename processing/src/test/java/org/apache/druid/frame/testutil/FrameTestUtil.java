@@ -33,7 +33,6 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -57,7 +56,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -263,19 +261,23 @@ public class FrameTestUtil
   )
   {
     final RowSignature signatureToUse = signature == null ? adapter.getRowSignature() : signature;
-    final Pair<Cursor, Closeable> cursorAndCloseable = makeCursorForAdapter(adapter, populateRowNumber);
-    return readRowsFromCursor(cursorAndCloseable.lhs, signatureToUse).withBaggage(cursorAndCloseable.rhs);
+    final CursorMaker maker = makeCursorForAdapter(adapter, populateRowNumber);
+    final Cursor cursor = maker.makeCursor();
+    if (cursor == null) {
+      return Sequences.withBaggage(Sequences.empty(), maker);
+    }
+    return readRowsFromCursor(cursor, signatureToUse).withBaggage(maker);
   }
 
   /**
-   * Creates a single-Cursor Sequence from a storage adapter.
+   * Creates a Cursor and  from a storage adapter.
    *
    * If {@param populateRowNumber} is set, the row number will be populated into {@link #ROW_NUMBER_COLUMN}.
    *
    * @param adapter           the adapter
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static Pair<Cursor, Closeable> makeCursorForAdapter(
+  public static CursorMaker makeCursorForAdapter(
       final StorageAdapter adapter,
       final boolean populateRowNumber
   )
@@ -297,11 +299,22 @@ public class FrameTestUtil
                                                      .build();
 
     final CursorMaker maker = adapter.asCursorMaker(buildSpec);
-    final Cursor cursor = maker.makeCursor();
     if (populateRowNumber) {
-      return new Pair<>(new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn), maker);
+      return new CursorMaker()
+      {
+        @Nullable
+        @Override
+        public Cursor makeCursor()
+        {
+          final Cursor cursor = maker.makeCursor();
+          if (cursor == null) {
+            return null;
+          }
+          return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);
+        }
+      };
     } else {
-      return new Pair<>(cursor, maker);
+      return maker;
     }
   }
 

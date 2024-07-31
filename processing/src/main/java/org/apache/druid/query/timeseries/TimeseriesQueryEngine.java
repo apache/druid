@@ -306,50 +306,5 @@ public class TimeseriesQueryEngine
                         }
                     )
                     .filter(Objects::nonNull);
-
-    /*
-    return Sequences.filter(
-        Sequences.map(
-            cursorMaker.makeCursors(),
-            cursor -> {
-              if (skipEmptyBuckets && cursor.isDone()) {
-                return null;
-              }
-
-              Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
-              String[] aggregatorNames = new String[aggregatorSpecs.size()];
-
-              for (int i = 0; i < aggregatorSpecs.size(); i++) {
-                aggregators[i] = aggregatorSpecs.get(i).factorize(cursor.getColumnSelectorFactory());
-                aggregatorNames[i] = aggregatorSpecs.get(i).getName();
-              }
-
-              try {
-                while (!cursor.isDone()) {
-                  for (Aggregator aggregator : aggregators) {
-                    aggregator.aggregate();
-                  }
-                  cursor.advance();
-                }
-
-                TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
-
-                for (int i = 0; i < aggregatorSpecs.size(); i++) {
-                  bob.addMetric(aggregatorNames[i], aggregators[i].get());
-                }
-
-                return bob.build();
-              }
-              finally {
-                // cleanup
-                for (Aggregator agg : aggregators) {
-                  agg.close();
-                }
-              }
-            }
-        ),
-        Objects::nonNull
-    );
-     */
   }
 }

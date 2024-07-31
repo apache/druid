@@ -145,46 +145,17 @@ public class GroupByQueryEngine
     );
 
     if (query.getGranularity().equals(Granularities.ALL)) {
-      return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<ResultRow, GroupByEngineIterator<?>>()
-          {
-            @Override
-            public GroupByEngineIterator<?> make()
-            {
-              if (cardinalityForArrayAggregation >= 0) {
-                return new ArrayAggregateIterator(
-                    query,
-                    querySpecificConfig,
-                    processingConfig,
-                    cursor,
-                    granularizer,
-                    processingBuffer,
-                    fudgeTimestamp,
-                    dims,
-                    hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions()),
-                    cardinalityForArrayAggregation
-                );
-              } else {
-                return new HashAggregateIterator(
-                    query,
-                    querySpecificConfig,
-                    processingConfig,
-                    cursor,
-                    granularizer,
-                    processingBuffer,
-                    fudgeTimestamp,
-                    dims,
-                    hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions())
-                );
-              }
-            }
-
-            @Override
-            public void cleanup(GroupByEngineIterator<?> iterFromMake)
-            {
-              iterFromMake.close();
-            }
-          }
+      return makeEngineIteratorSequence(
+          query,
+          processingBuffer,
+          fudgeTimestamp,
+          querySpecificConfig,
+          processingConfig,
+          cardinalityForArrayAggregation,
+          cursor,
+          granularizer,
+          dims,
+          columnSelectorFactory
       );
     }
 
@@ -193,48 +164,75 @@ public class GroupByQueryEngine
                       if (!granularizer.advanceToBucket(bucketInterval)) {
                         return Sequences.empty();
                       }
-                      return new BaseSequence<>(
-                          new BaseSequence.IteratorMaker<ResultRow, GroupByEngineIterator<?>>()
-                          {
-                            @Override
-                            public GroupByEngineIterator<?> make()
-                            {
-                              if (cardinalityForArrayAggregation >= 0) {
-                                return new ArrayAggregateIterator(
-                                    query,
-                                    querySpecificConfig,
-                                    processingConfig,
-                                    cursor,
-                                    granularizer,
-                                    processingBuffer,
-                                    fudgeTimestamp,
-                                    dims,
-                                    hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions()),
-                                    cardinalityForArrayAggregation
-                                );
-                              } else {
-                                return new HashAggregateIterator(
-                                    query,
-                                    querySpecificConfig,
-                                    processingConfig,
-                                    cursor,
-                                    granularizer,
-                                    processingBuffer,
-                                    fudgeTimestamp,
-                                    dims,
-                                    hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions())
-                                );
-                              }
-                            }
-
-                            @Override
-                            public void cleanup(GroupByEngineIterator<?> iterFromMake)
-                            {
-                              iterFromMake.close();
-                            }
-                          }
+                      return makeEngineIteratorSequence(
+                          query,
+                          processingBuffer,
+                          fudgeTimestamp,
+                          querySpecificConfig,
+                          processingConfig,
+                          cardinalityForArrayAggregation,
+                          cursor,
+                          granularizer,
+                          dims,
+                          columnSelectorFactory
                       );
                     });
+  }
+
+  private static Sequence<ResultRow> makeEngineIteratorSequence(
+      GroupByQuery query,
+      ByteBuffer processingBuffer,
+      @Nullable DateTime fudgeTimestamp,
+      GroupByQueryConfig querySpecificConfig,
+      DruidProcessingConfig processingConfig,
+      int cardinalityForArrayAggregation,
+      Cursor cursor,
+      CursorGranularizer granularizer,
+      GroupByColumnSelectorPlus[] dims,
+      ColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<ResultRow, GroupByEngineIterator<?>>()
+        {
+          @Override
+          public GroupByEngineIterator<?> make()
+          {
+            if (cardinalityForArrayAggregation >= 0) {
+              return new ArrayAggregateIterator(
+                  query,
+                  querySpecificConfig,
+                  processingConfig,
+                  cursor,
+                  granularizer,
+                  processingBuffer,
+                  fudgeTimestamp,
+                  dims,
+                  hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions()),
+                  cardinalityForArrayAggregation
+              );
+            } else {
+              return new HashAggregateIterator(
+                  query,
+                  querySpecificConfig,
+                  processingConfig,
+                  cursor,
+                  granularizer,
+                  processingBuffer,
+                  fudgeTimestamp,
+                  dims,
+                  hasNoImplicitUnnestDimensions(columnSelectorFactory, query.getDimensions())
+              );
+            }
+          }
+
+          @Override
+          public void cleanup(GroupByEngineIterator<?> iterFromMake)
+          {
+            iterFromMake.close();
+          }
+        }
+    );
   }
 
   /**
