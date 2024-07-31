@@ -74,6 +74,15 @@ public class SelectorPredicateFactory implements DruidPredicateFactory
     return doublePredicate;
   }
 
+  @Override
+  public DruidObjectPredicate<Object> makeObjectPredicate()
+  {
+    if (value == null) {
+      return DruidObjectPredicate.isNull();
+    }
+    return DruidObjectPredicate.equalTo(value);
+  }
+
   private void initLongPredicate()
   {
     if (longPredicate != null) {
