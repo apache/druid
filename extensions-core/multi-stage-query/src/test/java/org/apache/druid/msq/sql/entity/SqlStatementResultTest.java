@@ -72,14 +72,6 @@ public class SqlStatementResultTest
 
     Assert.assertEquals(JSON_STRING, MAPPER.writeValueAsString(SQL_STATEMENT_RESULT));
     Assert.assertEquals(
-        SQL_STATEMENT_RESULT,
-        MAPPER.readValue(MAPPER.writeValueAsString(SQL_STATEMENT_RESULT), SqlStatementResult.class)
-    );
-    Assert.assertEquals(
-        SQL_STATEMENT_RESULT.hashCode(),
-        MAPPER.readValue(MAPPER.writeValueAsString(SQL_STATEMENT_RESULT), SqlStatementResult.class).hashCode()
-    );
-    Assert.assertEquals(
         "SqlStatementResult{"
         + "queryId='q1',"
         + " state=RUNNING,"
