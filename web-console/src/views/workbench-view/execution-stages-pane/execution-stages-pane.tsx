@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
@@ -32,6 +31,7 @@ import type {
   ClusterBy,
   CounterName,
   Execution,
+  InOut,
   SegmentGenerationProgressFields,
   SimpleWideCounter,
   StageDefinition,
@@ -179,9 +179,9 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const phaseIsWorking = oneOf(phase, 'NEW', 'READING_INPUT', 'POST_READING');
     return (
       <div className="execution-stage-detail-pane">
-        {detailedCountersForPartitions(stage, 'input', phase === 'READING_INPUT')}
+        {detailedCountersForPartitions(stage, 'in', phase === 'READING_INPUT')}
         {detailedCountersForWorkers(stage)}
-        {detailedCountersForPartitions(stage, 'output', phaseIsWorking)}
+        {detailedCountersForPartitions(stage, 'out', phaseIsWorking)}
       </div>
     );
   }
@@ -320,15 +320,15 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
 
   function detailedCountersForPartitions(
     stage: StageDefinition,
-    type: 'input' | 'output',
+    inOut: InOut,
     inProgress: boolean,
   ) {
-    const wideCounters = stages.getByPartitionCountersForStage(stage, type);
+    const wideCounters = stages.getByPartitionCountersForStage(stage, inOut);
     if (!wideCounters.length) return;
 
     const counterNames: ChannelCounterName[] = stages.getPartitionChannelCounterNamesForStage(
       stage,
-      type,
+      inOut,
     );
 
     const bracesRows: Record<ChannelCounterName, string[]> = {} as any;
@@ -349,7 +349,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
         showPagination={wideCounters.length > MAX_DETAIL_ROWS}
         columns={[
           {
-            Header: `${capitalizeFirst(type)} partitions` + (inProgress ? '*' : ''),
+            Header: `${capitalizeFirst(inOut)} partitions` + (inProgress ? '*' : ''),
             id: 'partition',
             accessor: d => d.index,
             className: 'padded',
@@ -551,7 +551,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                 {(myError || warnings > 0) && (
                   <div className="error-warning">
                     {myError && (
-                      <Tooltip2
+                      <Tooltip
                         content={
                           <div>
                             {(error.error.errorCode ? `${error.error.errorCode}: ` : '') +
@@ -566,11 +566,11 @@ ${title} uncompressed size: ${formatBytesCompact(
                           intent={Intent.DANGER}
                           onClick={onErrorClick}
                         />
-                      </Tooltip2>
+                      </Tooltip>
                     )}
                     {myError && warnings > 0 && ' '}
                     {warnings > 0 && (
-                      <Tooltip2
+                      <Tooltip
                         content={
                           <pre>{formatBreakdown(stages.getWarningBreakdownForStage(stage))}</pre>
                         }
@@ -583,7 +583,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                           intent={Intent.WARNING}
                           onClick={onWarningClick}
                         />
-                      </Tooltip2>
+                      </Tooltip>
                     )}
                   </div>
                 )}

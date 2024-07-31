@@ -706,7 +706,7 @@ public class DruidCoordinator
             = metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments();
 
         final CoordinatorDynamicConfig dynamicConfig = metadataManager.configs().getCurrentDynamicConfig();
-        final CoordinatorCompactionConfig compactionConfig = metadataManager.configs().getCurrentCompactionConfig();
+        final DruidCompactionConfig compactionConfig = metadataManager.configs().getCurrentCompactionConfig();
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams
                 .newBuilder(coordinatorStartTime)
@@ -816,6 +816,9 @@ public class DruidCoordinator
     {
       broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
+      if (coordinatorSegmentMetadataCache != null) {
+        coordinatorSegmentMetadataCache.updateSegmentReplicationStatus(segmentReplicationStatus);
+      }
 
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();

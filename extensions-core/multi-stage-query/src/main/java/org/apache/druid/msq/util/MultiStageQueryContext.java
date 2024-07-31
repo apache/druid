@@ -100,6 +100,8 @@ public class MultiStageQueryContext
   public static final String CTX_MSQ_MODE = "mode";
   public static final String DEFAULT_MSQ_MODE = MSQMode.STRICT_MODE.toString();
 
+  // Note: CTX_MAX_NUM_TASKS and DEFAULT_MAX_NUM_TASKS values used here should be kept in sync with those in
+  // org.apache.druid.client.indexing.ClientMsqContext
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   @VisibleForTesting
   static final int DEFAULT_MAX_NUM_TASKS = 2;
@@ -145,7 +147,7 @@ public class MultiStageQueryContext
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
   // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
   // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
@@ -163,7 +165,7 @@ public class MultiStageQueryContext
   public static final boolean DEFAULT_USE_AUTO_SCHEMAS = false;
 
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
-  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.MVD;
+  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.ARRAY;
 
   public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
 

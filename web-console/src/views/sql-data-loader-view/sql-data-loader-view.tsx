@@ -23,14 +23,19 @@ import { SqlQuery, SqlTable } from '@druid-toolkit/query';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
-import type { ExternalConfig, QueryContext, QueryWithContext } from '../../druid-models';
+import type {
+  CapacityInfo,
+  ExternalConfig,
+  QueryContext,
+  QueryWithContext,
+} from '../../druid-models';
 import {
   Execution,
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import { maybeGetClusterCapacity, submitTaskQuery } from '../../helpers';
+import { submitTaskQuery } from '../../helpers';
 import { useLocalStorageState } from '../../hooks';
 import { AppToaster } from '../../singletons';
 import { deepDelete, LocalStorageKeys } from '../../utils';
@@ -58,12 +63,14 @@ export interface SqlDataLoaderViewProps {
   capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToTask(taskId: string): void;
+  goToTaskGroup(taskGroupId: string): void;
+  getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
 }
 
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { capabilities, goToQuery, goToTask } = props;
+  const { capabilities, goToQuery, goToTask, goToTaskGroup, getClusterCapacity } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
@@ -145,7 +152,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
               return;
             }
 
-            const clusterCapacity = capabilities.getClusterCapacity();
+            const clusterCapacity = capabilities.getMaxTaskSlots();
             let effectiveContext = queryContext || {};
             if (
               typeof effectiveContext.maxNumTasks === 'undefined' &&
@@ -154,7 +161,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
               effectiveContext = { ...effectiveContext, maxNumTasks: clusterCapacity };
             }
 
-            const capacityInfo = await maybeGetClusterCapacity();
+            const capacityInfo = await getClusterCapacity?.();
 
             const effectiveMaxNumTasks = effectiveContext.maxNumTasks ?? 2;
 
@@ -177,7 +184,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           }}
           extraCallout={
             <MaxTasksButton
-              clusterCapacity={capabilities.getClusterCapacity()}
+              clusterCapacity={capabilities.getMaxTaskSlots()}
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
               minimal
@@ -239,7 +246,11 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
           taskId={content.id}
           goToQuery={goToQuery}
           goToTask={goToTask}
-          onReset={() => setContent(undefined)}
+          goToTaskGroup={goToTaskGroup}
+          onReset={() => {
+            setExternalConfigStep({});
+            setContent(undefined);
+          }}
           onClose={() => setContent(deepDelete(content, 'id'))}
         />
       )}

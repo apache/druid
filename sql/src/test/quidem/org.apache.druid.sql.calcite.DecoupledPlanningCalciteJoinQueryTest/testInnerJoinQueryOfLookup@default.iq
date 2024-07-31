@@ -101,10 +101,10 @@ DruidProject(dim1=[$0], dim2=[$1], v=[$3], v0=[$3], druid=[logical])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "j0.a0" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

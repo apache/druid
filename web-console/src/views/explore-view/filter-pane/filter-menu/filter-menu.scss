@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+@import '../../../../variables';
+
 .filter-menu {
   width: 400px;
 
@@ -23,7 +25,7 @@
     padding: 15px;
   }
 
-  .controls .bp4-form-content {
+  .controls .#{$ns}-form-content {
     display: flex;
     gap: 15px;
 
