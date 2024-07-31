@@ -31,10 +31,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * Tracks the current segment loading rate for a single server.
  * <p>
  * The loading rate is computed as a moving average of the last
- * {@link #MOVING_AVERAGE_WINDOW_SIZE} batches of segment loads (or more if any
- * of the batches were smaller than {@link #MIN_ENTRY_SIZE_BYTES}). A batch is
- * defined as the set of all the segment loads performed between two consecutive
- * empty states of the load queue.
+ * {@link #MOVING_AVERAGE_WINDOW_SIZE} segment batches (or more if any batch was
+ * smaller than {@link #MIN_ENTRY_SIZE_BYTES}). A batch is defined as a set of
+ * segments added to the load queue together.
  * <pre>
  *   batchDurationMillis
  *   = t(load queue becomes empty) - t(first load request in batch is sent to server)
