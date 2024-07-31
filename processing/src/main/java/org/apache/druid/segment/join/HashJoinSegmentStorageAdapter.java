@@ -229,9 +229,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
 
     if (clauses.isEmpty()) {
-      // HashJoinEngine isn't vectorized yet.
-      // However, we can still vectorize if there are no clauses, since that means all we need to do is apply
-      // a base filter. That's easy enough!
+      // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
       final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
                                                             .setVirtualColumns(spec.getVirtualColumns())
                                                             .build();

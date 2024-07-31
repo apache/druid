@@ -232,15 +232,15 @@ public class FrameTestUtil
   {
     return new FrameChannelSequence(channel)
         .flatMap(
-            frame ->
-                readRowsFromCursor(
-                    // if FrameStorageAdapter.asCursorMaker ever needs closing.. this needs to change to add to a
-                    // closer that is tied to baggage of this sequence...
-                    new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                        .asCursorMaker(CursorBuildSpec.FULL_SCAN)
-                        .makeCursor(),
-                    frameReader.signature()
-                )
+            frame -> {
+              final CursorMaker maker = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(
+                  CursorBuildSpec.FULL_SCAN
+              );
+              return readRowsFromCursor(
+                  maker.makeCursor(),
+                  frameReader.signature()
+              ).withBaggage(maker);
+            }
         );
   }
 

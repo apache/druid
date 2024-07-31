@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
@@ -113,6 +114,7 @@ public class FrameBasedIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
+    final Closer closer = Closer.create();
     final Sequence<Cursor> cursors = Sequences.simple(
         frameBasedInlineDataSource
             .getFrames()
@@ -122,12 +124,10 @@ public class FrameBasedIndexedTable implements IndexedTable
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
               FrameStorageAdapter frameStorageAdapter =
                   new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
-              // currently FrameStorageAdapter cursor maker doesn't have any resources which need closed, but if this
-              // changes we need to register this cursor maker with a closer as the baggage of the sequence
-              return frameStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN).makeCursor();
+              return closer.register(frameStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)).makeCursor();
             })
             .collect(Collectors.toList())
-    );
+    ).withBaggage(closer);
 
     final Sequence<Integer> sequence = Sequences.map(
         cursors,
