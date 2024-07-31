@@ -87,12 +87,12 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 
 ## String functions
 
-String functions accept strings, and return a type appropriate to the function.
+String functions accept strings and return a type appropriate to the function.
 
 |Function|Notes|
 |--------|-----|
-|`CONCAT(expr, expr...)`|Concats a list of expressions. Also see the [concatenation operator](sql-operators.md#concatenation-operator).|
-|`TEXTCAT(expr, expr)`|Two argument version of `CONCAT`.|
+|`CONCAT(expr, expr, ...)`|Concatenates a list of expressions. Also see the [concatenation operator](sql-operators.md#concatenation-operator).|
+|`TEXTCAT(expr, expr)`| Concatenates two expressions.|
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
@@ -108,12 +108,12 @@ String functions accept strings, and return a type appropriate to the function.
 |`LPAD(expr, length, [chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 |`RPAD(expr, length, [chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
 |`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
-|`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of `needle` within `haystack`, with indexes starting from 1. The search will begin at `fromIndex`, or 1 if `fromIndex` is not specified. If `needle` is not found, returns 0.|
+|`POSITION(substring IN expr [FROM startingIndex])`|Returns the index of a `substring` within `expr`, with indexes starting from 1. The search begins at `startingIndex`, if `startingIndex` is not specified, the default is 1. If `substring` is not found, returns 0.|
 |`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
-|`REPEAT(expr, [N])`|Repeats `expr` N times.|
+|`REPEAT(expr, N)`|Repeats `expr` N times.|
 |`REVERSE(expr)`|Reverses `expr`.|
 |`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`STRPOS(haystack, needle)`|Returns the index of `needle` within `haystack`, with indexes starting from 1. If `needle` is not found, returns 0.|
