@@ -146,11 +146,6 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     return sinceRequestSentToServer.millisElapsed() > requestTimeout.getMillis();
   }
 
-  public long millisSinceRequestSentToServer()
-  {
-    return sinceRequestSentToServer.millisElapsed();
-  }
-
   public int incrementAndGetRunsInQueue()
   {
     return ++runsInQueue;
