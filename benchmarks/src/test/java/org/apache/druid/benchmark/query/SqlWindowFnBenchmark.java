@@ -149,7 +149,7 @@ public class SqlWindowFnBenchmark
   private PlannerFactory plannerFactory;
   private final Closer closer = Closer.create();
 
-  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig(){
+  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig() {
 
     @Override
     public int getNumMergeBuffers()
