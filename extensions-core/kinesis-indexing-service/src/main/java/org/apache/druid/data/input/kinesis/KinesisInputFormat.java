@@ -38,29 +38,40 @@ import java.util.Objects;
 
 /**
  * Kinesis aware InputFormat. Allows for reading kinesis specific values that are stored in the {@link Record}. At
- * this time, this input format only supports reading the main record payload ({@link Record#data}) and
- * {@link Record#approximateArrivalTimestamp}, but can be extended easily to read other fields.
+ * this time, this input format only supports reading data from the following record components
+ * <p>
+ * - {@link Record#data}
+ * - {@link Record#approximateArrivalTimestamp}
+ * - {@link Record#partitionKey}
+ * <p>
+ * This class can be extended easily to read other fields available in the kinesis record.
  */
 public class KinesisInputFormat implements InputFormat
 {
   private static final String DEFAULT_TIMESTAMP_COLUMN_NAME = "kinesis.timestamp";
-  public static final String DEFAULT_AUTO_TIMESTAMP_STRING = "__kif_auto_timestamp";
+  private static final String DEFAULT_PARTITION_KEY_COLUMN_NAME = "kinesis.partitionKey";
 
   // Since KinesisInputFormat blends data from record properties, and payload, timestamp spec can be pointing to an
   // attribute within one of these 2 sections. To handle scenarios where there is no timestamp value in the payload, we
   // induce an artificial timestamp value to avoid unnecessary parser barf out. Users in such situations can use the
   // inputFormat's kinesis record timestamp as its primary timestamp.
+  public static final String DEFAULT_AUTO_TIMESTAMP_STRING = "__kif_auto_timestamp";
   private final TimestampSpec dummyTimestampSpec = new TimestampSpec(DEFAULT_AUTO_TIMESTAMP_STRING, "auto", DateTimes.EPOCH);
 
   private final InputFormat valueFormat;
   private final String timestampColumnName;
+  private final String partitionKeyColumnName;
 
   public KinesisInputFormat(
       @JsonProperty("valueFormat") InputFormat valueFormat,
+      @JsonProperty("partitionKeyColumnName") @Nullable String partitionKeyColumnName,
       @JsonProperty("timestampColumnName") @Nullable String timestampColumnName
   )
   {
     this.valueFormat = Preconditions.checkNotNull(valueFormat, "valueFormat must not be null");
+    this.partitionKeyColumnName = partitionKeyColumnName != null
+        ? partitionKeyColumnName
+        : DEFAULT_PARTITION_KEY_COLUMN_NAME;
     this.timestampColumnName = timestampColumnName != null ? timestampColumnName : DEFAULT_TIMESTAMP_COLUMN_NAME;
   }
 
@@ -94,6 +105,7 @@ public class KinesisInputFormat implements InputFormat
             source,
             temporaryDirectory
         ),
+        partitionKeyColumnName,
         timestampColumnName
     );
   }
@@ -111,6 +123,13 @@ public class KinesisInputFormat implements InputFormat
     return timestampColumnName;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getPartitionKeyColumnName()
+  {
+    return partitionKeyColumnName;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -122,12 +141,13 @@ public class KinesisInputFormat implements InputFormat
     }
     KinesisInputFormat that = (KinesisInputFormat) o;
     return Objects.equals(valueFormat, that.valueFormat)
-           && Objects.equals(timestampColumnName, that.timestampColumnName);
+           && Objects.equals(timestampColumnName, that.timestampColumnName)
+           && Objects.equals(partitionKeyColumnName, that.partitionKeyColumnName);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(valueFormat, timestampColumnName);
+    return Objects.hash(valueFormat, timestampColumnName, partitionKeyColumnName);
   }
 }

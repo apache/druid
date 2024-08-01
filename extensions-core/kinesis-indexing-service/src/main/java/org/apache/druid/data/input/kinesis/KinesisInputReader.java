@@ -49,18 +49,21 @@ public class KinesisInputReader implements InputEntityReader
   private final InputRowSchema inputRowSchema;
   private final SettableByteEntity<KinesisRecordEntity> source;
   private final InputEntityReader valueParser;
+  private final String partitionKeyColumnName;
   private final String timestampColumnName;
 
   public KinesisInputReader(
       InputRowSchema inputRowSchema,
       SettableByteEntity<KinesisRecordEntity> source,
       InputEntityReader valueParser,
+      String partitionKeyColumnName,
       String timestampColumnName
   )
   {
     this.inputRowSchema = inputRowSchema;
     this.source = source;
     this.valueParser = valueParser;
+    this.partitionKeyColumnName = partitionKeyColumnName;
     this.timestampColumnName = timestampColumnName;
 
   }
@@ -95,6 +98,7 @@ public class KinesisInputReader implements InputEntityReader
   {
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
     mergedHeaderMap.put(timestampColumnName, record.getRecord().getApproximateArrivalTimestamp().getTime());
+    mergedHeaderMap.put(partitionKeyColumnName, record.getRecord().getPartitionKey());
     return mergedHeaderMap;
   }
 

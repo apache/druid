@@ -65,6 +65,7 @@ public class KinesisInputFormatTest
   private static final String KINESIS_APPROXIMATE_TIME_DATE = "2024-07-29";
   private static final long KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS = DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis();
   private static final String DATA_TIMSTAMP_DATE = "2024-07-30";
+  private static final String PARTITION_KEY = "partition_key_1";
 
   private static final byte[] SIMPLE_JSON_VALUE_BYTES = StringUtils.toUtf8(
       TestUtils.singleQuoteToStandardJson(
@@ -102,6 +103,7 @@ public class KinesisInputFormatTest
             false,
             false
         ),
+        "kinesis.newts.partitionKey",
         "kinesis.newts.timestamp"
     );
   }
@@ -129,6 +131,7 @@ public class KinesisInputFormatTest
             false,
             false
         ),
+        "kinesis.newts.partitionKey",
         "kinesis.newts.timestamp"
     );
     Assert.assertEquals(format, kif);
@@ -175,6 +178,7 @@ public class KinesisInputFormatTest
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -231,6 +235,7 @@ public class KinesisInputFormatTest
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -289,6 +294,7 @@ public class KinesisInputFormatTest
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -366,6 +372,7 @@ public class KinesisInputFormatTest
               String.valueOf(DateTimes.of("2024-07-1" + i).getMillis()),
               Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
           );
+          Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
           Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -423,6 +430,7 @@ public class KinesisInputFormatTest
             String.valueOf(KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -499,6 +507,7 @@ public class KinesisInputFormatTest
               String.valueOf(DateTimes.of("2024-07-29").getMillis()),
               Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
           );
+          Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
           Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
           Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -588,7 +597,8 @@ public class KinesisInputFormatTest
             "jq_omg2",
             "baz",
             "root_baz2",
-            "path_omg2"
+            "path_omg2",
+            "kinesis.newts.partitionKey"
         );
         Collections.sort(expectedDimensions);
         Collections.sort(row.getDimensions());
@@ -603,6 +613,7 @@ public class KinesisInputFormatTest
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -656,7 +667,8 @@ public class KinesisInputFormatTest
             "jq_omg2",
             "baz",
             "root_baz2",
-            "path_omg2"
+            "path_omg2",
+            "kinesis.newts.partitionKey"
         );
         Collections.sort(expectedDimensions);
         Collections.sort(row.getDimensions());
@@ -671,6 +683,7 @@ public class KinesisInputFormatTest
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -701,6 +714,7 @@ public class KinesisInputFormatTest
             false,
             0
         ),
+        "kinesis.newts.partitionKey",
         "kinesis.newts.timestamp"
     );
 
@@ -715,7 +729,8 @@ public class KinesisInputFormatTest
                     ImmutableList.of(
                         "bar",
                         "foo",
-                        "kinesis.newts.timestamp"
+                        "kinesis.newts.timestamp",
+                        "kinesis.newts.partitionKey"
                     )
                 )
             ),
@@ -735,7 +750,8 @@ public class KinesisInputFormatTest
             Arrays.asList(
                 "bar",
                 "foo",
-                "kinesis.newts.timestamp"
+                "kinesis.newts.timestamp",
+                "kinesis.newts.partitionKey"
             ),
             row.getDimensions()
         );
@@ -748,6 +764,7 @@ public class KinesisInputFormatTest
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertTrue(row.getDimension("bar").isEmpty());
@@ -788,6 +805,7 @@ public class KinesisInputFormatTest
             "bar",
             "foo",
             "kinesis.newts.timestamp",
+            "kinesis.newts.partitionKey",
             "root_baz",
             "o",
             "path_omg",
@@ -810,6 +828,7 @@ public class KinesisInputFormatTest
             String.valueOf(DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis()),
             Iterables.getOnlyElement(row.getDimension("kinesis.newts.timestamp"))
         );
+        Assert.assertEquals(PARTITION_KEY, Iterables.getOnlyElement(row.getDimension("kinesis.newts.partitionKey")));
         Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
         Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
@@ -835,6 +854,7 @@ public class KinesisInputFormatTest
     return new KinesisRecordEntity(
         new Record().withData(ByteBuffer.wrap(payload))
             .withApproximateArrivalTimestamp(new Date(kinesisTimestampMillis))
+            .withPartitionKey(PARTITION_KEY)
     );
   }
 
