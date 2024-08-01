@@ -405,8 +405,8 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       return ColumnType.NESTED_DATA;
     }
     if (isConstant && constantValue == null) {
-      // we didn't see anything, so we can be anything, so why not a string?
-      return ColumnType.STRING;
+      // we didn't see anything, so we can be anything, so be long as it is the most restrictive type
+      return ColumnType.LONG;
     }
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       FieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
