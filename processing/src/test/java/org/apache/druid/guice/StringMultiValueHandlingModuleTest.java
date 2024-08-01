@@ -31,7 +31,7 @@ import java.util.Properties;
 public class StringMultiValueHandlingModuleTest
 {
   @Test
-  public void testDefaults()
+  public void testDefaultMode()
   {
     final Properties props = new Properties();
     final Injector gadget = makeInjector(props);
@@ -45,23 +45,7 @@ public class StringMultiValueHandlingModuleTest
   }
 
   @Test
-  public void testOverrides()
-  {
-    final Properties props = new Properties();
-    props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "ARRAY");
-    final Injector gadget = makeInjector(props);
-
-    gadget.getInstance(StringMultiValueHandlingModule.SideEffectHandlerRegisterer.class);
-
-    Assert.assertEquals(
-        DimensionSchema.MultiValueHandling.ARRAY,
-        StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode()
-    );
-  }
-
-
-  @Test
-  public void testOverridesCaseIsensitiveMode()
+  public void testOverrideMode()
   {
     final Properties props = new Properties();
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "sorted_array");
@@ -71,6 +55,21 @@ public class StringMultiValueHandlingModuleTest
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode()
+    );
+  }
+
+  @Test
+  public void testOverrideCaseInsensitiveMode()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "ARRAY");
+    final Injector gadget = makeInjector(props);
+
+    gadget.getInstance(StringMultiValueHandlingModule.SideEffectHandlerRegisterer.class);
+
+    Assert.assertEquals(
+        DimensionSchema.MultiValueHandling.ARRAY,
         StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode()
     );
   }
