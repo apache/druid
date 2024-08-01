@@ -46,9 +46,10 @@ public class KinesisInputFormat implements InputFormat
   private static final String DEFAULT_TIMESTAMP_COLUMN_NAME = "kinesis.timestamp";
   public static final String DEFAULT_AUTO_TIMESTAMP_STRING = "__kif_auto_timestamp";
 
-  // Since KinesisInputFormat blends data from record timestamp, and payload, timestamp spec can be pointing to an attribute within one of these
-  // 2 sections. To handle scenarios where there is no timestamp value either in payload or record timestamp, we induce an artifical timestamp value
-  // to avoid unnecessary parser barf out. Users in such situations can use the inputFormat's kinesis record timestamp as its primary timestamp.
+  // Since KinesisInputFormat blends data from record properties, and payload, timestamp spec can be pointing to an
+  // attribute within one of these 2 sections. To handle scenarios where there is no timestamp value in the payload, we
+  // induce an artificial timestamp value to avoid unnecessary parser barf out. Users in such situations can use the
+  // inputFormat's kinesis record timestamp as its primary timestamp.
   private final TimestampSpec dummyTimestampSpec = new TimestampSpec(DEFAULT_AUTO_TIMESTAMP_STRING, "auto", DateTimes.EPOCH);
 
   private final InputFormat valueFormat;
