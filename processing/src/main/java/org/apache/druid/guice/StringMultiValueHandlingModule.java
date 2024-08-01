@@ -19,14 +19,11 @@
 
 package org.apache.druid.guice;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
-
-import javax.annotation.Nonnull;
 
 /**
  * Module to determine the default mode of string multi value handling.
@@ -42,11 +39,11 @@ public class StringMultiValueHandlingModule implements DruidModule
   }
 
   /**
-   * The system property along with the default is managed in {@link DefaultColumnFormatConfig} itself.
-   * So the value is guaranteed to be non-null after lifecycle service start.
+   * The default value is set here so tests can just use it without any explicit initialization.
+   * In production, this default may be overridden if a value is configured via
+   * {@link #setStringMvMode(DefaultColumnFormatConfig)}.
    */
-  @Nonnull
-  private static DimensionSchema.MultiValueHandling STRING_MV_MODE;
+  private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
 
   /**
    * @return the configured string multi value handling mode from the system config if set; otherwise, returns
@@ -61,17 +58,10 @@ public class StringMultiValueHandlingModule implements DruidModule
   @LazySingleton
   public static SideEffectHandlerRegisterer setStringMvMode(DefaultColumnFormatConfig formatsConfig)
   {
-    STRING_MV_MODE = formatsConfig.getStringMultiValueHandlingMode();
+    if (formatsConfig.getStringMultiValueHandlingMode() != null) {
+      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(formatsConfig.getStringMultiValueHandlingMode());
+    }
     return new SideEffectHandlerRegisterer();
-  }
-
-  /**
-   * Helper for wiring stuff up for tests that don't use guice injection.
-   */
-  @VisibleForTesting
-  public static void initializeStringMvForTests()
-  {
-    STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
   }
 
   /**

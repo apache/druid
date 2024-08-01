@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.realtime;
 
-import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -56,7 +55,6 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    StringMultiValueHandlingModule.initializeStringMvForTests();
     incrementalIndexSegment = new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SegmentId.dummy("test"));
     queryableIndexSegment = new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SegmentId.dummy("test"));
 

@@ -53,7 +53,6 @@ public abstract class CalciteTestBase
   {
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
-    StringMultiValueHandlingModule.initializeStringMvForTests();
   }
 
   /**

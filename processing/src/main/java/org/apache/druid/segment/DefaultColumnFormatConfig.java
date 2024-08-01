@@ -64,8 +64,9 @@ public class DefaultColumnFormatConfig
   @JsonProperty("nestedColumnFormatVersion")
   private final Integer nestedColumnFormatVersion;
 
+  @Nullable
   @JsonProperty("stringMultiValueHandlingMode")
-  private final DimensionSchema.MultiValueHandling stringMultiValueHandlingMode;
+  private final String stringMultiValueHandlingMode;
 
   @JsonCreator
   public DefaultColumnFormatConfig(
@@ -77,9 +78,7 @@ public class DefaultColumnFormatConfig
     validateMultiValueHandlingMode(stringMultiValueHandlingMode);
 
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
-    this.stringMultiValueHandlingMode = stringMultiValueHandlingMode == null ?
-                                        DimensionSchema.MultiValueHandling.SORTED_ARRAY :
-                                        DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
+    this.stringMultiValueHandlingMode = stringMultiValueHandlingMode;
   }
 
   @Nullable
@@ -89,8 +88,9 @@ public class DefaultColumnFormatConfig
     return nestedColumnFormatVersion;
   }
 
+  @Nullable
   @JsonProperty("stringMultiValueHandlingMode")
-  public DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
+  public String getStringMultiValueHandlingMode()
   {
     return stringMultiValueHandlingMode;
   }
@@ -106,7 +106,7 @@ public class DefaultColumnFormatConfig
     }
     DefaultColumnFormatConfig that = (DefaultColumnFormatConfig) o;
     return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion)
-           && stringMultiValueHandlingMode == that.stringMultiValueHandlingMode;
+           && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode);
   }
 
   @Override
