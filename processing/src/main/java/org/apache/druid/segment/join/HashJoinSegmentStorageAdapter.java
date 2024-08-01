@@ -243,8 +243,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Override
       public Cursor makeCursor()
       {
-        // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
-        // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
+        // Filter pre-analysis key implied by the call to "makeCursor". We need to sanity-check that it matches
+        // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursor" call (it
         // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
         // in the cached key.)
         final JoinFilterPreAnalysisKey keyIn =
@@ -258,7 +258,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
         final JoinFilterPreAnalysis preAnalysis;
         if (keyIn.equals(keyCached)) {
-          // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
+          // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursor call
+          // (keyIn).
           preAnalysis = joinFilterPreAnalysis;
         } else {
           // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
@@ -351,7 +352,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    */
   private Optional<JoinableClause> getClauseForColumn(final String column)
   {
-    // Check clauses in reverse, since "makeCursors" creates the cursor in such a way that the last clause
+    // Check clauses in reverse, since "makeCursor" creates the cursor in such a way that the last clause
     // gets first dibs to claim a column.
     return Lists.reverse(clauses)
                 .stream()

@@ -190,7 +190,7 @@ public class LookupSegmentTest
   }
 
   @Test
-  public void test_asStorageAdapter_makeCursors()
+  public void test_asStorageAdapter_makeCursor()
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970/PT1H"))
@@ -222,7 +222,7 @@ public class LookupSegmentTest
   @Test
   public void test_asStorageAdapter_isRowBasedAdapter()
   {
-    // This allows us to assume that RowBasedStorageAdapterTest is further exercising makeCursors and verifying misc.
+    // This allows us to assume that RowBasedStorageAdapterTest is further exercising makeCursor and verifying misc.
     // methods like getMinTime, getMaxTime, getMetadata, etc, without checking them explicitly in _this_ test class.
     Assert.assertThat(LOOKUP_SEGMENT.asStorageAdapter(), CoreMatchers.instanceOf(RowBasedStorageAdapter.class));
   }

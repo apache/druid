@@ -119,8 +119,11 @@ public class FrameProcessors
                                                            .setGranularity(Granularities.ALL)
                                                            .setVirtualColumns(virtualColumns)
                                                            .build();
-    // Safe to never close the Sequence that the FrameCursor comes from, because it does not need to be closed.
-    // Refer to FrameStorageAdapter#makeCursors.
+    // Despite appearances of columnar FrameCursorMakerFactory with its closers, it is currently safe to never close
+    // the CursorMaker that the FrameCursor comes from because it really does nothing. The row based
+    // FrameCursorMakerFactory has no closer stuff at all and is totally safe. If this ever changes, this method will
+    // probably need to wrap the cursor in something closeable, or be reworked to just return the CursorMaker so that
+    // callers can deal with closing the stuff.
     return (FrameCursor) new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(cursorBuildSpec)
                                                                                         .makeCursor();
   }

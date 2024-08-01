@@ -261,7 +261,7 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
+    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursor is called).
     for (String column : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
     }
@@ -330,7 +330,7 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
+    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursor is called).
     for (String column : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
     }
@@ -450,7 +450,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_filterOnLong()
+  public void test_makeCursor_filterOnLong()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
@@ -474,7 +474,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_filterOnNonexistentColumnEqualsNull()
+  public void test_makeCursor_filterOnNonexistentColumnEqualsNull()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
 
@@ -498,7 +498,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_filterOnVirtualColumn()
+  public void test_makeCursor_filterOnVirtualColumn()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
 
@@ -533,7 +533,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_descending()
+  public void test_makeCursor_descending()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
@@ -554,7 +554,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_intervalDoesNotMatch()
+  public void test_makeCursor_intervalDoesNotMatch()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
@@ -574,7 +574,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_intervalPartiallyMatches()
+  public void test_makeCursor_intervalPartiallyMatches()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
@@ -596,7 +596,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_hourGranularity()
+  public void test_makeCursor_hourGranularity()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
 
@@ -622,7 +622,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_hourGranularityWithInterval()
+  public void test_makeCursor_hourGranularityWithInterval()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
 
@@ -648,7 +648,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_hourGranularityWithIntervalDescending()
+  public void test_makeCursor_hourGranularityWithIntervalDescending()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
 
@@ -674,7 +674,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_allProcessors()
+  public void test_makeCursor_allProcessors()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
 
@@ -779,7 +779,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_filterOnNonexistentColumnEqualsNonnull()
+  public void test_makeCursor_filterOnNonexistentColumnEqualsNonnull()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
 
@@ -800,7 +800,7 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_eternityIntervalWithMonthGranularity()
+  public void test_makeCursor_eternityIntervalWithMonthGranularity()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
     Assert.assertThrows(IAE.class, () -> {

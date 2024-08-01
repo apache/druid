@@ -297,7 +297,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeft()
+  public void test_makeCursor_factToCountryLeft()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
 
@@ -354,7 +354,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeftUsingLookup()
+  public void test_makeCursor_factToCountryLeftUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
 
@@ -410,7 +410,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInner()
+  public void test_makeCursor_factToCountryInner()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.INNER));
     JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
@@ -460,7 +460,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInnerUsingLookup()
+  public void test_makeCursor_factToCountryInnerUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.INNER));
     JoinFilterPreAnalysis joinFilterPreAnalysis = makeDefaultConfigPreAnalysis(
@@ -509,7 +509,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInnerUsingCountryNumber()
+  public void test_makeCursor_factToCountryInnerUsingCountryNumber()
   {
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
@@ -569,7 +569,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInnerUsingCountryNumberUsingLookup()
+  public void test_makeCursor_factToCountryInnerUsingCountryNumberUsingLookup()
   {
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
@@ -627,7 +627,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeftWithFilterOnFacts()
+  public void test_makeCursor_factToCountryLeftWithFilterOnFacts()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
@@ -658,7 +658,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeftWithFilterOnFactsUsingLookup()
+  public void test_makeCursor_factToCountryLeftWithFilterOnFactsUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
     Filter filter = new SelectorDimFilter("channel", "#de.wikipedia", null).toFilter();
@@ -688,7 +688,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryRightWithFilterOnLeftIsNull()
+  public void test_makeCursor_factToCountryRightWithFilterOnLeftIsNull()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
@@ -721,7 +721,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryRightWithFilterOnLeftIsNullUsingLookup()
+  public void test_makeCursor_factToCountryRightWithFilterOnLeftIsNullUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.RIGHT));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
@@ -753,7 +753,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryFullWithFilterOnLeftIsNull()
+  public void test_makeCursor_factToCountryFullWithFilterOnLeftIsNull()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.FULL));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
@@ -786,7 +786,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryFullWithFilterOnLeftIsNullUsingLookup()
+  public void test_makeCursor_factToCountryFullWithFilterOnLeftIsNullUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.FULL));
     Filter filter = new SelectorDimFilter("channel", null, null).toFilter();
@@ -818,7 +818,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryRightWithFilterOnJoinable()
+  public void test_makeCursor_factToCountryRightWithFilterOnJoinable()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.RIGHT));
     Filter filter = new SelectorDimFilter(
@@ -855,7 +855,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryRightWithFilterOnJoinableUsingLookup()
+  public void test_makeCursor_factToCountryRightWithFilterOnJoinableUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.RIGHT));
     Filter filter = new SelectorDimFilter(
@@ -891,7 +891,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeftWithFilterOnJoinable()
+  public void test_makeCursor_factToCountryLeftWithFilterOnJoinable()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
 
@@ -930,7 +930,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeftWithFilterOnJoinableUsingLookup()
+  public void test_makeCursor_factToCountryLeftWithFilterOnJoinableUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
     Filter filter = new OrDimFilter(
@@ -965,7 +965,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInnerWithFilterInsteadOfRealJoinCondition()
+  public void test_makeCursor_factToCountryInnerWithFilterInsteadOfRealJoinCondition()
   {
     // Join condition => always true.
     // Filter => Fact to countries on countryIsoCode.
@@ -1037,7 +1037,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInnerWithFilterInsteadOfRealJoinConditionUsingLookup()
+  public void test_makeCursor_factToCountryInnerWithFilterInsteadOfRealJoinConditionUsingLookup()
   {
     // Join condition => always true.
     // Filter => Fact to countries on countryIsoCode.
@@ -1107,7 +1107,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToRegionToCountryLeft()
+  public void test_makeCursor_factToRegionToCountryLeft()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         factToRegion(JoinType.LEFT),
@@ -1164,7 +1164,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToRegionToCountryInnerIncludeNull()
+  public void test_makeCursor_factToRegionToCountryInnerIncludeNull()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         factToRegionIncludeNull(JoinType.INNER),
@@ -1220,7 +1220,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryAlwaysTrue()
+  public void test_makeCursor_factToCountryAlwaysTrue()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1277,7 +1277,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryAlwaysFalse()
+  public void test_makeCursor_factToCountryAlwaysFalse()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1319,7 +1319,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryAlwaysTrueUsingLookup()
+  public void test_makeCursor_factToCountryAlwaysTrueUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1377,7 +1377,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryAlwaysFalseUsingLookup()
+  public void test_makeCursor_factToCountryAlwaysFalseUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1419,7 +1419,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryUsingVirtualColumn()
+  public void test_makeCursor_factToCountryUsingVirtualColumn()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1470,7 +1470,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryUsingVirtualColumnUsingLookup()
+  public void test_makeCursor_factToCountryUsingVirtualColumnUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1521,7 +1521,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryUsingExpression()
+  public void test_makeCursor_factToCountryUsingExpression()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1566,7 +1566,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryUsingExpressionUsingLookup()
+  public void test_makeCursor_factToCountryUsingExpressionUsingLookup()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
@@ -1611,7 +1611,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToRegionTheWrongWay()
+  public void test_makeCursor_factToRegionTheWrongWay()
   {
     // Joins using only regionIsoCode, which is wrong since they are not unique internationally.
     List<JoinableClause> joinableClauses = ImmutableList.of(
@@ -1663,7 +1663,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_errorOnNonEquiJoin()
+  public void test_makeCursor_errorOnNonEquiJoin()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: x == y");
@@ -1698,7 +1698,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_errorOnNonEquiJoinUsingLookup()
+  public void test_makeCursor_errorOnNonEquiJoinUsingLookup()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot join lookup with non-equi condition: x == y");
@@ -1733,7 +1733,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_errorOnNonKeyBasedJoin()
+  public void test_makeCursor_errorOnNonKeyBasedJoin()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot build hash-join matcher on non-key-based condition: "
@@ -1768,7 +1768,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_errorOnNonKeyBasedJoinUsingLookup()
+  public void test_makeCursor_errorOnNonKeyBasedJoinUsingLookup()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(
@@ -1803,7 +1803,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeft_filterExcludesAllLeftRows()
+  public void test_makeCursor_factToCountryLeft_filterExcludesAllLeftRows()
   {
     Filter originalFilter = new SelectorFilter("page", "this matches nothing");
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
@@ -1833,7 +1833,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeft_filterExcludesAllLeftRowsUsingLookup()
+  public void test_makeCursor_factToCountryLeft_filterExcludesAllLeftRowsUsingLookup()
   {
     Filter originalFilter = new SelectorFilter("page", "this matches nothing");
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryNameUsingIsoCodeLookup(JoinType.LEFT));
@@ -1861,7 +1861,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_originalFilterDoesNotMatchPreAnalysis_shouldThrowISE()
+  public void test_makeCursor_originalFilterDoesNotMatchPreAnalysis_shouldThrowISE()
   {
     List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
     Filter filter = new SelectorFilter("page", "this matches nothing");
@@ -1881,7 +1881,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryLeftWithBaseFilter()
+  public void test_makeCursor_factToCountryLeftWithBaseFilter()
   {
     final Filter baseFilter = Filters.or(Arrays.asList(
         new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
@@ -1919,7 +1919,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryInnerWithBaseFilter()
+  public void test_makeCursor_factToCountryInnerWithBaseFilter()
   {
     final Filter baseFilter = Filters.or(Arrays.asList(
         new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
@@ -1955,7 +1955,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryRightWithBaseFilter()
+  public void test_makeCursor_factToCountryRightWithBaseFilter()
   {
     final Filter baseFilter = Filters.or(Arrays.asList(
         new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),
@@ -2008,7 +2008,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
-  public void test_makeCursors_factToCountryFullWithBaseFilter()
+  public void test_makeCursor_factToCountryFullWithBaseFilter()
   {
     final Filter baseFilter = Filters.or(Arrays.asList(
         new SelectorDimFilter("countryIsoCode", "CA", null).toFilter(),

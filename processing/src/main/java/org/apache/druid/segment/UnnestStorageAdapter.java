@@ -269,9 +269,9 @@ public class UnnestStorageAdapter implements StorageAdapter
   /**
    * Split queryFilter into pre- and post-correlate filters.
    *
-   * @param queryFilter            query filter passed to makeCursors
+   * @param queryFilter            query filter from {@link CursorBuildSpec}
    * @param unnestFilter           filter on unnested column passed to PostUnnestCursor
-   * @param queryVirtualColumns    query virtual columns passed to makeCursors
+   * @param queryVirtualColumns    query virtual columns from {@link CursorBuildSpec}
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    * @return pair of pre- and post-unnest filters
@@ -467,7 +467,7 @@ public class UnnestStorageAdapter implements StorageAdapter
    * while in case B, due to presence of the expression virtual column expressionVirtualColumn("j0.unnest", "array(\"dim1\",\"dim2\")", ColumnType.STRING_ARRAY)
    * the filters on d12 cannot be pushed to the pre filters
    *
-   * @param queryFilter            query filter passed to makeCursors
+   * @param queryFilter            query filter from {@link CursorBuildSpec}
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    */

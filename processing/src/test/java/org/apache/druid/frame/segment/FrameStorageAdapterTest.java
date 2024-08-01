@@ -71,7 +71,7 @@ import java.util.function.Function;
 public class FrameStorageAdapterTest
 {
   /**
-   * Basic tests: everything except makeCursors, makeVectorCursor.
+   * Basic tests: everything except makeCursor, makeVectorCursor.
    */
   @RunWith(Parameterized.class)
   public static class BasicTests extends InitializedNullHandlingTest
@@ -231,7 +231,7 @@ public class FrameStorageAdapterTest
   }
 
   /**
-   * CursorTests: matrix of tests of makeCursors, makeVectorCursor
+   * CursorTests: matrix of tests of makeCursor, makeVectorCursor
    */
   @RunWith(Parameterized.class)
   public static class CursorTests extends InitializedNullHandlingTest
@@ -363,7 +363,7 @@ public class FrameStorageAdapterTest
     }
 
     @Test
-    public void test_makeCursors()
+    public void test_makeCursor()
     {
       assertCursorMatch(adapter -> adapter.asCursorMaker(buildSpec));
     }

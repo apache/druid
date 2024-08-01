@@ -71,7 +71,7 @@ public interface CursorFactory extends CursorMakerFactory
    *                                                      .isDescending(descending)
    *                                                      .setQueryMetrics(queryMetrics)
    *                                                      .build();
-   *     return asCursorMaker(buildSpec).makeCursors();
+   *     return asCursorMaker(buildSpec).makeCursor();
    * </pre>
    * This method is no longer implemented by any built-in factories.
    */
