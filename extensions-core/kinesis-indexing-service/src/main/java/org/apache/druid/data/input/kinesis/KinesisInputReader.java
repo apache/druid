@@ -95,10 +95,7 @@ public class KinesisInputReader implements InputEntityReader
   private Map<String, Object> extractHeaders(KinesisRecordEntity record)
   {
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
-    // Add kinesis record timestamp to the mergelist, we will skip record timestamp if the same key exists already in
-    // the header list
     mergedHeaderMap.put(timestampColumnName, record.getRecord().getApproximateArrivalTimestamp().getTime());
-
     return mergedHeaderMap;
   }
 
