@@ -83,11 +83,11 @@ public class KinesisInputReader implements InputEntityReader
   public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
   {
     final KinesisRecordEntity record = source.getEntity();
-    InputRowListPlusRawValues keysAndHeader = extractHeaderAndKeysSample(record);
+    InputRowListPlusRawValues headers = extractHeaderSample(record);
     if (record.getRecord().getData() != null) {
-      return buildBlendedRowsSample(valueParser, keysAndHeader.getRawValues());
+      return buildBlendedRowsSample(valueParser, headers.getRawValues());
     } else {
-      final List<InputRowListPlusRawValues> rows = Collections.singletonList(keysAndHeader);
+      final List<InputRowListPlusRawValues> rows = Collections.singletonList(headers);
       return CloseableIterators.withEmptyBaggage(rows.iterator());
     }
   }
@@ -97,7 +97,7 @@ public class KinesisInputReader implements InputEntityReader
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
     // Add kinesis record timestamp to the mergelist, we will skip record timestamp if the same key exists already in
     // the header list
-    mergedHeaderMap.putIfAbsent(timestampColumnName, record.getRecord().getApproximateArrivalTimestamp().getTime());
+    mergedHeaderMap.put(timestampColumnName, record.getRecord().getApproximateArrivalTimestamp().getTime());
 
     return mergedHeaderMap;
   }
@@ -129,7 +129,7 @@ public class KinesisInputReader implements InputEntityReader
     );
   }
 
-  private InputRowListPlusRawValues extractHeaderAndKeysSample(KinesisRecordEntity record)
+  private InputRowListPlusRawValues extractHeaderSample(KinesisRecordEntity record)
   {
     Map<String, Object> mergedHeaderMap = extractHeaders(record);
     return InputRowListPlusRawValues.of(buildInputRowsForMap(mergedHeaderMap), mergedHeaderMap);

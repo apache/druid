@@ -19,6 +19,7 @@
 
 package org.apache.druid.data.input.kinesis;
 
+import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputEntity;
@@ -35,6 +36,11 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Objects;
 
+/**
+ * Kinesis aware InputFormat. Allows for reading kinesis specific values that are stored in the {@link Record}. At
+ * this time, this input format only supports reading the main record payload ({@link Record#data}) and
+ * {@link Record#approximateArrivalTimestamp}, but can be extended easily to read other fields.
+ */
 public class KinesisInputFormat implements InputFormat
 {
   private static final String DEFAULT_TIMESTAMP_COLUMN_NAME = "kinesis.timestamp";
