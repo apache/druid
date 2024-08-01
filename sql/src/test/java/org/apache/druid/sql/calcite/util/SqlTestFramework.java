@@ -31,6 +31,7 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -619,7 +620,8 @@ public class SqlTestFramework
         .addModule(new SegmentWranglerModule())
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
-        .addModule(new TestSetupModule(builder));
+        .addModule(new TestSetupModule(builder))
+        .addModule(new StringMultiValueHandlingModule());
 
     builder.componentSupplier.configureGuice(injectorBuilder);
 

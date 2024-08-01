@@ -63,7 +63,7 @@ public class IndexGeneratorCombinerTest
   @Before
   public void setUp() throws Exception
   {
-    StringMultiValueHandlingModule.setStringMvForTests();
+    StringMultiValueHandlingModule.initializeStringMvForTests();
     HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
             new DataSchema(

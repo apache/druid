@@ -56,7 +56,7 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    StringMultiValueHandlingModule.setStringMvForTests();
+    StringMultiValueHandlingModule.initializeStringMvForTests();
     incrementalIndexSegment = new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SegmentId.dummy("test"));
     queryableIndexSegment = new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SegmentId.dummy("test"));
 

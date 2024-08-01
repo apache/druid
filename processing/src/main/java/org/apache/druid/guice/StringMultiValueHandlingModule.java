@@ -66,10 +66,10 @@ public class StringMultiValueHandlingModule implements DruidModule
   }
 
   /**
-   * Helper for wiring stuff up for tests.
+   * Helper for wiring stuff up for tests that don't use guice injection.
    */
   @VisibleForTesting
-  public static void setStringMvForTests()
+  public static void initializeStringMvForTests()
   {
     STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
   }

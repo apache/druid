@@ -20,6 +20,7 @@
 package org.apache.druid.testing;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.math.expr.ExpressionProcessing;
 
 public class InitializedNullHandlingTest
@@ -27,5 +28,6 @@ public class InitializedNullHandlingTest
   static {
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
+    StringMultiValueHandlingModule.initializeStringMvForTests();
   }
 }
