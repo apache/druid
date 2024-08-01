@@ -44,12 +44,16 @@ const DEFAULT_MAX_NUM_LABEL_FN = (maxNum: number) => {
   return { text: formatInteger(maxNum), label: `(1 controller + max ${maxNum - 1} workers)` };
 };
 
+const DEFAULT_FULL_CLUSTER_CAPACITY_LABEL_FN = (clusterCapacity: number) =>
+  `${formatInteger(clusterCapacity)} (full cluster capacity)`;
+
 export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIcon'> {
   clusterCapacity: number | undefined;
   queryContext: QueryContext;
   changeQueryContext(queryContext: QueryContext): void;
   menuHeader?: JSX.Element;
   maxNumLabelFn?: (maxNum: number) => { text: string; label?: string };
+  fullClusterCapacityLabelFn?: (clusterCapacity: number) => string;
 }
 
 export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps) {
@@ -59,6 +63,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
     changeQueryContext,
     menuHeader,
     maxNumLabelFn = DEFAULT_MAX_NUM_LABEL_FN,
+    fullClusterCapacityLabelFn = DEFAULT_FULL_CLUSTER_CAPACITY_LABEL_FN,
     ...rest
   } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
@@ -67,9 +72,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
   const taskAssigment = getTaskAssigment(queryContext);
 
   const fullClusterCapacity =
-    typeof clusterCapacity === 'number'
-      ? `${formatInteger(clusterCapacity)} (full cluster capacity)`
-      : undefined;
+    typeof clusterCapacity === 'number' ? fullClusterCapacityLabelFn(clusterCapacity) : undefined;
 
   const shownMaxNumTaskOptions = clusterCapacity
     ? MAX_NUM_TASK_OPTIONS.filter(_ => _ <= clusterCapacity)

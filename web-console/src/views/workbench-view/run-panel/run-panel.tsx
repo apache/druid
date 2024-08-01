@@ -135,6 +135,9 @@ export interface RunPanelProps {
   maxTaskMenuHeader?: JSX.Element;
   enginesLabelFn?: (engine: DruidEngine | undefined) => { text: string; label?: string };
   maxTaskLabelFn?: ComponentProps<typeof MaxTasksButton>['maxNumLabelFn'];
+  maxTaskFullClusterCapacityLabelFn?: ComponentProps<
+    typeof MaxTasksButton
+  >['fullClusterCapacityLabelFn'];
   defaultSelectDestinationFn?: (engine: DruidEngine | undefined) => 'taskReport' | 'durableStorage';
 }
 
@@ -150,6 +153,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     clusterCapacity,
     maxTaskMenuHeader,
     maxTaskLabelFn,
+    maxTaskFullClusterCapacityLabelFn,
     enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
     defaultSelectDestinationFn = DEFAULT_SELECT_DESTINATION_FN,
   } = props;
@@ -540,6 +544,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               changeQueryContext={changeQueryContext}
               menuHeader={maxTaskMenuHeader}
               maxNumLabelFn={maxTaskLabelFn}
+              fullClusterCapacityLabelFn={maxTaskFullClusterCapacityLabelFn}
             />
           )}
           {ingestMode && (
