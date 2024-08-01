@@ -61,6 +61,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -436,6 +437,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testCountDistinctOnNestedData(String contextName, Map<String, Object> context)
   {
+    Assumptions.assumeTrue(NullHandling.sqlCompatible());
     RowSignature rowSignature = RowSignature.builder()
                                             .add("distinct_obj", ColumnType.LONG)
                                             .build();
