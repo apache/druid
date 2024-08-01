@@ -26,13 +26,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Strings;
+import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.MultiValueConfigHandling;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
@@ -113,7 +113,7 @@ public abstract class DimensionSchema
 
     public static MultiValueHandling ofDefault()
     {
-      return MultiValueConfigHandling.getDefaultMultiValueHandlingMode();
+      return StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode();
     }
   }
 

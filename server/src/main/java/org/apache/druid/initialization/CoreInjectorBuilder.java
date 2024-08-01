@@ -39,6 +39,7 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
 import org.apache.druid.guice.StorageNodeModule;
+import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.http.HttpClientModule;
@@ -131,7 +132,8 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new StartupLoggingModule(),
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
-        new StorageConnectorModule()
+        new StorageConnectorModule(),
+        new StringMultiValueHandlingModule()
     );
     return this;
   }

@@ -41,19 +41,19 @@ public class DefaultColumnFormatConfig
     }
   }
 
-  private static void validateMultiValueHandlingMode(@Nullable String multiValueHandlingMode)
+  private static void validateMultiValueHandlingMode(@Nullable String stringMultiValueHandlingMode)
   {
-    if (multiValueHandlingMode != null) {
+    if (stringMultiValueHandlingMode != null) {
       try {
-        DimensionSchema.MultiValueHandling.fromString(multiValueHandlingMode);
+        DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
       }
       catch (IllegalArgumentException e) {
         throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.INVALID_INPUT)
                             .build(
-                                "Invalid value[%s] specified for 'druid.indexing.formats.multiValueHandlingMode'."
+                                "Invalid value[%s] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
                                 + " Supported values are [%s].",
-                                multiValueHandlingMode,
+                                stringMultiValueHandlingMode,
                                 Arrays.toString(DimensionSchema.MultiValueHandling.values())
                             );
       }
@@ -64,22 +64,22 @@ public class DefaultColumnFormatConfig
   @JsonProperty("nestedColumnFormatVersion")
   private final Integer nestedColumnFormatVersion;
 
-  @JsonProperty("multiValueHandlingMode")
-  private final DimensionSchema.MultiValueHandling multiValueHandlingMode;
+  @JsonProperty("stringMultiValueHandlingMode")
+  private final DimensionSchema.MultiValueHandling stringMultiValueHandlingMode;
 
   @JsonCreator
   public DefaultColumnFormatConfig(
       @JsonProperty("nestedColumnFormatVersion") @Nullable Integer nestedColumnFormatVersion,
-      @JsonProperty("multiValueHandlingMode") @Nullable String multiValueHandlingMode
+      @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode
   )
   {
     validateNestedFormatVersion(nestedColumnFormatVersion);
-    validateMultiValueHandlingMode(multiValueHandlingMode);
+    validateMultiValueHandlingMode(stringMultiValueHandlingMode);
 
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
-    this.multiValueHandlingMode = multiValueHandlingMode == null ?
-                                  DimensionSchema.MultiValueHandling.SORTED_ARRAY :
-                                  DimensionSchema.MultiValueHandling.fromString(multiValueHandlingMode);
+    this.stringMultiValueHandlingMode = stringMultiValueHandlingMode == null ?
+                                        DimensionSchema.MultiValueHandling.SORTED_ARRAY :
+                                        DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
   }
 
   @Nullable
@@ -89,10 +89,10 @@ public class DefaultColumnFormatConfig
     return nestedColumnFormatVersion;
   }
 
-  @JsonProperty("multiValueHandlingMode")
-  public DimensionSchema.MultiValueHandling getMultiValueHandlingMode()
+  @JsonProperty("stringMultiValueHandlingMode")
+  public DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
   {
-    return multiValueHandlingMode;
+    return stringMultiValueHandlingMode;
   }
 
   @Override
@@ -106,13 +106,13 @@ public class DefaultColumnFormatConfig
     }
     DefaultColumnFormatConfig that = (DefaultColumnFormatConfig) o;
     return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion)
-           && multiValueHandlingMode == that.multiValueHandlingMode;
+           && stringMultiValueHandlingMode == that.stringMultiValueHandlingMode;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(nestedColumnFormatVersion, multiValueHandlingMode);
+    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode);
   }
 
   @Override
@@ -120,7 +120,7 @@ public class DefaultColumnFormatConfig
   {
     return "DefaultColumnFormatConfig{" +
            "nestedColumnFormatVersion=" + nestedColumnFormatVersion +
-           ", multiValueHandlingMode=" + multiValueHandlingMode +
+           ", stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
            '}';
   }
 }
