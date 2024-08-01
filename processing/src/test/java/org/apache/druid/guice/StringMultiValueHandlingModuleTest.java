@@ -40,7 +40,7 @@ public class StringMultiValueHandlingModuleTest
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-        StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode()
+        StringMultiValueHandlingModule.getConfiguredOrDefaultStringMvMode()
     );
   }
 
@@ -55,7 +55,7 @@ public class StringMultiValueHandlingModuleTest
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-        StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode()
+        StringMultiValueHandlingModule.getConfiguredOrDefaultStringMvMode()
     );
   }
 
@@ -70,7 +70,7 @@ public class StringMultiValueHandlingModuleTest
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.ARRAY,
-        StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode()
+        StringMultiValueHandlingModule.getConfiguredOrDefaultStringMvMode()
     );
   }
 

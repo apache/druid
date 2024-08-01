@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -62,6 +63,7 @@ public class IndexGeneratorCombinerTest
   @Before
   public void setUp() throws Exception
   {
+    StringMultiValueHandlingModule.setStringMvForTests();
     HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
             new DataSchema(

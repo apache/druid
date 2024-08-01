@@ -113,7 +113,7 @@ public abstract class DimensionSchema
 
     public static MultiValueHandling ofDefault()
     {
-      return StringMultiValueHandlingModule.getConfiguredStringMultiValueHandlingMode();
+      return StringMultiValueHandlingModule.getConfiguredOrDefaultStringMvMode();
     }
   }
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -45,25 +46,38 @@ public class StringMultiValueHandlingModule implements DruidModule
    * So the value is guaranteed to be non-null after lifecycle service start.
    */
   @Nonnull
-  private static DimensionSchema.MultiValueHandling CONFIGURED_STRING_MULTI_HANDLING_MODE;
+  private static DimensionSchema.MultiValueHandling STRING_MV_MODE;
 
-  public static DimensionSchema.MultiValueHandling getConfiguredStringMultiValueHandlingMode()
+  /**
+   * @return the configured string multi value handling mode from the system config if set; otherwise, returns
+   * the default.
+   */
+  public static DimensionSchema.MultiValueHandling getConfiguredOrDefaultStringMvMode()
   {
-    return CONFIGURED_STRING_MULTI_HANDLING_MODE;
+    return STRING_MV_MODE;
   }
 
   @Provides
   @LazySingleton
-  public SideEffectHandlerRegisterer setStringMultiValueHandlingMode(DefaultColumnFormatConfig formatsConfig)
+  public static SideEffectHandlerRegisterer setStringMvMode(DefaultColumnFormatConfig formatsConfig)
   {
-    CONFIGURED_STRING_MULTI_HANDLING_MODE = formatsConfig.getStringMultiValueHandlingMode();
+    STRING_MV_MODE = formatsConfig.getStringMultiValueHandlingMode();
     return new SideEffectHandlerRegisterer();
+  }
+
+  /**
+   * Helper for wiring stuff up for tests.
+   */
+  @VisibleForTesting
+  public static void setStringMvForTests()
+  {
+    STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
   }
 
   /**
    * This is used as a vehicle to register the correct version of the system default string mvd mode by side
    * effect with the help of binding to {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} so that
-   * {@link #setStringMultiValueHandlingMode(DefaultColumnFormatConfig)} can be called with the injected
+   * {@link #setStringMvMode(DefaultColumnFormatConfig)} can be called with the injected
    * {@link DefaultColumnFormatConfig}.
    */
   public static class SideEffectHandlerRegisterer
