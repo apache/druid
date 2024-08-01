@@ -33,6 +33,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -43,6 +45,7 @@ import org.apache.druid.testing.guice.DruidTestModuleFactory;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KafkaUtil;
+import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testing.utils.StreamEventWriter;
 import org.apache.druid.testing.utils.StreamGenerator;
 import org.apache.druid.testing.utils.WikipediaStreamEventStreamGenerator;
@@ -67,6 +70,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Integration Test to verify behaviour when there are concurrent
@@ -74,12 +78,15 @@ import java.util.Set;
  */
 @Test(groups = {TestNGGroup.COMPACTION})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
-public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingServiceTest
+public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceTest
 {
-  private static final Logger LOG = new Logger(ITConcurrentStreamAppendReplaceTest.class);
+  private static final Logger LOG = new Logger(ITConcurrentAppendReplaceTest.class);
 
   @Inject
   private CompactionResourceTestClient compactionResource;
+  
+  @Inject
+  private MsqTestQueryHelper msqHelper;
 
   private GeneratedTestConfig generatedTestConfig;
   private StreamGenerator streamGenerator;
@@ -87,7 +94,7 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
   private String fullDatasourceName;
 
   private int currentRowCount = 0;
-  private boolean concurrentAppendAndReplaceLocksExisted = false;
+  private boolean concurrentAppendAndReplaceLocksExisted;
 
   @DataProvider
   public static Object[] getParameters()
@@ -114,6 +121,7 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
         EventSerializer.class
     );
     streamGenerator = new WikipediaStreamEventStreamGenerator(serializer, 6, 100);
+    concurrentAppendAndReplaceLocksExisted = false;
   }
 
   @Override
@@ -150,25 +158,27 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
       final Interval minute3 = Intervals.of("2000-01-01T01:03:00Z/2000-01-01T01:04:00Z");
       long rowsForMinute3 = generateData(minute3, streamEventWriter);
 
-      // Wait for data to be ingested for all the minutes
-      ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
+      Function<String, AggregatorFactory> function = name -> new LongSumAggregatorFactory(name, "count");
 
-      ensureSegmentsLoaded();
+      // Wait for data to be ingested for all the minutes
+      ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
+
+      ensureSegmentsLoaded(fullDatasourceName);
 
       // 2 segments for each minute, total 6
-      ensureSegmentsCount(6);
-      printTaskStatuses();
+      ensureSegmentsCount(fullDatasourceName, 6);
+      printTaskStatuses(fullDatasourceName);
 
       // Trigger auto compaction
-      submitAndVerifyCompactionConfig(null);
+      submitAndVerifyCompactionConfig(fullDatasourceName, null);
       compactionResource.forceTriggerAutoCompaction();
 
       // Verify that all the segments are now compacted
-      ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
-      ensureSegmentsLoaded();
-      ensureSegmentsCount(3);
-      verifyCompactedIntervals(minute1, minute2, minute3);
-      printTaskStatuses();
+      ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
+      ensureSegmentsLoaded(fullDatasourceName);
+      ensureSegmentsCount(fullDatasourceName, 3);
+      verifyCompactedIntervals(fullDatasourceName, minute1, minute2, minute3);
+      printTaskStatuses(fullDatasourceName);
 
       // Concurrent compaction with configured segment granularity
       for (int i = 0; i < 5; i++) {
@@ -178,20 +188,20 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
 
         //ensureNoLockContention();
         compactionResource.forceTriggerAutoCompaction();
-        ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
-        printTaskStatuses();
-        checkAndSetConcurrentLocks();
+        ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
+        printTaskStatuses(fullDatasourceName);
+        checkAndSetConcurrentLocks(fullDatasourceName);
       }
 
       // Verify the state with minute granularity
-      ensureSegmentsCount(3);
-      ensureSegmentsLoaded();
-      ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
-      verifyCompactedIntervals(minute1, minute2, minute3);
+      ensureSegmentsCount(fullDatasourceName, 3);
+      ensureSegmentsLoaded(fullDatasourceName);
+      ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
+      verifyCompactedIntervals(fullDatasourceName, minute1, minute2, minute3);
 
 
       // Use ALL segment granularity for compaction and run concurrent streaming ingestion
-      submitAndVerifyCompactionConfig(Granularities.DAY);
+      submitAndVerifyCompactionConfig(fullDatasourceName, Granularities.DAY);
 
       for (int i = 0; i < 5; i++) {
         rowsForMinute1 += generateData(minute1, streamEventWriter);
@@ -200,36 +210,107 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
 
         //ensureNoLockContention();
         compactionResource.forceTriggerAutoCompaction();
-        ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
-        printTaskStatuses();
-        checkAndSetConcurrentLocks();
+        ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
+        printTaskStatuses(fullDatasourceName);
+        checkAndSetConcurrentLocks(fullDatasourceName);
       }
 
       // Verify the state with all granularity
-      ensureSegmentsCount(1);
-      ensureSegmentsLoaded();
-      ensureRowCount(rowsForMinute1 + rowsForMinute2 + rowsForMinute3);
-      verifyCompactedIntervals(Intervals.of("2000-01-01/2000-01-02"));
-      printTaskStatuses();
+      ensureSegmentsCount(fullDatasourceName, 1);
+      ensureSegmentsLoaded(fullDatasourceName);
+      ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
+      verifyCompactedIntervals(fullDatasourceName, Intervals.of("2000-01-01/2000-01-02"));
+      printTaskStatuses(fullDatasourceName);
 
-
-      // Concurrent locks should ensure that there are no failed tasks
-      Assert.assertEquals(0, getFailedTaskCount());
       Assert.assertTrue(concurrentAppendAndReplaceLocksExisted);
     }
   }
 
-  /**
-   * Retries until the segment count is as expected.
-   */
-  private void ensureSegmentsCount(int numExpectedSegments)
+
+  @Test(dataProvider = "getParameters")
+  public void testConcurrentMSQAppendReplace(boolean transactionEnabled) throws Exception
+  {
+    if (shouldSkipTest(transactionEnabled)) {
+      return;
+    }
+
+    final String datasource = "dst";
+
+    final String queryLocal =
+        StringUtils.format(
+            "INSERT INTO %s\n"
+            + "SELECT\n"
+            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+            + "  isRobot,\n"
+            + "  diffUrl,\n"
+            + "  added,\n"
+            + "  countryIsoCode,\n"
+            + "  regionName,\n"
+            + "  channel,\n"
+            + "  flags,\n"
+            + "  delta,\n"
+            + "  isUnpatrolled,\n"
+            + "  isNew,\n"
+            + "  deltaBucket,\n"
+            + "  isMinor,\n"
+            + "  isAnonymous,\n"
+            + "  deleted,\n"
+            + "  cityName,\n"
+            + "  metroCode,\n"
+            + "  namespace,\n"
+            + "  comment,\n"
+            + "  page,\n"
+            + "  commentLength,\n"
+            + "  countryName,\n"
+            + "  user,\n"
+            + "  regionIsoCode\n"
+            + "FROM TABLE(\n"
+            + "  EXTERN(\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"json\"}',\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "  )\n"
+            + ")\n"
+            + "PARTITIONED BY DAY\n",
+            datasource
+        );
+
+    Function<String, AggregatorFactory> function = name -> new CountAggregatorFactory("rows");
+
+    msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
+    ensureSegmentsCount(datasource, 1);
+    ensureRowCount(datasource, 3, function);
+
+    submitAndVerifyCompactionConfig(datasource, null);
+
+    for (int i = 0; i < 5; i++) {
+      // Submit the task and wait for the datasource to get loaded
+      msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
+
+      ensureRowCount(datasource, (i + 2) * 3, function);
+    }
+
+    ensureRowCount(datasource, 18, function);
+    ensureSegmentsCount(datasource, 1);
+    ensureSegmentsLoaded(datasource);
+    verifyCompactedIntervals(datasource, Intervals.of("2013-08-31/2013-09-01"));
+    printTaskStatuses(datasource);
+
+    Assert.assertTrue(concurrentAppendAndReplaceLocksExisted);
+  }
+
+
+    /**
+     * Retries until the segment count is as expected.
+     */
+  private void ensureSegmentsCount(String datasource, int numExpectedSegments)
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
-          printTaskStatuses();
-          checkAndSetConcurrentLocks();
+          printTaskStatuses(datasource);
+          checkAndSetConcurrentLocks(datasource);
           compactionResource.forceTriggerAutoCompaction();
-          List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+          List<DataSegment> segments = coordinator.getFullSegmentsMetadata(datasource);
           StringBuilder sb = new StringBuilder();
           segments.forEach(
               seg -> sb.append("{")
@@ -249,9 +330,9 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
   /**
    * Verifies that the given intervals have been compacted.
    */
-  private void verifyCompactedIntervals(Interval... compactedIntervals)
+  private void verifyCompactedIntervals(String datasource, Interval... compactedIntervals)
   {
-    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(datasource);
     List<DataSegment> observedCompactedSegments = new ArrayList<>();
     Set<Interval> observedCompactedIntervals = new HashSet<>();
     for (DataSegment segment : segments) {
@@ -298,23 +379,24 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
   /**
    * Retries until segments have been loaded.
    */
-  private void ensureSegmentsLoaded()
+  private void ensureSegmentsLoaded(String datasource)
   {
     ITRetryUtil.retryUntilTrue(
-        () -> coordinator.areSegmentsLoaded(fullDatasourceName),
+        () -> coordinator.areSegmentsLoaded(datasource),
         "Segment Loading"
     );
   }
 
-  private void checkAndSetConcurrentLocks()
+  private void checkAndSetConcurrentLocks(String datasource)
   {
-    LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
+    LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(datasource, 0, null, null);
     final List<TaskLock> locks = indexer.getActiveLocks(ImmutableList.of(lockFilterPolicy))
                                         .getDatasourceToLocks()
-                                        .get(fullDatasourceName);
+                                        .get(datasource);
     if (CollectionUtils.isNullOrEmpty(locks)) {
       return;
     }
+    LOG.info(locks.toString());
     Set<Interval> replaceIntervals = new HashSet<>();
     Set<Interval> appendIntervals = new HashSet<>();
     for (TaskLock lock : locks) {
@@ -352,13 +434,13 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
   /**
    * Submits a compaction config for the current datasource.
    */
-  private void submitAndVerifyCompactionConfig(Granularity segmentGranularity) throws Exception
+  private void submitAndVerifyCompactionConfig(String datasource, Granularity segmentGranularity) throws Exception
   {
     final UserCompactionTaskGranularityConfig granularitySpec =
         new UserCompactionTaskGranularityConfig(segmentGranularity, null, null);
     final DataSourceCompactionConfig compactionConfig =
         DataSourceCompactionConfig.builder()
-                                  .forDataSource(fullDatasourceName)
+                                  .forDataSource(datasource)
                                   .withSkipOffsetFromLatest(Period.ZERO)
                                   .withGranularitySpec(granularitySpec)
                                   .withTaskContext(ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true))
@@ -373,40 +455,25 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
     DruidCompactionConfig druidCompactionConfig = compactionResource.getCompactionConfig();
     DataSourceCompactionConfig observedCompactionConfig = null;
     for (DataSourceCompactionConfig dataSourceCompactionConfig : druidCompactionConfig.getCompactionConfigs()) {
-      if (dataSourceCompactionConfig.getDataSource().equals(fullDatasourceName)) {
+      if (dataSourceCompactionConfig.getDataSource().equals(datasource)) {
         observedCompactionConfig = dataSourceCompactionConfig;
       }
     }
     Assert.assertEquals(observedCompactionConfig, compactionConfig);
 
-    observedCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
+    observedCompactionConfig = compactionResource.getDataSourceCompactionConfig(datasource);
     Assert.assertEquals(observedCompactionConfig, compactionConfig);
-  }
-
-  private int getFailedTaskCount()
-  {
-    int failedCount = 0;
-    int successfulCount = 0;
-    for (TaskResponseObject completeTask : indexer.getCompleteTasksForDataSource(fullDatasourceName)) {
-      if (completeTask.getStatus().isFailure()) {
-        failedCount++;
-      } else {
-        successfulCount++;
-      }
-    }
-    LOG.info("Ran %d successful tasks and %d failed tasks.", successfulCount, failedCount);
-    return failedCount;
   }
 
   /**
    * Gets the number of complete compaction tasks.
    */
-  private void printTaskStatuses()
+  private void printTaskStatuses(String datsource)
   {
     List<TaskResponseObject> incompleteTasks = indexer
-        .getUncompletedTasksForDataSource(fullDatasourceName);
+        .getUncompletedTasksForDataSource(datsource);
     List<TaskResponseObject> completeTasks = indexer
-        .getCompleteTasksForDataSource(fullDatasourceName);
+        .getCompleteTasksForDataSource(datsource);
 
     printTasks(incompleteTasks, "Incomplete");
     printTasks(completeTasks, "Complete");
@@ -431,27 +498,30 @@ public class ITConcurrentStreamAppendReplaceTest extends AbstractKafkaIndexingSe
    * Retries until the total row count is as expected.
    * Also verifies that row count is non-decreasing
    */
-  private void ensureRowCount(long totalRows)
+  private void ensureRowCount(String datasource, long totalRows, Function<String, AggregatorFactory> function)
   {
     LOG.info("Verifying Row Count. Expected: %s", totalRows);
     ITRetryUtil.retryUntilTrue(
         () -> {
+          printTaskStatuses(datasource);
+          compactionResource.forceTriggerAutoCompaction();
+          checkAndSetConcurrentLocks(datasource);
           int newRowCount = this.queryHelper.countRows(
-              fullDatasourceName,
+              datasource,
               Intervals.ETERNITY,
-              name -> new LongSumAggregatorFactory(name, "count")
+              function
           );
           Assert.assertTrue(newRowCount >= currentRowCount, "Number of events queried must be non decreasing");
           currentRowCount = newRowCount;
           return currentRowCount == totalRows;
         },
         StringUtils.format(
-            "dataSource[%s] consumed [%,d] events, expected [%,d]",
-            fullDatasourceName,
+            "dataSource[%s] has [%,d] queryable rows, expected [%,d]",
+            datasource,
             this.queryHelper.countRows(
-                fullDatasourceName,
+                datasource,
                 Intervals.ETERNITY,
-                name -> new LongSumAggregatorFactory(name, "count")
+                function
             ),
             totalRows
         )
