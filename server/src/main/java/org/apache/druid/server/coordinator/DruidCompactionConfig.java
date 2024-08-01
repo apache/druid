@@ -21,83 +21,84 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import com.google.common.base.Optional;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.CompactionEngine;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public class CoordinatorCompactionConfig
+public class DruidCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
-  private static final double DEFAULT_COMPACTION_TASK_RATIO = 0.1;
-  private static final int DEFAULT_MAX_COMPACTION_TASK_SLOTS = Integer.MAX_VALUE;
-  private static final boolean DEFAULT_USE_AUTO_SCALE_SLOTS = false;
-  private static final CompactionEngine DEFAULT_COMPACTION_ENGINE = CompactionEngine.NATIVE;
+  private static final DruidCompactionConfig EMPTY_INSTANCE
+      = new DruidCompactionConfig(Collections.emptyList(), null, null, null, null);
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
-  private final CompactionEngine compactionEngine;
+  private final CompactionEngine engine;
 
-  public static CoordinatorCompactionConfig from(
-      CoordinatorCompactionConfig baseConfig,
+  public DruidCompactionConfig withDatasourceConfigs(
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    return new CoordinatorCompactionConfig(
+    return new DruidCompactionConfig(
         compactionConfigs,
-        baseConfig.compactionTaskSlotRatio,
-        baseConfig.maxCompactionTaskSlots,
-        baseConfig.useAutoScaleSlots,
-        null
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        useAutoScaleSlots,
+        engine
     );
   }
 
-  public static CoordinatorCompactionConfig from(
-      CoordinatorCompactionConfig baseConfig,
-      @Nullable Double compactionTaskSlotRatio,
-      @Nullable Integer maxCompactionTaskSlots,
-      @Nullable Boolean useAutoScaleSlots
+  public DruidCompactionConfig withClusterConfig(
+      ClusterCompactionConfig update
   )
   {
-    return new CoordinatorCompactionConfig(
-        baseConfig.compactionConfigs,
-        compactionTaskSlotRatio == null ? baseConfig.compactionTaskSlotRatio : compactionTaskSlotRatio,
-        maxCompactionTaskSlots == null ? baseConfig.maxCompactionTaskSlots : maxCompactionTaskSlots,
-        useAutoScaleSlots == null ? baseConfig.useAutoScaleSlots : useAutoScaleSlots,
-        null
+    return new DruidCompactionConfig(
+        this.compactionConfigs,
+        Configs.valueOrDefault(update.getCompactionTaskSlotRatio(), compactionTaskSlotRatio),
+        Configs.valueOrDefault(update.getMaxCompactionTaskSlots(), maxCompactionTaskSlots),
+        Configs.valueOrDefault(update.getUseAutoScaleSlots(), useAutoScaleSlots),
+        Configs.valueOrDefault(update.getEngine(), engine)
     );
   }
 
-  public static CoordinatorCompactionConfig from(List<DataSourceCompactionConfig> compactionConfigs)
+  public DruidCompactionConfig withDatasourceConfig(DataSourceCompactionConfig dataSourceConfig)
   {
-    return new CoordinatorCompactionConfig(compactionConfigs, null, null, null, null);
+    final Map<String, DataSourceCompactionConfig> configs = dataSourceToCompactionConfigMap();
+    configs.put(dataSourceConfig.getDataSource(), dataSourceConfig);
+    return withDatasourceConfigs(new ArrayList<>(configs.values()));
   }
 
-  public static CoordinatorCompactionConfig empty()
+  public static DruidCompactionConfig empty()
   {
-    return new CoordinatorCompactionConfig(ImmutableList.of(), null, null, null, null);
+    return EMPTY_INSTANCE;
   }
 
   @JsonCreator
-  public CoordinatorCompactionConfig(
+  public DruidCompactionConfig(
       @JsonProperty("compactionConfigs") List<DataSourceCompactionConfig> compactionConfigs,
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("compactionEngine") @Nullable CompactionEngine compactionEngine
+      @JsonProperty("engine") @Nullable CompactionEngine compactionEngine
   )
   {
-    this.compactionConfigs = compactionConfigs;
-    this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, DEFAULT_COMPACTION_TASK_RATIO);
-    this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, DEFAULT_MAX_COMPACTION_TASK_SLOTS);
-    this.useAutoScaleSlots = Configs.valueOrDefault(useAutoScaleSlots, DEFAULT_USE_AUTO_SCALE_SLOTS);
-    this.compactionEngine = Configs.valueOrDefault(compactionEngine, DEFAULT_COMPACTION_ENGINE);
+    this.compactionConfigs = Configs.valueOrDefault(compactionConfigs, Collections.emptyList());
+    this.compactionTaskSlotRatio = Configs.valueOrDefault(compactionTaskSlotRatio, 0.1);
+    this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
+    this.useAutoScaleSlots = Configs.valueOrDefault(useAutoScaleSlots, false);
+    this.engine = Configs.valueOrDefault(compactionEngine, CompactionEngine.NATIVE);
   }
 
   @JsonProperty
@@ -127,7 +128,36 @@ public class CoordinatorCompactionConfig
   @JsonProperty
   public CompactionEngine getEngine()
   {
-    return compactionEngine;
+    return engine;
+  }
+
+
+  // Null-safe getters not used for serialization
+  public ClusterCompactionConfig clusterConfig()
+  {
+    return new ClusterCompactionConfig(
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        useAutoScaleSlots,
+        engine
+    );
+  }
+
+  public Map<String, DataSourceCompactionConfig> dataSourceToCompactionConfigMap()
+  {
+    return getCompactionConfigs().stream().collect(
+        Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity())
+    );
+  }
+
+  public Optional<DataSourceCompactionConfig> findConfigForDatasource(String dataSource)
+  {
+    for (DataSourceCompactionConfig dataSourceConfig : getCompactionConfigs()) {
+      if (dataSource.equals(dataSourceConfig.getDataSource())) {
+        return Optional.of(dataSourceConfig);
+      }
+    }
+    return Optional.absent();
   }
 
   @Override
@@ -139,11 +169,11 @@ public class CoordinatorCompactionConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CoordinatorCompactionConfig that = (CoordinatorCompactionConfig) o;
+    DruidCompactionConfig that = (DruidCompactionConfig) o;
     return Double.compare(that.compactionTaskSlotRatio, compactionTaskSlotRatio) == 0 &&
            maxCompactionTaskSlots == that.maxCompactionTaskSlots &&
            useAutoScaleSlots == that.useAutoScaleSlots &&
-           compactionEngine == that.compactionEngine &&
+           engine == that.engine &&
            Objects.equals(compactionConfigs, that.compactionConfigs);
   }
 
@@ -155,7 +185,7 @@ public class CoordinatorCompactionConfig
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         useAutoScaleSlots,
-        compactionEngine
+        engine
     );
   }
 
@@ -167,7 +197,7 @@ public class CoordinatorCompactionConfig
            ", compactionTaskSlotRatio=" + compactionTaskSlotRatio +
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            ", useAutoScaleSlots=" + useAutoScaleSlots +
-           ", compactionEngine=" + compactionEngine +
+           ", engine=" + engine +
            '}';
   }
 }

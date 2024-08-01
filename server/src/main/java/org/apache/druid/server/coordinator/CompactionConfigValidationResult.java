@@ -23,10 +23,23 @@ import org.apache.druid.java.util.common.StringUtils;
 
 public class CompactionConfigValidationResult
 {
+  private static final CompactionConfigValidationResult SUCCESS
+      = new CompactionConfigValidationResult(true, null);
+
   private final boolean valid;
   private final String reason;
 
-  public CompactionConfigValidationResult(boolean valid, String format, Object... args)
+  public static CompactionConfigValidationResult success()
+  {
+    return SUCCESS;
+  }
+
+  public static CompactionConfigValidationResult failure(String msgFormat, Object... args)
+  {
+    return new CompactionConfigValidationResult(false, msgFormat, args);
+  }
+
+  private CompactionConfigValidationResult(boolean valid, String format, Object... args)
   {
     this.valid = valid;
     this.reason = format == null ? null : StringUtils.format(format, args);
