@@ -97,7 +97,7 @@ String functions accept strings and return a type appropriate to the function.
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
 |`LEFT(expr, length)`|Returns the leftmost `length` characters from `expr`, where `length` is an integer. |
-|`RIGHT(expr, length)`|Returns the rightmost ``length`` characters from `expr`, where `length` is an integer. |
+|`RIGHT(expr, length)`|Returns the rightmost `length` characters from `expr`, where `length` is an integer. |
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
@@ -113,7 +113,7 @@ String functions accept strings and return a type appropriate to the function.
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
-|`REPEAT(expr, N)`|Repeats `expr` N times.|
+|`REPEAT(expr, N)`|Repeats `expr` _N_ times.|
 |`REVERSE(expr)`|Reverses `expr`.|
 |`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
 |`STRPOS(haystack, needle)`|Returns the index of `needle` within `haystack`, with indexes starting from 1. If `needle` is not found, returns 0.|
