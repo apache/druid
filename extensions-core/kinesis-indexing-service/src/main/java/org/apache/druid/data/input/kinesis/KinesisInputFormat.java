@@ -69,6 +69,10 @@ public class KinesisInputFormat implements InputFormat
   )
   {
     this.valueFormat = Preconditions.checkNotNull(valueFormat, "valueFormat must not be null");
+    Preconditions.checkState(
+        !(timestampColumnName != null && timestampColumnName.equals(partitionKeyColumnName)),
+        "timestampColumnName and partitionKeyColumnName must be different"
+    );
     this.partitionKeyColumnName = partitionKeyColumnName != null
         ? partitionKeyColumnName
         : DEFAULT_PARTITION_KEY_COLUMN_NAME;

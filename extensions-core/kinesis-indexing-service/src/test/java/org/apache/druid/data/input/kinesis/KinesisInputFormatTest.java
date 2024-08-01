@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -845,6 +846,78 @@ public class KinesisInputFormatTest
 
       Assert.assertEquals(numExpectedIterations, numActualIterations);
     }
+  }
+
+  @Test
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  public void testValidInputFormatConstruction() throws IOException
+  {
+    InputFormat valueFormat = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+            )
+        ),
+        null,
+        null,
+        false,
+        false
+    );
+    // null partitionKeyColumnName and null timestampColumnName is valid
+    new KinesisInputFormat(valueFormat, null, null);
+
+    // non-null partitionKeyColumnName and null timestampColumnName is valid
+    new KinesisInputFormat(valueFormat, "kinesis.partitionKey", null);
+
+    // null partitionKeyColumnName and non-null timestampColumnName is valid
+    new KinesisInputFormat(valueFormat, null, "kinesis.timestamp");
+
+    // non-null partitionKeyColumnName and non-null timestampColumnName is valid
+    new KinesisInputFormat(valueFormat, "kinesis.partitionKey", "kinesis.timestamp");
+
+  }
+
+  @Test
+  @SuppressWarnings("ResultOfMethodCallIgnored")
+  public void testInvalidInputFormatConstruction() throws IOException
+  {
+    // null value format is invalid
+    Assert.assertThrows(
+        "valueFormat must not be null",
+        NullPointerException.class,
+        () -> new KinesisInputFormat(null, null, null)
+    );
+
+    InputFormat valueFormat = new JsonInputFormat(
+        new JSONPathSpec(
+            true,
+            ImmutableList.of(
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz", "baz"),
+                new JSONPathFieldSpec(JSONPathFieldType.ROOT, "root_baz2", "baz2"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg", "$.o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.PATH, "path_omg2", "$.o.mg2"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg", ".o.mg"),
+                new JSONPathFieldSpec(JSONPathFieldType.JQ, "jq_omg2", ".o.mg2")
+            )
+        ),
+        null,
+        null,
+        false,
+        false
+    );
+
+    // partitionKeyColumnName == timestampColumnName is invalid
+    Assert.assertThrows(
+        "timestampColumnName and partitionKeyColumnName must be different",
+        IllegalStateException.class,
+        () -> new KinesisInputFormat(valueFormat, "kinesis.timestamp", "kinesis.timestamp")
+    );
   }
 
   private KinesisRecordEntity makeInputEntity(
