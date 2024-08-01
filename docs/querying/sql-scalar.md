@@ -96,8 +96,8 @@ String functions accept strings and return a type appropriate to the function.
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
-|`LEFT(expr, length)`|Returns the leftmost `length` characters from `expr`, where `length` is an integer. |
-|`RIGHT(expr, length)`|Returns the rightmost `length` characters from `expr`, where `length` is an integer. |
+|`LEFT(expr, length)`|Returns the left most `length` characters from `expr`, where `length` is an integer. |
+|`RIGHT(expr, length)`|Returns the right most `length` characters from `expr`, where `length` is an integer. |
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
