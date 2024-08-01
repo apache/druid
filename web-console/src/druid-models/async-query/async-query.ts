@@ -17,6 +17,8 @@
  */
 
 import type { ErrorResponse } from '../../utils';
+import type { Counters, StageDefinition } from '../stages/stages';
+import type { MsqTaskErrorReport } from '../task/task';
 
 export type AsyncState = 'ACCEPTED' | 'RUNNING' | 'SUCCESS' | 'FAILED';
 
@@ -37,5 +39,8 @@ export interface AsyncStatusResponse {
       sizeInBytes: number;
     }[];
   };
+  stages?: StageDefinition[];
+  counters?: Counters;
   errorDetails?: ErrorResponse;
+  warnings?: MsqTaskErrorReport[];
 }
