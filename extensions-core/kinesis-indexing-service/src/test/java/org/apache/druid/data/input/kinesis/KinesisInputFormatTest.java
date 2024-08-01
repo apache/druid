@@ -850,7 +850,7 @@ public class KinesisInputFormatTest
 
   @Test
   @SuppressWarnings("ResultOfMethodCallIgnored")
-  public void testValidInputFormatConstruction() throws IOException
+  public void testValidInputFormatConstruction()
   {
     InputFormat valueFormat = new JsonInputFormat(
         new JSONPathSpec(
@@ -885,7 +885,7 @@ public class KinesisInputFormatTest
 
   @Test
   @SuppressWarnings("ResultOfMethodCallIgnored")
-  public void testInvalidInputFormatConstruction() throws IOException
+  public void testInvalidInputFormatConstruction()
   {
     // null value format is invalid
     Assert.assertThrows(
