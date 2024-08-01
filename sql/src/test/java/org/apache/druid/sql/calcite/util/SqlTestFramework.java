@@ -26,12 +26,12 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.guice.DefaultColumnFormatConfigModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.guice.StringMultiValueHandlingModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -621,7 +621,7 @@ public class SqlTestFramework
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
         .addModule(new TestSetupModule(builder))
-        .addModule(new StringMultiValueHandlingModule());
+        .addModule(new DefaultColumnFormatConfigModule());
 
     builder.componentSupplier.configureGuice(injectorBuilder);
 
