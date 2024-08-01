@@ -32,7 +32,7 @@ import org.apache.druid.indexing.kinesis.KinesisRecordSupplier;
  * method also allows Kinesis-aware {@link InputFormat} implementations to read the full kinesis record, including
  * timestamp, encrytion key, patition key, and sequence number
  * <p>
- * NOTE: Any records with null values will be skipped, even if they contain non-null headers
+ * NOTE: Any records with null values will be returned as records with just only kinesis properties and no data payload
  */
 public class KinesisRecordEntity extends ByteEntity
 {

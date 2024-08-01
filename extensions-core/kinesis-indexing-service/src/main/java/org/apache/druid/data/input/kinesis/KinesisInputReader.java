@@ -71,7 +71,6 @@ public class KinesisInputReader implements InputEntityReader
     final KinesisRecordEntity record = source.getEntity();
     final Map<String, Object> mergedHeaderMap = extractHeaders(record);
 
-    // Ignore tombstone records that have null values.
     if (record.getRecord().getData() != null) {
       return buildBlendedRows(valueParser, mergedHeaderMap);
     } else {
