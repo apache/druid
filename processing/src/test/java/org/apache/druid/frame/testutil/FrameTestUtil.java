@@ -236,10 +236,11 @@ public class FrameTestUtil
               final CursorMaker maker = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(
                   CursorBuildSpec.FULL_SCAN
               );
-              return readRowsFromCursor(
-                  maker.makeCursor(),
-                  frameReader.signature()
-              ).withBaggage(maker);
+              final Cursor cursor = maker.makeCursor();
+              if (cursor == null) {
+                return Sequences.withBaggage(Sequences.empty(), maker);
+              }
+              return readRowsFromCursor(cursor, frameReader.signature()).withBaggage(maker);
             }
         );
   }
@@ -311,6 +312,12 @@ public class FrameTestUtil
             return null;
           }
           return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);
+        }
+
+        @Override
+        public void close()
+        {
+          maker.close();
         }
       };
     } else {

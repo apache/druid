@@ -121,7 +121,8 @@ public class FrameProcessors
                                                            .build();
     // Safe to never close the Sequence that the FrameCursor comes from, because it does not need to be closed.
     // Refer to FrameStorageAdapter#makeCursors.
-    return (FrameCursor) new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(cursorBuildSpec).makeCursor();
+    return (FrameCursor) new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(cursorBuildSpec)
+                                                                                        .makeCursor();
   }
 
   /**
