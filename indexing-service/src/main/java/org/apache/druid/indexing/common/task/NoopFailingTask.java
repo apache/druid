@@ -17,32 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.indexing.common.task;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskToolbox;
 
 import java.util.Map;
 
-/**
- * Provides task count metrics for the indexers
- * These metrics are reported by indexers
- */
-public interface IndexerTaskCountStatsProvider
+public class NoopFailingTask extends NoopTask
 {
-  /**
-   * Map from datasource name to the number of running tasks on the Indexer.
-   */
-  Map<String, Long> getWorkerRunningTasks();
+  private static final int DEFAULT_RUN_TIME = 2500;
+  @JsonIgnore
+  private final long runTime;
 
-  /**
-   * Map from datasource name to the number of assigned tasks to the Indexer.
-   */
-  Map<String, Long> getWorkerAssignedTasks();
+  public NoopFailingTask(String id, String groupId, String dataSource, long runTimeMillis, long isReadyTime, Map<String, Object> context)
+  {
+    super(id, groupId, dataSource, runTimeMillis, isReadyTime, context);
+    this.runTime = (runTimeMillis == 0) ? DEFAULT_RUN_TIME : runTimeMillis;
+  }
 
-  /**
-   * Map from datasource name to the number of completed tasks by the Indexer.
-   */
-  Map<String, Long> getWorkerCompletedTasks();
-
-  Map<String, Long> getWorkerFailedTasks();
-
-  Map<String, Long> getWorkerSuccessfulTasks();
+  @Override
+  public TaskStatus runTask(TaskToolbox toolbox) throws Exception
+  {
+    Thread.sleep(runTime);
+    return TaskStatus.failure(getId(), "Failed to complete the task");
+  }
 }

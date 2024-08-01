@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
+import org.apache.druid.indexing.common.task.NoopFailingTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
@@ -455,6 +456,11 @@ public class WorkerTaskManagerTest
     return new NoopTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 
+  private NoopTask createNoopFailingTask(String id, String dataSource)
+  {
+    return new NoopFailingTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+  }
+
   /**
    * Start the {@link #workerTaskManager}, submit a {@link NoopTask}, wait for it to be complete. Common preamble
    * for various tests of {@link WorkerTaskManager#doCompletedTasksCleanup()}.
@@ -494,7 +500,7 @@ public class WorkerTaskManagerTest
 
     Task task1 = createNoopTask("task1", "wikipedia");
     Task task2 = createNoopTask("task2", "wikipedia");
-    Task task3 = createNoopTask("task3", "animals");
+    Task task3 = createNoopFailingTask("task3", "animals");
 
     workerTaskManager.start();
     // befor assigning tasks we should get no running tasks
@@ -517,10 +523,18 @@ public class WorkerTaskManagerTest
       Thread.sleep(10);
     } while (!runningTasks.isEmpty());
 
-    // When running tasks are empty all task should be reported as completed
+    // When running tasks are empty all task should be reported as completed and
+    // one of the task for animals datasource should fail and other 2 tasks in
+    // the wikipedia datasource should succeed
     Assert.assertEquals(workerTaskManager.getWorkerCompletedTasks(), ImmutableMap.of(
         "wikipedia", 2L,
         "animals", 1L
+    ));
+    Assert.assertEquals(workerTaskManager.getWorkerFailedTasks(), ImmutableMap.of(
+            "animals", 1L
+    ));
+    Assert.assertEquals(workerTaskManager.getWorkerSuccessfulTasks(), ImmutableMap.of(
+            "wikipedia", 2L
     ));
     Assert.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
   }

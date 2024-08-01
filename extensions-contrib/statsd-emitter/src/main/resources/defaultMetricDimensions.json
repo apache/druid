@@ -74,6 +74,8 @@
   "worker/task/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/completed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "indexer/task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "indexer/task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
   "worker/task/success/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
   "worker/taskSlot/idle/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
