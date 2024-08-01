@@ -92,7 +92,7 @@ String functions accept strings and return a type appropriate to the function.
 |Function|Notes|
 |--------|-----|
 |`CONCAT(expr, [expr, ...])`|Concatenates a list of expressions. Also see the [concatenation operator](sql-operators.md#concatenation-operator).|
-|`TEXTCAT(expr, expr)`| Concatenates two expressions.|
+|`TEXTCAT(expr, expr)`|Concatenates two expressions.|
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
