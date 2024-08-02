@@ -42,7 +42,7 @@ import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import java.util.Collections;
 import java.util.List;
 
-public class DefaultColumnFormatConfigModule implements DruidModule
+public class BuiltInTypesModule implements DruidModule
 {
   /**
    * Initialized with a default value so tests can just get it via {@link #getStringMultiValueHandlingMode} without any

@@ -36,7 +36,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Properties;
 
-public class DefaultColumnFormatConfigModuleTest
+public class BuiltInTypesModuleTest
 {
   @Nullable
   private static DimensionHandlerProvider DEFAULT_HANDLER_PROVIDER;
@@ -70,7 +70,7 @@ public class DefaultColumnFormatConfigModuleTest
     Injector gadget = makeInjector(props);
 
     // side effects
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class);
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
 
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
@@ -79,7 +79,7 @@ public class DefaultColumnFormatConfigModuleTest
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-        DefaultColumnFormatConfigModule.getStringMultiValueHandlingMode()
+        BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
   }
 
@@ -93,7 +93,7 @@ public class DefaultColumnFormatConfigModuleTest
     Injector gadget = makeInjector(props);
 
     // side effects
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class);
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
 
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
@@ -102,7 +102,7 @@ public class DefaultColumnFormatConfigModuleTest
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-        DefaultColumnFormatConfigModule.getStringMultiValueHandlingMode()
+        BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
   }
 
@@ -113,11 +113,11 @@ public class DefaultColumnFormatConfigModuleTest
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "ARRAY");
     final Injector gadget = makeInjector(props);
 
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class);
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.ARRAY,
-        DefaultColumnFormatConfigModule.getStringMultiValueHandlingMode()
+        BuiltInTypesModule.getStringMultiValueHandlingMode()
     );
   }
 
@@ -130,7 +130,7 @@ public class DefaultColumnFormatConfigModuleTest
 
     final Exception exception = Assert.assertThrows(
         Exception.class,
-        () -> gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class)
+        () -> gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class)
     );
     Assert.assertTrue(exception.getMessage().contains(
         "Invalid value[boo] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
@@ -148,7 +148,7 @@ public class DefaultColumnFormatConfigModuleTest
             binder -> {
               JsonConfigProvider.bind(binder, "druid.indexing.formats", DefaultColumnFormatConfig.class);
             },
-            new DefaultColumnFormatConfigModule()
+            new BuiltInTypesModule()
         )
     );
 

@@ -22,7 +22,7 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DefaultColumnFormatConfigModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -81,8 +81,8 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
 
   public NestedFieldColumnSelectorsTest()
   {
-    DefaultColumnFormatConfigModule.registerHandlersAndSerde();
-    List<? extends Module> mods = DefaultColumnFormatConfigModule.getJacksonModulesList();
+    BuiltInTypesModule.registerHandlersAndSerde();
+    List<? extends Module> mods = BuiltInTypesModule.getJacksonModulesList();
     this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(
         mods,
         tempFolder

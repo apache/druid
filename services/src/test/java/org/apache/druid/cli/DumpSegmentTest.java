@@ -31,7 +31,7 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.DefaultColumnFormatConfigModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.ServerInjectorBuilder;
@@ -84,7 +84,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 
   public DumpSegmentTest()
   {
-    DefaultColumnFormatConfigModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.closer = Closer.create();
   }
 
@@ -156,7 +156,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(DefaultColumnFormatConfigModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -196,7 +196,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(DefaultColumnFormatConfigModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)

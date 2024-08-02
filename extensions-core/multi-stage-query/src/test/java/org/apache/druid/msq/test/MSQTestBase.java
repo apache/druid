@@ -48,7 +48,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.guice.DefaultColumnFormatConfigModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -357,8 +357,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
             {
               // We want this module to bring InputSourceModule along for the ride.
               binder.install(new InputSourceModule());
-              binder.install(new DefaultColumnFormatConfigModule());
-              DefaultColumnFormatConfigModule.registerHandlersAndSerde();
+              binder.install(new BuiltInTypesModule());
+              BuiltInTypesModule.registerHandlersAndSerde();
               SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
@@ -521,7 +521,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
-    objectMapper.registerModules(DefaultColumnFormatConfigModule.getJacksonModulesList());
+    objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 

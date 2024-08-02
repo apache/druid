@@ -21,7 +21,7 @@ package org.apache.druid.query.groupby.epinephelinae.column;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.guice.DefaultColumnFormatConfigModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByColumnSelectorStrategyFactory;
@@ -44,7 +44,7 @@ import java.util.List;
 public class NestedColumnGroupByColumnSelectorStrategyTest extends InitializedNullHandlingTest
 {
   static {
-    DefaultColumnFormatConfigModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private static final GroupByColumnSelectorStrategyFactory STRATEGY_FACTORY = new GroupByColumnSelectorStrategyFactory();

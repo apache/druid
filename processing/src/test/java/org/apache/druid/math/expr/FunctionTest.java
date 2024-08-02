@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DefaultColumnFormatConfigModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -66,7 +66,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );
-    DefaultColumnFormatConfigModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
