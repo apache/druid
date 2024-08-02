@@ -595,7 +595,7 @@ public class SqlStatementResource
         ));
       }
       catch (DruidException e) {
-        if (e.getErrorCode().equals("notFound")) {
+        if (e.getErrorCode().equals("notFound") || e.getMessage().contains("Unable to contact overlord")) {
           return Optional.empty();
         }
         throw e;
