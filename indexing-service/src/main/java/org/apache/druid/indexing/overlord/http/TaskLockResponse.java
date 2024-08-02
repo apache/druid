@@ -17,24 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.indexing.overlord.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexing.common.TaskLock;
 
-public class CoordinatorCompactionConfigTest
+import java.util.List;
+import java.util.Map;
+
+public class TaskLockResponse
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private final Map<String, List<TaskLock>> datasourceToLocks;
 
-  @Test
-  public void testSerdeDefaultConfig() throws Exception
+  @JsonCreator
+  public TaskLockResponse(
+      @JsonProperty("datasourceToLocks") final Map<String, List<TaskLock>> datasourceToLocks
+  )
   {
-    final CoordinatorCompactionConfig defaultConfig = CoordinatorCompactionConfig.empty();
-    final String json = MAPPER.writeValueAsString(defaultConfig);
+    this.datasourceToLocks = datasourceToLocks;
+  }
 
-    CoordinatorCompactionConfig deserialized = MAPPER.readValue(json, CoordinatorCompactionConfig.class);
-    Assert.assertEquals(defaultConfig, deserialized);
+  @JsonProperty
+  public Map<String, List<TaskLock>> getDatasourceToLocks()
+  {
+    return datasourceToLocks;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "TaskLockResponse{" +
+           "datasourceToLocks='" + datasourceToLocks +
+           '}';
   }
 }
