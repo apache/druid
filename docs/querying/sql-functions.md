@@ -1121,7 +1121,7 @@ Returns the `N` leftmost characters of an expression, where `N` is an integer va
 
 <details><summary>Example</summary>
 
-  The following example returns the `3` leftmost characters of the expresion `ABCDEFG`.
+  The following example returns the `3` leftmost characters of the expression `ABCDEFG`.
 
   ```sql
   SELECT
@@ -1525,7 +1525,7 @@ Returns the `N` rightmost characters of an expression, where `N` is an integer v
 
 <details><summary>Example</summary>
 
-  The following example returns the `3` rightmost characters of the expresion `ABCDEFG`.
+  The following example returns the `3` rightmost characters of the expression `ABCDEFG`.
 
   ```sql
   SELECT
