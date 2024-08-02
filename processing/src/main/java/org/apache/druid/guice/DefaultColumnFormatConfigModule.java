@@ -44,6 +44,13 @@ import java.util.List;
 
 public class DefaultColumnFormatConfigModule implements DruidModule
 {
+  /**
+   * Initialized with a default value so tests can just get it via {@link #getStringMultiValueHandlingMode} without any
+   * explicit initialization. In production, this default may be overridden if a value is configured via
+   * {@link #initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig)}.
+   */
+  private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
+
   @Override
   public List<? extends Module> getJacksonModules()
   {
@@ -54,17 +61,15 @@ public class DefaultColumnFormatConfigModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
-    // binding our side effect classes to the lifecycle causes the registerDimensionHandler and
-    // setStringMultiValueHandlingMode methods to be called on service start, allowing use of the config to get the
-    // system default format version and string multi value handling mode. We need to register them as two different side
-    // effect classes to make Guice initialization happy.
-    LifecycleModule.register(binder, SideEffectDimensionHandlerRegisterer.class);
-    LifecycleModule.register(binder, SideEffectMultiValueHandlingRegisterer.class);
+    // binding our side effect classes to the lifecycle causes the initDimensionHandlerAndMvHandlingMode to be
+    // called on service start, allowing use of the config to get the system default format version and string multi
+    // value handling mode.
+    LifecycleModule.register(binder, SideEffectRegisterer.class);
   }
 
   @Provides
   @LazySingleton
-  public SideEffectDimensionHandlerRegisterer registerDimensionHandler(DefaultColumnFormatConfig formatsConfig)
+  public static SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
   {
     if (formatsConfig.getNestedColumnFormatVersion() != null && formatsConfig.getNestedColumnFormatVersion() == 4) {
       DimensionHandlerUtils.registerDimensionHandlerProvider(
@@ -77,7 +82,20 @@ public class DefaultColumnFormatConfigModule implements DruidModule
           new NestedCommonFormatHandlerProvider()
       );
     }
-    return new SideEffectDimensionHandlerRegisterer();
+
+    if (formatsConfig.getStringMultiValueHandlingMode() != null) {
+      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(formatsConfig.getStringMultiValueHandlingMode());
+    }
+    return new SideEffectRegisterer();
+  }
+
+  /**
+   * @return the configured string multi value handling mode from the system config if set; otherwise, returns
+   * the default.
+   */
+  public static DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
+  {
+    return STRING_MV_MODE;
   }
 
   public static List<SimpleModule> getJacksonModulesList()
@@ -132,54 +150,13 @@ public class DefaultColumnFormatConfigModule implements DruidModule
   }
 
   /**
-   * The default value is set here so tests can just use it without any explicit initialization.
-   * In production, this default may be overridden if a value is configured via
-   * {@link #setStringMultiValueHandlingMode(DefaultColumnFormatConfig)}.
-   */
-  private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
-
-  @Provides
-  @LazySingleton
-  public static SideEffectMultiValueHandlingRegisterer setStringMultiValueHandlingMode(DefaultColumnFormatConfig formatsConfig)
-  {
-    if (formatsConfig.getStringMultiValueHandlingMode() != null) {
-      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(formatsConfig.getStringMultiValueHandlingMode());
-    }
-    return new SideEffectMultiValueHandlingRegisterer();
-  }
-
-  /**
-   * @return the configured string multi value handling mode from the system config if set; otherwise, returns
-   * the default.
-   */
-  public static DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
-  {
-    return STRING_MV_MODE;
-  }
-
-  /**
-   * this is used as a vehicle to register the correct version of the system default nested column handler by side
-   * effect with the help of binding to {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} so that
-   * {@link #registerDimensionHandler(DefaultColumnFormatConfig)} can be called with the injected
+   * this is used as a vehicle to register the correct version of the system default nested column handler and multi
+   * value handling mode by side effect with the help of binding to
+   * {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} so that
+   * {@link #initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig)} can be called with the injected
    * {@link DefaultColumnFormatConfig}.
    */
-  public static class SideEffectDimensionHandlerRegisterer
-  {
-    // nothing to see here
-  }
-
-  /**
-   *  This is used as a vehicle to register the correct multi value handling mode by side effect with the help of
-   *  binding to {@link org.apache.druid.java.util.common.lifecycle.Lifecycle} so that
-   *  {@link #setStringMultiValueHandlingMode(DefaultColumnFormatConfig)} can be called with the injected
-   *  {@link DefaultColumnFormatConfig}.
-   *
-   *  <p>
-   *   Similar purpose as {@link SideEffectDimensionHandlerRegisterer}, but we need separate static classes to make
-   *   Guice initialization happy.
-   *  </p>
-   */
-  public static class SideEffectMultiValueHandlingRegisterer
+  public static class SideEffectRegisterer
   {
     // nothing to see here
   }

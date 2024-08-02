@@ -70,8 +70,7 @@ public class DefaultColumnFormatConfigModuleTest
     Injector gadget = makeInjector(props);
 
     // side effects
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectDimensionHandlerRegisterer.class);
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectMultiValueHandlingRegisterer.class);
+    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class);
 
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
@@ -94,8 +93,7 @@ public class DefaultColumnFormatConfigModuleTest
     Injector gadget = makeInjector(props);
 
     // side effects
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectDimensionHandlerRegisterer.class);
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectMultiValueHandlingRegisterer.class);
+    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class);
 
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
@@ -115,7 +113,7 @@ public class DefaultColumnFormatConfigModuleTest
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "ARRAY");
     final Injector gadget = makeInjector(props);
 
-    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectMultiValueHandlingRegisterer.class);
+    gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class);
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.ARRAY,
@@ -132,7 +130,7 @@ public class DefaultColumnFormatConfigModuleTest
 
     final Exception exception = Assert.assertThrows(
         Exception.class,
-        () -> gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectMultiValueHandlingRegisterer.class)
+        () -> gadget.getInstance(DefaultColumnFormatConfigModule.SideEffectRegisterer.class)
     );
     Assert.assertTrue(exception.getMessage().contains(
         "Invalid value[boo] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
