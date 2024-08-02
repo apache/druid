@@ -1584,7 +1584,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 6.0, null}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1615,7 +1615,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 6.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1646,7 +1646,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 21.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1677,7 +1677,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 21.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1709,7 +1709,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 21.0, 21.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1741,7 +1741,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 6.0, 6.0}
                          )
                      )
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0),
                              SegmentId.of("foo1", Intervals.of("2000-01-02T/P1D"), "test", 0),
@@ -2045,7 +2045,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{0L, 129L, "Albuquerque", 140L}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 }
