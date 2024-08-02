@@ -27,7 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
-import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -46,7 +46,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
+public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, KinesisRecordEntity>
 {
   private static final String TYPE = "index_kinesis";
 
@@ -100,7 +100,7 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, By
   }
 
   @Override
-  protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
+  protected SeekableStreamIndexTaskRunner<String, String, KinesisRecordEntity> createTaskRunner()
   {
     //noinspection unchecked
     return new KinesisIndexTaskRunner(
