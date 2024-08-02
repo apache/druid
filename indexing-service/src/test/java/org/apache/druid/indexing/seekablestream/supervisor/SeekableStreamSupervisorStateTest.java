@@ -114,8 +114,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -279,6 +285,110 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
+  }
+
+  @Test
+  public void testAddDiscoveredTaskToPendingCompletionTaskGroups() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    replayAll();
+    ExecutorService threadExecutor = Executors.newFixedThreadPool(3);
+
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    Map<String, String> startingPartiions = new HashMap<>();
+    startingPartiions.put("partition", "offset");
+
+    // Test concurrent threads adding to same task group
+    Callable<Boolean> task1 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_1", startingPartiions);
+      return true;
+    };
+    Callable<Boolean> task2 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_2", startingPartiions);
+      return true;
+    };
+    Callable<Boolean> task3 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_3", startingPartiions);
+      return true;
+    };
+
+    // Create a list to hold the Callable tasks
+    List<Callable<Boolean>> tasks = new ArrayList<>();
+    tasks.add(task1);
+    tasks.add(task2);
+    tasks.add(task3);
+    List<Future<Boolean>> futures = threadExecutor.invokeAll(tasks);
+    // Wait for all tasks to complete
+    for (Future<Boolean> future : futures) {
+      try {
+        Boolean result = future.get();
+        Assert.assertTrue(result);
+      }
+      catch (ExecutionException e) {
+        Assert.assertTrue(false);
+      }
+    }
+    CopyOnWriteArrayList<SeekableStreamSupervisor.TaskGroup> taskGroups = supervisor.getPendingCompletionTaskGroups(0);
+    Assert.assertEquals(1, taskGroups.size());
+    Assert.assertEquals(3, taskGroups.get(0).tasks.size());
+
+    // Test concurrent threads adding to different task groups
+    task1 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartiions);
+      return true;
+    };
+    task2 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_1", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_1", startingPartiions);
+      return true;
+    };
+    task3 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_2", startingPartiions);
+      return true;
+    };
+    Callable<Boolean> task4 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_2", startingPartiions);
+      return true;
+    };
+    Callable<Boolean> task5 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_3", startingPartiions);
+      return true;
+    };
+    Callable<Boolean> task6 = () -> {
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartiions);
+      return true;
+    };
+
+    tasks = new ArrayList<>();
+    tasks.add(task1);
+    tasks.add(task2);
+    tasks.add(task3);
+    tasks.add(task4);
+    tasks.add(task5);
+    tasks.add(task6);
+    futures = threadExecutor.invokeAll(tasks);
+    for (Future<Boolean> future : futures) {
+      try {
+        Boolean result = future.get();
+        Assert.assertTrue(result);
+      }
+      catch (ExecutionException e) {
+        Assert.assertTrue(false);
+      }
+    }
+
+    taskGroups = supervisor.getPendingCompletionTaskGroups(1);
+    Assert.assertEquals(1, taskGroups.size());
+    Assert.assertEquals(3, taskGroups.get(0).tasks.size());
+
+    taskGroups = supervisor.getPendingCompletionTaskGroups(2);
+    Assert.assertEquals(1, taskGroups.size());
+    Assert.assertEquals(2, taskGroups.get(0).tasks.size());
   }
 
   @Test

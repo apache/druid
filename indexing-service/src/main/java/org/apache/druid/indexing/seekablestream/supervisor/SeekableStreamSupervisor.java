@@ -2482,7 +2482,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
-  private void addDiscoveredTaskToPendingCompletionTaskGroups(
+  @VisibleForTesting
+  protected void addDiscoveredTaskToPendingCompletionTaskGroups(
       int groupId,
       String taskId,
       Map<PartitionIdType, SequenceOffsetType> startingPartitions
@@ -2490,35 +2491,49 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.computeIfAbsent(
         groupId,
-        k -> new CopyOnWriteArrayList<>()
+        k -> {
+          CopyOnWriteArrayList<TaskGroup> list = new CopyOnWriteArrayList<>();
+          log.info("Creating new pending completion task group [%s] for discovered task [%s]", groupId, taskId);
+
+          // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
+          // change to a state where it will read any more events.
+          // This is a discovered task, so it would not have been assigned closed partitions initially.
+          TaskGroup newTaskGroup = new TaskGroup(
+              groupId,
+              ImmutableMap.copyOf(startingPartitions),
+              null,
+              Optional.absent(),
+              Optional.absent(),
+              null
+          );
+
+          newTaskGroup.tasks.put(taskId, new TaskData());
+          newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
+
+          list.add(newTaskGroup);
+          return list;
+        }
     );
+
     for (TaskGroup taskGroup : taskGroupList) {
       if (taskGroup.startingSequences.equals(startingPartitions)) {
         if (taskGroup.tasks.putIfAbsent(taskId, new TaskData()) == null) {
-          log.info("Added discovered task [%s] to existing pending task group [%s]", taskId, groupId);
+          log.info(
+              "Added discovered task [%s] to existing pending completion task group [%s]. PendingCompletionTaskGroup: %s",
+              taskId,
+              groupId,
+              taskGroup.taskIds()
+          );
         }
         return;
       }
     }
+  }
 
-    log.info("Creating new pending completion task group [%s] for discovered task [%s]", groupId, taskId);
-
-    // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
-    // change to a state where it will read any more events.
-    // This is a discovered task, so it would not have been assigned closed partitions initially.
-    TaskGroup newTaskGroup = new TaskGroup(
-        groupId,
-        ImmutableMap.copyOf(startingPartitions),
-        null,
-        Optional.absent(),
-        Optional.absent(),
-        null
-    );
-
-    newTaskGroup.tasks.put(taskId, new TaskData());
-    newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
-
-    taskGroupList.add(newTaskGroup);
+  @VisibleForTesting
+  protected CopyOnWriteArrayList<TaskGroup> getPendingCompletionTaskGroups(int group_id)
+  {
+    return pendingCompletionTaskGroups.get(group_id);
   }
 
   // Sanity check to ensure that tasks have the same sequence name as their task group
