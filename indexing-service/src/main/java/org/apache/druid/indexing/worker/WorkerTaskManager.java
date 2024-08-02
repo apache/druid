@@ -184,20 +184,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     return completedTasks;
   }
 
-  public Map<String, TaskAnnouncement> getFailedTasks()
-  {
-    return completedTasks.entrySet().stream()
-            .filter(entry -> entry.getValue().getTaskStatus().isFailure())
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
-
-  public Map<String, TaskAnnouncement> getSuccessfulTasks()
-  {
-    return completedTasks.entrySet().stream()
-            .filter(entry -> entry.getValue().getTaskStatus().isSuccess())
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-  }
-
   private void submitNoticeToExec(Notice notice)
   {
     exec.execute(
@@ -657,13 +643,17 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
   @Override
   public Map<String, Long> getWorkerFailedTasks()
   {
-    return getNumTasksPerDatasource(this.getFailedTasks().values(), TaskAnnouncement::getTaskDataSource);
+    return getNumTasksPerDatasource(completedTasks.entrySet().stream()
+            .filter(entry -> entry.getValue().getTaskStatus().isFailure())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
   }
 
   @Override
   public Map<String, Long> getWorkerSuccessfulTasks()
   {
-    return getNumTasksPerDatasource(this.getSuccessfulTasks().values(), TaskAnnouncement::getTaskDataSource);
+    return getNumTasksPerDatasource(completedTasks.entrySet().stream()
+            .filter(entry -> entry.getValue().getTaskStatus().isSuccess())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
   }
 
   private static class TaskDetails
