@@ -39,6 +39,7 @@ import org.apache.druid.segment.nested.StructuredDataJsonSerializer;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 
@@ -69,7 +70,7 @@ public class BuiltInTypesModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public static SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
+  public SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
   {
     if (formatsConfig.getNestedColumnFormatVersion() != null && formatsConfig.getNestedColumnFormatVersion() == 4) {
       DimensionHandlerUtils.registerDimensionHandlerProvider(
@@ -83,10 +84,15 @@ public class BuiltInTypesModule implements DruidModule
       );
     }
 
-    if (formatsConfig.getStringMultiValueHandlingMode() != null) {
-      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(formatsConfig.getStringMultiValueHandlingMode());
-    }
+    setStringMultiValueHandlingModeIfConfigured(formatsConfig.getStringMultiValueHandlingMode());
     return new SideEffectRegisterer();
+  }
+
+  private static void setStringMultiValueHandlingModeIfConfigured(@Nullable String stringMultiValueHandlingMode)
+  {
+    if (stringMultiValueHandlingMode != null) {
+      STRING_MV_MODE = DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
+    }
   }
 
   /**
