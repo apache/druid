@@ -816,6 +816,11 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{1672531200000L, "day1_1"},

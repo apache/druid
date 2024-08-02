@@ -1419,6 +1419,13 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.of("2023-01-01/P1D"), "test", 0),
+                             SegmentId.of("foo", Intervals.of("2023-01-01/P1D"), "test", 1),
+                             SegmentId.of("foo", Intervals.of("2023-02-01/P1D"), "test", 0)
+                         )
+                     )
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{1672531200000L, "day1_1"},
