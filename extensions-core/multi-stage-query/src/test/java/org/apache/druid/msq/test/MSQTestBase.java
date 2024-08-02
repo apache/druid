@@ -904,7 +904,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
+    public Builder setExpectedSegments(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;

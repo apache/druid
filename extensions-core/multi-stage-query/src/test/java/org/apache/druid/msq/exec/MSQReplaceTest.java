@@ -142,7 +142,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of("foo", Intervals.of("2000-01-01T/P1D"), "test", 0),
                              SegmentId.of("foo", Intervals.of("2000-01-02T/P1D"), "test", 0),
@@ -214,7 +214,7 @@ public class MSQReplaceTest extends MSQTestBase
                          "2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-02T/P1D"),
                          "test",
@@ -284,7 +284,7 @@ public class MSQReplaceTest extends MSQTestBase
                              "Cannot use RangeShardSpec, RangedShardSpec only supports string CLUSTER BY keys. Using NumberedShardSpec instead."
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(
+                     .setExpectedSegments(ImmutableSet.of(
                                              SegmentId.of(
                                                  "foo1",
                                                  Intervals.of("2016-06-27T00:00:00.000Z/2016-06-27T01:00:00.000Z"),
@@ -374,7 +374,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of(
                          "2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo1",
                          Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z"),
                          "test",
@@ -453,7 +453,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -469,7 +469,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -542,7 +542,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -558,7 +558,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(
+                     .setExpectedSegments(ImmutableSet.of(
                                              SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0),
                                              SegmentId.of("foo", Intervals.of("2001-01-01T/P1M"), "test", 0)
                                          )
@@ -628,7 +628,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -640,7 +640,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -720,7 +720,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -893,7 +893,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -950,7 +950,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
                      .setExpectedResultRows(expectedRows)
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
@@ -1009,7 +1009,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1071,7 +1071,7 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("%s/%s", "2000-02-01", Intervals.ETERNITY.getEnd())
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1119,7 +1119,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedSegments(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
@@ -1161,7 +1161,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{0L, NullHandling.sqlCompatible() ? "" : null, 1.0f, 1L},
@@ -1206,7 +1206,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foobar", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foobar", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{946684800000L, 1.0f},
@@ -1248,7 +1248,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of(
                                  "foobar",
@@ -1324,7 +1324,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1348,7 +1348,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, null}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -1399,7 +1399,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1421,7 +1421,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
