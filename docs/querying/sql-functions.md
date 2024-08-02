@@ -476,7 +476,7 @@ Returns the following:
 
 Alias for [`LENGTH`](#length).
 
-* **Syntax:**`CHAR_LENGTH(expr)`
+* **Syntax:** `CHAR_LENGTH(expr)`
 * **Function type:** Scalar, string 
 
 [Learn more](sql-scalar.md#string-functions)
@@ -485,7 +485,7 @@ Alias for [`LENGTH`](#length).
 
 Alias for [`LENGTH`](#length).
 
-* **Syntax:**`CHARACTER_LENGTH(expr)`
+* **Syntax:** `CHARACTER_LENGTH(expr)`
 * **Function type:** Scalar, string 
 
 [Learn more](sql-scalar.md#string-functions)
@@ -503,7 +503,7 @@ Returns the first non-null value.
 
 Concatenates a list of expressions.
 
-* **Syntax:**`CONCAT(expr[, expr,...])`
+* **Syntax:** `CONCAT(expr[, expr,...])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
@@ -533,7 +533,7 @@ Returns the following:
 
 Returns `true` if `str` is a substring of `expr`, case-sensitive. Otherwise returns `false`.
 
-* **Syntax:**`CONTAINS_STRING(expr, str)`
+* **Syntax:** `CONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
@@ -630,7 +630,7 @@ Decodes a Base64-encoded string into a complex data type, where `dataType` is th
 
 Decodes a Base64-encoded string into a UTF-8 encoded string.
 
-* **Syntax:**`DECODE_BASE64_UTF8(expr)`
+* **Syntax:** `DECODE_BASE64_UTF8(expr)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
@@ -1143,7 +1143,7 @@ Returns the `N` leftmost characters of an expression, where `N` is an integer va
 
 Returns the length of the expression in UTF-16 code units.
 
-* **Syntax:**`LENGTH(expr)`
+* **Syntax:** `LENGTH(expr)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
@@ -1660,7 +1660,7 @@ Splits `str1` into an multi-value string on the delimiter specified by `str2`, w
 
 Alias for [`LENGTH`](#length).
 
-* **Syntax:**`STRLEN(expr)`
+* **Syntax:** `STRLEN(expr)`
 * **Function type:** Scalar, string 
 
 [Learn more](sql-scalar.md#string-functions)
@@ -1725,7 +1725,7 @@ Returns the quantile for the specified fraction from a T-Digest sketch construct
 
 Concatenates two string expressions.
 
-* **Syntax:**`TEXTCAT(expr, expr)`
+* **Syntax:** `TEXTCAT(expr, expr)`
 * **Function type:** Scalar, string
   
 <details><summary>Example</summary>
