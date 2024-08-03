@@ -311,7 +311,7 @@ See [Enabling metrics](../configuration/index.md#enabling-metrics) for more deta
 
 ## Coordination
 
-These metrics are for the Druid Coordinator and are reset each time the Coordinator runs the coordination logic.
+These metrics are emitted by the Druid Coordinator in every run of the corresponding coordinator duty.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
@@ -325,6 +325,7 @@ These metrics are for the Druid Coordinator and are reset each time the Coordina
 |`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `tier`, `description`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
+|`segment/loading/rateKbps`|Current rate of segment loading on a server in kbps (1000 bits per second). The rate is calculated as a moving average over the last 10 GiB or more of successful segment loads on that server.|`server`|Varies|
 |`segment/dropQueue/count`|Number of segments to drop.|`server`|Varies|
 |`segment/loadQueue/assigned`|Number of segments assigned for load or drop to the load queue of a server.|`dataSource`, `server`|Varies|
 |`segment/loadQueue/success`|Number of segment assignments that completed successfully.|`dataSource`, `server`|Varies|
