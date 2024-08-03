@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
@@ -197,10 +196,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
     return CursorBuildSpec.builder()
                           .setInterval(interval)
-                          .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setGroupingColumns(Collections.singletonList(dimensionSpec.getDimension()))
-                          .setVirtualColumns(getVirtualColumns())
+                          .setGroupingAndVirtualColumns(
+                              getGranularity(),
+                              Collections.singletonList(dimensionSpec.getDimension()),
+                              virtualColumns
+                          )
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())
                           .isDescending(isDescending())

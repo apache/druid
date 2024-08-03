@@ -26,7 +26,6 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
@@ -270,8 +269,6 @@ public class FrameStorageAdapterTest
       this.buildSpec = CursorBuildSpec.builder()
                                       .setFilter(this.filter)
                                       .setInterval(this.interval)
-                                      // Frames only support Granularities.ALL: no point testing the others.
-                                      .setGranularity(Granularities.ALL)
                                       .setVirtualColumns(this.virtualColumns)
                                       .isDescending(this.descending)
                                       .setQueryContext(queryContext)

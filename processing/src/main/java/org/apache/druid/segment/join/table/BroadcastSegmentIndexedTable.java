@@ -21,7 +21,6 @@ package org.apache.druid.segment.join.table;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -119,7 +118,6 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
                                                          queryableIndex.getDataInterval()
                                                                        .withChronology(ISOChronology.getInstanceUTC())
                                                      )
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();

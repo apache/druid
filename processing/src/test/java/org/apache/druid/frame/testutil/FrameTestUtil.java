@@ -33,7 +33,6 @@ import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -294,7 +293,6 @@ public class FrameTestUtil
     }
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
 

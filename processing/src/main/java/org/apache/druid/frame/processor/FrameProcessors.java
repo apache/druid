@@ -32,7 +32,6 @@ import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -116,7 +115,6 @@ public class FrameProcessors
   )
   {
     final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
-                                                           .setGranularity(Granularities.ALL)
                                                            .setVirtualColumns(virtualColumns)
                                                            .build();
     // Despite appearances of columnar FrameCursorMakerFactory with its closers, it is currently safe to never close

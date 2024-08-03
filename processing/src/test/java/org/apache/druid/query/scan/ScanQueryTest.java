@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -444,7 +443,6 @@ public class ScanQueryTest extends InitializedNullHandlingTest
 
     final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
-    Assert.assertEquals(Granularities.ALL, buildSpec.getGranularity());
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertNull(buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());

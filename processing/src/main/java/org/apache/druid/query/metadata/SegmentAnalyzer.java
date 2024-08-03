@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -277,7 +276,6 @@ public class SegmentAnalyzer
       final DateTime end = storageAdapter.getMaxTime();
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(new Interval(start, end))
-                                                       .setGranularity(Granularities.ALL)
                                                        .build();
       try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(buildSpec)) {
         final Cursor cursor = cursorHolder.asCursor();

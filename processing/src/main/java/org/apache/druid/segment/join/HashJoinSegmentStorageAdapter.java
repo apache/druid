@@ -221,7 +221,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder =
         CursorBuildSpec.builder()
                        .setInterval(spec.getInterval())
-                       .setGranularity(spec.getGranularity())
                        .isDescending(spec.isDescending())
                        .setQueryMetrics(spec.getQueryMetrics());
 

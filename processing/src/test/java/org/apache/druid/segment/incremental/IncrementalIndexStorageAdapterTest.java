@@ -433,7 +433,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
       Cursor cursor = cursorHolder.asCursor();
@@ -491,7 +490,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new DictionaryRaceTestFilter(index, timestamp))
                                                      .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
       Cursor cursor = cursorHolder.asCursor();
@@ -531,7 +529,6 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
       Cursor cursor = cursorHolder.asCursor();

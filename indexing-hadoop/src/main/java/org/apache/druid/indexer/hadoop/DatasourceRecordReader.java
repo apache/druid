@@ -33,7 +33,6 @@ import org.apache.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -218,7 +217,6 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
                   final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                                    .setFilter(Filters.toFilter(dimFilter))
                                                                    .setInterval(adapter.getInterval())
-                                                                   .setGranularity(Granularities.ALL)
                                                                    .build();
                   final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec);
                   final Cursor cursor = cursorHolder.asCursor();

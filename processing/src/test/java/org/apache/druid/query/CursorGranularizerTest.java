@@ -203,7 +203,6 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   public void testGranularizeFullScanDescending()
   {
     final CursorBuildSpec descending = CursorBuildSpec.builder()
-                                                      .setGranularity(Granularities.ALL)
                                                       .isDescending(true)
                                                       .build();
     try (CursorHolder cursorHolder = adapter.makeCursorHolder(descending)) {

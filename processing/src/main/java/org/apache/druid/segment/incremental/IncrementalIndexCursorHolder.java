@@ -39,17 +39,17 @@ public class IncrementalIndexCursorHolder implements CursorHolder
 {
   private final IncrementalIndexStorageAdapter storageAdapter;
   private final IncrementalIndex index;
-  private final CursorBuildSpec builder;
+  private final CursorBuildSpec spec;
 
   public IncrementalIndexCursorHolder(
       IncrementalIndexStorageAdapter storageAdapter,
       IncrementalIndex index,
-      CursorBuildSpec builder
+      CursorBuildSpec spec
   )
   {
     this.storageAdapter = storageAdapter;
     this.index = index;
-    this.builder = builder;
+    this.spec = spec;
   }
 
   @Override
@@ -59,27 +59,18 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       return null;
     }
 
-    if (builder.getQueryMetrics() != null) {
-      builder.getQueryMetrics().vectorized(false);
+    if (spec.getQueryMetrics() != null) {
+      spec.getQueryMetrics().vectorized(false);
     }
 
-    final Interval dataInterval = new Interval(
-        index.getMinTime(),
-        builder.getGranularity().bucketEnd(index.getMaxTime())
-    );
-
-    if (!builder.getInterval().overlaps(dataInterval)) {
-      return null;
-    }
-    final Interval actualInterval = builder.getInterval().overlap(dataInterval);
 
     return new IncrementalIndexCursor(
         storageAdapter,
         index,
-        builder.getVirtualColumns(),
-        builder.isDescending(),
-        builder.getFilter(),
-        actualInterval
+        spec.getVirtualColumns(),
+        spec.isDescending(),
+        spec.getFilter(),
+        spec.getInterval()
     );
   }
 

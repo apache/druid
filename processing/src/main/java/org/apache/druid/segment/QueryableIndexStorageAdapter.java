@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -173,15 +172,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final Interval actualInterval = computeCursorInterval(spec.getGranularity(), spec.getInterval());
-
-    if (actualInterval == null) {
-      return CursorHolder.EMPTY;
-    }
-
     return new QueryableIndexCursorHolder(
         index,
-        CursorBuildSpec.builder(spec).setInterval(actualInterval).build()
+        CursorBuildSpec.builder(spec).setInterval(spec.getInterval()).build()
     );
   }
 
@@ -199,19 +192,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
       this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
     }
-  }
-
-  @Nullable
-  private Interval computeCursorInterval(final Granularity gran, final Interval interval)
-  {
-    final DateTime minTime = getMinTime();
-    final DateTime maxTime = getMaxTime();
-    final Interval dataInterval = new Interval(minTime, gran.bucketEnd(maxTime));
-
-    if (!interval.overlaps(dataInterval)) {
-      return null;
-    }
-
-    return interval.overlap(dataInterval);
   }
 }

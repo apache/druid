@@ -140,7 +140,6 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     for (StorageAdapter adapter : ADAPTERS) {
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(adapter.getInterval())
-                                                       .setGranularity(Granularities.ALL)
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
         Cursor cursor = cursorHolder.asCursor();
@@ -209,7 +208,6 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     for (StorageAdapter adapter : ADAPTERS) {
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(adapter.getInterval())
-                                                       .setGranularity(Granularities.ALL)
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
         Cursor cursor = cursorHolder.asCursor();
@@ -290,7 +288,6 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     for (StorageAdapter adapter : ADAPTERS) {
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(adapter.getInterval())
-                                                       .setGranularity(Granularities.ALL)
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
         Cursor cursor = cursorHolder.asCursor();
@@ -339,7 +336,6 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     for (StorageAdapter adapter : ADAPTERS) {
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(adapter.getInterval())
-                                                       .setGranularity(Granularities.ALL)
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
         Cursor cursor = cursorHolder.asCursor();

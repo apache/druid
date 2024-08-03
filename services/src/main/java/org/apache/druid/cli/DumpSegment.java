@@ -48,7 +48,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -306,7 +305,6 @@ public class DumpSegment extends GuiceRunnable
                                                          index.getDataInterval()
                                                               .withChronology(ISOChronology.getInstanceUTC())
                                                      )
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {

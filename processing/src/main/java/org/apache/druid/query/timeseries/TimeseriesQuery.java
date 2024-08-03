@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -215,9 +214,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     );
     return CursorBuildSpec.builder()
                           .setInterval(interval)
-                          .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setVirtualColumns(getVirtualColumns())
+                          .setGroupingAndVirtualColumns(getGranularity(), null, virtualColumns)
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())
                           .isDescending(isDescending())

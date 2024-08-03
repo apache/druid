@@ -1703,7 +1703,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segment.getInterval()
       );
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
@@ -1835,7 +1834,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segment.getInterval()
       );
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
@@ -2064,7 +2062,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
           segment.getInterval()
       );
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {

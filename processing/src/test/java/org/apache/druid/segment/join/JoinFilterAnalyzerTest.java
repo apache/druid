@@ -25,7 +25,6 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -84,7 +83,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -156,7 +155,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -207,7 +206,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -269,7 +268,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -335,7 +334,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -403,7 +402,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             CursorBuildSpec.builder()
                            .setFilter(originalFilter)
                            .setVirtualColumns(virtualColumns)
-                           .setGranularity(Granularities.ALL)
                            .build()
         ),
         ImmutableList.of(
@@ -476,7 +474,6 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
             CursorBuildSpec.builder()
                            .setFilter(originalFilter)
                            .setVirtualColumns(virtualColumns)
-                           .setGranularity(Granularities.ALL)
                            .build()
         ),
         ImmutableList.of(
@@ -576,7 +573,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -698,7 +695,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -787,7 +784,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -832,7 +829,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -929,7 +926,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1014,7 +1011,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1083,7 +1080,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1136,7 +1133,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1188,7 +1185,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1239,7 +1236,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1291,7 +1288,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1343,7 +1340,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1402,7 +1399,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1458,7 +1455,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1508,7 +1505,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1557,7 +1554,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1610,7 +1607,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1662,7 +1659,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1713,7 +1710,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1775,7 +1772,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1841,7 +1838,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1917,7 +1914,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -1973,7 +1970,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -2048,7 +2045,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -2246,7 +2243,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -2375,7 +2372,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",
@@ -2450,7 +2447,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
 
     JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
+            CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
             "page",

@@ -41,6 +41,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 
 @RunWith(Parameterized.class)
 public class TimeseriesQueryTest extends InitializedNullHandlingTest
@@ -108,7 +109,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testAsCursorBuildSpec()
+  public void testAsCursorBuildSpecAllGranularity()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn(
@@ -122,7 +123,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
-              .granularity(QueryRunnerTestHelper.DAY_GRAN)
+              .granularity(Granularities.ALL)
               .virtualColumns(virtualColumns)
               .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
               .aggregators(
@@ -137,7 +138,6 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
 
     final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
     Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
-    Assert.assertEquals(Granularities.DAY, buildSpec.getGranularity());
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertEquals(
         ImmutableList.of(
@@ -149,6 +149,59 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         buildSpec.getAggregators()
     );
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
+  }
+
+  @Test
+  public void testAsCursorBuildSpecDayGranularity()
+  {
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(
+            "index",
+            "\"fieldFromVirtualColumn\"",
+            ColumnType.LONG,
+            ExprMacroTable.nil()
+        )
+    );
+    final LongSumAggregatorFactory beep = new LongSumAggregatorFactory("beep", "aField");
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .granularity(Granularities.DAY)
+              .virtualColumns(virtualColumns)
+              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+              .aggregators(
+                  QueryRunnerTestHelper.ROWS_COUNT,
+                  QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+                  QueryRunnerTestHelper.INDEX_LONG_MAX,
+                  beep
+              )
+              .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+              .descending(descending)
+              .build();
+
+    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
+    Assert.assertEquals(
+        Collections.singletonList(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+        buildSpec.getGroupingColumns()
+    );
+    Assert.assertEquals(
+        ImmutableList.of(
+            QueryRunnerTestHelper.ROWS_COUNT,
+            QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
+            QueryRunnerTestHelper.INDEX_LONG_MAX,
+            beep
+        ),
+        buildSpec.getAggregators()
+    );
+    Assert.assertEquals(
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.DAY),
+            virtualColumns.getVirtualColumns()[0]
+        ),
+        buildSpec.getVirtualColumns()
+    );
     Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

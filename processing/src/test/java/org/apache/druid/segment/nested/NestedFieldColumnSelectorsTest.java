@@ -348,7 +348,6 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(storageAdapter.getInterval())
                                                      .setVirtualColumns(virtualColumns)
-                                                     .setGranularity(Granularities.DAY)
                                                      .build();
     final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
     final Cursor cursor = cursorHolder.asCursor();

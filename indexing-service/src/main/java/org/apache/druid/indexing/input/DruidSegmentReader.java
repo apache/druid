@@ -34,7 +34,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -128,7 +127,6 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                            .setFilter(Filters.toFilter(dimFilter))
                                                            .setInterval(storageAdapter.getInterval())
-                                                           .setGranularity(Granularities.ALL)
                                                            .build();
 
     final CursorHolder cursorHolder = storageAdapter.getAdapter().makeCursorHolder(cursorBuildSpec);

@@ -272,7 +272,7 @@ public class TopNQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testAsCursorBuildSpec()
+  public void testAsCursorBuildSpecAllGranularity()
   {
     final VirtualColumns virtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn("v", "\"other\"", ColumnType.STRING, ExprMacroTable.nil())
@@ -284,7 +284,7 @@ public class TopNQueryTest extends InitializedNullHandlingTest
         .virtualColumns(virtualColumns)
         .dimension(DefaultDimensionSpec.of("v"))
         .aggregators(QueryRunnerTestHelper.ROWS_COUNT, longSum)
-        .granularity(QueryRunnerTestHelper.DAY_GRAN)
+        .granularity(Granularities.ALL)
         .postAggregators(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
         .metric(new NumericTopNMetricSpec("idx"))
         .threshold(100)
@@ -292,10 +292,45 @@ public class TopNQueryTest extends InitializedNullHandlingTest
 
     final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
-    Assert.assertEquals(Granularities.DAY, buildSpec.getGranularity());
     Assert.assertEquals(ImmutableList.of("v"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
+  }
+
+  @Test
+  public void testAsCursorBuildSpecDayGranularity()
+  {
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v", "\"other\"", ColumnType.STRING, ExprMacroTable.nil())
+    );
+    final LongSumAggregatorFactory longSum = new LongSumAggregatorFactory("idx", "index");
+    final TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .virtualColumns(virtualColumns)
+        .dimension(DefaultDimensionSpec.of("v"))
+        .aggregators(QueryRunnerTestHelper.ROWS_COUNT, longSum)
+        .granularity(Granularities.DAY)
+        .postAggregators(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
+        .metric(new NumericTopNMetricSpec("idx"))
+        .threshold(100)
+        .build();
+
+    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    Assert.assertEquals(
+        ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "v"),
+        buildSpec.getGroupingColumns()
+    );
+    Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
+    Assert.assertEquals(
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.DAY),
+            virtualColumns.getVirtualColumns()[0]
+        ),
+        buildSpec.getVirtualColumns()
+    );
     Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

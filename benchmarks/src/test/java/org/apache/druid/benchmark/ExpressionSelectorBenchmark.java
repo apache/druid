@@ -148,7 +148,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -173,7 +172,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -196,7 +194,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.HOUR)
                                                      .build();
     final StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -204,7 +201,7 @@ public class ExpressionSelectorBenchmark
       final CursorGranularizer granularizer = CursorGranularizer.create(
           adapter,
           cursor,
-          buildSpec.getGranularity(),
+          Granularities.HOUR,
           buildSpec.getInterval(),
           buildSpec.isDescending()
       );
@@ -238,7 +235,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -265,7 +261,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -287,7 +282,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -312,7 +306,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -340,7 +333,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
 
     try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
@@ -358,7 +350,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -383,7 +374,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -407,7 +397,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -431,7 +420,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -467,7 +455,6 @@ public class ExpressionSelectorBenchmark
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -492,7 +479,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -523,7 +509,6 @@ public class ExpressionSelectorBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              ImmutableList.of(

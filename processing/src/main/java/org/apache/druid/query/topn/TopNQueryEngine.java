@@ -81,7 +81,7 @@ public class TopNQueryEngine
     final CursorGranularizer granularizer = CursorGranularizer.create(
         adapter,
         cursor,
-        buildSpec.getGranularity(),
+        query.getGranularity(),
         buildSpec.getInterval(),
         buildSpec.isDescending()
     );

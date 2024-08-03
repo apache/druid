@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -29,11 +31,13 @@ import org.apache.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class CursorBuildSpec
 {
-  public static final CursorBuildSpec FULL_SCAN = CursorBuildSpec.builder().setGranularity(Granularities.ALL).build();
+  public static final CursorBuildSpec FULL_SCAN = CursorBuildSpec.builder().build();
 
   public static CursorBuildSpecBuilder builder()
   {
@@ -48,7 +52,6 @@ public class CursorBuildSpec
   @Nullable
   private final Filter filter;
   private final Interval interval;
-  private final Granularity granularity;
   @Nullable
   private final List<String> groupingColumns;
   private final VirtualColumns virtualColumns;
@@ -64,7 +67,6 @@ public class CursorBuildSpec
   public CursorBuildSpec(
       @Nullable Filter filter,
       Interval interval,
-      Granularity granularity,
       @Nullable List<String> groupingColumns,
       VirtualColumns virtualColumns,
       @Nullable List<AggregatorFactory> aggregators,
@@ -75,7 +77,6 @@ public class CursorBuildSpec
   {
     this.filter = filter;
     this.interval = interval;
-    this.granularity = granularity;
     this.groupingColumns = groupingColumns;
     this.virtualColumns = virtualColumns;
     this.aggregators = aggregators;
@@ -93,11 +94,6 @@ public class CursorBuildSpec
   public Interval getInterval()
   {
     return interval;
-  }
-
-  public Granularity getGranularity()
-  {
-    return granularity;
   }
 
   @Nullable
@@ -138,7 +134,6 @@ public class CursorBuildSpec
     @Nullable
     private Filter filter;
     private Interval interval = Intervals.ETERNITY;
-    private Granularity granularity = Granularities.NONE;
 
     @Nullable
     private List<String> groupingColumns;
@@ -160,7 +155,6 @@ public class CursorBuildSpec
     {
       this.filter = buildSpec.filter;
       this.interval = buildSpec.interval;
-      this.granularity = buildSpec.granularity;
       this.groupingColumns = buildSpec.groupingColumns;
       this.virtualColumns = buildSpec.virtualColumns;
       this.aggregators = buildSpec.aggregators;
@@ -181,15 +175,30 @@ public class CursorBuildSpec
       return this;
     }
 
-    public CursorBuildSpecBuilder setGranularity(Granularity granularity)
+    public CursorBuildSpecBuilder setGroupingAndVirtualColumns(
+        Granularity granularity,
+        @Nullable List<String> groupingColumns,
+        VirtualColumns virtualColumns
+    )
     {
-      this.granularity = granularity;
-      return this;
-    }
-
-    public CursorBuildSpecBuilder setGroupingColumns(@Nullable List<String> columns)
-    {
-      this.groupingColumns = columns;
+      final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(granularity);
+      if (granularityVirtual == null) {
+        this.virtualColumns = virtualColumns;
+        this.groupingColumns = groupingColumns;
+      } else {
+        this.virtualColumns = VirtualColumns.fromIterable(
+            Iterables.concat(
+                Collections.singletonList(granularityVirtual),
+                () -> Arrays.stream(virtualColumns.getVirtualColumns()).iterator()
+            )
+        );
+        ImmutableList.Builder<String> bob = ImmutableList.<String>builder()
+                                                         .add(granularityVirtual.getOutputName());
+        if (groupingColumns != null) {
+          bob.addAll(groupingColumns);
+        }
+        this.groupingColumns = bob.build();
+      }
       return this;
     }
 
@@ -228,7 +237,6 @@ public class CursorBuildSpec
       return new CursorBuildSpec(
           filter,
           interval,
-          granularity,
           groupingColumns,
           virtualColumns,
           aggregators,

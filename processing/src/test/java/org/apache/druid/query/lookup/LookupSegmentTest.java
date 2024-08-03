@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -194,7 +193,6 @@ public class LookupSegmentTest
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970/PT1H"))
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = LOOKUP_SEGMENT.asStorageAdapter().makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();

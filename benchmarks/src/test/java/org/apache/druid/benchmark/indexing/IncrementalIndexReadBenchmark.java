@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.indexing;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -208,7 +207,6 @@ public class IncrementalIndexReadBenchmark
   private CursorHolder makeCursor(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
-                                                                    .setGranularity(Granularities.ALL)
                                                                     .setInterval(schemaInfo.getDataInterval());
     if (filter != null) {
       builder.setFilter(filter.toFilter());

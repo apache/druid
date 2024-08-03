@@ -46,7 +46,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
@@ -796,7 +795,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return CursorBuildSpec.builder()
                           .setFilter(filter)
                           .setVirtualColumns(VIRTUAL_COLUMNS)
-                          .setGranularity(Granularities.ALL)
                           .build();
 
   }
@@ -806,7 +804,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return CursorBuildSpec.builder()
                           .setFilter(filter)
                           .setVirtualColumns(virtualColumns)
-                          .setGranularity(Granularities.ALL)
                           .setQueryContext(
                               QueryContext.of(
                                   ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)

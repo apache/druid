@@ -28,7 +28,6 @@ import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
@@ -821,10 +820,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     );
     return CursorBuildSpec.builder()
                           .setInterval(interval)
-                          .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setGroupingColumns(groupingColumns)
-                          .setVirtualColumns(getVirtualColumns())
+                          .setGroupingAndVirtualColumns(getGranularity(), groupingColumns, virtualColumns)
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())
                           .isDescending(isDescending())

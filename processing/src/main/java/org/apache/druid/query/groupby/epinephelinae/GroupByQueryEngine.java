@@ -112,7 +112,7 @@ public class GroupByQueryEngine
     final CursorGranularizer granularizer = CursorGranularizer.create(
         storageAdapter,
         cursor,
-        buildSpec.getGranularity(),
+        query.getGranularity(),
         buildSpec.getInterval(),
         buildSpec.isDescending()
     );

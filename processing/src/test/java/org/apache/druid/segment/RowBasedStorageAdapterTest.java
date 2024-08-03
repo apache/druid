@@ -25,10 +25,10 @@ import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -456,7 +456,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter(ValueType.LONG.name(), "1.0", null).toFilter())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -480,7 +479,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter("nonexistent", null, null).toFilter())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -516,7 +514,6 @@ public class RowBasedStorageAdapterTest
                                                              )
                                                          )
                                                      )
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -537,7 +534,7 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder().setGranularity(Granularities.ALL).isDescending(true).build();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder().isDescending(true).build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
@@ -560,7 +557,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("2000/P1D"))
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -580,7 +576,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT1H"))
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -602,7 +597,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970/1971"))
-                                                     .setGranularity(Granularities.HOUR)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -614,7 +608,7 @@ public class RowBasedStorageAdapterTest
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
               ImmutableList.of(DateTimes.of("1970-01-01T03"), "3")
           ),
-          walkCursorGranularized(adapter, cursor, buildSpec, READ_TIME_AND_STRING_GRAN)
+          walkCursorGranularized(adapter, cursor, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
       );
     }
 
@@ -628,7 +622,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT2H"))
-                                                     .setGranularity(Granularities.HOUR)
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -640,7 +633,7 @@ public class RowBasedStorageAdapterTest
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2")
           ),
-          walkCursorGranularized(adapter, cursor, buildSpec, READ_TIME_AND_STRING_GRAN)
+          walkCursorGranularized(adapter, cursor, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
       );
     }
 
@@ -654,7 +647,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT2H"))
-                                                     .setGranularity(Granularities.HOUR)
                                                      .isDescending(true)
                                                      .build();
 
@@ -666,7 +658,7 @@ public class RowBasedStorageAdapterTest
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1")
           ),
-          walkCursorGranularized(adapter, cursor, buildSpec, READ_TIME_AND_STRING_GRAN)
+          walkCursorGranularized(adapter, cursor, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
       );
     }
 
@@ -785,7 +777,6 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter("nonexistent", "abc", null).toFilter())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -797,19 +788,6 @@ public class RowBasedStorageAdapterTest
     }
 
     Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursor_eternityIntervalWithMonthGranularity()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
-    Assert.assertThrows(IAE.class, () -> {
-      adapter.makeCursorHolder(
-          CursorBuildSpec.builder()
-                         .setGranularity(Granularities.MONTH)
-                         .build()
-      ).asCursor();
-    });
   }
 
   private static List<List<Object>> walkCursor(
@@ -842,13 +820,14 @@ public class RowBasedStorageAdapterTest
       final StorageAdapter adapter,
       final Cursor cursor,
       final CursorBuildSpec buildSpec,
+      final Granularity granularity,
       final List<BiFunction<Cursor, CursorGranularizer, Supplier<Object>>> processors
   )
   {
     CursorGranularizer granularizer = CursorGranularizer.create(
         adapter,
         cursor,
-        buildSpec.getGranularity(),
+        granularity,
         buildSpec.getInterval(),
         buildSpec.isDescending()
     );

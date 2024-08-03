@@ -26,10 +26,9 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.segment.FrameFilteredOffset;
-import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorMakerFactory;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -66,40 +66,42 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    if (!Granularities.ALL.equals(spec.getGranularity())) {
-      // Not currently needed for the intended use cases of frame-based cursors.
-      throw new UOE("Granularity [%s] not supported", spec.getGranularity());
-    }
-    return () -> {
-      final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
+    return new CursorHolder()
+    {
+      @Nullable
+      @Override
+      public Cursor asCursor()
+      {
+        final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
 
-      final SimpleSettableOffset baseOffset = spec.isDescending()
-                                              ? new SimpleDescendingOffset(frame.numRows())
-                                              : new SimpleAscendingOffset(frame.numRows());
+        final SimpleSettableOffset baseOffset = spec.isDescending()
+                                                ? new SimpleDescendingOffset(frame.numRows())
+                                                : new SimpleAscendingOffset(frame.numRows());
 
-      final SimpleSettableOffset offset;
 
-      final ColumnSelectorFactory columnSelectorFactory =
-          spec.getVirtualColumns().wrap(
-              new FrameColumnSelectorFactory(
-                  frame,
-                  frameReader.signature(),
-                  fieldReaders,
-                  new CursorFrameRowPointer(frame, baseOffset)
-              )
-          );
+        final ColumnSelectorFactory columnSelectorFactory =
+            spec.getVirtualColumns().wrap(
+                new FrameColumnSelectorFactory(
+                    frame,
+                    frameReader.signature(),
+                    fieldReaders,
+                    new CursorFrameRowPointer(frame, baseOffset)
+                )
+            );
 
-      if (filterToUse == null) {
-        offset = baseOffset;
-      } else {
-        offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
+        final SimpleSettableOffset offset;
+        if (filterToUse == null) {
+          offset = baseOffset;
+        } else {
+          offset = new FrameFilteredOffset(baseOffset, columnSelectorFactory, filterToUse);
+        }
+
+        final FrameCursor cursor = new FrameCursor(offset, columnSelectorFactory);
+
+        // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
+        // Currently, it assumes that closing the Sequence does nothing.
+        return cursor;
       }
-
-      final FrameCursor cursor = new FrameCursor(offset, columnSelectorFactory);
-
-      // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
-      // Currently, it assumes that closing the Sequence does nothing.
-      return cursor;
     };
   }
 }

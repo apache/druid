@@ -165,7 +165,6 @@ public class ExpressionAggregationBenchmark
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();

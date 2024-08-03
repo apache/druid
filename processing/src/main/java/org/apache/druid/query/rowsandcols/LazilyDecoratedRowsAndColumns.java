@@ -30,7 +30,6 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -220,8 +219,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       }
     }
     final CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
-                                                                          .setFilter(filter)
-                                                                          .setGranularity(Granularities.ALL);
+                                                                          .setFilter(filter);
     if (interval != null) {
       builder.setInterval(interval);
     }

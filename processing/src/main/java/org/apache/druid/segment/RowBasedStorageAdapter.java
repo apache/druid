@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -176,32 +175,17 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
       @Override
       public Cursor asCursor()
       {
-        final Granularity gran = spec.getGranularity();
-        final Interval actualInterval = spec.getInterval()
-                                            .overlap(new Interval(getMinTime(), gran.bucketEnd(getMaxTime())));
-
-        if (actualInterval == null) {
-          return null;
-        }
-
-        if (!isQueryGranularityAllowed(actualInterval, gran)) {
-          throw new IAE(
-              "Cannot support interval [%s] with granularity [%s]",
-              Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
-              gran
-          );
-        }
-
-        final RowWalker<RowType> rowWalker = new RowWalker<>(
-            spec.isDescending() ? reverse(rowSequence) : rowSequence,
-            rowAdapter
+        final RowWalker<RowType> rowWalker = closer.register(
+            new RowWalker<>(
+                spec.isDescending() ? reverse(rowSequence) : rowSequence,
+                rowAdapter
+            )
         );
-        closer.register(rowWalker);
         return new RowBasedCursor<>(
             rowWalker,
             rowAdapter,
             spec.getFilter(),
-            actualInterval,
+            spec.getInterval(),
             spec.getVirtualColumns(),
             spec.isDescending(),
             rowSignature

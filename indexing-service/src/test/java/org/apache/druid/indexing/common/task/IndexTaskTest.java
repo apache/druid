@@ -541,7 +541,6 @@ public class IndexTaskTest extends IngestionTestBase
         segment.getInterval()
     );
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setInterval(segment.getInterval())
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
@@ -775,7 +774,6 @@ public class IndexTaskTest extends IngestionTestBase
       );
 
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {

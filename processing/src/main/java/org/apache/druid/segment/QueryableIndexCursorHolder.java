@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
@@ -66,8 +65,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private static final Logger log = new Logger(QueryableIndexCursorHolder.class);
   private final QueryableIndex index;
   private final Interval interval;
-  @SuppressWarnings("unused")
-  private final Granularity gran;
   private final VirtualColumns virtualColumns;
 
   @Nullable
@@ -88,7 +85,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
   {
     this.index = index;
     this.interval = cursorBuildSpec.getInterval();
-    this.gran = cursorBuildSpec.getGranularity();
     this.virtualColumns = cursorBuildSpec.getVirtualColumns();
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
@@ -689,7 +685,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
       final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
       final BitmapResultFactory<?> bitmapResultFactory;
       if (metrics != null) {
-        bitmapResultFactory =metrics.makeBitmapResultFactory(bitmapFactory);
+        bitmapResultFactory = metrics.makeBitmapResultFactory(bitmapFactory);
         metrics.reportSegmentRows(numRows);
       } else {
         bitmapResultFactory = new DefaultBitmapResultFactory(bitmapFactory);

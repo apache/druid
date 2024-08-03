@@ -25,7 +25,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -478,7 +477,6 @@ public class FilterPartitionBenchmark
         CursorBuildSpec.builder()
                        .setFilter(filter)
                        .setInterval(schemaInfo.getDataInterval())
-                       .setGranularity(Granularities.ALL)
                        .build()
     );
   }

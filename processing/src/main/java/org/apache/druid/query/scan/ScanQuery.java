@@ -508,7 +508,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     );
     return CursorBuildSpec.builder()
                           .setInterval(interval)
-                          .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
                           .setVirtualColumns(getVirtualColumns())
                           .setQueryContext(context())

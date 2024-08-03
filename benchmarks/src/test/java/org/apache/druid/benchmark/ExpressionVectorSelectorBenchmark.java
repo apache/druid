@@ -153,7 +153,6 @@ public class ExpressionVectorSelectorBenchmark
     );
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
     final CursorHolder cursorHolder = closer.register(

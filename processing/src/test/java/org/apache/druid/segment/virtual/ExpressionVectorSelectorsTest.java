@@ -237,7 +237,6 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
     final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(index.getDataInterval())
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
     try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(buildSpec)) {

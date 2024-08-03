@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.LookupExprMacro;
@@ -383,7 +382,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter("countryIsoCode", "CA", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
     try (final CursorHolder cursorHolder = baseSegment.asStorageAdapter().makeCursorHolder(buildSpec)) {
@@ -411,7 +409,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter("c.v", "Canada", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
     try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
@@ -440,7 +437,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter("c.v", "Canada", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
     try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
@@ -469,7 +465,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter("c.countryName", "Canada", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
     try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
@@ -498,7 +493,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter("c.countryName", "Canada", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
     try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
@@ -515,7 +509,6 @@ public class JoinAndLookupBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setVirtualColumns(lookupVirtualColumns)
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
                                                                          .makeCursorHolder(buildSpec)) {
@@ -531,7 +524,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter(LOOKUP_COUNTRY_CODE_TO_NAME, "Canada", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .setVirtualColumns(lookupVirtualColumns)
                                                      .build();
@@ -549,7 +541,6 @@ public class JoinAndLookupBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setVirtualColumns(lookupVirtualColumns)
-                                                     .setGranularity(Granularities.ALL)
                                                      .build();
     try (final CursorHolder cursorHolder = baseSegment.asStorageAdapter().makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -564,7 +555,6 @@ public class JoinAndLookupBenchmark
   {
     final Filter filter = new SelectorDimFilter(LOOKUP_COUNTRY_NUMBER_TO_NAME, "Canada", null).toFilter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(lookupVirtualColumns)
                                                      .setFilter(filter)
                                                      .build();
