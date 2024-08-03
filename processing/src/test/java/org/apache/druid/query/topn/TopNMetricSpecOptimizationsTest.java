@@ -33,7 +33,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.Metadata;
@@ -318,13 +318,13 @@ public class TopNMetricSpecOptimizationsTest
       }
 
       @Override
-      public CursorMaker asCursorMaker(CursorBuildSpec spec)
+      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
-        return new CursorMaker()
+        return new CursorHolder()
         {
           @Nullable
           @Override
-          public Cursor makeCursor()
+          public Cursor asCursor()
           {
             return null;
           }

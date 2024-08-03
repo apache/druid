@@ -46,7 +46,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
@@ -324,10 +324,10 @@ public class JoinTestHelper
     );
   }
 
-  public static List<Object[]> readCursor(final CursorMaker cursorMaker, final List<String> columns)
+  public static List<Object[]> readCursor(final CursorHolder cursorHolder, final List<String> columns)
   {
     try {
-      final Cursor cursor = cursorMaker.makeCursor();
+      final Cursor cursor = cursorHolder.asCursor();
       final List<Supplier<Object>> readers = columns
           .stream()
           .map(
@@ -363,17 +363,17 @@ public class JoinTestHelper
       return rows;
     }
     finally {
-      cursorMaker.close();
+      cursorHolder.close();
     }
   }
 
   public static void verifyCursor(
-      final CursorMaker cursorMaker,
+      final CursorHolder cursorHolder,
       final List<String> columns,
       final List<Object[]> expectedRows
   )
   {
-    final List<Object[]> rows = readCursor(cursorMaker, columns);
+    final List<Object[]> rows = readCursor(cursorHolder, columns);
 
     for (int i = 0; i < rows.size(); i++) {
       try {

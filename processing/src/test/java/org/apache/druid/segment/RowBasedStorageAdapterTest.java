@@ -458,8 +458,8 @@ public class RowBasedStorageAdapterTest
                                                      .setFilter(new SelectorDimFilter(ValueType.LONG.name(), "1.0", null).toFilter())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       Assert.assertEquals(
           ImmutableList.of(
@@ -482,8 +482,8 @@ public class RowBasedStorageAdapterTest
                                                      .setFilter(new SelectorDimFilter("nonexistent", null, null).toFilter())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       Assert.assertEquals(
           ImmutableList.of(
@@ -519,8 +519,8 @@ public class RowBasedStorageAdapterTest
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
 
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of("1")
@@ -538,8 +538,8 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder().setGranularity(Granularities.ALL).isDescending(true).build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of("2"),
@@ -562,8 +562,8 @@ public class RowBasedStorageAdapterTest
                                                      .setInterval(Intervals.of("2000/P1D"))
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(),
           walkCursor(cursor, READ_STRING)
@@ -582,8 +582,8 @@ public class RowBasedStorageAdapterTest
                                                      .setInterval(Intervals.of("1970-01-01T01/PT1H"))
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of("1")
@@ -604,8 +604,8 @@ public class RowBasedStorageAdapterTest
                                                      .setInterval(Intervals.of("1970/1971"))
                                                      .setGranularity(Granularities.HOUR)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T00"), "0"),
@@ -631,8 +631,8 @@ public class RowBasedStorageAdapterTest
                                                      .setGranularity(Granularities.HOUR)
                                                      .build();
 
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       Assert.assertEquals(
           ImmutableList.of(
@@ -658,8 +658,8 @@ public class RowBasedStorageAdapterTest
                                                      .isDescending(true)
                                                      .build();
 
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
@@ -678,8 +678,8 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
 
-    try (final CursorMaker maker = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               Lists.newArrayList(
@@ -788,8 +788,8 @@ public class RowBasedStorageAdapterTest
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
 
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(),
           walkCursor(cursor, new ArrayList<>(PROCESSORS.values()))
@@ -804,11 +804,11 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
     Assert.assertThrows(IAE.class, () -> {
-      adapter.asCursorMaker(
+      adapter.makeCursorHolder(
           CursorBuildSpec.builder()
                          .setGranularity(Granularities.MONTH)
                          .build()
-      ).makeCursor();
+      ).asCursor();
     });
   }
 

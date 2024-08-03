@@ -44,7 +44,7 @@ import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -80,7 +80,7 @@ public class VectorGroupByEngine
   public static Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
-      final CursorMaker cursorMaker,
+      final CursorHolder cursorHolder,
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
       final Interval interval,
@@ -94,7 +94,7 @@ public class VectorGroupByEngine
           @Override
           public CloseableIterator<ResultRow> make()
           {
-            final VectorCursor cursor = cursorMaker.makeVectorCursor();
+            final VectorCursor cursor = cursorHolder.asVectorCursor();
 
             if (cursor == null) {
               // Return empty iterator.

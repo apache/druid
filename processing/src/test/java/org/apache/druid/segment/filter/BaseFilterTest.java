@@ -70,7 +70,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -818,7 +818,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   private VectorCursor makeVectorCursor(final Filter filter)
   {
     final CursorBuildSpec buildSpec = makeVectorCursorBuildSpec(filter);
-    return adapter.asCursorMaker(buildSpec).makeVectorCursor();
+    return adapter.makeCursorHolder(buildSpec).asVectorCursor();
   }
 
   /**
@@ -826,8 +826,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
    */
   private List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    try (final CursorMaker maker = adapter.asCursorMaker(makeCursorBuildSpec(makeFilter(filter)))) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(makeFilter(filter)))) {
+      final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
           .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -846,8 +846,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   private long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    try (final CursorMaker maker = adapter.asCursorMaker(makeCursorBuildSpec(null))) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(null))) {
+      final Cursor cursor = cursorHolder.asCursor();
       Aggregator agg = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
           maybeOptimize(filter)
@@ -870,8 +870,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     );
 
 
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(null))) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(null))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
           maybeOptimize(dimFilter)
@@ -937,8 +937,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final CursorMaker maker = adapter.asCursorMaker(makeCursorBuildSpec(postFilteringFilter))) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(postFilteringFilter))) {
+      final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
           .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -997,8 +997,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(postFilteringFilter))) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(postFilteringFilter))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1022,8 +1022,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)))) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1049,8 +1049,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
-    try (final CursorMaker maker = adapter.asCursorMaker(makeVectorCursorBuildSpec(makeFilter(filter)))) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
 
       final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
       final List<String> values = new ArrayList<>();

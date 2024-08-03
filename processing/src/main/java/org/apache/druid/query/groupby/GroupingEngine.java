@@ -76,7 +76,7 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -502,10 +502,10 @@ public class GroupingEngine
       // group by specific vectorization check:
 
       final CursorBuildSpec buildSpec = query.asCursorBuildSpec(groupByQueryMetrics);
-      final CursorMaker cursorMaker = closer.register(storageAdapter.asCursorMaker(buildSpec));
+      final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
 
       final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
-      final boolean canVectorize = cursorMaker.canVectorize() &&
+      final boolean canVectorize = cursorHolder.canVectorize() &&
                                    VectorGroupByEngine.canVectorizeDimensions(inspector, query.getDimensions());
       final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(canVectorize);
       final Sequence<ResultRow> result;
@@ -513,7 +513,7 @@ public class GroupingEngine
         result = VectorGroupByEngine.process(
             query,
             storageAdapter,
-            cursorMaker,
+            cursorHolder,
             bufferHolder.get(),
             fudgeTimestamp,
             buildSpec.getInterval(),
@@ -524,7 +524,7 @@ public class GroupingEngine
         result = GroupByQueryEngine.process(
             query,
             storageAdapter,
-            cursorMaker,
+            cursorHolder,
             buildSpec,
             bufferHolder.get(),
             fudgeTimestamp,

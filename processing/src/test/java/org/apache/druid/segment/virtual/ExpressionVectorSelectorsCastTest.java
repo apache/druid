@@ -121,7 +121,7 @@ public class ExpressionVectorSelectorsCastTest
                                                      .setVirtualColumns(virtualColumns)
                                                      .setInterval(index.getDataInterval())
                                                      .build();
-    VectorCursor cursor = closer.register(storageAdapter.asCursorMaker(buildSpec)).makeVectorCursor();
+    VectorCursor cursor = closer.register(storageAdapter.makeCursorHolder(buildSpec)).asVectorCursor();
 
     ColumnCapabilities capabilities = INDEX.getColumnCapabilities(column);
 

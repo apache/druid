@@ -29,7 +29,7 @@ import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -196,8 +196,8 @@ public class LookupSegmentTest
                                                      .setInterval(Intervals.of("1970/PT1H"))
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = LOOKUP_SEGMENT.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = LOOKUP_SEGMENT.asStorageAdapter().makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       final List<Pair<String, String>> kvs = new ArrayList<>();
 

@@ -42,7 +42,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -220,7 +220,7 @@ public class FrameTestUtil
 
   /**
    * Reads a sequence of rows from a frame channel using a non-vectorized cursor from
-   * {@link FrameStorageAdapter#asCursorMaker(CursorBuildSpec)}.
+   * {@link FrameStorageAdapter#makeCursorHolder(CursorBuildSpec)}.
    *
    * @param channel     the channel
    * @param frameReader reader for this channel
@@ -233,14 +233,13 @@ public class FrameTestUtil
     return new FrameChannelSequence(channel)
         .flatMap(
             frame -> {
-              final CursorMaker maker = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).asCursorMaker(
-                  CursorBuildSpec.FULL_SCAN
-              );
-              final Cursor cursor = maker.makeCursor();
+              final CursorHolder cursorHolder = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
+                  .makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+              final Cursor cursor = cursorHolder.asCursor();
               if (cursor == null) {
-                return Sequences.withBaggage(Sequences.empty(), maker);
+                return Sequences.withBaggage(Sequences.empty(), cursorHolder);
               }
-              return readRowsFromCursor(cursor, frameReader.signature()).withBaggage(maker);
+              return readRowsFromCursor(cursor, frameReader.signature()).withBaggage(cursorHolder);
             }
         );
   }
@@ -262,12 +261,12 @@ public class FrameTestUtil
   )
   {
     final RowSignature signatureToUse = signature == null ? adapter.getRowSignature() : signature;
-    final CursorMaker maker = makeCursorForAdapter(adapter, populateRowNumber);
-    final Cursor cursor = maker.makeCursor();
+    final CursorHolder cursorHolder = makeCursorForAdapter(adapter, populateRowNumber);
+    final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
-      return Sequences.withBaggage(Sequences.empty(), maker);
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
-    return readRowsFromCursor(cursor, signatureToUse).withBaggage(maker);
+    return readRowsFromCursor(cursor, signatureToUse).withBaggage(cursorHolder);
   }
 
   /**
@@ -278,7 +277,7 @@ public class FrameTestUtil
    * @param adapter           the adapter
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static CursorMaker makeCursorForAdapter(
+  public static CursorHolder makeCursorForAdapter(
       final StorageAdapter adapter,
       final boolean populateRowNumber
   )
@@ -299,15 +298,15 @@ public class FrameTestUtil
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
 
-    final CursorMaker maker = adapter.asCursorMaker(buildSpec);
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec);
     if (populateRowNumber) {
-      return new CursorMaker()
+      return new CursorHolder()
       {
         @Nullable
         @Override
-        public Cursor makeCursor()
+        public Cursor asCursor()
         {
-          final Cursor cursor = maker.makeCursor();
+          final Cursor cursor = cursorHolder.asCursor();
           if (cursor == null) {
             return null;
           }
@@ -317,11 +316,11 @@ public class FrameTestUtil
         @Override
         public void close()
         {
-          maker.close();
+          cursorHolder.close();
         }
       };
     } else {
-      return maker;
+      return cursorHolder;
     }
   }
 

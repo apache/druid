@@ -35,7 +35,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -114,14 +114,14 @@ public class ScanQueryEngine
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
-    final CursorMaker maker = adapter.asCursorMaker(query.asCursorBuildSpec(queryMetrics));
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(query.asCursorBuildSpec(queryMetrics));
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
         {
           @Override
           public Iterator<ScanResultValue> make()
           {
-            final Cursor cursor = maker.makeCursor();
+            final Cursor cursor = cursorHolder.asCursor();
             if (cursor == null) {
               return Collections.emptyIterator();
             }
@@ -222,7 +222,7 @@ public class ScanQueryEngine
           {
           }
         }
-    ).withBaggage(maker);
+    ).withBaggage(cursorHolder);
   }
 
   /**

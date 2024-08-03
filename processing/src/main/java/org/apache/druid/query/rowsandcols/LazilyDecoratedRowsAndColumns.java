@@ -45,7 +45,7 @@ import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -228,8 +228,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (virtualColumns != null) {
       builder.setVirtualColumns(virtualColumns);
     }
-    try (final CursorMaker maker = as.asCursorMaker(builder.build())) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = as.makeCursorHolder(builder.build())) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       if (cursor == null) {
         return null;

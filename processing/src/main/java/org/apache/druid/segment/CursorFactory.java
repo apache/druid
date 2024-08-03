@@ -33,8 +33,13 @@ import javax.annotation.Nullable;
  * Interface extended by {@link StorageAdapter}, which gives them the power to create cursors.
  *
  * @see StorageAdapter
+ *
+ * @deprecated This interface is deprecated and no longer implemented by any built-in {@link StorageAdapter}. Callers
+ * should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead. Implementors should implement
+ * {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead.
  */
-public interface CursorFactory extends CursorMakerFactory
+@Deprecated
+public interface CursorFactory
 {
   /**
    * Returns true if the provided combination of parameters can be handled by "makeVectorCursor".
@@ -42,9 +47,10 @@ public interface CursorFactory extends CursorMakerFactory
    * Query engines should use this before running in vectorized mode, and be prepared to fall back to non-vectorized
    * mode if this method returns false.
    *
-   * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call {@link CursorMaker#canVectorize()}.
-   * Implementors should implement {@link #asCursorMaker(CursorBuildSpec)} instead.  This method is no longer
-   * implemented by any built-in factories.
+   * @deprecated Callers should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} and call
+   * {@link CursorHolder#canVectorize()}.
+   * Implementors should implement {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead.  This method is
+   * no longer implemented by any built-in factories.
    */
   @Deprecated
   default boolean canVectorize(
@@ -53,26 +59,17 @@ public interface CursorFactory extends CursorMakerFactory
       boolean descending
   )
   {
-    throw DruidException.defensive("canVectorize is no longer supported, use asCursorMaker instead");
+    throw DruidException.defensive(
+        "CursorFactory.canVectorize is no longer supported, use CursorMakerFactory.makeCursorHolder instead"
+    );
   }
 
   /**
    * Creates a sequence of Cursors, one for each time-granular bucket (based on the provided Granularity).
    *
-   * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call {@link CursorMaker#makeCursor()}.
-   * Implementors should implement {@link #asCursorMaker(CursorBuildSpec)} instead. Recommend for implementors to fill
-   * this method in with:
-   * <pre>
-   *     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-   *                                                      .setFilter(filter)
-   *                                                      .setInterval(interval)
-   *                                                      .setGranularity(gran)
-   *                                                      .setVirtualColumns(virtualColumns)
-   *                                                      .isDescending(descending)
-   *                                                      .setQueryMetrics(queryMetrics)
-   *                                                      .build();
-   *     return asCursorMaker(buildSpec).makeCursor();
-   * </pre>
+   * @deprecated Callers should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} and call
+   * {@link CursorHolder#asCursor()}.
+   * Implementors should implement {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead.
    * This method is no longer implemented by any built-in factories.
    */
   @Deprecated
@@ -85,7 +82,9 @@ public interface CursorFactory extends CursorMakerFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    throw DruidException.defensive("makeCursors is no longer supported, use asCursorMaker instead");
+    throw DruidException.defensive(
+        "CursorFactory.makeCursors is no longer supported, use CursorMakerFactory.makeCursorHolder instead"
+    );
   }
 
   /**
@@ -96,9 +95,10 @@ public interface CursorFactory extends CursorMakerFactory
    * Returns null if there is no data to walk over (for example, if the "interval" does not overlap the data interval
    * of this segment).
    *
-   * @deprecated Callers should use {@link #asCursorMaker(CursorBuildSpec)} and call
-   * {@link CursorMaker#makeVectorCursor()}. Implementors should implement {@link #asCursorMaker(CursorBuildSpec)}
-   * instead. This method is no longer implemented by any built-in factories.
+   * @deprecated Callers should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} and call
+   * {@link CursorHolder#asVectorCursor()}. Implementors should implement
+   * {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead. This method is no longer implemented by any
+   * built-in factories.
    */
   @Deprecated
   @Nullable
@@ -111,6 +111,8 @@ public interface CursorFactory extends CursorMakerFactory
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
-    throw DruidException.defensive("makeVectorCursor is no longer supported, use asCursorMaker instead");
+    throw DruidException.defensive(
+        "CursorFactory.makeVectorCursor is no longer supported, use CursorMakerFactory.makeCursorHolder instead"
+    );
   }
 }

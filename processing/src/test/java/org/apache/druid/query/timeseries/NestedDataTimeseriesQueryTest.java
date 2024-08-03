@@ -41,7 +41,7 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -666,10 +666,10 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
                                           s -> {
-                                            final CursorMaker maker = s.asStorageAdapter()
-                                                                       .asCursorMaker(spec);
-                                            final boolean canVectorize = maker.canVectorize();
-                                            maker.close();
+                                            final CursorHolder cursorHolder = s.asStorageAdapter()
+                                                                               .makeCursorHolder(spec);
+                                            final boolean canVectorize = cursorHolder.canVectorize();
+                                            cursorHolder.close();
                                             return canVectorize;
                                           });
 

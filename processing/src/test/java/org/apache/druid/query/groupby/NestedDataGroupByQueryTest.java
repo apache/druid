@@ -37,7 +37,7 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -659,10 +659,10 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
                                           s -> {
-                                            final CursorMaker maker = s.asStorageAdapter()
-                                                                       .asCursorMaker(spec);
-                                            final boolean canVectorize = maker.canVectorize();
-                                            maker.close();
+                                            final CursorHolder cursorHolder = s.asStorageAdapter()
+                                                                               .makeCursorHolder(spec);
+                                            final boolean canVectorize = cursorHolder.canVectorize();
+                                            cursorHolder.close();
                                             return canVectorize;
                                           });
 

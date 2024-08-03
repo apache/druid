@@ -167,14 +167,14 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return new CursorMaker()
+    return new CursorHolder()
     {
       final Closer closer = Closer.create();
 
       @Override
-      public Cursor makeCursor()
+      public Cursor asCursor()
       {
         final Granularity gran = spec.getGranularity();
         final Interval actualInterval = spec.getInterval()

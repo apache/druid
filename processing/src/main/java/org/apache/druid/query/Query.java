@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -45,6 +44,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -278,15 +278,15 @@ public interface Query<T>
 
   default CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final List<Interval> intervals = getIntervals();
-    if (intervals.size() > 1) {
-      throw DruidException.defensive(
-          "This method can only be called after query is reduced to a single segment interval, got [%s]",
-          intervals
-      );
-    }
+    final Interval interval = CollectionUtils.getOnlyElement(
+        getIntervals(),
+        (i) -> DruidException.defensive(
+            "This method can only be called after query is reduced to a single segment interval, got [%s]",
+            i
+        )
+    );
     return CursorBuildSpec.builder()
-                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setInterval(interval)
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
                           .setVirtualColumns(getVirtualColumns())

@@ -50,7 +50,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.RowIdSupplier;
@@ -577,8 +577,9 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       inputSegment = new FrameSegment(inputFrame, FrameReader.create(signature), SegmentId.dummy("xxx"));
     }
 
-    try (final CursorMaker maker = inputSegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = inputSegment.asStorageAdapter()
+                                                       .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       int numRows = 0;
       final FrameWriterFactory frameWriterFactory;

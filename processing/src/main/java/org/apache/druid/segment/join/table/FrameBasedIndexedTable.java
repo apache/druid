@@ -124,7 +124,7 @@ public class FrameBasedIndexedTable implements IndexedTable
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
               FrameStorageAdapter frameStorageAdapter =
                   new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
-              return closer.register(frameStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)).makeCursor();
+              return closer.register(frameStorageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)).asCursor();
             })
             .collect(Collectors.toList())
     ).withBaggage(closer);

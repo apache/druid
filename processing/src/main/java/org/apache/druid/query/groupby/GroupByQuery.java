@@ -73,6 +73,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -811,15 +812,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Override
   public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
   {
-    final List<Interval> intervals = getIntervals();
-    if (intervals.size() > 1) {
-      throw DruidException.defensive(
-          "This method can only be called after query is reduced to a single segment interval, got [%s]",
-          intervals
-      );
-    }
+    final Interval interval = CollectionUtils.getOnlyElement(
+        getIntervals(),
+        (i) -> DruidException.defensive(
+            "This method can only be called after query is reduced to a single segment interval, got [%s]",
+            i
+        )
+    );
     return CursorBuildSpec.builder()
-                          .setInterval(Iterables.getOnlyElement(intervals))
+                          .setInterval(interval)
                           .setGranularity(getGranularity())
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
                           .setGroupingColumns(groupingColumns)

@@ -40,7 +40,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -118,8 +118,8 @@ public class TimeBoundaryQueryRunnerFactory
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder(legacyQuery.asCursorBuildSpec(null))
                                                        .isDescending(descending)
                                                        .build();
-      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
         if (cursor == null) {
           return null;
         }
@@ -195,7 +195,7 @@ public class TimeBoundaryQueryRunnerFactory
 
   /**
    * Whether a particular {@link TimeBoundaryQuery} can use {@link StorageAdapter#getMinTime()} and/or
-   * {@link StorageAdapter#getMaxTime()}. If false, must use {@link StorageAdapter#asCursorMaker(CursorBuildSpec)}.
+   * {@link StorageAdapter#getMaxTime()}. If false, must use {@link StorageAdapter#makeCursorHolder(CursorBuildSpec)}.
    */
   private static boolean canUseAdapterMinMaxTime(final TimeBoundaryQuery query, final StorageAdapter adapter)
   {

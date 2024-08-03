@@ -311,7 +311,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -368,7 +368,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -423,7 +423,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -473,7 +473,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -525,7 +525,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -585,7 +585,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -641,7 +641,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -672,7 +672,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -702,7 +702,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -735,7 +735,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -767,7 +767,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -800,7 +800,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -837,7 +837,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -874,7 +874,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -911,7 +911,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -948,7 +948,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -998,7 +998,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1069,7 +1069,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1123,7 +1123,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -1180,7 +1180,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             FACT_TO_REGION_PREFIX + "regionName",
@@ -1246,7 +1246,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1305,7 +1305,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1346,7 +1346,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1405,7 +1405,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1450,7 +1450,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setVirtualColumns(virtualColumns).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1501,7 +1501,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setVirtualColumns(virtualColumns).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1549,7 +1549,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1594,7 +1594,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1641,7 +1641,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1692,7 +1692,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of()
     );
   }
@@ -1727,7 +1727,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of()
     );
   }
@@ -1762,7 +1762,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of()
     );
   }
@@ -1797,7 +1797,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of()
     );
   }
@@ -1818,7 +1818,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1847,7 +1847,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             factSegment.asStorageAdapter(),
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(
+        ).makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1875,7 +1875,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         factSegment.asStorageAdapter(),
         joinableClauses,
         joinFilterPreAnalysis
-    ).asCursorMaker(
+    ).makeCursorHolder(
         CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
     );
   }
@@ -1901,7 +1901,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             baseFilter,
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1938,7 +1938,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             baseFilter,
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -1974,7 +1974,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             baseFilter,
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",
@@ -2027,7 +2027,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             baseFilter,
             joinableClauses,
             joinFilterPreAnalysis
-        ).asCursorMaker(CursorBuildSpec.FULL_SCAN),
+        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         ImmutableList.of(
             "page",
             "countryIsoCode",

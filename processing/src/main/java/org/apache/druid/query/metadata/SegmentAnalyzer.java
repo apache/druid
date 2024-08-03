@@ -30,7 +30,7 @@ import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -279,8 +279,8 @@ public class SegmentAnalyzer
                                                        .setInterval(new Interval(start, end))
                                                        .setGranularity(Granularities.ALL)
                                                        .build();
-      try (final CursorMaker maker = storageAdapter.asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
 
         if (cursor != null) {
           final DimensionSelector selector =

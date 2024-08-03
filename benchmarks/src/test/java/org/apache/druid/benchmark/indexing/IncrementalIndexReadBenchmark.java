@@ -36,7 +36,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.generator.DataGenerator;
@@ -149,8 +149,8 @@ public class IncrementalIndexReadBenchmark
   public void read(Blackhole blackhole)
   {
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    try (final CursorMaker maker = makeCursor(sa, null)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursor(sa, null)) {
+      Cursor cursor = cursorHolder.asCursor();
 
       List<DimensionSelector> selectors = new ArrayList<>();
       selectors.add(makeDimensionSelector(cursor, "dimSequential"));
@@ -185,8 +185,8 @@ public class IncrementalIndexReadBenchmark
     );
 
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    try (final CursorMaker maker = makeCursor(sa, filter)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursor(sa, filter)) {
+      Cursor cursor = cursorHolder.asCursor();
 
       List<DimensionSelector> selectors = new ArrayList<>();
       selectors.add(makeDimensionSelector(cursor, "dimSequential"));
@@ -205,7 +205,7 @@ public class IncrementalIndexReadBenchmark
     }
   }
 
-  private CursorMaker makeCursor(IncrementalIndexStorageAdapter sa, DimFilter filter)
+  private CursorHolder makeCursor(IncrementalIndexStorageAdapter sa, DimFilter filter)
   {
     CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
                                                                     .setGranularity(Granularities.ALL)
@@ -213,7 +213,7 @@ public class IncrementalIndexReadBenchmark
     if (filter != null) {
       builder.setFilter(filter.toFilter());
     }
-    return sa.asCursorMaker(builder.build());
+    return sa.makeCursorHolder(builder.build());
   }
 
   private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)

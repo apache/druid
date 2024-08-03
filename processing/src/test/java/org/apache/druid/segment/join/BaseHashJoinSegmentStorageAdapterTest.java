@@ -223,7 +223,7 @@ public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandli
 
   /**
    * Creates a fact-to-country join segment without a {@link JoinFilterPreAnalysis}. This means it cannot
-   * have {@link org.apache.druid.segment.StorageAdapter#asCursorMaker(CursorBuildSpec)} called on it.
+   * have {@link org.apache.druid.segment.StorageAdapter#makeCursorHolder(CursorBuildSpec)} called on it.
    */
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {

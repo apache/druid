@@ -31,7 +31,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 
 /**
- * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#asCursorMaker(CursorBuildSpec)} to add post-join
+ * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#makeCursorHolder(CursorBuildSpec)} to add post-join
  * virtual columns and filters.
  */
 public class PostJoinCursor implements Cursor

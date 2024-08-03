@@ -22,7 +22,7 @@ package org.apache.druid.frame.segment;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorMakerFactory;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.Metadata;
@@ -142,8 +142,8 @@ public class FrameStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return cursorFactory.asCursorMaker(spec);
+    return cursorFactory.makeCursorHolder(spec);
   }
 }

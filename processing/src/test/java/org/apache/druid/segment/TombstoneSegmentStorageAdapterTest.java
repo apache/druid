@@ -37,13 +37,13 @@ public class TombstoneSegmentStorageAdapterTest
     StorageAdapter sa = new StorageAdapter()
     {
       @Override
-      public CursorMaker asCursorMaker(CursorBuildSpec spec)
+      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
-        return new CursorMaker()
+        return new CursorHolder()
         {
           @Nullable
           @Override
-          public Cursor makeCursor()
+          public Cursor asCursor()
           {
             return null;
           }

@@ -37,7 +37,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -217,8 +217,8 @@ public class IndexedTableJoinCursorBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void hashJoinCursorColumnValueSelectors(Blackhole blackhole)
   {
-    try (final CursorMaker maker = makeCursorMaker()) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder()) {
+      final Cursor cursor = cursorHolder.asCursor();
       int rowCount = processRowsValueSelector(blackhole, cursor, projectionColumns);
       blackhole.consume(rowCount);
     }
@@ -229,16 +229,16 @@ public class IndexedTableJoinCursorBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void hashJoinCursorDimensionSelectors(Blackhole blackhole)
   {
-    try (final CursorMaker maker = makeCursorMaker()) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder()) {
+      final Cursor cursor = cursorHolder.asCursor();
       int rowCount = processRowsDimensionSelectors(blackhole, cursor, projectionColumns);
       blackhole.consume(rowCount);
     }
   }
 
-  private CursorMaker makeCursorMaker()
+  private CursorHolder makeCursorHolder()
   {
-    return hashJoinSegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN);
+    return hashJoinSegment.asStorageAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN);
   }
 
 

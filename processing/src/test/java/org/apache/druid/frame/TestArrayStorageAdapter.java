@@ -27,7 +27,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
@@ -53,16 +53,16 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final CursorMaker delegate = super.asCursorMaker(spec);
-    return new CursorMaker()
+    final CursorHolder delegate = super.makeCursorHolder(spec);
+    return new CursorHolder()
     {
       @Nullable
       @Override
-      public Cursor makeCursor()
+      public Cursor asCursor()
       {
-        return new DecoratedCursor(delegate.makeCursor());
+        return new DecoratedCursor(delegate.asCursor());
       }
 
       @Override

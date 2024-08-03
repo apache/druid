@@ -21,5 +21,5 @@ package org.apache.druid.segment;
 
 public interface CursorMakerFactory
 {
-  CursorMaker asCursorMaker(CursorBuildSpec spec);
+  CursorHolder makeCursorHolder(CursorBuildSpec spec);
 }

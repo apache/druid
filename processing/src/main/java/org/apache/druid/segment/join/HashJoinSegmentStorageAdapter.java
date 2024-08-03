@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -216,7 +216,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder =
         CursorBuildSpec.builder()
@@ -233,15 +233,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
                                                             .setVirtualColumns(spec.getVirtualColumns())
                                                             .build();
-      return baseAdapter.asCursorMaker(newSpec);
+      return baseAdapter.makeCursorHolder(newSpec);
     }
 
-    return new CursorMaker()
+    return new CursorHolder()
     {
       final Closer joinablesCloser = Closer.create();
 
       @Override
-      public Cursor makeCursor()
+      public Cursor asCursor()
       {
         // Filter pre-analysis key implied by the call to "makeCursor". We need to sanity-check that it matches
         // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursor" call (it
@@ -287,8 +287,8 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
         cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
 
-        final Cursor baseCursor = joinablesCloser.register(baseAdapter.asCursorMaker(cursorBuildSpecBuilder.build()))
-                                                 .makeCursor();
+        final Cursor baseCursor = joinablesCloser.register(baseAdapter.makeCursorHolder(cursorBuildSpecBuilder.build()))
+                                                 .asCursor();
 
         if (baseCursor == null) {
           return null;
@@ -316,14 +316,14 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Override
       public boolean canVectorize()
       {
-        return CursorMaker.super.canVectorize();
+        return CursorHolder.super.canVectorize();
       }
 
       @Nullable
       @Override
-      public VectorCursor makeVectorCursor()
+      public VectorCursor asVectorCursor()
       {
-        return CursorMaker.super.makeVectorCursor();
+        return CursorHolder.super.asVectorCursor();
       }
     };
   }

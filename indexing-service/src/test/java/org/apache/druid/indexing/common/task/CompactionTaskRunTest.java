@@ -72,7 +72,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
@@ -1706,8 +1706,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -1838,8 +1838,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -2067,8 +2067,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
         while (!cursor.isDone()) {

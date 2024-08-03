@@ -83,7 +83,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -155,7 +155,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -206,7 +206,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -268,7 +268,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -334,7 +334,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -399,7 +399,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder()
                            .setFilter(originalFilter)
                            .setVirtualColumns(virtualColumns)
@@ -472,7 +472,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder()
                            .setFilter(originalFilter)
                            .setVirtualColumns(virtualColumns)
@@ -575,7 +575,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -697,7 +697,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -786,7 +786,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinFilterPreAnalysis
     );
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -831,7 +831,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -928,7 +928,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1013,7 +1013,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1082,7 +1082,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1135,7 +1135,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1187,7 +1187,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1238,7 +1238,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1290,7 +1290,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1342,7 +1342,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1401,7 +1401,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1457,7 +1457,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1507,7 +1507,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1556,7 +1556,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1609,7 +1609,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1661,7 +1661,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1712,7 +1712,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1774,7 +1774,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1840,7 +1840,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1916,7 +1916,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -1972,7 +1972,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -2047,7 +2047,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -2245,7 +2245,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     }
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -2374,7 +2374,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(
@@ -2449,7 +2449,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.asCursorMaker(
+        adapter.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).setGranularity(Granularities.ALL).build()
         ),
         ImmutableList.of(

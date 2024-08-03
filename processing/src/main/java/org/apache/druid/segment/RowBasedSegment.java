@@ -40,7 +40,7 @@ public class RowBasedSegment<RowType> implements Segment
    * Create a row-based segment.
    *
    * The provided "rowIterable" must be in time-order according to the provided {@link RowAdapter#timestampFunction()}.
-   * The cursor returned by {@link RowBasedStorageAdapter#asCursorMaker(CursorBuildSpec)} makes no attempt to verify
+   * The cursor returned by {@link RowBasedStorageAdapter#makeCursorHolder(CursorBuildSpec)} makes no attempt to verify
    * this, and callers will expect it.
    *
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of

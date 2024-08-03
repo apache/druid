@@ -26,7 +26,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.joda.time.DateTime;
@@ -35,13 +35,13 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Iterator;
 
-public class IncrementalIndexCursorMaker implements CursorMaker
+public class IncrementalIndexCursorHolder implements CursorHolder
 {
   private final IncrementalIndexStorageAdapter storageAdapter;
   private final IncrementalIndex index;
   private final CursorBuildSpec builder;
 
-  public IncrementalIndexCursorMaker(
+  public IncrementalIndexCursorHolder(
       IncrementalIndexStorageAdapter storageAdapter,
       IncrementalIndex index,
       CursorBuildSpec builder
@@ -53,7 +53,7 @@ public class IncrementalIndexCursorMaker implements CursorMaker
   }
 
   @Override
-  public Cursor makeCursor()
+  public Cursor asCursor()
   {
     if (index.isEmpty()) {
       return null;

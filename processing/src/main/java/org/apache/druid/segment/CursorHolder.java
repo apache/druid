@@ -25,25 +25,25 @@ import org.apache.druid.segment.vector.VectorCursor;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 
-public interface CursorMaker extends Closeable
+public interface CursorHolder extends Closeable
 {
   /**
    * Create a {@link Cursor} for use with non-vectorized query engines.
    */
   @Nullable
-  Cursor makeCursor();
+  Cursor asCursor();
 
   /**
    * Create a {@link VectorCursor} for use with vectorized query engines.
    */
   @Nullable
-  default VectorCursor makeVectorCursor()
+  default VectorCursor asVectorCursor()
   {
     throw new UOE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor' on %s.", this.getClass().getName());
   }
 
   /**
-   * Returns true if this {@link CursorMaker} supports calling {@link #makeVectorCursor()}.
+   * Returns true if this {@link CursorHolder} supports calling {@link #asVectorCursor()}.
    */
   default boolean canVectorize()
   {
@@ -59,7 +59,7 @@ public interface CursorMaker extends Closeable
     // nothing to close
   }
 
-  CursorMaker EMPTY = new CursorMaker()
+  CursorHolder EMPTY = new CursorHolder()
   {
     @Override
     public boolean canVectorize()
@@ -67,15 +67,16 @@ public interface CursorMaker extends Closeable
       return true;
     }
 
+    @Nullable
     @Override
-    public Cursor makeCursor()
+    public Cursor asCursor()
     {
       return null;
     }
 
     @Nullable
     @Override
-    public VectorCursor makeVectorCursor()
+    public VectorCursor asVectorCursor()
     {
       return null;
     }

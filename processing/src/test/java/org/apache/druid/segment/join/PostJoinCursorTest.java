@@ -26,7 +26,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -70,16 +70,16 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
       }
 
       @Override
-      public CursorMaker asCursorMaker(CursorBuildSpec spec)
+      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
-        final CursorMaker delegate = super.asCursorMaker(spec);
-        return new CursorMaker()
+        final CursorHolder delegate = super.makeCursorHolder(spec);
+        return new CursorHolder()
         {
           @Nullable
           @Override
-          public Cursor makeCursor()
+          public Cursor asCursor()
           {
-            return new CursorNoAdvance(delegate.makeCursor(), countDownLatch);
+            return new CursorNoAdvance(delegate.asCursor(), countDownLatch);
           }
 
           @Override
@@ -242,8 +242,8 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         joinFilterPreAnalysis
     );
 
-    try (final CursorMaker maker = hashJoinSegmentStorageAdapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinSegmentStorageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
 
       ((PostJoinCursor) cursor).setValueMatcher(new ValueMatcher()
       {

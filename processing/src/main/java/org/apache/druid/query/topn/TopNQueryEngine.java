@@ -29,7 +29,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -73,10 +73,10 @@ public class TopNQueryEngine
     final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
 
     final CursorBuildSpec buildSpec = query.asCursorBuildSpec(queryMetrics);
-    final CursorMaker maker = adapter.asCursorMaker(buildSpec);
-    final Cursor cursor = maker.makeCursor();
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec);
+    final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
-      return Sequences.withBaggage(Sequences.empty(), maker);
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
     final CursorGranularizer granularizer = CursorGranularizer.create(
         adapter,
@@ -86,7 +86,7 @@ public class TopNQueryEngine
         buildSpec.isDescending()
     );
     if (granularizer == null) {
-      return Sequences.withBaggage(Sequences.empty(), maker);
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
 
     if (queryMetrics != null) {
@@ -100,7 +100,7 @@ public class TopNQueryEngine
                    return mapFn.apply(cursor, granularizer, queryMetrics);
                  }),
                  Predicates.notNull()
-    ).withBaggage(maker);
+    ).withBaggage(cursorHolder);
   }
 
   /**

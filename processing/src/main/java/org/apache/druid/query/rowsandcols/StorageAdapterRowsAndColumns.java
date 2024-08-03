@@ -30,7 +30,7 @@ import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -95,8 +95,8 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   @Nonnull
   private static RowsAndColumns materialize(StorageAdapter as)
   {
-    try (final CursorMaker maker = as.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = as.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       if (cursor == null) {
         return new EmptyRowsAndColumns();

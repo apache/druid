@@ -31,9 +31,9 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 /**
- * Class that helps vectorized query engines handle "granularity" parameters. Nonvectorized engines have it handled
- * for them by the StorageAdapter. Vectorized engines don't, because they can get efficiency gains by pushing
- * granularity handling into the engine layer.
+ * Class that helps vectorized query engines handle "granularity" parameters.
+ *
+ * @see org.apache.druid.query.CursorGranularizer for non-vectorized query engines.
  */
 public class VectorCursorGranularizer
 {
@@ -71,7 +71,6 @@ public class VectorCursorGranularizer
     return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector);
   }
 
-  // And a cursor that has been made from it.
   private final VectorCursor cursor;
 
   // Iterable that iterates over time buckets.

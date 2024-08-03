@@ -34,7 +34,7 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorMakerFactory;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -79,10 +79,10 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final Closer closer = Closer.create();
-    return new CursorMaker()
+    return new CursorHolder()
     {
       @Override
       public boolean canVectorize()
@@ -93,7 +93,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
       }
 
       @Override
-      public Cursor makeCursor()
+      public Cursor asCursor()
       {
         final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
 
@@ -116,7 +116,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
 
       @Nullable
       @Override
-      public VectorCursor makeVectorCursor()
+      public VectorCursor asVectorCursor()
       {
         if (!canVectorize()) {
           throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");

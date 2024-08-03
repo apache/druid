@@ -30,7 +30,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.VectorGroupByEngineIterator;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
@@ -61,9 +61,9 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(factory)
         .build();
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
-    final CursorMaker maker = storageAdapter.asCursorMaker(query.asCursorBuildSpec(null));
+    final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(query.asCursorBuildSpec(null));
     final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
-    final VectorCursor cursor = maker.makeVectorCursor();
+    final VectorCursor cursor = cursorHolder.asVectorCursor();
     final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
         dimensionSpec ->
             ColumnProcessors.makeVectorProcessor(
@@ -94,6 +94,6 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
     };
     iterator.close();
     Mockito.verify(grouperCaptor.getValue()).close();
-    maker.close();
+    cursorHolder.close();
   }
 }

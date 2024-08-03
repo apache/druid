@@ -232,8 +232,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setInterval(UNNEST_STORAGE_ADAPTER.getInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = UNNEST_STORAGE_ADAPTER.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = UNNEST_STORAGE_ADAPTER.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
 
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
@@ -262,8 +262,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setInterval(UNNEST_STORAGE_ADAPTER1.getInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = UNNEST_STORAGE_ADAPTER1.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = UNNEST_STORAGE_ADAPTER1.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME1));
@@ -320,8 +320,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setInterval(unnestStorageAdapter.getInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = unnestStorageAdapter.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
       final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
       final Filter pushDownFilter = base.getPushDownFilter();
 
@@ -367,8 +367,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setInterval(unnestStorageAdapter.getInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = unnestStorageAdapter.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
       final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
       final Filter pushDownFilter = base.getPushDownFilter();
 
@@ -647,8 +647,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
 
-    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = unnestStorageAdapter.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
       final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
       final Filter pushDownFilter = base.getPushDownFilter();
 
@@ -690,8 +690,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
 
-    try (final CursorMaker maker = unnestStorageAdapter.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = unnestStorageAdapter.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
       final TestStorageAdapter base = (TestStorageAdapter) unnestStorageAdapter.getBaseAdapter();
       final Filter pushDownFilter = base.getPushDownFilter();
 
@@ -737,8 +737,8 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
                                                      .setInterval(withNullsStorageAdapter.getInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = withNullsStorageAdapter.asCursorMaker(buildSpec)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = withNullsStorageAdapter.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
       ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
@@ -832,9 +832,9 @@ class TestStorageAdapter extends IncrementalIndexStorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     this.pushDownFilter = spec.getFilter();
-    return super.asCursorMaker(spec);
+    return super.makeCursorHolder(spec);
   }
 }

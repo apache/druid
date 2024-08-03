@@ -35,19 +35,19 @@ import java.util.Optional;
 /**
  */
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnInspector
+public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorMakerFactory
 {
 
   /**
-   * Build a {@link CursorMaker} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
+   * Build a {@link CursorHolder} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
    * scanning segments and creating {@link ColumnSelectorFactory} and
    * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values at the cursor
    * position.
    */
   @Override
-  default CursorMaker asCursorMaker(CursorBuildSpec spec)
+  default CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return new CursorMaker()
+    return new CursorHolder()
     {
       @Override
       public boolean canVectorize()
@@ -56,7 +56,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
       }
 
       @Override
-      public Cursor makeCursor()
+      public Cursor asCursor()
       {
         return Iterables.getOnlyElement(
             StorageAdapter.this.makeCursors(
@@ -71,7 +71,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
       }
 
       @Override
-      public VectorCursor makeVectorCursor()
+      public VectorCursor asVectorCursor()
       {
         return StorageAdapter.this.makeVectorCursor(
             spec.getFilter(),

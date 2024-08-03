@@ -20,7 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
@@ -243,9 +243,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return new IncrementalIndexCursorMaker(this, index, spec);
+    return new IncrementalIndexCursorHolder(this, index, spec);
   }
 
   @Override

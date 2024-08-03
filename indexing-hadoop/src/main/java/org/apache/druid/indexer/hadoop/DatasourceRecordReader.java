@@ -45,7 +45,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -220,8 +220,8 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
                                                                    .setInterval(adapter.getInterval())
                                                                    .setGranularity(Granularities.ALL)
                                                                    .build();
-                  final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec);
-                  final Cursor cursor = maker.makeCursor();
+                  final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec);
+                  final Cursor cursor = cursorHolder.asCursor();
                   if (cursor == null) {
                     return Sequences.empty();
                   }
@@ -307,7 +307,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
                           };
                         }
                       }
-                  ).withBaggage(maker);
+                  ).withBaggage(cursorHolder);
                 }
               }
           )

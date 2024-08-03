@@ -89,7 +89,7 @@ public class UnnestStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final String input = getUnnestInputIfDirectAccess(unnestColumn);
     final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
@@ -105,14 +105,14 @@ public class UnnestStorageAdapter implements StorageAdapter
                        .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
                        .build();
 
-    return new CursorMaker()
+    return new CursorHolder()
     {
       final Closer closer = Closer.create();
       @Override
-      public Cursor makeCursor()
+      public Cursor asCursor()
       {
-        final CursorMaker maker = closer.register(baseAdapter.asCursorMaker(unnestBuildSpec));
-        final Cursor cursor = maker.makeCursor();
+        final CursorHolder cursorHolder = closer.register(baseAdapter.makeCursorHolder(unnestBuildSpec));
+        final Cursor cursor = cursorHolder.asCursor();
         if (cursor == null) {
           return null;
         }

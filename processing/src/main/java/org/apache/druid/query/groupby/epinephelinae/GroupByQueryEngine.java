@@ -51,7 +51,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
@@ -97,7 +97,7 @@ public class GroupByQueryEngine
   public static Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
-      final CursorMaker cursorMaker,
+      final CursorHolder cursorHolder,
       final CursorBuildSpec buildSpec,
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
@@ -105,7 +105,7 @@ public class GroupByQueryEngine
       final DruidProcessingConfig processingConfig
   )
   {
-    final Cursor cursor = cursorMaker.makeCursor();
+    final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return Sequences.empty();
     }

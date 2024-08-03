@@ -34,7 +34,7 @@ import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.ValueType;
@@ -167,8 +167,8 @@ public class ExpressionAggregationBenchmark
                                                      .setInterval(index.getDataInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
       final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
       bufferAggregator.init(aggregationBuffer, 0);

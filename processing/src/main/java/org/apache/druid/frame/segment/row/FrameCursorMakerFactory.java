@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorMakerFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
@@ -64,7 +64,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     if (!Granularities.ALL.equals(spec.getGranularity())) {
       // Not currently needed for the intended use cases of frame-based cursors.

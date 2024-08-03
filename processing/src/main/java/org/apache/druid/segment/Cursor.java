@@ -20,12 +20,31 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
 import org.joda.time.DateTime;
 
 /**
- * Cursor is an interface for iteration over a range of data points, used during query execution. {@link
- * QueryableIndexCursorMaker.QueryableIndexCursor} is an implementation for historical segments, and {@link
- * org.apache.druid.segment.incremental.IncrementalIndexCursorMaker.IncrementalIndexCursor} is an implementation for
+ * Cursor is an interface for iteration over a range of data points, used during query execution. Cursors are available
+ * from {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} via {@link CursorHolder#asCursor()}.
+ *
+ * A typical usage pattern might look something like this:
+ * <pre>
+ *   try (CursorHolder cursorHolder = adapter.makeCursorHolder(...)) {
+ *     Cursor cursor = cursorHolder.asCursor();
+ *     ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+ *     ColumnValueSelector timeSelector = factory.makeColumnValueSelector("__time");
+ *     // ...
+ *     while (!cursor.isDone()) {}
+ *       long time = timeSelector.getLong();
+ *       // do stuff with column values
+ *       // ...
+ *       cursor.advance();
+ *     }
+ *   }
+ * </pre>
+ *
+ * {@link QueryableIndexCursorHolder.QueryableIndexCursor} is an implementation for historical segments, and {@link
+ * IncrementalIndexCursorHolder.IncrementalIndexCursor} is an implementation for
  * {@link org.apache.druid.segment.incremental.IncrementalIndex}.
  *
  * Cursor is conceptually similar to {@link TimeAndDimsPointer}, but the latter is used for historical segment creation
@@ -44,7 +63,7 @@ public interface Cursor
 
   /**
    * Advance to the next row in the cursor, checking if thread has been interrupted after advancing and possibly
-   * throwing {@link QueryInterruptedException} if so
+   * throwing {@link QueryInterruptedException} if so.
    */
   void advance();
 
@@ -54,17 +73,23 @@ public interface Cursor
   void advanceUninterruptibly();
 
   /**
-   * Check if there are any additional rows in the cursor
+   * Check if the current cursor position is valid. If true, any selectors created via
+   * {@link #getColumnSelectorFactory()} will no longer produce values.
    */
   boolean isDone();
 
   /**
-   * Check if there are any additional rows in the cursor, or if the thread has been interrupted
+   * Check if the current cursor position is valid, or if the thread has been interrupted.
+   *
+   * @see #isDone()
    */
   boolean isDoneOrInterrupted();
 
   /**
-   * Mark a position on the cursor which can recalled with {@link #resetToMark()}
+   * Mark a position on the cursor which can recalled with {@link #resetToMark()}. This method is used by
+   * {@link org.apache.druid.query.topn.TopNQueryEngine} when computing results in query granularity buckets. The
+   * {@link DateTime} parameter supplied to this method corresponds to the start of the bucket interval. Cursor
+   * implementations may use this if useful, or ignore it and mark the current offset if not.
    */
   void mark(DateTime mark);
 
@@ -74,7 +99,7 @@ public interface Cursor
   void resetToMark();
 
   /**
-   * Reset to start of cursor
+   * Reset to start of cursor and discard mark.
    */
   void reset();
 }

@@ -36,7 +36,7 @@ import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSe
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -240,8 +240,8 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
                                                      .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(buildSpec)) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(buildSpec)) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       Assert.assertNotNull(cursor);
 
       ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(storageAdapter, "v");
@@ -314,7 +314,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
       }
 
 
-      final Cursor nonVectorized = maker.makeCursor();
+      final Cursor nonVectorized = cursorHolder.asCursor();
       Assert.assertNotNull(nonVectorized);
       final ColumnValueSelector nonSelector = nonVectorized.getColumnSelectorFactory()
                                                            .makeColumnValueSelector("v");

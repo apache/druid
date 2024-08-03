@@ -33,7 +33,7 @@ import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -156,9 +156,11 @@ public class ExpressionVectorSelectorBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
-    final CursorMaker cursorMaker = closer.register(new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec));
+    final CursorHolder cursorHolder = closer.register(
+        new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)
+    );
     if (vectorize) {
-      VectorCursor cursor = cursorMaker.makeVectorCursor();
+      VectorCursor cursor = cursorHolder.asVectorCursor();
       if (outputType.isNumeric()) {
         VectorValueSelector selector = cursor.getColumnSelectorFactory().makeValueSelector("v");
         if (outputType.is(ExprType.DOUBLE)) {
@@ -176,7 +178,7 @@ public class ExpressionVectorSelectorBenchmark
         }
       }
     } else {
-      final Cursor cursor = cursorMaker.makeCursor();
+      final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       int rowCount = 0;
       if (outputType.isNumeric()) {

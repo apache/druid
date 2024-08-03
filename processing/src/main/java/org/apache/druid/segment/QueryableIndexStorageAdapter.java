@@ -171,15 +171,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final Interval actualInterval = computeCursorInterval(spec.getGranularity(), spec.getInterval());
 
     if (actualInterval == null) {
-      return CursorMaker.EMPTY;
+      return CursorHolder.EMPTY;
     }
 
-    return new QueryableIndexCursorMaker(
+    return new QueryableIndexCursorHolder(
         index,
         CursorBuildSpec.builder(spec).setInterval(actualInterval).build()
     );

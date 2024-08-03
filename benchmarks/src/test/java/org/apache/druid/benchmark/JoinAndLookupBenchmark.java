@@ -35,7 +35,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
@@ -370,8 +370,8 @@ public class JoinAndLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void baseSegment(Blackhole blackhole)
   {
-    try (final CursorMaker maker = baseSegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = baseSegment.asStorageAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "countryIsoCode"));
     }
   }
@@ -386,8 +386,8 @@ public class JoinAndLookupBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
-    try (final CursorMaker maker = baseSegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = baseSegment.asStorageAdapter().makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "countryIsoCode"));
     }
   }
@@ -397,8 +397,9 @@ public class JoinAndLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void joinLookupStringKey(Blackhole blackhole)
   {
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.v"));
     }
   }
@@ -413,8 +414,9 @@ public class JoinAndLookupBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.v"));
     }
   }
@@ -424,8 +426,9 @@ public class JoinAndLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void joinLookupLongKey(Blackhole blackhole)
   {
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.v"));
     }
   }
@@ -440,8 +443,9 @@ public class JoinAndLookupBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.v"));
     }
   }
@@ -451,8 +455,9 @@ public class JoinAndLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void joinIndexedTableLongKey(Blackhole blackhole)
   {
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.countryName"));
     }
   }
@@ -467,8 +472,9 @@ public class JoinAndLookupBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.countryName"));
     }
   }
@@ -478,8 +484,9 @@ public class JoinAndLookupBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void joinIndexedTableStringKey(Blackhole blackhole)
   {
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.countryName"));
     }
   }
@@ -494,8 +501,9 @@ public class JoinAndLookupBenchmark
                                                      .setGranularity(Granularities.ALL)
                                                      .setFilter(filter)
                                                      .build();
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, "c.countryName"));
     }
   }
@@ -509,8 +517,9 @@ public class JoinAndLookupBenchmark
                                                      .setVirtualColumns(lookupVirtualColumns)
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, LOOKUP_COUNTRY_CODE_TO_NAME));
     }
   }
@@ -526,8 +535,9 @@ public class JoinAndLookupBenchmark
                                                      .setFilter(filter)
                                                      .setVirtualColumns(lookupVirtualColumns)
                                                      .build();
-    try (final CursorMaker maker = hashJoinLookupStringKeySegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = hashJoinLookupStringKeySegment.asStorageAdapter()
+                                                                         .makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, LOOKUP_COUNTRY_CODE_TO_NAME));
     }
   }
@@ -541,8 +551,8 @@ public class JoinAndLookupBenchmark
                                                      .setVirtualColumns(lookupVirtualColumns)
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = baseSegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = baseSegment.asStorageAdapter().makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, LOOKUP_COUNTRY_NUMBER_TO_NAME));
     }
   }
@@ -558,8 +568,8 @@ public class JoinAndLookupBenchmark
                                                      .setVirtualColumns(lookupVirtualColumns)
                                                      .setFilter(filter)
                                                      .build();
-    try (final CursorMaker maker = baseSegment.asStorageAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = baseSegment.asStorageAdapter().makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       blackhole.consume(getLastValue(cursor, LOOKUP_COUNTRY_NUMBER_TO_NAME));
     }
   }

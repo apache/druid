@@ -26,7 +26,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
@@ -57,8 +57,8 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testRead()
   {
-    try (final CursorMaker maker = makeCursor()) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder()) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final Supplier<Object[]> qualitySupplier = ColumnProcessors.makeVectorProcessor(
           "quality",
           ToObjectVectorColumnProcessorFactory.INSTANCE,
@@ -171,7 +171,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
     Assert.assertThat(sketch, CoreMatchers.instanceOf(HyperLogLogCollector.class));
   }
 
-  private CursorMaker makeCursor()
+  private CursorHolder makeCursorHolder()
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setQueryContext(
@@ -180,13 +180,13 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
                                                          )
                                                      )
                                                      .build();
-    return adapter.asCursorMaker(buildSpec);
+    return adapter.makeCursorHolder(buildSpec);
   }
 
   private List<Object> readColumn(final String column, final int limit)
   {
-    try (final CursorMaker maker = makeCursor()) {
-      final VectorCursor cursor = maker.makeVectorCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder()) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final Supplier<Object[]> supplier = ColumnProcessors.makeVectorProcessor(
           column,
           ToObjectVectorColumnProcessorFactory.INSTANCE,

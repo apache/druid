@@ -26,7 +26,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
@@ -75,8 +75,8 @@ public class CursorOnlyStrategy extends SearchStrategy
     {
       final StorageAdapter adapter = segment.asStorageAdapter();
       final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
-      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
 
         final Object2IntRBTreeMap<SearchHit> retVal = new Object2IntRBTreeMap<>(query.getSort().getComparator());
         retVal.defaultReturnValue(0);

@@ -70,7 +70,7 @@ public class QueryableIndexStorageAdapterTest
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
       final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
       if (vectorize) {
-        final VectorCursor cursor = closer.register(adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)).makeVectorCursor();
+        final VectorCursor cursor = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)).asVectorCursor();
 
         final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -81,8 +81,8 @@ public class QueryableIndexStorageAdapterTest
         partialNullSelector =
             columnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("partial_null_column"));
       } else {
-        final CursorMaker maker = closer.register(adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN));
-        final Cursor cursor = maker.makeCursor();
+        final CursorHolder cursorHolder = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+        final Cursor cursor = cursorHolder.asCursor();
         final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
         qualitySelector =
@@ -226,8 +226,8 @@ public class QueryableIndexStorageAdapterTest
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
       final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-      final CursorMaker maker = closer.register(adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN));
-      cursor = maker.makeCursor();
+      final CursorHolder cursorHolder = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+      cursor = cursorHolder.asCursor();
       columnSelectorFactory = cursor.getColumnSelectorFactory();
     }
 

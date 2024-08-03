@@ -47,7 +47,7 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -233,8 +233,8 @@ public class FilterPartitionBenchmark
   public void stringRead(Blackhole blackhole)
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, null)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, null)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -245,8 +245,8 @@ public class FilterPartitionBenchmark
   public void longRead(Blackhole blackhole)
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, null)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, null)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
   }
@@ -257,8 +257,8 @@ public class FilterPartitionBenchmark
   public void timeFilterNone(Blackhole blackhole)
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (CursorMaker maker = makeCursorMaker(sa, timeFilterNone)) {
-      final Cursor cursor = maker.makeCursor();
+    try (CursorHolder cursorHolder = makeCursorHolder(sa, timeFilterNone)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
   }
@@ -269,8 +269,8 @@ public class FilterPartitionBenchmark
   public void timeFilterHalf(Blackhole blackhole)
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, timeFilterHalf)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, timeFilterHalf)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
   }
@@ -281,8 +281,8 @@ public class FilterPartitionBenchmark
   public void timeFilterAll(Blackhole blackhole)
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, timeFilterAll)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, timeFilterAll)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
   }
@@ -295,8 +295,8 @@ public class FilterPartitionBenchmark
     Filter filter = new SelectorFilter("dimSequential", "199");
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, filter)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -309,8 +309,8 @@ public class FilterPartitionBenchmark
     Filter filter = new NoBitmapSelectorFilter("dimSequential", "199");
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, filter)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -323,8 +323,8 @@ public class FilterPartitionBenchmark
     Filter filter = new SelectorDimFilter("dimSequential", "super-199", JS_EXTRACTION_FN).toFilter();
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, filter)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -337,8 +337,8 @@ public class FilterPartitionBenchmark
     Filter filter = new NoBitmapSelectorDimFilter("dimSequential", "super-199", JS_EXTRACTION_FN).toFilter();
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, filter)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -356,8 +356,8 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, andFilter)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, andFilter)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -372,8 +372,8 @@ public class FilterPartitionBenchmark
     Filter orFilter = new OrFilter(Arrays.asList(filter, filter2));
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, orFilter)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, orFilter)) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -388,8 +388,8 @@ public class FilterPartitionBenchmark
     Filter orFilter = new OrFilter(Arrays.asList(filter, filter2));
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, Filters.toCnf(orFilter))) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, Filters.toCnf(orFilter))) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -427,8 +427,8 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, dimFilter3.toFilter())) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, dimFilter3.toFilter())) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
@@ -466,15 +466,15 @@ public class FilterPartitionBenchmark
     );
 
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorMaker maker = makeCursorMaker(sa, Filters.toCnf(dimFilter3.toFilter()))) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = makeCursorHolder(sa, Filters.toCnf(dimFilter3.toFilter()))) {
+      final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
 
-  private CursorMaker makeCursorMaker(StorageAdapter sa, Filter filter)
+  private CursorHolder makeCursorHolder(StorageAdapter sa, Filter filter)
   {
-    return sa.asCursorMaker(
+    return sa.makeCursorHolder(
         CursorBuildSpec.builder()
                        .setFilter(filter)
                        .setInterval(schemaInfo.getDataInterval())

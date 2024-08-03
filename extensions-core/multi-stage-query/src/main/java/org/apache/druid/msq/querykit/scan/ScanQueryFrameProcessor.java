@@ -63,7 +63,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -252,12 +252,13 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         );
       }
 
-      final CursorMaker maker = closer.register(adapter.asCursorMaker(query.asCursorBuildSpec(null)));
-      final Cursor nextCursor = maker.makeCursor();
+      final CursorHolder cursorHolder = closer.register(
+          adapter.makeCursorHolder(query.asCursorBuildSpec(null))
+      );
+      final Cursor nextCursor = cursorHolder.asCursor();
 
       if (nextCursor == null) {
         // No cursors!
-        maker.close();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get());
@@ -296,12 +297,13 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
           );
         }
 
-        final CursorMaker maker = closer.register(adapter.asCursorMaker(query.asCursorBuildSpec(null)));
-        final Cursor nextCursor = maker.makeCursor();
+        final CursorHolder cursorHolder = closer.register(
+            adapter.makeCursorHolder(query.asCursorBuildSpec(null))
+        );
+        final Cursor nextCursor = cursorHolder.asCursor();
 
         if (nextCursor == null) {
           // no cursor
-          maker.close();
           return ReturnOrAwait.returnObject(Unit.instance());
         }
         final long rowsFlushed = setNextCursor(nextCursor, frameSegment);

@@ -32,7 +32,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.LongColumnSelector;
@@ -350,8 +350,8 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
                                                      .setVirtualColumns(virtualColumns)
                                                      .setGranularity(Granularities.DAY)
                                                      .build();
-    final CursorMaker maker = closer.register(storageAdapter.asCursorMaker(buildSpec));
-    final Cursor cursor = maker.makeCursor();
+    final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
+    final Cursor cursor = cursorHolder.asCursor();
     return cursor.getColumnSelectorFactory();
   }
 
@@ -373,7 +373,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, segments.size());
     StorageAdapter storageAdapter = segments.get(0).asStorageAdapter();
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder().setVirtualColumns(virtualColumns).build();
-    VectorCursor cursor = closer.register(storageAdapter.asCursorMaker(buildSpec)).makeVectorCursor();
+    VectorCursor cursor = closer.register(storageAdapter.makeCursorHolder(buildSpec)).asVectorCursor();
     return cursor.getColumnSelectorFactory();
   }
 }

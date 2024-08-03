@@ -44,7 +44,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -142,8 +142,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
                                                        .setInterval(adapter.getInterval())
                                                        .setGranularity(Granularities.ALL)
                                                        .build();
-      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-        Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        Cursor cursor = cursorHolder.asCursor();
 
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -211,8 +211,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
                                                        .setInterval(adapter.getInterval())
                                                        .setGranularity(Granularities.ALL)
                                                        .build();
-      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-        Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
         // identifier, uses dimension selector supplier supplier, no null coercion
@@ -292,8 +292,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
                                                        .setInterval(adapter.getInterval())
                                                        .setGranularity(Granularities.ALL)
                                                        .build();
-      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-        Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -341,8 +341,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
                                                        .setInterval(adapter.getInterval())
                                                        .setGranularity(Granularities.ALL)
                                                        .build();
-      try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-        Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -660,8 +660,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     );
 
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
       DimensionSelector xExprSelector = ExpressionSelectors.makeDimensionSelector(
           cursor.getColumnSelectorFactory(),
           Parser.parse("concat(x, 'foo')", ExprMacroTable.nil()),

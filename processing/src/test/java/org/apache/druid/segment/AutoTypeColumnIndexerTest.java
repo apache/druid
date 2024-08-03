@@ -148,8 +148,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, STRING_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_COL, STRING_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -201,8 +201,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, LONG_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(LONG_COL, LONG_COL, ColumnType.LONG);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -284,8 +284,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, DOUBLE_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(DOUBLE_COL, DOUBLE_COL, ColumnType.DOUBLE);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -367,8 +367,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, STRING_ARRAY_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(
           STRING_ARRAY_COL,
           STRING_ARRAY_COL,
@@ -415,8 +415,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, VARIANT_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(VARIANT_COL, VARIANT_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -459,8 +459,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -518,8 +518,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
 
     IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorMaker maker = storageAdapter.asCursorMaker(CursorBuildSpec.builder().build())) {
-      Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.builder().build())) {
+      Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

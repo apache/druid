@@ -37,7 +37,7 @@ import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeStrategy;
@@ -256,8 +256,8 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       if (interval != null) {
         builder.setInterval(interval);
       }
-      try (final CursorMaker maker = seggy.asStorageAdapter().asCursorMaker(builder.build())) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = seggy.asStorageAdapter().makeCursorHolder(builder.build())) {
+        final Cursor cursor = cursorHolder.asCursor();
 
         vals = new ArrayList<>();
         final ColumnValueSelector idSupplier = cursor.getColumnSelectorFactory().makeColumnValueSelector("arrayIndex");

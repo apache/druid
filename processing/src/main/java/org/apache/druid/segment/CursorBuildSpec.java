@@ -141,10 +141,10 @@ public class CursorBuildSpec
     private Granularity granularity = Granularities.NONE;
 
     @Nullable
-    private List<String> groupingColumns = null;
+    private List<String> groupingColumns;
     private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
     @Nullable
-    private List<AggregatorFactory> aggregators = null;
+    private List<AggregatorFactory> aggregators;
     private boolean descending = false;
 
     private QueryContext queryContext = QueryContext.empty();
@@ -153,7 +153,7 @@ public class CursorBuildSpec
 
     private CursorBuildSpecBuilder()
     {
-      //
+      // initialize with defaults
     }
 
     private CursorBuildSpecBuilder(CursorBuildSpec buildSpec)

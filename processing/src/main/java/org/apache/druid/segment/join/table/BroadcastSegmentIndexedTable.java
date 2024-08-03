@@ -30,7 +30,7 @@ import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
@@ -121,8 +121,8 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
                                                      )
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = adapter.asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {
         this.keyColumnsIndexes = Collections.emptyList();
         return;

@@ -50,7 +50,7 @@ import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -131,10 +131,10 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
                                                            .setGranularity(Granularities.ALL)
                                                            .build();
 
-    final CursorMaker maker = storageAdapter.getAdapter().asCursorMaker(cursorBuildSpec);
-    final Cursor cursor = maker.makeCursor();
+    final CursorHolder cursorHolder = storageAdapter.getAdapter().makeCursorHolder(cursorBuildSpec);
+    final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
-      return CloseableIterators.wrap(Collections.emptyIterator(), maker);
+      return CloseableIterators.wrap(Collections.emptyIterator(), cursorHolder);
     }
 
     // Retain order of columns from the original segments. Useful for preserving dimension order if we're in
@@ -146,7 +146,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         )
     );
 
-    final Sequence<Map<String, Object>> sequence = cursorToSequence(cursor, columnsToRead).withBaggage(maker);
+    final Sequence<Map<String, Object>> sequence = cursorToSequence(cursor, columnsToRead).withBaggage(cursorHolder);
 
     return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
   }

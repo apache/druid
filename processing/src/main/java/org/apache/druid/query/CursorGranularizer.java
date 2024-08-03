@@ -33,6 +33,11 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
+/**
+ * Class that helps non-vectorized query engines handle "granularity" parameters. Given a set of intervals
+ *
+ * @see org.apache.druid.query.vector.VectorCursorGranularizer for vectorized query engines.
+ */
 public class CursorGranularizer
 {
   @Nullable
@@ -73,13 +78,12 @@ public class CursorGranularizer
     return new CursorGranularizer(cursor, bucketIterable, timeSelector, descending);
   }
 
-  // And a cursor that has been made from it.
   private final Cursor cursor;
 
   // Iterable that iterates over time buckets.
   private final Iterable<Interval> bucketIterable;
 
-  // Vector selector for the "__time" column.
+  // Selector for the "__time" column.
   @Nullable
   private final ColumnValueSelector timeSelector;
   private final boolean descending;

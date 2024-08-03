@@ -20,22 +20,20 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.QueryableIndexCursorMaker;
 
 /**
- * Vectorized cursor used during query execution. VectorCursors are returned by
- * {@link org.apache.druid.segment.StorageAdapter#asCursorMaker(CursorBuildSpec)} and are created by
- * {@link QueryableIndexCursorMaker#makeVectorCursor()}.
+ * Vectorized cursor used during query execution. VectorCursors are available from
+ * {@link org.apache.druid.segment.CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} via
+ * {@link org.apache.druid.segment.CursorHolder#asVectorCursor()}.
  *
- * Unlike the non-vectorized version, VectorCursor does not have a getTime() method. This is because we are trying to
- * avoid creating needlessly-small vectors when the time granularity is very fine. See
- * {@link org.apache.druid.query.vector.VectorCursorGranularizer} for a helper that makes it easier for query engines to
- * do their own time granularization.
+ * See {@link org.apache.druid.query.vector.VectorCursorGranularizer} for a helper that makes it easier for query
+ * engines to do time granularization.
  *
  * An example of how to use the methods in this class:
  *
  * <pre>
- *   try (VectorCursor cursor = adapter.makeVectorCursor(...)) {
+ *   try (CursorHolder cursorHolder = adapter.makeCursorHolder(...)) {
+ *     VectorCursor cursor = cursorHolder.asVectorCursor();
  *     // ProcessorClass is some vectorized processor class.
  *     ProcessorClass o = makeProcessor(cursor.getColumnSelectorFactory());
  *     for (; !cursor.isDone(); cursor.advance()) {

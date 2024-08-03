@@ -61,9 +61,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class QueryableIndexCursorMaker implements CursorMaker
+public class QueryableIndexCursorHolder implements CursorHolder
 {
-  private static final Logger log = new Logger(QueryableIndexCursorMaker.class);
+  private static final Logger log = new Logger(QueryableIndexCursorHolder.class);
   private final QueryableIndex index;
   private final Interval interval;
   @SuppressWarnings("unused")
@@ -81,7 +81,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
   private final int vectorSize;
   private final Supplier<CursorResources> resourcesSupplier;
 
-  public QueryableIndexCursorMaker(
+  public QueryableIndexCursorHolder(
       QueryableIndex index,
       CursorBuildSpec cursorBuildSpec
   )
@@ -96,7 +96,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
     this.queryContext = cursorBuildSpec.getQueryContext();
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();
-    this.resourcesSupplier = Suppliers.memoize(CursorResources::new);
+    this.resourcesSupplier = Suppliers.memoize(() -> new CursorResources(index, virtualColumns, filter, metrics));
   }
 
   @Override
@@ -129,7 +129,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
   }
 
   @Override
-  public Cursor makeCursor()
+  public Cursor asCursor()
   {
     if (metrics != null) {
       metrics.vectorized(false);
@@ -209,7 +209,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
 
   @Nullable
   @Override
-  public VectorCursor makeVectorCursor()
+  public VectorCursor asVectorCursor()
   {
     final CursorResources resources = resourcesSupplier.get();
     final FilterBundle filterBundle = resources.filterBundle;
@@ -285,51 +285,8 @@ public class QueryableIndexCursorMaker implements CursorMaker
     CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
   }
 
-  @Nullable
-  private FilterBundle makeFilterBundle(
-      ColumnSelectorColumnIndexSelector bitmapIndexSelector,
-      int numRows
-  )
-  {
-    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
-    final BitmapResultFactory<?> bitmapResultFactory;
-    if (metrics != null) {
-      bitmapResultFactory = metrics.makeBitmapResultFactory(bitmapFactory);
-      metrics.reportSegmentRows(numRows);
-    } else {
-      bitmapResultFactory = new DefaultBitmapResultFactory(bitmapFactory);
-    }
-    if (filter == null) {
-      return null;
-    }
-    final long bitmapConstructionStartNs = System.nanoTime();
-    final FilterBundle filterBundle = filter.makeFilterBundle(
-        bitmapIndexSelector,
-        bitmapResultFactory,
-        numRows,
-        numRows,
-        false
-    );
-    if (metrics != null) {
-      final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
-      metrics.reportBitmapConstructionTime(buildTime);
-      final FilterBundle.BundleInfo info = filterBundle.getInfo();
-      metrics.filterBundle(info);
-      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
-      if (filterBundle.getIndex() != null) {
-        metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
-      } else {
-        metrics.reportPreFilteredRows(0);
-      }
-    } else if (log.isDebugEnabled()) {
-      final FilterBundle.BundleInfo info = filterBundle.getInfo();
-      final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
-      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
-    }
-    return filterBundle;
-  }
 
-  VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+  private VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
       ColumnCache columnCache,
       VectorOffset baseOffset
   )
@@ -477,7 +434,7 @@ public class QueryableIndexCursorMaker implements CursorMaker
       cursorOffset.increment();
       // Must call BaseQuery.checkInterrupted() after cursorOffset.increment(), not before, because
       // FilteredOffset.increment() is a potentially long, not an "instant" operation (unlike to all other subclasses
-      // of Offset) and it returns early on interruption, leaving itself in an illegal  We should not let
+      // of Offset) and it returns early on interruption, leaving itself in an illegal state.  We should not let
       // aggregators, etc. access this illegal state and throw a QueryInterruptedException by calling
       // BaseQuery.checkInterrupted().
       BaseQuery.checkInterrupted();
@@ -519,7 +476,6 @@ public class QueryableIndexCursorMaker implements CursorMaker
       cursorOffset.reset();
     }
   }
-
 
   public abstract static class TimestampCheckingOffset extends Offset
   {
@@ -675,20 +631,31 @@ public class QueryableIndexCursorMaker implements CursorMaker
     }
   }
 
-  private final class CursorResources implements Closeable
+  private static final class CursorResources implements Closeable
   {
     private final Closer closer;
     private final long minDataTimestamp;
     private final long maxDataTimestamp;
     private final int numRows;
     @Nullable
+    private final Filter filter;
+    @Nullable
     private final FilterBundle filterBundle;
     private final NumericColumn timestamps;
     private final ColumnCache columnCache;
+    @Nullable
+    private final QueryMetrics<? extends Query<?>> metrics;
 
-    private CursorResources()
+    private CursorResources(
+        QueryableIndex index,
+        VirtualColumns virtualColumns,
+        @Nullable Filter filter,
+        @Nullable QueryMetrics<? extends Query<?>> metrics
+    )
     {
       this.closer = Closer.create();
+      this.filter = filter;
+      this.metrics = metrics;
       this.columnCache = new ColumnCache(index, closer);
       final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
@@ -711,6 +678,50 @@ public class QueryableIndexCursorMaker implements CursorMaker
     public void close() throws IOException
     {
       closer.close();
+    }
+
+    @Nullable
+    private FilterBundle makeFilterBundle(
+        ColumnSelectorColumnIndexSelector bitmapIndexSelector,
+        int numRows
+    )
+    {
+      final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
+      final BitmapResultFactory<?> bitmapResultFactory;
+      if (metrics != null) {
+        bitmapResultFactory =metrics.makeBitmapResultFactory(bitmapFactory);
+        metrics.reportSegmentRows(numRows);
+      } else {
+        bitmapResultFactory = new DefaultBitmapResultFactory(bitmapFactory);
+      }
+      if (filter == null) {
+        return null;
+      }
+      final long bitmapConstructionStartNs = System.nanoTime();
+      final FilterBundle filterBundle = filter.makeFilterBundle(
+          bitmapIndexSelector,
+          bitmapResultFactory,
+          numRows,
+          numRows,
+          false
+      );
+      if (metrics != null) {
+        final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
+        metrics.reportBitmapConstructionTime(buildTime);
+        final FilterBundle.BundleInfo info = filterBundle.getInfo();
+        metrics.filterBundle(info);
+        log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
+        if (filterBundle.getIndex() != null) {
+          metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
+        } else {
+          metrics.reportPreFilteredRows(0);
+        }
+      } else if (log.isDebugEnabled()) {
+        final FilterBundle.BundleInfo info = filterBundle.getInfo();
+        final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
+        log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
+      }
+      return filterBundle;
     }
   }
 }

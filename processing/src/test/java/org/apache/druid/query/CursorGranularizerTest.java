@@ -30,7 +30,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
@@ -152,8 +152,8 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   @Test
   public void testGranularizeFullScan()
   {
-    try (CursorMaker maker = adapter.asCursorMaker(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = maker.makeCursor();
+    try (CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
       CursorGranularizer granularizer = CursorGranularizer.create(
           adapter,
           cursor,
@@ -206,8 +206,8 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                                                       .setGranularity(Granularities.ALL)
                                                       .isDescending(true)
                                                       .build();
-    try (CursorMaker maker = adapter.asCursorMaker(descending)) {
-      final Cursor cursor = maker.makeCursor();
+    try (CursorHolder cursorHolder = adapter.makeCursorHolder(descending)) {
+      final Cursor cursor = cursorHolder.asCursor();
       CursorGranularizer granularizer = CursorGranularizer.create(
           adapter,
           cursor,

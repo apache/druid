@@ -68,7 +68,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
@@ -544,8 +544,8 @@ public class IndexTaskTest extends IngestionTestBase
                                                      .setGranularity(Granularities.ALL)
                                                      .setInterval(segment.getInterval())
                                                      .build();
-    try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       final List<Map<String, Object>> transforms = new ArrayList<>();
 
       final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
@@ -778,8 +778,8 @@ public class IndexTaskTest extends IngestionTestBase
                                                        .setGranularity(Granularities.ALL)
                                                        .setInterval(segment.getInterval())
                                                        .build();
-      try (final CursorMaker maker = adapter.getAdapter().asCursorMaker(buildSpec)) {
-        final Cursor cursor = maker.makeCursor();
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
         final List<Integer> hashes = new ArrayList<>();
         final DimensionSelector selector = cursor.getColumnSelectorFactory()
                                                  .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));

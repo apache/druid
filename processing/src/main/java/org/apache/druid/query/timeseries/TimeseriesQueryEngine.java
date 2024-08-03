@@ -39,7 +39,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -95,27 +95,27 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
 
 
-    final CursorMaker cursorMaker = adapter.asCursorMaker(query.asCursorBuildSpec(timeseriesQueryMetrics));
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(query.asCursorBuildSpec(timeseriesQueryMetrics));
     final Sequence<Result<TimeseriesResultValue>> result;
 
-    if (query.context().getVectorize().shouldVectorize(cursorMaker.canVectorize(), cursorMaker::close)) {
-      result = processVectorized(query, adapter, cursorMaker, interval, gran);
+    if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize(), cursorHolder::close)) {
+      result = processVectorized(query, adapter, cursorHolder, interval, gran);
     } else {
-      result = processNonVectorized(query, adapter, cursorMaker, interval, gran);
+      result = processNonVectorized(query, adapter, cursorHolder, interval, gran);
     }
 
     final int limit = query.getLimit();
     if (limit < Integer.MAX_VALUE) {
-      return result.limit(limit).withBaggage(cursorMaker);
+      return result.limit(limit).withBaggage(cursorHolder);
     } else {
-      return result.withBaggage(cursorMaker);
+      return result.withBaggage(cursorHolder);
     }
   }
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
       final StorageAdapter adapter,
-      final CursorMaker cursorMaker,
+      final CursorHolder cursorHolder,
       final Interval queryInterval,
       final Granularity gran
   )
@@ -123,7 +123,7 @@ public class TimeseriesQueryEngine
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
 
-    final VectorCursor cursor = cursorMaker.makeVectorCursor();
+    final VectorCursor cursor = cursorHolder.asVectorCursor();
 
     if (cursor == null) {
       return Sequences.empty();
@@ -231,14 +231,14 @@ public class TimeseriesQueryEngine
   private Sequence<Result<TimeseriesResultValue>> processNonVectorized(
       final TimeseriesQuery query,
       final StorageAdapter adapter,
-      final CursorMaker cursorMaker,
+      final CursorHolder cursorHolder,
       final Interval queryInterval,
       final Granularity gran
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-    final Cursor cursor = cursorMaker.makeCursor();
+    final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return Sequences.empty();
     }

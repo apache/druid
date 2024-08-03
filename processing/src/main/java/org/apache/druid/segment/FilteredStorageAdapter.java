@@ -42,7 +42,7 @@ public class FilteredStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public CursorMaker asCursorMaker(CursorBuildSpec spec)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
     final Filter newFilter;
@@ -56,7 +56,7 @@ public class FilteredStorageAdapter implements StorageAdapter
       newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filterOnDataSource.toFilter()));
     }
     buildSpecBuilder.setFilter(newFilter);
-    return baseStorageAdapter.asCursorMaker(buildSpecBuilder.build());
+    return baseStorageAdapter.makeCursorHolder(buildSpecBuilder.build());
   }
 
   @Override

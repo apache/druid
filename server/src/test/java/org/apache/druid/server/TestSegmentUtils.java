@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -329,13 +329,13 @@ public class TestSegmentUtils
         }
 
         @Override
-        public CursorMaker asCursorMaker(CursorBuildSpec spec)
+        public CursorHolder makeCursorHolder(CursorBuildSpec spec)
         {
-          return new CursorMaker()
+          return new CursorHolder()
           {
             @Nullable
             @Override
-            public Cursor makeCursor()
+            public Cursor asCursor()
             {
               return null;
             }

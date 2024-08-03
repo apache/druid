@@ -33,7 +33,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorMaker;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.ValueType;
@@ -150,8 +150,8 @@ public class ExpressionFilterBenchmark
                                                      .setInterval(index.getDataInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
 
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("x");
@@ -170,8 +170,8 @@ public class ExpressionFilterBenchmark
                                                      .setInterval(index.getDataInterval())
                                                      .setGranularity(Granularities.ALL)
                                                      .build();
-    try (final CursorMaker maker = new QueryableIndexStorageAdapter(index).asCursorMaker(buildSpec)) {
-      final Cursor cursor = maker.makeCursor();
+    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("x");
       while (!cursor.isDone()) {
         blackhole.consume(selector.getObject());

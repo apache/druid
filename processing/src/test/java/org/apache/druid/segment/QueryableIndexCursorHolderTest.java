@@ -25,7 +25,7 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class QueryableIndexCursorMakerTest
+public class QueryableIndexCursorHolderTest
 {
   @Test
   public void testTimeSearch()
@@ -66,52 +66,52 @@ public class QueryableIndexCursorMakerTest
 
     Assert.assertEquals(
         0,
-        QueryableIndexCursorMaker.timeSearch(column, 0, 0, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 0, 0, values.length)
     );
 
     Assert.assertEquals(
         2,
-        QueryableIndexCursorMaker.timeSearch(column, 0, 2, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 0, 2, values.length)
     );
 
     Assert.assertEquals(
         0,
-        QueryableIndexCursorMaker.timeSearch(column, 0, 0, values.length / 2)
+        QueryableIndexCursorHolder.timeSearch(column, 0, 0, values.length / 2)
     );
 
     Assert.assertEquals(
         1,
-        QueryableIndexCursorMaker.timeSearch(column, 1, 0, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 1, 0, values.length)
     );
 
     Assert.assertEquals(
         2,
-        QueryableIndexCursorMaker.timeSearch(column, 1, 2, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 1, 2, values.length)
     );
 
     Assert.assertEquals(
         1,
-        QueryableIndexCursorMaker.timeSearch(column, 1, 0, values.length / 2)
+        QueryableIndexCursorHolder.timeSearch(column, 1, 0, values.length / 2)
     );
 
     Assert.assertEquals(
         1,
-        QueryableIndexCursorMaker.timeSearch(column, 1, 1, 8)
+        QueryableIndexCursorHolder.timeSearch(column, 1, 1, 8)
     );
 
     Assert.assertEquals(
         8,
-        QueryableIndexCursorMaker.timeSearch(column, 2, 0, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 2, 0, values.length)
     );
 
     Assert.assertEquals(
         10,
-        QueryableIndexCursorMaker.timeSearch(column, 10, 0, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 10, 0, values.length)
     );
 
     Assert.assertEquals(
         11,
-        QueryableIndexCursorMaker.timeSearch(column, 15, 0, values.length)
+        QueryableIndexCursorHolder.timeSearch(column, 15, 0, values.length)
     );
   }
 }
