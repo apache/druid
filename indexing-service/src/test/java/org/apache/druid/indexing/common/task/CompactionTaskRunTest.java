@@ -2030,7 +2030,6 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     final TaskConfig config = new TaskConfigBuilder()
-            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build();
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create();
     centralizedDatasourceSchemaConfig.setEnabled(true);

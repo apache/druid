@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.avatica.util.TimeUnitRange;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexWindowBounds;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.calcite.sql.SqlOperator;
@@ -72,7 +74,9 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.hamcrest.core.StringContains;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -83,6 +87,8 @@ import org.mockito.Mockito;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ExpressionsTest extends CalciteTestBase
 {
@@ -2825,6 +2831,36 @@ public class ExpressionsTest extends CalciteTestBase
         makeExpression("human_readable_decimal_byte_format(45678,3)"),
         "45.678 KB"
     );
+  }
+
+  @Test
+  public void testPresenceOfOverIsInvalid()
+  {
+    final RexBuilder rexBuilder = new RexBuilder(DruidTypeSystem.TYPE_FACTORY);
+    final PlannerContext plannerContext = Mockito.mock(PlannerContext.class);
+    Mockito.when(plannerContext.getTimeZone()).thenReturn(DateTimeZone.UTC);
+
+    RexNode rexNode = rexBuilder.makeOver(
+        testHelper.createSqlType(SqlTypeName.BIGINT),
+        SqlStdOperatorTable.SUM,
+        Collections.emptyList(),
+        Collections.emptyList(),
+        ImmutableList.of(),
+        RexWindowBounds.CURRENT_ROW,
+        RexWindowBounds.CURRENT_ROW,
+        false,
+        true,
+        false,
+        false,
+        false
+    );
+
+    CannotBuildQueryException t = Assert.assertThrows(
+        CannotBuildQueryException.class,
+        () -> testHelper.testExpression(rexNode, null, plannerContext)
+    );
+
+    assertThat(t.getMessage(), StringContains.containsString("Unexpected OVER expression"));
   }
 
   @Test

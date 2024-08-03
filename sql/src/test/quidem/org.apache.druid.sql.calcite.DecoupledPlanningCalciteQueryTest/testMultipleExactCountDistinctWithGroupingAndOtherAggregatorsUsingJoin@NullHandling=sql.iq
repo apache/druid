@@ -236,6 +236,7 @@ DruidProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$3], EXPR$3=[$5], druid=[logical])
   "columnTypes" : [ "LONG", "LONG", "STRING", "LONG" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

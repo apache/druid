@@ -129,7 +129,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " GROUP BY 1\n"
                              + " PARTITIONED BY ALL")
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)
@@ -257,7 +257,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " GROUP BY 1\n"
                              + " PARTITIONED BY ALL")
                      .setQueryContext(adjustedContext)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)

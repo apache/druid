@@ -562,7 +562,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     taskConfig = new TaskConfigBuilder()
         .setBaseDir(temporaryFolder.newFolder().toString())
         .setDefaultRowFlushBoundary(50000)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .setTmpStorageBytesPerTask(-1L)
         .build();
 

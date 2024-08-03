@@ -30,7 +30,8 @@ import type { SqlQuery } from '@druid-toolkit/query';
 import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React, { ComponentProps } from 'react';
+import type { ComponentProps } from 'react';
+import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
@@ -104,6 +105,7 @@ export interface WorkbenchViewProps {
   maxTaskMenuHeader?: JSX.Element;
   enginesLabelFn?: ComponentProps<typeof QueryTab>['enginesLabelFn'];
   maxTaskLabelFn?: ComponentProps<typeof QueryTab>['maxTaskLabelFn'];
+  hideToolbar?: boolean;
 }
 
 export interface WorkbenchViewState {
@@ -463,7 +465,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }
 
           this.handleNewTab(
-            WorkbenchQuery.fromEffectiveQueryAndContext(
+            WorkbenchQuery.fromTaskQueryAndContext(
               execution.sqlQuery,
               execution.queryContext,
             ).changeLastExecution({ engine: 'sql-msq-task', id: taskId }),
@@ -613,8 +615,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderToolbar() {
-    const { queryEngines } = this.props;
+    const { queryEngines, hideToolbar } = this.props;
     if (!queryEngines.includes('sql-msq-task')) return;
+    if (hideToolbar) return;
 
     const { showRecentQueryTaskPanel } = this.state;
     return (

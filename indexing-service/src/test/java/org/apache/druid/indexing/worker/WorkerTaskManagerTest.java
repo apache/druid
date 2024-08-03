@@ -116,7 +116,6 @@ public class WorkerTaskManagerTest
         .setBaseDir(FileUtils.createTempDir().toString())
         .setDefaultRowFlushBoundary(0)
         .setRestoreTasksOnRestart(restoreTasksOnRestart)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);

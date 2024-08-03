@@ -63,7 +63,7 @@ public class DoubleMinAggregationTest
     selector = new TestDoubleColumnSelectorImpl(values);
     colSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
     EasyMock.expect(colSelectorFactory.makeColumnValueSelector("nilly")).andReturn(selector);
-    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null);
+    EasyMock.expect(colSelectorFactory.getColumnCapabilities("nilly")).andReturn(null).anyTimes();
     EasyMock.replay(colSelectorFactory);
 
 

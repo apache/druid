@@ -37,6 +37,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -183,6 +184,16 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       selector.setHasExtractionFn(true);
     }
     topNMetricSpec.initTopNAlgorithmSelector(selector);
+  }
+
+  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
+  {
+    return RowSignature.builder()
+                       .addTimeColumn()
+                       .addDimensions(Collections.singletonList(getDimensionSpec()))
+                       .addAggregators(getAggregatorSpecs(), finalization)
+                       .addPostAggregators(getPostAggregatorSpecs())
+                       .build();
   }
 
   @Override

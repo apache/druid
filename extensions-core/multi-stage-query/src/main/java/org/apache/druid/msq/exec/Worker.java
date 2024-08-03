@@ -19,40 +19,44 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.frame.key.ClusterByPartitions;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
-import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * Interface for a multi-stage query (MSQ) worker. Workers are long-lived and are able to run multiple {@link WorkOrder}
+ * prior to exiting.
+ *
+ * @see WorkerImpl the production implementation
+ */
 public interface Worker
 {
   /**
-   * Unique ID for this worker.
+   * Identifier for this worker. Same as {@link WorkerContext#workerId()}.
    */
   String id();
 
   /**
-   * The task which this worker runs.
+   * Runs the worker in the current thread. Surrounding classes provide the execution thread.
    */
-  MSQWorkerTask task();
+  void run();
 
   /**
-   * Runs the worker in the current thread. Surrounding classes provide
-   * the execution thread.
+   * Terminate the worker upon a cancellation request. Causes a concurrently-running {@link #run()} method in
+   * a separate thread to cancel all outstanding work and exit. Does not block. Use {@link #awaitStop()} if you
+   * would like to wait for {@link #run()} to finish.
    */
-  TaskStatus run() throws Exception;
+  void stop();
 
   /**
-   * Terminate the worker upon a cancellation request.
+   * Wait for {@link #run()} to finish.
    */
-  void stopGracefully();
+  void awaitStop();
 
   /**
    * Report that the controller has failed. The worker must cease work immediately. Cleanup then exit.
@@ -63,20 +67,20 @@ public interface Worker
   // Controller-to-worker, and worker-to-worker messages
 
   /**
-   * Called when the worker chat handler receives a request for a work order. Accepts the work order and schedules it for
-   * execution
+   * Called when the worker receives a new work order. Accepts the work order and schedules it for execution.
    */
   void postWorkOrder(WorkOrder workOrder);
 
   /**
    * Returns the statistics snapshot for the given stageId. This is called from {@link WorkerSketchFetcher} under
-   * PARALLEL OR AUTO modes.
+   * {@link ClusterStatisticsMergeMode#PARALLEL} OR {@link ClusterStatisticsMergeMode#AUTO} modes.
    */
   ClusterByStatisticsSnapshot fetchStatisticsSnapshot(StageId stageId);
 
   /**
    * Returns the statistics snapshot for the given stageId which contains only the sketch for the specified timeChunk.
-   * This is called from {@link WorkerSketchFetcher} under SEQUENTIAL OR AUTO modes.
+   * This is called from {@link WorkerSketchFetcher} under {@link ClusterStatisticsMergeMode#SEQUENTIAL} or
+   * {@link ClusterStatisticsMergeMode#AUTO} modes.
    */
   ClusterByStatisticsSnapshot fetchStatisticsSnapshotForTimeChunk(StageId stageId, long timeChunk);
 
@@ -84,26 +88,30 @@ public interface Worker
    * Called when the worker chat handler recieves the result partition boundaries for a particular stageNumber
    * and queryId
    */
-  boolean postResultPartitionBoundaries(
-      ClusterByPartitions stagePartitionBoundaries,
-      String queryId,
-      int stageNumber
-  );
+  boolean postResultPartitionBoundaries(StageId stageId, ClusterByPartitions stagePartitionBoundaries);
 
   /**
    * Returns an InputStream of the worker output for a particular queryId, stageNumber and partitionNumber.
    * Offset indicates the number of bytes to skip the channel data, and is used to prevent re-reading the same data
-   * during retry in case of a connection error
+   * during retry in case of a connection error.
    *
-   * Returns a null if the workerOutput for a particular queryId, stageNumber, and partitionNumber is not found.
+   * The returned future resolves when at least one byte of data is available, or when the channel is finished.
+   * If the channel is finished, an empty {@link InputStream} is returned.
    *
-   * @throws IOException when the worker output is found but there is an error while reading it.
+   * With {@link OutputChannelMode#MEMORY}, once this method is called with a certain offset, workers are free to
+   * delete data prior to that offset. (Already-requested offsets will not be re-requested, because
+   * {@link OutputChannelMode#MEMORY} requires a single reader.) In this mode, if an already-requested offset is
+   * re-requested for some reason, an error future is returned.
+   *
+   * The returned future resolves to null if stage output for a particular queryId, stageNumber, and
+   * partitionNumber is not found.
+   *
+   * Throws an exception when worker output is found, but there is an error while reading it.
    */
-  @Nullable
-  InputStream readChannel(String queryId, int stageNumber, int partitionNumber, long offset) throws IOException;
+  ListenableFuture<InputStream> readStageOutput(StageId stageId, int partitionNumber, long offset);
 
   /**
-   * Returns the snapshot of the worker counters
+   * Returns a snapshot of counters.
    */
   CounterSnapshotsTree getCounters();
 
@@ -115,7 +123,7 @@ public interface Worker
   void postCleanupStage(StageId stageId);
 
   /**
-   * Called when the work required for the query has been finished
+   * Called when the worker is no longer needed, and should shut down.
    */
   void postFinish();
 }

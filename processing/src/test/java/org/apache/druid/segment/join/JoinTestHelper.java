@@ -342,6 +342,7 @@ public class JoinTestHelper
               .collect(Collectors.toList());
 
           final List<Object[]> rows = new ArrayList<>();
+          boolean interruptible = false; // test both advance() and advanceUninterruptibly()
 
           while (!cursor.isDone()) {
             final Object[] row = new Object[columns.size()];
@@ -351,7 +352,13 @@ public class JoinTestHelper
             }
 
             rows.add(row);
-            cursor.advance();
+            if (interruptible) {
+              cursor.advance();
+            } else {
+              cursor.advanceUninterruptibly();
+            }
+
+            interruptible = !interruptible;
           }
 
           return Sequences.simple(rows);

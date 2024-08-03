@@ -177,7 +177,7 @@ public class HashJoinEngine
       @Override
       public void advance()
       {
-        advanceUninterruptibly();
+        advance(true);
         BaseQuery.checkInterrupted();
       }
 
@@ -196,6 +196,11 @@ public class HashJoinEngine
 
       @Override
       public void advanceUninterruptibly()
+      {
+        advance(false);
+      }
+
+      private void advance(boolean interruptibly)
       {
         joinColumnSelectorFactory.advanceRowId();
 
@@ -217,7 +222,11 @@ public class HashJoinEngine
 
         do {
           // No more right-hand side matches; advance the left-hand side.
-          leftCursor.advanceUninterruptibly();
+          if (interruptibly) {
+            leftCursor.advance();
+          } else {
+            leftCursor.advanceUninterruptibly();
+          }
 
           // Update joinMatcher state to match new cursor position.
           matchCurrentPosition();

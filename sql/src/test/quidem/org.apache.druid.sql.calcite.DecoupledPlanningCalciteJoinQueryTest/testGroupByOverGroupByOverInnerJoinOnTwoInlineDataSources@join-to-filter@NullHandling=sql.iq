@@ -86,7 +86,8 @@ DruidAggregate(group=[{0}], druid=[logical])
             "columnTypes" : [ "LONG", "STRING" ],
             "granularity" : {
               "type" : "all"
-            }
+            },
+            "legacy" : false
           }
         },
         "right" : {
@@ -112,7 +113,8 @@ DruidAggregate(group=[{0}], druid=[logical])
             "columnTypes" : [ "STRING" ],
             "granularity" : {
               "type" : "all"
-            }
+            },
+            "legacy" : false
           }
         },
         "rightPrefix" : "j0.",
