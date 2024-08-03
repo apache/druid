@@ -22,7 +22,7 @@ package org.apache.druid.query.timeseries;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
@@ -98,7 +98,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   )
   {
     this.helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
-        NestedDataModule.getJacksonModulesList(),
+        BuiltInTypesModule.getJacksonModulesList(),
         tempFolder
     );
     this.segmentsGenerator = segmentsGenerator;
