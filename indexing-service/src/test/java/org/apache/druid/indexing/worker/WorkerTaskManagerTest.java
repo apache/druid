@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
-import org.apache.druid.indexing.common.task.NoopFailingTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTestTaskReportFileWriter;
 import org.apache.druid.indexing.common.task.Task;
@@ -458,7 +457,15 @@ public class WorkerTaskManagerTest
 
   private NoopTask createNoopFailingTask(String id, String dataSource)
   {
-    return new NoopFailingTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
+    return new NoopTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
+      {
+        Thread.sleep(runTime);
+        return TaskStatus.failure(getId(), "Failed to complete the task");
+      }
+    };
   }
 
   /**

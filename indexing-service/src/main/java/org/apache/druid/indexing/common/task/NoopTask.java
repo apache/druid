@@ -45,7 +45,7 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   private static final int DEFAULT_RUN_TIME = 2500;
 
   @JsonIgnore
-  private final long runTime;
+  protected final long runTime;
 
   @JsonCreator
   public NoopTask(
