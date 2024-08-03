@@ -171,7 +171,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     synchronized (lock) {
       final Iterator<SegmentHolder> queuedSegmentIterator = queuedSegments.iterator();
 
-      final long currentTimeMillis = System.currentTimeMillis();
       while (newRequests.size() < batchSize && queuedSegmentIterator.hasNext()) {
         final SegmentHolder holder = queuedSegmentIterator.next();
         final DataSegment segment = holder.getSegment();
@@ -399,7 +398,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       queuedSegments.clear();
       activeRequestSegments.clear();
       queuedSize.set(0L);
-      loadingRateTracker.reset();
+      loadingRateTracker.stop();
       stats.get().clear();
     }
   }

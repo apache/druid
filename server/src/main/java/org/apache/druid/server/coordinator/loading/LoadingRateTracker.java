@@ -33,7 +33,15 @@ import java.util.concurrent.atomic.AtomicReference;
  * The loading rate is computed as a moving average of the last
  * {@link #MOVING_AVERAGE_WINDOW_SIZE} segment batches (or more if any batch was
  * smaller than {@link #MIN_ENTRY_SIZE_BYTES}). A batch is defined as a set of
- * segments added to the load queue together.
+ * segments added to the load queue together. Usage:
+ * <ul>
+ * <li>Call {@link #markBatchLoadingStarted()} exactly once to indicate start of
+ * a batch.</li>
+ * <li>Call {@link #incrementBytesLoadedInBatch(long)} any number of times to
+ * increment successful loads done in the batch.</li>
+ * <li>Call {@link #markBatchLoadingFinished()} exactly once to complete the batch.</li>
+ * </ul>
+ *
  * <pre>
  *   batchDurationMillis
  *   = t(load queue becomes empty) - t(first load request in batch is sent to server)
@@ -54,14 +62,24 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LoadingRateTracker
 {
   public static final int MOVING_AVERAGE_WINDOW_SIZE = 10;
+
+  /**
+   * Minimum size of a single entry in the moving average window = 1 GiB.
+   */
   public static final long MIN_ENTRY_SIZE_BYTES = 1 << 30;
 
   private final EvictingQueue<Entry> window = EvictingQueue.create(MOVING_AVERAGE_WINDOW_SIZE);
 
   /**
-   * Total stats for the whole window. This includes the total from the current batch as well.
+   * Total stats for the whole window. This includes the total from the current
+   * batch as well.
+   * <p>
+   * Maintained as an atomic reference to ensure computational correctness in
+   * {@link #getMovingAverageLoadRateKbps()}. Otherwise, it is possible to have
+   * a state where bytes have been updated for the entry but not time taken
+   * (or vice versa).
    */
-  private final AtomicReference<Entry> windowTotal = new AtomicReference<>(null);
+  private final AtomicReference<Entry> windowTotal = new AtomicReference<>();
 
   private Entry currentBatchTotal;
   private Entry currentTail;
@@ -93,6 +111,9 @@ public class LoadingRateTracker
     }
   }
 
+  /**
+   * @return if a batch of segments is currently being loaded.
+   */
   public boolean isLoadingBatch()
   {
     return currentBatchDuration.isRunning();
@@ -101,6 +122,9 @@ public class LoadingRateTracker
   /**
    * Adds the given number of bytes to the total data successfully loaded in the
    * current batch. This causes an update of the current load rate.
+   *
+   * @throws DruidException if called without making a prior call to
+   * {@link #markBatchLoadingStarted()}.
    */
   public void incrementBytesLoadedInBatch(long loadedBytes)
   {
@@ -135,7 +159,10 @@ public class LoadingRateTracker
     }
   }
 
-  public void reset()
+  /**
+   * Stops this rate tracker and resets its current state.
+   */
+  public void stop()
   {
     window.clear();
     windowTotal.set(null);

@@ -56,13 +56,13 @@ public class LoadingRateTrackerTest
   }
 
   @Test
-  public void testRateIsZeroAfterReset()
+  public void testRateIsZeroAfterStop()
   {
     tracker.markBatchLoadingStarted();
     tracker.incrementBytesLoadedInBatch(1000, 10);
     Assert.assertEquals(8 * 1000 / 10, tracker.getMovingAverageLoadRateKbps());
 
-    tracker.reset();
+    tracker.stop();
     Assert.assertEquals(0, tracker.getMovingAverageLoadRateKbps());
   }
 
