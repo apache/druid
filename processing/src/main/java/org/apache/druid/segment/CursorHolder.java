@@ -58,27 +58,4 @@ public interface CursorHolder extends Closeable
   {
     // nothing to close
   }
-
-  CursorHolder EMPTY = new CursorHolder()
-  {
-    @Override
-    public boolean canVectorize()
-    {
-      return true;
-    }
-
-    @Nullable
-    @Override
-    public Cursor asCursor()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    public VectorCursor asVectorCursor()
-    {
-      return null;
-    }
-  };
 }

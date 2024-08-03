@@ -43,8 +43,8 @@ import org.joda.time.DateTime;
  *   }
  * </pre>
  *
- * {@link QueryableIndexCursorHolder.QueryableIndexCursor} is an implementation for historical segments, and {@link
- * IncrementalIndexCursorHolder.IncrementalIndexCursor} is an implementation for
+ * {@link QueryableIndexCursorHolder.QueryableIndexCursor} is an implementation for historical segments, and
+ * {@link IncrementalIndexCursorHolder.IncrementalIndexCursor} is an implementation for
  * {@link org.apache.druid.segment.incremental.IncrementalIndex}.
  *
  * Cursor is conceptually similar to {@link TimeAndDimsPointer}, but the latter is used for historical segment creation
