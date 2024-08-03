@@ -34,7 +34,10 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 /**
- * Class that helps non-vectorized query engines handle "granularity" parameters. Given a set of intervals
+ * Class that helps non-vectorized query engines handle "granularity" parameters. Given a set of intervals, this class
+ * provides mechansims to advance a cursor to the start of an interval ({@link #advanceToBucket(Interval)}),
+ * advance a cursor within a bucket interval ({@link #advanceCursorWithinBucket()}), and check if the current cursor
+ * position is within the bucket {@link #currentOffsetWithinBucket()}.
  *
  * @see org.apache.druid.query.vector.VectorCursorGranularizer for vectorized query engines.
  */
