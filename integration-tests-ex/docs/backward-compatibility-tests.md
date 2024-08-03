@@ -18,7 +18,7 @@
   -->
 
 #### Problem
-The idea of this test group is to simulate issues that can arise during rolling upgrade.
+The idea of this test group is to simulate issues that can arise during rolling upgrade/downgrade.
 
 #### Implementation 
 In this test group, the docker compose cluster is launched with services on different versions. 
