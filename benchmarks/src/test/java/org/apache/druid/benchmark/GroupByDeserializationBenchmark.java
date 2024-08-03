@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -68,7 +68,7 @@ public class GroupByDeserializationBenchmark
 
   static {
     NullHandling.initializeForTests();
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     AggregatorsModule.registerComplexMetricsAndSerde();
   }
 
@@ -93,7 +93,7 @@ public class GroupByDeserializationBenchmark
   public void setup() throws JsonProcessingException
   {
     final ObjectMapper undecoratedMapper = TestHelper.makeJsonMapper();
-    undecoratedMapper.registerModules(NestedDataModule.getJacksonModulesList());
+    undecoratedMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     undecoratedMapper.registerModule(new AggregatorsModule());
     final Pair<GroupByQuery, String> sqlQueryAndResultRow = sqlQueryAndResultRow(
         numDimensions,

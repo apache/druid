@@ -548,7 +548,7 @@ public class SqlTestFramework
     {
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null));
+      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
     }
 
     @Provides
@@ -620,7 +620,6 @@ public class SqlTestFramework
         .addModule(new SqlAggregationModule())
         .addModule(new ExpressionModule())
         .addModule(new TestSetupModule(builder));
-
     builder.componentSupplier.configureGuice(injectorBuilder);
 
     ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);

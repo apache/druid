@@ -41,7 +41,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -447,7 +447,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   @Before
   public void setUp() throws Exception
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     String className = getClass().getName();
     Map<String, AdapterStuff> adaptersForClass = adapterCache.get().get(className);
     if (adaptersForClass == null) {
