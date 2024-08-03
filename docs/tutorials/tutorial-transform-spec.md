@@ -24,17 +24,18 @@ sidebar_label: Transform input data
   -->
 
 
-This tutorial will demonstrate how to use transform specs to filter and transform input data during ingestion.
+This tutorial demonstrates how to transform input data during ingestion.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine.
+## Prerequisite
 
-It will also be helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
+This tutorial assumes you've already downloaded Apache Druid&circledR; as described in
+the [single-machine quickstart](./index.md) and have it running on your local machine.
+
+It's helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
 
 ## Sample data
 
-We've included sample data for this tutorial at `quickstart/tutorial/transform-data.json`, reproduced here for convenience:
-
+For this tutorial, you use the following sample data:
 ```json
 {"timestamp":"2018-01-01T07:01:35Z","animal":"octopus",  "location":1, "number":100}
 {"timestamp":"2018-01-01T05:01:35Z","animal":"mongoose", "location":2,"number":200}
@@ -42,115 +43,53 @@ We've included sample data for this tutorial at `quickstart/tutorial/transform-d
 {"timestamp":"2018-01-01T01:01:35Z","animal":"lion", "location":4, "number":300}
 ```
 
-## Load data with transform specs
+## Transform data during ingestion
 
-We will ingest the sample data using the following spec, which demonstrates the use of transform specs:
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to ingest the data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
-```json
-{
-  "type" : "index_parallel",
-  "spec" : {
-    "dataSchema" : {
-      "dataSource" : "transform-tutorial",
-      "timestampSpec": {
-        "column": "timestamp",
-        "format": "iso"
-      },
-      "dimensionsSpec" : {
-        "dimensions" : [
-          "animal",
-          { "name": "location", "type": "long" }
-        ]
-      },
-      "metricsSpec" : [
-        { "type" : "count", "name" : "count" },
-        { "type" : "longSum", "name" : "number", "fieldName" : "number" },
-        { "type" : "longSum", "name" : "triple-number", "fieldName" : "triple-number" }
-      ],
-      "granularitySpec" : {
-        "type" : "uniform",
-        "segmentGranularity" : "week",
-        "queryGranularity" : "minute",
-        "intervals" : ["2018-01-01/2018-01-03"],
-        "rollup" : true
-      },
-      "transformSpec": {
-        "transforms": [
-          {
-            "type": "expression",
-            "name": "animal",
-            "expression": "concat('super-', animal)"
-          },
-          {
-            "type": "expression",
-            "name": "triple-number",
-            "expression": "number * 3"
-          }
-        ],
-        "filter": {
-          "type":"or",
-          "fields": [
-            { "type": "selector", "dimension": "animal", "value": "super-mongoose" },
-            { "type": "selector", "dimension": "triple-number", "value": "300" },
-            { "type": "selector", "dimension": "location", "value": "3" }
-          ]
-        }
-      }
-    },
-    "ioConfig" : {
-      "type" : "index_parallel",
-      "inputSource" : {
-        "type" : "local",
-        "baseDir" : "quickstart/tutorial",
-        "filter" : "transform-data.json"
-      },
-      "inputFormat" : {
-        "type" :"json"
-      },
-      "appendToExisting" : false
-    },
-    "tuningConfig" : {
-      "type" : "index_parallel",
-      "partitionsSpec": {
-        "type": "dynamic"
-      },
-      "maxRowsInMemory" : 25000
-    }
-  }
-}
+```sql
+REPLACE INTO "transform_tutorial" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(EXTERN('{"type":"inline","data":"{\"timestamp\":\"2018-01-01T07:01:35Z\",\"animal\":\"octopus\",  \"location\":1, \"number\":100}\n{\"timestamp\":\"2018-01-01T05:01:35Z\",\"animal\":\"mongoose\", \"location\":2,\"number\":200}\n{\"timestamp\":\"2018-01-01T06:01:35Z\",\"animal\":\"snake\", \"location\":3, \"number\":300}\n{\"timestamp\":\"2018-01-01T01:01:35Z\",\"animal\":\"lion\", \"location\":4, \"number\":300}"}', '{"type":"json"}')) EXTEND ("timestamp" VARCHAR, "animal" VARCHAR, "location" BIGINT, "number" BIGINT)
+)
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  TEXTCAT('super-', "animal") AS "animal",
+  "location",
+  "number",
+  "number" * 3 AS "triple-number"
+FROM "ext"
+WHERE (TEXTCAT('super-', "animal") = 'super-mongoose' OR "location" = 3 OR "number" * 3 = 300)
+PARTITIONED BY DAY
 ```
 
-In the transform spec, we have two expression transforms:
-* `super-animal`: prepends "super-" to the values in the `animal` column. This will override the `animal` column with the transformed version, since the transform's name is `animal`.
-* `triple-number`: multiplies the `number` column by 3. This will create a new `triple-number` column. Note that we are ingesting both the original and the transformed column.
+The following columns have transformations applied on ingestion:
+* `animal`: prepends "super-" to the values in the `animal` column using the [`TEXTCAT`](../querying/sql-functions.md/#textcat). This will override the `animal` column with the transformed version.
+* `triple-number`: multiplies the `number` column by 3. This stores the results in a new column called `triple-number`. Note that it ingestions both the original and the transformed column.
 
-Additionally, we have an OR filter with three clauses:
-* `super-animal` values that match "super-mongoose"
+Additionally, a filter with the following three OR clauses are applied:
+* `animal` values that match "super-mongoose"
 * `triple-number` values that match 300
 * `location` values that match 3
 
-This filter selects the first 3 rows, and it will exclude the final "lion" row in the input data. Note that the filter is applied after the transformation.
+This filter selects the first 3 rows, and excludes the final "lion" row in the input data. Note that the filter applies after the transformation.
 
-Let's submit this task now, which has been included at `quickstart/tutorial/transform-index.json`:
-
-```bash
-bin/post-index-task --file quickstart/tutorial/transform-index.json --url http://localhost:8081
-```
 
 ## Query the transformed data
 
-Let's run `bin/dsql` and issue a `select * from "transform-tutorial";` query to see what was ingested:
+In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
 
-```bash
-dsql> select * from "transform-tutorial";
-┌──────────────────────────┬────────────────┬───────┬──────────┬────────┬───────────────┐
-│ __time                   │ animal         │ count │ location │ number │ triple-number │
-├──────────────────────────┼────────────────┼───────┼──────────┼────────┼───────────────┤
-│ 2018-01-01T05:01:00.000Z │ super-mongoose │     1 │        2 │    200 │           600 │
-│ 2018-01-01T06:01:00.000Z │ super-snake    │     1 │        3 │    300 │           900 │
-│ 2018-01-01T07:01:00.000Z │ super-octopus  │     1 │        1 │    100 │           300 │
-└──────────────────────────┴────────────────┴───────┴──────────┴────────┴───────────────┘
-Retrieved 3 rows in 0.03s.
+```sql
+SELECT * FROM "transform_tutorial"
 ```
 
-The "lion" row has been discarded, the `animal` column has been transformed, and we have both the original and transformed `number` column.
+Returns the following:
+
+| `__time` | `animal` | `location` | `number` | `triple-number` | 
+| -- | -- | -- | -- | -- |
+| `2018-01-01T05:01:35.000Z` | `super-mongoose` | `2` | `200` | `600` |
+| `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
+| `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
+
+The only row that wasn't ingested from the input data was the "lion" row. It is filtered out because it's the only row that doesn't meet any of the three filter condition listed. 
