@@ -120,15 +120,15 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
