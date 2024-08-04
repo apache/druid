@@ -23,7 +23,7 @@ The idea of this test group is to simulate issues that can arise during rolling 
 #### Implementation 
 In this test group, the docker compose cluster is launched with services on different versions. 
 The docker image for the previous version is built by downloading the previous version druid tar.
-Currently, the upgrade phase where Coordinator and Overlord is on the previous version is tested. 
+Currently, the case where Coordinator and Overlord is on the previous version is tested. 
 
 #### Test coverage 
 Existing
