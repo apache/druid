@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -38,6 +39,9 @@ public class CustomExceptionMapperTest
   @Mock
   private ServerConfig serverConfig;
 
+  @Mock
+  private JsonParser jsonParser;
+
   private CustomExceptionMapper customExceptionMapper;
 
   @Before
@@ -51,7 +55,7 @@ public class CustomExceptionMapperTest
   {
     Mockito.when(serverConfig.isShowDetailedJettyErrors()).thenReturn(false);
 
-    final JsonMappingException exception = new JsonMappingException("Test exception");
+    final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
     final Response response = customExceptionMapper.toResponse(exception);
 
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
@@ -68,7 +72,7 @@ public class CustomExceptionMapperTest
   {
     Mockito.when(serverConfig.isShowDetailedJettyErrors()).thenReturn(true);
 
-    final JsonMappingException exception = new JsonMappingException("Test exception");
+    final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
     final Response response = customExceptionMapper.toResponse(exception);
 
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
