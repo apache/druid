@@ -1730,7 +1730,7 @@ Concatenates two string expressions.
   
 <details><summary>Example</summary>
 
-The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`,
+The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`:
 
 ```sql
 SELECT
