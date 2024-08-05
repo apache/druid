@@ -88,8 +88,10 @@ public interface Cursor
   /**
    * Mark a position on the cursor which can recalled with {@link #resetToMark()}. This method is used by
    * {@link org.apache.druid.query.topn.TopNQueryEngine} when computing results in query granularity buckets. The
-   * {@link DateTime} parameter supplied to this method corresponds to the start of the bucket interval. Cursor
-   * implementations may use this if useful, or ignore it and mark the current offset if not.
+   * {@link DateTime} parameter supplied to this method corresponds to the start of the bucket interval. The mark is
+   * not guaranteed to be a row with the specified timestamp, rather it is to assist to seeking to the actual offset
+   * at the time of marking for cursor implementations which do not have random access offsets or might be mutable.
+   * Cursor implementations may use this parameter if useful, or ignore it and mark the current offset if not.
    */
   void mark(DateTime mark);
 
