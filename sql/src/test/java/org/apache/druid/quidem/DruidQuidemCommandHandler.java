@@ -199,11 +199,11 @@ public class DruidQuidemCommandHandler implements CommandHandler
   /**
    * Handles plan commands captured via {@link Hook}.
    */
-  abstract static class AbstractXPlanCommand extends AbstractPlanCommand
+  abstract static class AbstractStringCaptureCommand extends AbstractPlanCommand
   {
     HookKey<String> hook;
 
-    AbstractXPlanCommand(List<String> lines, List<String> content, DruidHook.HookKey<String> hook)
+    AbstractStringCaptureCommand(List<String> lines, List<String> content, DruidHook.HookKey<String> hook)
     {
       super(lines, content);
       this.hook = hook;
@@ -247,7 +247,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
       super(lines, content, DruidHook.CONVERTED_PLAN);
     }
   }
-  static class MSQPlanCommand extends AbstractXPlanCommand
+  static class MSQPlanCommand extends AbstractStringCaptureCommand
   {
     MSQPlanCommand(List<String> lines, List<String> content)
     {
