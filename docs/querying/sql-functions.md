@@ -1738,6 +1738,7 @@ Concatenates two string expressions.
     TEXTCAT("OriginState", ', USA') AS "concatenate_state_with_USA"
   FROM "flight-carriers"
   LIMIT 1
+  ```
 
 Returns the following:
 
