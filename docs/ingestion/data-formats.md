@@ -755,7 +755,7 @@ Configure the Kinesis `inputFormat` as follows:
 Using `{ "type": "json" }` as the input format would only parse the payload value.
 To parse the Kinesis metadata in addition to the payload, use the `kinesis` input format.
 
-For example, consider the following structure for a Kafka message that represents an edit in a development environment:
+For example, consider the following structure for a Kinesis message that represents an edit in a development environment:
 
 - **Kinesis timestamp**: `1680795276351`
 - **Kinesis partition key**: `partition-1`
