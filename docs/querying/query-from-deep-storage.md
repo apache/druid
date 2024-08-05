@@ -66,7 +66,9 @@ You can also confirm this through the Druid console. On the **Segments** page, s
 
 Keep the following in mind when working with load rules to control what exists only in deep storage:
 
-- At least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. The segment on the Historical process can be any segment from the datasource. It does not need to be a specific segment. One way to verify that a datasource has at least one segment on a Historical process is if it's visible in the Druid console.
+- Your datasource must meet one of the following conditions:
+  - At least one of the segments in a datasource is loaded onto a Historical process so that Druid can plan the query. The segment on the Historical process can be any segment from the datasource. It does not need to be a specific segment. One way to verify that a datasource has at least one segment on a Historical process is if it's visible in the Druid console.
+  - You have the centralized data source schema feature enabled. For more information, see [Centralized datasource schema](../configuration/index.md#centralized-datasource-schema)
 - The actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
 
 ## Run a query from deep storage
