@@ -1733,12 +1733,11 @@ Concatenates two string expressions.
   The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`,
 
   ```sql
-SELECT
-  "OriginState" AS "origin_state",
-  TEXTCAT("OriginState", ', USA') AS "concatenate_state_with_USA"
-FROM "flight-carriers"
-LIMIT 1
-  ```
+  SELECT
+    "OriginState" AS "origin_state",
+    TEXTCAT("OriginState", ', USA') AS "concatenate_state_with_USA"
+  FROM "flight-carriers"
+  LIMIT 1
 
 Returns the following:
 
