@@ -86,6 +86,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
   private String dataFileNameJsonString;
   private String dataFileSignatureJsonString;
   private DataSource dataFileExternalDataSource;
+  private File dataFile;
 
   public static Collection<Object[]> data()
   {
@@ -101,7 +102,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
   @BeforeEach
   public void setup() throws IOException
   {
-    File dataFile = newTempFile("dataFile");
+    dataFile = newTempFile("dataFile");
     final InputStream resourceStream = this.getClass().getClassLoader()
                                            .getResourceAsStream(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
     final InputStream decompressing = CompressionUtils.decompress(
@@ -435,7 +436,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testCountDistinctOnNestedData(String contextName, Map<String, Object> context)
+  public void testExactCountDistinctOnNestedData(String contextName, Map<String, Object> context)
   {
     Assumptions.assumeTrue(NullHandling.sqlCompatible());
     RowSignature rowSignature = RowSignature.builder()
@@ -458,7 +459,6 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + "    '{ \"files\": [" + dataFileNameJsonString + "],\"type\":\"local\"}',\n"
                              + "    '{\"type\": \"json\"}',\n"
                              + "    '[{\"name\": \"timestamp\", \"type\": \"STRING\"}, {\"name\": \"obj\", \"type\": \"COMPLEX<json>\"}]'\n"
-
                              + "   )\n"
                              + " )\n"
                              + " ORDER BY 1")
@@ -516,6 +516,101 @@ public class MSQComplexGroupByTest extends MSQTestBase
                      .setQueryContext(modifiedContext)
                      .setExpectedResultRows(ImmutableList.of(
                          new Object[]{7L}
+                     ))
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExactCountDistinctOnNestedData2(String contextName, Map<String, Object> context)
+  {
+    Assumptions.assumeTrue(NullHandling.sqlCompatible());
+    RowSignature dataFileSignature = RowSignature.builder()
+                                                 .add("timestamp", ColumnType.STRING)
+                                                 .add("cObj", ColumnType.NESTED_DATA)
+                                                 .build();
+    DataSource dataFileExternalDataSource2 = new ExternalDataSource(
+        new LocalInputSource(null, null, ImmutableList.of(dataFile), SystemFields.none()),
+        new JsonInputFormat(null, null, null, null, null),
+        dataFileSignature
+    );
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("distinct_obj", ColumnType.LONG)
+                                            .build();
+
+    Map<String, Object> modifiedContext = ImmutableMap.<String, Object>builder()
+                                                      .putAll(context)
+                                                      .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                                      .build();
+
+    DimFilter innerFilter = NullHandling.replaceWithDefault()
+                            ? new SelectorDimFilter("d0", null, null)
+                            : new NullFilter("d0", null);
+
+    testSelectQuery().setSql("SELECT\n"
+                             + " COUNT(DISTINCT cObj) AS distinct_obj\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + dataFileNameJsonString + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"STRING\"}, {\"name\": \"cObj\", \"type\": \"COMPLEX<json>\"}]'\n"
+                             + "   )\n"
+                             + " )\n"
+                             + " ORDER BY 1")
+                     .setQueryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false))
+                     .setExpectedMSQSpec(
+                         MSQSpec
+                             .builder()
+                             .query(
+                                 GroupByQuery
+                                     .builder()
+                                     .setDataSource(
+                                         new QueryDataSource(
+                                             GroupByQuery
+                                                 .builder()
+                                                 .setDataSource(dataFileExternalDataSource2)
+                                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                                 .setDimensions(
+                                                     new DefaultDimensionSpec("cObj", "d0", ColumnType.NESTED_DATA)
+                                                 )
+                                                 .setGranularity(Granularities.ALL)
+                                                 .setContext(modifiedContext)
+                                                 .build()
+                                         )
+                                     )
+                                     .setAggregatorSpecs(
+                                         new FilteredAggregatorFactory(
+                                             new CountAggregatorFactory("a0"),
+                                             new NotDimFilter(innerFilter),
+                                             "a0"
+                                         )
+                                     )
+                                     .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                                     .setGranularity(Granularities.ALL)
+                                     .setLimitSpec(new DefaultLimitSpec(
+                                         ImmutableList.of(
+                                             new OrderByColumnSpec(
+                                                 "a0",
+                                                 OrderByColumnSpec.Direction.ASCENDING,
+                                                 StringComparators.NUMERIC
+                                             )
+                                         ),
+                                         Integer.MAX_VALUE
+                                     ))
+                                     .setContext(modifiedContext)
+                                     .build()
+                             )
+                             .columnMappings(new ColumnMappings(ImmutableList.of(
+                                 new ColumnMapping("a0", "distinct_obj")
+                             )))
+                             .tuningConfig(MSQTuningConfig.defaultConfig())
+                             .destination(TaskReportMSQDestination.INSTANCE)
+                             .build()
+                     )
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(modifiedContext)
+                     .setExpectedResultRows(ImmutableList.of(
+                         new Object[]{1L}
                      ))
                      .verifyResults();
   }
