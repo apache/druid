@@ -85,7 +85,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
       {
         return (spec.getFilter() == null || spec.getFilter().canVectorizeMatcher(signature))
                && spec.getVirtualColumns().canVectorize(signature)
-               && CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
+               && !CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
       }
 
       @Override
