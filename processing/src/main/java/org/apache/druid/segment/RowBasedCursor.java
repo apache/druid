@@ -133,7 +133,7 @@ public class RowBasedCursor<RowType> implements Cursor
 
   @Override
   public void reset()
-  {g
+  {
     rowId = 0;
     markId = 0;
     rowWalker.reset();
