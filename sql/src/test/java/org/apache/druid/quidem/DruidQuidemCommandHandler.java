@@ -35,12 +35,16 @@ import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.rel.DruidRel;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHook.HookKey;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class DruidQuidemCommandHandler implements CommandHandler
@@ -56,7 +60,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
       return new LogicalPlanCommand(lines, content);
     }
     if (line.startsWith("druidPlan")) {
-      return new PhysicalPlanCommand(lines, content);
+      return new DruidPlanCommand(lines, content);
     }
     if (line.startsWith("nativePlan")) {
       return new NativePlanCommand(lines, content);
@@ -155,19 +159,22 @@ public class DruidQuidemCommandHandler implements CommandHandler
    */
   abstract static class AbstractRelPlanCommand extends AbstractPlanCommand
   {
-    Hook hook;
+    HookKey<RelNode> hook;
 
-    AbstractRelPlanCommand(List<String> lines, List<String> content, Hook hook)
+    AbstractRelPlanCommand(List<String> lines, List<String> content, DruidHook.HookKey<RelNode> hook)
     {
       super(lines, content);
       this.hook = hook;
     }
 
     @Override
-    protected final void executeExplain(Context x)
+    protected final void executeExplain(Context x) throws IOException
     {
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
       List<RelNode> logged = new ArrayList<>();
-      try (final Hook.Closeable unhook = hook.add((Consumer<RelNode>) logged::add)) {
+      try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
+        logged.add(relNode);
+      })) {
         executeQuery(x);
       }
 
@@ -179,21 +186,26 @@ public class DruidQuidemCommandHandler implements CommandHandler
         x.echo(ImmutableList.of(str));
       }
     }
+
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+    {
+      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
+    }
   }
 
   static class LogicalPlanCommand extends AbstractRelPlanCommand
   {
     LogicalPlanCommand(List<String> lines, List<String> content)
     {
-      super(lines, content, Hook.TRIMMED);
+      super(lines, content, DruidHook.LOGICAL_PLAN);
     }
   }
 
-  static class PhysicalPlanCommand extends AbstractRelPlanCommand
+  static class DruidPlanCommand extends AbstractRelPlanCommand
   {
-    PhysicalPlanCommand(List<String> lines, List<String> content)
+    DruidPlanCommand(List<String> lines, List<String> content)
     {
-      super(lines, content, Hook.JAVA_PLAN);
+      super(lines, content, DruidHook.DRUID_PLAN);
     }
   }
 
@@ -201,7 +213,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
   {
     ConvertedPlanCommand(List<String> lines, List<String> content)
     {
-      super(lines, content, Hook.CONVERTED);
+      super(lines, content, DruidHook.CONVERTED_PLAN);
     }
   }
 }

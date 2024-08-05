@@ -21,6 +21,7 @@ package org.apache.druid.guice;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -35,7 +36,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Properties;
 
-public class NestedDataModuleTest
+public class BuiltInTypesModuleTest
 {
   @Nullable
   private static DimensionHandlerProvider DEFAULT_HANDLER_PROVIDER;
@@ -69,12 +70,17 @@ public class NestedDataModuleTest
     Injector gadget = makeInjector(props);
 
     // side effects
-    gadget.getInstance(NestedDataModule.SideEffectHandlerRegisterer.class);
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
 
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
     );
     Assert.assertTrue(provider.get("test") instanceof NestedCommonFormatColumnHandler);
+
+    Assert.assertEquals(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        BuiltInTypesModule.getStringMultiValueHandlingMode()
+    );
   }
 
   @Test
@@ -82,16 +88,54 @@ public class NestedDataModuleTest
   {
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
     Properties props = new Properties();
-    props.put("druid.indexing.formats.nestedColumnFormatVersion", "4");
+    props.setProperty("druid.indexing.formats.nestedColumnFormatVersion", "4");
+    props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "sorted_array");
     Injector gadget = makeInjector(props);
 
     // side effects
-    gadget.getInstance(NestedDataModule.SideEffectHandlerRegisterer.class);
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
 
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
     );
     Assert.assertTrue(provider.get("test") instanceof NestedDataColumnHandlerV4);
+
+    Assert.assertEquals(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        BuiltInTypesModule.getStringMultiValueHandlingMode()
+    );
+  }
+
+  @Test
+  public void testOverrideMultiValueHandlingModeCaseInsensitive()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "ARRAY");
+    final Injector gadget = makeInjector(props);
+
+    gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class);
+
+    Assert.assertEquals(
+        DimensionSchema.MultiValueHandling.ARRAY,
+        BuiltInTypesModule.getStringMultiValueHandlingMode()
+    );
+  }
+
+  @Test
+  public void testInvalidMultiValueHandlingMode()
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "boo");
+    final Injector gadget = makeInjector(props);
+
+    final Exception exception = Assert.assertThrows(
+        Exception.class,
+        () -> gadget.getInstance(BuiltInTypesModule.SideEffectRegisterer.class)
+    );
+    Assert.assertTrue(exception.getMessage().contains(
+        "Invalid value[boo] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
+        + " Supported values are [[SORTED_ARRAY, SORTED_SET, ARRAY]]."
+    ));
   }
 
   private Injector makeInjector(Properties props)
@@ -104,7 +148,7 @@ public class NestedDataModuleTest
             binder -> {
               JsonConfigProvider.bind(binder, "druid.indexing.formats", DefaultColumnFormatConfig.class);
             },
-            new NestedDataModule()
+            new BuiltInTypesModule()
         )
     );
 

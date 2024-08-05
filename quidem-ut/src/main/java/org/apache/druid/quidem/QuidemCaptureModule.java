@@ -17,24 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.quidem;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import org.apache.druid.guice.Jerseys;
 
-public class CoordinatorCompactionConfigTest
+public class QuidemCaptureModule implements Module
 {
-  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
-  @Test
-  public void testSerdeDefaultConfig() throws Exception
+  @Override
+  public void configure(Binder binder)
   {
-    final CoordinatorCompactionConfig defaultConfig = CoordinatorCompactionConfig.empty();
-    final String json = MAPPER.writeValueAsString(defaultConfig);
-
-    CoordinatorCompactionConfig deserialized = MAPPER.readValue(json, CoordinatorCompactionConfig.class);
-    Assert.assertEquals(defaultConfig, deserialized);
+    Jerseys.addResource(binder, QuidemCaptureResource.class);
   }
 }

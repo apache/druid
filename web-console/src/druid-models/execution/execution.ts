@@ -194,7 +194,7 @@ export interface ExecutionValue {
 
 export class Execution {
   static USE_TASK_PAYLOAD = true;
-  static USE_TASK_REPORTS = true;
+  static USE_TASK_REPORTS = false;
   static INLINE_DATASOURCE_MARKER = '__query_select';
 
   static getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined =
@@ -235,7 +235,7 @@ export class Execution {
     sqlQuery?: string,
     queryContext?: QueryContext,
   ): Execution {
-    const { queryId, schema, result, errorDetails } = asyncSubmitResult;
+    const { queryId, schema, result, errorDetails, stages, counters, warnings } = asyncSubmitResult;
 
     let queryResult: QueryResult | undefined;
     if (schema && result?.sampleRecords) {
@@ -263,6 +263,8 @@ export class Execution {
       status: Execution.normalizeAsyncState(asyncSubmitResult.state),
       sqlQuery,
       queryContext,
+      stages: Array.isArray(stages) && counters ? new Stages(stages, counters) : undefined,
+      warnings: Array.isArray(warnings) ? warnings : undefined,
       error: executionError,
       destination:
         typeof result?.dataSource === 'string'
