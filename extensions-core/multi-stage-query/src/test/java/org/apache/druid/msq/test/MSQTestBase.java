@@ -48,6 +48,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -55,7 +56,6 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -357,8 +357,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
             {
               // We want this module to bring InputSourceModule along for the ride.
               binder.install(new InputSourceModule());
-              binder.install(new NestedDataModule());
-              NestedDataModule.registerHandlersAndSerde();
+              binder.install(new BuiltInTypesModule());
+              BuiltInTypesModule.registerHandlersAndSerde();
               SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
@@ -521,7 +521,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
-    objectMapper.registerModules(NestedDataModule.getJacksonModulesList());
+    objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
