@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -100,7 +101,8 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       "druid",
       new CalciteRulesManager(ImmutableSet.of()),
       CalciteTests.TEST_AUTHORIZER_MAPPER,
-      AuthConfig.newBuilder().build()
+      AuthConfig.newBuilder().build(),
+      new DruidHookDispatcher()
   );
   private static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,
