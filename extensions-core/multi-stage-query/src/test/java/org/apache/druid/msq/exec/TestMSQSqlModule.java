@@ -36,7 +36,7 @@ import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.avatica.MSQDruidMeta;
 
-class TestMSQSqlModule extends TestDruidModule {
+public class TestMSQSqlModule extends TestDruidModule {
 
   @Provides
   @MultiStageQuery
@@ -82,8 +82,7 @@ class TestMSQSqlModule extends TestDruidModule {
   @LazySingleton
   private WorkerMemoryParameters makeWorkerMemoryParameters()
   {
-    final WorkerMemoryParameters workerMemoryParameters = MSQTestBase.makeTestWorkerMemoryParameters();
-    return workerMemoryParameters;
+    return MSQTestBase.makeTestWorkerMemoryParameters();
   }
 
   @Provides

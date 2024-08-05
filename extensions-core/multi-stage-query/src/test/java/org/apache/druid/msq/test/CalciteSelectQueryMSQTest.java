@@ -27,7 +27,7 @@ import com.google.inject.Module;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.msq.exec.TestMSQSqlModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteSelectQueryMSQTest.SelectMSQComponentSupplier;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
@@ -63,8 +63,8 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
     {
       super.configureGuice(builder);
       builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
+      builder.addModule(new TestMSQSqlModule());
     }
-
 
     @Override
     public SqlEngine createEngine(
@@ -73,15 +73,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
         Injector injector
     )
     {
-      final WorkerMemoryParameters workerMemoryParameters = MSQTestBase.makeTestWorkerMemoryParameters();
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-          queryJsonMapper,
-          injector,
-          new MSQTestTaskActionClient(queryJsonMapper, injector),
-          workerMemoryParameters,
-          ImmutableList.of()
-      );
-      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+      return injector.getInstance(MSQTaskSqlEngine.class);
     }
   }
 
