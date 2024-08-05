@@ -72,6 +72,7 @@ import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHo
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.Access;
@@ -103,6 +104,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class SystemSchema extends AbstractSchema
 {
@@ -161,10 +163,22 @@ public class SystemSchema extends AbstractSchema
       .add("replication_factor", ColumnType.LONG)
       .build();
 
-  static final int SEGMENTS_SHARD_SPEC_INDEX = SEGMENTS_SIGNATURE.indexOf("shard_spec");
-  static final int SEGMENTS_DIMENSIONS_INDEX = SEGMENTS_SIGNATURE.indexOf("dimensions");
-  static final int SEGMENTS_METRICS_INDEX = SEGMENTS_SIGNATURE.indexOf("metrics");
-  static final int SEGMENTS_LAST_COMPACTION_STATE_INDEX = SEGMENTS_SIGNATURE.indexOf("last_compaction_state");
+  /**
+   * List of [0..n) where n is the size of {@link #SEGMENTS_SIGNATURE}.
+   */
+  private static final int[] SEGMENTS_PROJECT_ALL = IntStream.range(0, SEGMENTS_SIGNATURE.size()).toArray();
+
+  /**
+   * Fields in {@link #SEGMENTS_SIGNATURE} that are serialized with {@link ObjectMapper#writeValueAsString(Object)}.
+   */
+  private static final IntSet SEGMENTS_JSON_FIELDS = new IntOpenHashSet(
+      new int[]{
+          SEGMENTS_SIGNATURE.indexOf("shard_spec"),
+          SEGMENTS_SIGNATURE.indexOf("dimensions"),
+          SEGMENTS_SIGNATURE.indexOf("metrics"),
+          SEGMENTS_SIGNATURE.indexOf("last_compaction_state")
+      }
+  );
 
   static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
@@ -250,7 +264,7 @@ public class SystemSchema extends AbstractSchema
   /**
    * This table contains row per segment from metadata store as well as served segments.
    */
-  static class SegmentsTable extends AbstractTable implements ScannableTable, ProjectableFilterableTable
+  static class SegmentsTable extends AbstractTable implements ProjectableFilterableTable
   {
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
@@ -283,21 +297,12 @@ public class SystemSchema extends AbstractSchema
     }
 
     @Override
-    public Enumerable<Object[]> scan(DataContext root)
-    {
-      return scan(root, Collections.emptyList(), null);
-    }
-
-    @Override
     public Enumerable<Object[]> scan(
         final DataContext root,
         final List<RexNode> filters,
         @Nullable final int[] projects
     )
     {
-      // Set of fields to include in the returned Object[]s
-      final IntSet projectSet = projects == null ? null : new IntOpenHashSet(projects);
-
       // get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
           druidSchema.cache().getSegmentMetadataSnapshot();
@@ -349,65 +354,30 @@ public class SystemSchema extends AbstractSchema
             // is_active is true for published segments that are not overshadowed or else they should be realtime
             boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
 
-            try {
-              final String shardSpec;
-              final String dimensions;
-              final String metrics;
-              final String lastCompactionState;
-
-              if (segment.getShardSpec() != null && doesProject(projectSet, SEGMENTS_SHARD_SPEC_INDEX)) {
-                shardSpec = jsonMapper.writeValueAsString(segment.getShardSpec());
-              } else {
-                shardSpec = null;
-              }
-
-              if (segment.getDimensions() != null && doesProject(projectSet, SEGMENTS_DIMENSIONS_INDEX)) {
-                dimensions = jsonMapper.writeValueAsString(segment.getDimensions());
-              } else {
-                dimensions = null;
-              }
-
-              if (segment.getMetrics() != null && doesProject(projectSet, SEGMENTS_METRICS_INDEX)) {
-                metrics = jsonMapper.writeValueAsString(segment.getMetrics());
-              } else {
-                metrics = null;
-              }
-
-              if (segment.getLastCompactionState() != null
-                  && doesProject(projectSet, SEGMENTS_LAST_COMPACTION_STATE_INDEX)) {
-                lastCompactionState = jsonMapper.writeValueAsString(segment.getLastCompactionState());
-              } else {
-                lastCompactionState = null;
-              }
-
-              return new Object[]{
-                  segment.getId().toString(),
-                  segment.getDataSource(),
-                  segment.getInterval().getStart().toString(),
-                  segment.getInterval().getEnd().toString(),
-                  segment.getSize(),
-                  segment.getVersion(),
-                  (long) segment.getShardSpec().getPartitionNum(),
-                  numReplicas,
-                  numRows,
-                  isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
-                  isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
-                  isAvailable,
-                  isRealtime,
-                  val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
-                  shardSpec,
-                  dimensions,
-                  metrics,
-                  lastCompactionState,
-                  // If the segment is unpublished, we won't have this information yet.
-                  // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
-                  // This should be automatically updated in the next Coordinator poll.
-                  val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
-              };
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
+            return new Object[]{
+                segment.getId(),
+                segment.getDataSource(),
+                segment.getInterval().getStart(),
+                segment.getInterval().getEnd(),
+                segment.getSize(),
+                segment.getVersion(),
+                (long) segment.getShardSpec().getPartitionNum(),
+                numReplicas,
+                numRows,
+                isActive ? IS_ACTIVE_TRUE : IS_ACTIVE_FALSE,
+                isPublished ? IS_PUBLISHED_TRUE : IS_PUBLISHED_FALSE,
+                isAvailable,
+                isRealtime,
+                val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
+                segment.getShardSpec(),
+                segment.getDimensions(),
+                segment.getMetrics(),
+                segment.getLastCompactionState(),
+                // If the segment is unpublished, we won't have this information yet.
+                // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
+                // This should be automatically updated in the next Coordinator poll.
+                val.getReplicationFactor() == null ? REPLICATION_FACTOR_UNKNOWN : (long) val.getReplicationFactor()
+            };
           });
 
       // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
@@ -421,62 +391,34 @@ public class SystemSchema extends AbstractSchema
             if (segmentsAlreadySeen.contains(val.getKey())) {
               return null;
             }
+            final DataSegment segment = val.getValue().getSegment();
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
             final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
-            try {
-              final String shardSpec;
-              final String dimensions;
-              final String metrics;
-
-              final DataSegment segment = val.getValue().getSegment();
-
-              if (segment.getShardSpec() != null && doesProject(projectSet, SEGMENTS_SHARD_SPEC_INDEX)) {
-                shardSpec = jsonMapper.writeValueAsString(segment.getShardSpec());
-              } else {
-                shardSpec = null;
-              }
-
-              if (segment.getDimensions() != null && doesProject(projectSet, SEGMENTS_DIMENSIONS_INDEX)) {
-                dimensions = jsonMapper.writeValueAsString(segment.getDimensions());
-              } else {
-                dimensions = null;
-              }
-
-              if (segment.getMetrics() != null && doesProject(projectSet, SEGMENTS_METRICS_INDEX)) {
-                metrics = jsonMapper.writeValueAsString(segment.getMetrics());
-              } else {
-                metrics = null;
-              }
-
-              return new Object[]{
-                  val.getKey().toString(),
-                  val.getKey().getDataSource(),
-                  val.getKey().getInterval().getStart().toString(),
-                  val.getKey().getInterval().getEnd().toString(),
-                  segment.getSize(),
-                  val.getKey().getVersion(),
-                  (long) segment.getShardSpec().getPartitionNum(),
-                  numReplicas,
-                  val.getValue().getNumRows(),
-                  // is_active is true for unpublished segments iff they are realtime
-                  val.getValue().isRealtime() /* is_active */,
-                  // is_published is false for unpublished segments
-                  IS_PUBLISHED_FALSE,
-                  // is_available is assumed to be always true for segments announced by historicals or realtime tasks
-                  IS_AVAILABLE_TRUE,
-                  val.getValue().isRealtime(),
-                  IS_OVERSHADOWED_FALSE,
-                  // there is an assumption here that unpublished segments are never overshadowed
-                  shardSpec,
-                  dimensions,
-                  metrics,
-                  null, // unpublished segments from realtime tasks will not be compacted yet
-                  REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
-              };
-            }
-            catch (JsonProcessingException e) {
-              throw new RuntimeException(e);
-            }
+            return new Object[]{
+                val.getKey(),
+                val.getKey().getDataSource(),
+                val.getKey().getInterval().getStart(),
+                val.getKey().getInterval().getEnd(),
+                segment.getSize(),
+                val.getKey().getVersion(),
+                (long) segment.getShardSpec().getPartitionNum(),
+                numReplicas,
+                val.getValue().getNumRows(),
+                // is_active is true for unpublished segments iff they are realtime
+                val.getValue().isRealtime() /* is_active */,
+                // is_published is false for unpublished segments
+                IS_PUBLISHED_FALSE,
+                // is_available is assumed to be always true for segments announced by historicals or realtime tasks
+                IS_AVAILABLE_TRUE,
+                val.getValue().isRealtime(),
+                IS_OVERSHADOWED_FALSE,
+                // there is an assumption here that unpublished segments are never overshadowed
+                segment.getShardSpec(),
+                segment.getDimensions(),
+                segment.getMetrics(),
+                null, // unpublished segments from realtime tasks will not be compacted yet
+                REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
+            };
           });
 
       final Iterable<Object[]> allSegments = Iterables.unmodifiableIterable(
@@ -485,7 +427,7 @@ public class SystemSchema extends AbstractSchema
 
       return Linq4j.asEnumerable(allSegments)
                    .where(Objects::nonNull)
-                   .select(row -> projectRow(row, projects));
+                   .select(row -> projectSegmentsRow(row, projects, jsonMapper));
     }
 
     private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
@@ -1221,23 +1163,42 @@ public class SystemSchema extends AbstractSchema
   }
 
   /**
-   * Project a row using "projects" from {@link ProjectableFilterableTable}.
+   * Project a row using "projects" from {@link SegmentsTable#scan(DataContext, List, int[])}.
+   *
+   * Also, fix up types so {@link ColumnType#STRING} are transformed to Strings if they aren't yet. This defers
+   * computation of {@link ObjectMapper#writeValueAsString(Object)} or {@link Object#toString()} until we know we
+   * actually need it.
    */
-  private static Object[] projectRow(final Object[] row, @Nullable final int[] projects)
+  private static Object[] projectSegmentsRow(
+      final Object[] row,
+      @Nullable final int[] projects,
+      final ObjectMapper jsonMapper
+  )
   {
-    if (projects == null) {
-      return row;
-    } else {
-      final Object[] projectedRow = new Object[projects.length];
-      for (int i = 0; i < projects.length; i++) {
-        projectedRow[i] = row[projects[i]];
-      }
-      return projectedRow;
-    }
-  }
+    final int[] nonNullProjects = projects == null ? SEGMENTS_PROJECT_ALL : projects;
+    final Object[] projectedRow = new Object[nonNullProjects.length];
 
-  private static boolean doesProject(@Nullable final IntSet projectSet, final int fieldNumber)
-  {
-    return projectSet == null || projectSet.contains(fieldNumber);
+    for (int i = 0; i < nonNullProjects.length; i++) {
+      final Object o = row[nonNullProjects[i]];
+
+      if (SEGMENTS_SIGNATURE.getColumnType(nonNullProjects[i]).get().is(ValueType.STRING)
+          && o != null
+          && !(o instanceof String)) {
+        // Delay calling toString() or ObjectMapper#writeValueAsString() until we know we actually need this field.
+        if (SEGMENTS_JSON_FIELDS.contains(nonNullProjects[i])) {
+          try {
+            projectedRow[i] = jsonMapper.writeValueAsString(o);
+          }
+          catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+          }
+        } else {
+          projectedRow[i] = o.toString();
+        }
+      } else {
+        projectedRow[i] = o;
+      }
+    }
+    return projectedRow;
   }
 }
