@@ -462,7 +462,7 @@ public class WorkerTaskManagerTest
       @Override
       public TaskStatus runTask(TaskToolbox toolbox) throws Exception
       {
-        Thread.sleep(runTime);
+        Thread.sleep(getRunTime());
         return TaskStatus.failure(getId(), "Failed to complete the task");
       }
     };

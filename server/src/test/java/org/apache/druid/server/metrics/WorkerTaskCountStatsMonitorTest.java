@@ -289,22 +289,22 @@ public class WorkerTaskCountStatsMonitorTest
         9L
     );
     emitter.verifyValue(
-            "indexer/task/failed/count",
+            "worker/task/failed/count",
             ImmutableMap.of("dataSource", "movies"),
             4L
     );
     emitter.verifyValue(
-            "indexer/task/failed/count",
+            "worker/task/failed/count",
             ImmutableMap.of("dataSource", "games"),
             6L
     );
     emitter.verifyValue(
-            "indexer/task/success/count",
+            "worker/task/success/count",
             ImmutableMap.of("dataSource", "games"),
             23L
     );
     emitter.verifyValue(
-            "indexer/task/success/count",
+            "worker/task/success/count",
             ImmutableMap.of("dataSource", "inventory"),
             89L
     );
