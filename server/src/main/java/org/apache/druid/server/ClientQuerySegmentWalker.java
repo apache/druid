@@ -648,6 +648,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
+   */
+  /**
+   *
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
    *
    * @param query            the query
@@ -657,6 +660,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                         particular master query
    * @param limit            user-configured limit. If negative, will be treated as {@link Integer#MAX_VALUE}.
    *                         If zero, this method will throw an error immediately.
+   * @param memoryLimit      User configured byte limit.
+   * @param useNestedForUnknownTypeInSubquery Uses nested json for unknown types when materializing subquery results
+   * @param subqueryStatsProvider Statistics about the subquery materialization
+   * @param emitMetrics      Flag to control if the metrics need to be emitted while materializing. The metrics are omitted
+   *                         when we are performing a dry run of the query to avoid double reporting the same metric incorrectly
+   * @param emitter          Metrics emitter
+   * @return                 Inlined datasource represented by the provided results
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
   private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
