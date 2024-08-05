@@ -63,9 +63,11 @@ class TestMSQSqlModule extends TestDruidModule {
 
   @Provides
   @LazySingleton
-  private MSQTestOverlordServiceClient extracted(ObjectMapper queryJsonMapper, Injector injector)
+  private MSQTestOverlordServiceClient makeOverlordServiceClient(
+      ObjectMapper queryJsonMapper,
+      Injector injector,
+      WorkerMemoryParameters workerMemoryParameters)
   {
-    final WorkerMemoryParameters workerMemoryParameters = MSQTestBase.makeTestWorkerMemoryParameters();
     final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
         queryJsonMapper,
         injector,
@@ -74,6 +76,14 @@ class TestMSQSqlModule extends TestDruidModule {
         ImmutableList.of()
     );
     return indexingServiceClient;
+  }
+
+  @Provides
+  @LazySingleton
+  private WorkerMemoryParameters makeWorkerMemoryParameters()
+  {
+    final WorkerMemoryParameters workerMemoryParameters = MSQTestBase.makeTestWorkerMemoryParameters();
+    return workerMemoryParameters;
   }
 
   @Provides
