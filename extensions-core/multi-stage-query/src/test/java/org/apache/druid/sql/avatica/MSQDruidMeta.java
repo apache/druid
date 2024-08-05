@@ -93,7 +93,11 @@ public class MSQDruidMeta extends DruidMeta
       String str = objectMapper
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(payload.getStages());
-      str = str.replaceAll(taskId, "<taskId>");
+      str = str.replaceAll(taskId, "<taskId>")
+          .replaceAll("\"startTime\" : .*", "\"startTime\" : __TIMESTAMP__")
+          .replaceAll("\"duration\" : .*", "\"duration\" : __DURATION__")
+          .replaceAll("\"sqlQueryId\" : .*", "\"sqlQueryId\" : __SQL_QUERY_ID__");
+
       hookDispatcher.dispatch(DruidHook.MSQ_PLAN, str);
     }
     catch (JsonProcessingException e) {
