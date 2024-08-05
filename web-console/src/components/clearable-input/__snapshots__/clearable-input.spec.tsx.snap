@@ -2,26 +2,25 @@
 
 exports[`ClearableInput matches snapshot 1`] = `
 <div
-  class="bp4-input-group clearable-input testClassName"
+  class="bp5-input-group clearable-input testClassName"
 >
   <input
-    class="bp4-input"
+    class="bp5-input"
     placeholder="testPlaceholder"
     style="padding-right: 0px;"
     type="text"
     value="testValue"
   />
   <span
-    class="bp4-input-action"
+    class="bp5-input-action"
   >
     <button
-      class="bp4-button bp4-minimal"
+      class="bp5-button bp5-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-cross"
-        icon="cross"
+        class="bp5-icon bp5-icon-cross"
       >
         <svg
           data-icon="cross"

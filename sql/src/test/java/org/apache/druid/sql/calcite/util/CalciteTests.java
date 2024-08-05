@@ -125,6 +125,11 @@ public class CalciteTests
   public static final String DRUID_SCHEMA_NAME = "druid";
   public static final String WIKIPEDIA = "wikipedia";
   public static final String WIKIPEDIA_FIRST_LAST = "wikipedia_first_last";
+  public static final String TBL_WITH_NULLS_PARQUET = "tblWnulls.parquet";
+  public static final String SML_TBL_PARQUET = "smlTbl.parquet";
+  public static final String ALL_TYPES_UNIQ_PARQUET = "allTypsUniq.parquet";
+  public static final String FEW_ROWS_ALL_DATA_PARQUET = "fewRowsAllData.parquet";
+  public static final String T_ALL_TYPE_PARQUET = "t_alltype.parquet";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
@@ -360,18 +365,30 @@ public class CalciteTests
     return QueryFrameworkUtils.createOperatorTable(INJECTOR);
   }
 
+
+  public static DruidNode mockCoordinatorNode()
+  {
+    return new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
+  }
+
+  public static FakeDruidNodeDiscoveryProvider mockDruidNodeDiscoveryProvider(final DruidNode coordinatorNode)
+  {
+    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+    return provider;
+  }
+
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
       final AuthorizerMapper authorizerMapper
   )
   {
-    final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
-    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
-        ImmutableMap.of(
-            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
-        )
-    );
+    final DruidNode coordinatorNode = mockCoordinatorNode();
+    FakeDruidNodeDiscoveryProvider provider = mockDruidNodeDiscoveryProvider(coordinatorNode);
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 

@@ -165,9 +165,9 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      factoryCreator.create("a0:agg", "m1", 9, 9, false),
-                      factoryCreator.create("a1:agg", "m2", 9, 9, false),
-                      factoryCreator.create("a2:agg", "dim1", 9, 9, false)
+                      factoryCreator.create("a0", "m1", 9, 9, false),
+                      factoryCreator.create("a1", "m2", 9, 9, false),
+                      factoryCreator.create("a2", "dim1", 9, 9, false)
 
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -190,7 +190,7 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .aggregators(factoryCreator.create("a0:agg", "dim1", 9, 9, true))
+                  .aggregators(factoryCreator.create("a0", "dim1", 9, 9, true))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -218,9 +218,9 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      factoryCreator.create("a0:agg", "m1", 9, 3, false),
-                      factoryCreator.create("a1:agg", "m2", 9, 3, false),
-                      factoryCreator.create("a2:agg", "dim1", 9, 3, false)
+                      factoryCreator.create("a0", "m1", 9, 3, false),
+                      factoryCreator.create("a1", "m2", 9, 3, false),
+                      factoryCreator.create("a2", "dim1", 9, 3, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -249,9 +249,9 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      factoryCreator.create("a0:agg", "m1", 9, 9, false),
-                      factoryCreator.create("a1:agg", "m2", 9, 9, false),
-                      factoryCreator.create("a2:agg", "dim1", 9, 9, false)
+                      factoryCreator.create("a0", "m1", 9, 9, false),
+                      factoryCreator.create("a1", "m2", 9, 9, false),
+                      factoryCreator.create("a2", "dim1", 9, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -275,9 +275,9 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      factoryCreator.create("a0:agg", "m1", 6, 9, false),
-                      factoryCreator.create("a1:agg", "m2", 6, 9, false),
-                      factoryCreator.create("a2:agg", "dim1", 6, 9, false)
+                      factoryCreator.create("a0", "m1", 6, 9, false),
+                      factoryCreator.create("a1", "m2", 6, 9, false),
+                      factoryCreator.create("a2", "dim1", 6, 9, false)
                   )
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()

@@ -68,7 +68,8 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   )
   {
     // Expecting a single input slice from some prior stage.

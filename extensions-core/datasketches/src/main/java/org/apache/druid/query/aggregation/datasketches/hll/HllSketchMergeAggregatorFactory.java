@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -34,7 +35,9 @@ import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -107,6 +110,8 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public Aggregator factorize(final ColumnSelectorFactory columnSelectorFactory)
   {
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
+
     final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeAggregator(selector, getLgK(), TgtHllType.valueOf(getTgtHllType()));
   }
@@ -115,6 +120,8 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(final ColumnSelectorFactory columnSelectorFactory)
   {
+    validateInputs(columnSelectorFactory.getColumnCapabilities(getFieldName()));
+
     final ColumnValueSelector<HllSketchHolder> selector = columnSelectorFactory.makeColumnValueSelector(getFieldName());
     return new HllSketchMergeBufferAggregator(
         selector,
@@ -133,6 +140,7 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+    validateInputs(selectorFactory.getColumnCapabilities(getFieldName()));
     return new HllSketchMergeVectorAggregator(
         selectorFactory,
         getFieldName(),
@@ -140,6 +148,34 @@ public class HllSketchMergeAggregatorFactory extends HllSketchAggregatorFactory
         TgtHllType.valueOf(getTgtHllType()),
         getMaxIntermediateSize()
     );
+  }
+
+  /**
+   * Validates whether the aggregator supports the input column type.
+   * Supported column types are complex types of HLLSketch, HLLSketchBuild, HLLSketchMerge, as well as UNKNOWN_COMPLEX.
+   * @param capabilities
+   */
+  private void validateInputs(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities != null) {
+      final ColumnType type = capabilities.toColumnType();
+      boolean isSupportedComplexType = ValueType.COMPLEX.equals(type.getType()) &&
+                                          (
+                                              HllSketchModule.TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                              HllSketchModule.BUILD_TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                              HllSketchModule.MERGE_TYPE_NAME.equals(type.getComplexTypeName()) ||
+                                              type.getComplexTypeName() == null
+                                          );
+      if (!isSupportedComplexType) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                "Using aggregator [%s] is not supported for complex columns with type [%s].",
+                                getIntermediateType().getComplexTypeName(),
+                                type
+                            );
+      }
+    }
   }
 
   @Override

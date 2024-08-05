@@ -27,7 +27,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -182,7 +181,7 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     doubleDictionaryWriter.open();
 
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
-        getInternalFileName(name, RAW_FILE_NAME),
+        NestedCommonFormatColumnSerializer.getInternalFileName(name, RAW_FILE_NAME),
         segmentWriteOutMedium,
         indexSpec.getJsonCompression() != null ? indexSpec.getJsonCompression() : CompressionStrategy.LZ4
     );
@@ -390,14 +389,9 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
 
   private void writeInternal(FileSmoosher smoosher, Serializer serializer, String fileName) throws IOException
   {
-    final String internalName = getInternalFileName(name, fileName);
+    final String internalName = NestedCommonFormatColumnSerializer.getInternalFileName(name, fileName);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
       serializer.writeTo(smooshChannel, smoosher);
     }
-  }
-
-  public static String getInternalFileName(String fileNameBase, String field)
-  {
-    return StringUtils.format("%s.%s", fileNameBase, field);
   }
 }

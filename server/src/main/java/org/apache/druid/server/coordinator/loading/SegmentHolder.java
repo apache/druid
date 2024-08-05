@@ -21,18 +21,20 @@ package org.apache.druid.server.coordinator.loading;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Represents a segment queued for a load or drop operation in a LoadQueuePeon.
@@ -57,14 +59,17 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   private final DataSegmentChangeRequest changeRequest;
   private final SegmentAction action;
 
+  private final Duration requestTimeout;
+
   // Guaranteed to store only non-null elements
   private final List<LoadPeonCallback> callbacks = new ArrayList<>();
-  private final AtomicLong firstRequestMillis = new AtomicLong(0);
+  private final Stopwatch sinceRequestSentToServer = Stopwatch.createUnstarted();
   private int runsInQueue = 0;
 
   public SegmentHolder(
       DataSegment segment,
       SegmentAction action,
+      Duration requestTimeout,
       @Nullable LoadPeonCallback callback
   )
   {
@@ -76,6 +81,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
     if (callback != null) {
       callbacks.add(callback);
     }
+    this.requestTimeout = requestTimeout;
   }
 
   public DataSegment getSegment()
@@ -124,17 +130,20 @@ public class SegmentHolder implements Comparable<SegmentHolder>
 
   public void markRequestSentToServer()
   {
-    firstRequestMillis.compareAndSet(0L, System.currentTimeMillis());
+    if (!sinceRequestSentToServer.isRunning()) {
+      sinceRequestSentToServer.start();
+    }
   }
 
-  public boolean isRequestSentToServer()
+  /**
+   * A request is considered to have timed out if the time elapsed since it was
+   * first sent to the server is greater than the configured load timeout.
+   *
+   * @see HttpLoadQueuePeonConfig#getLoadTimeout()
+   */
+  public boolean hasRequestTimedOut()
   {
-    return firstRequestMillis.get() > 0;
-  }
-
-  public long getFirstRequestMillis()
-  {
-    return firstRequestMillis.get();
+    return sinceRequestSentToServer.millisElapsed() > requestTimeout.getMillis();
   }
 
   public int incrementAndGetRunsInQueue()

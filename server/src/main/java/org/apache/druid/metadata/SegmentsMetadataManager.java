@@ -201,7 +201,7 @@ public interface SegmentsMetadataManager
    */
   List<Interval> getUnusedSegmentIntervals(
       String dataSource,
-      DateTime minStartTime,
+      @Nullable DateTime minStartTime,
       DateTime maxEndTime,
       int limit,
       DateTime maxUsedStatusLastUpdatedTime

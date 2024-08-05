@@ -19,9 +19,12 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -36,8 +39,10 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
@@ -51,9 +56,11 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -100,6 +107,8 @@ import java.util.stream.Collectors;
  */
 public class TestDataBuilder
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+
   public static final String TIMESTAMP_COLUMN = "t";
   public static final GlobalTableDataSource CUSTOM_TABLE = new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE);
 
@@ -655,8 +664,9 @@ public class TestDataBuilder
                         new FloatLastAggregatorFactory("float_last_added", "added", "__time"),
                         new FloatLastAggregatorFactory("float_first_added", "added", "__time"),
                         new DoubleLastAggregatorFactory("double_last_added", "added", "__time"),
-                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time")
-
+                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time"),
+                        new StringFirstAggregatorFactory("string_first_added", "comment", "__time", 1000),
+                        new StringLastAggregatorFactory("string_last_added", "comment", "__time", 1000)
                     )
                     .build()
         )
@@ -957,6 +967,175 @@ public class TestDataBuilder
                    .build(),
         arraysIndex
     );
+  }
+
+  public static void attachIndexesForDrillTestDatasources(SpecificSegmentsQuerySegmentWalker segmentWalker, File tmpDir)
+  {
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.TBL_WITH_NULLS_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.SML_TBL_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.ALL_TYPES_UNIQ_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.FEW_ROWS_ALL_DATA_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.T_ALL_TYPE_PARQUET, tmpDir);
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private static void attachIndexForDrillTestDatasource(
+      SpecificSegmentsQuerySegmentWalker segmentWalker,
+      String dataSource,
+      File tmpDir
+  )
+  {
+    final QueryableIndex queryableIndex = getQueryableIndexForDrillDatasource(dataSource, tmpDir);
+
+    segmentWalker.add(
+        DataSegment.builder()
+                   .dataSource(dataSource)
+                   .interval(Intervals.ETERNITY)
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .size(0)
+                   .build(),
+        queryableIndex);
+  }
+
+  public static QueryableIndex getQueryableIndexForDrillDatasource(String datasource, File parentTempDir)
+  {
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(getDimensionSpecForDrillDatasource(datasource))
+        .withRollup(false)
+        .build();
+    Iterable<InputRow> inputRowsForDrillDatasource = getInputRowsForDrillDatasource(datasource);
+    return IndexBuilder
+        .create()
+        .tmpDir(new File(parentTempDir, datasource))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(indexSchema)
+        .rows(inputRowsForDrillDatasource)
+        .buildMMappedIndex();
+  }
+
+  private static DimensionsSpec getDimensionSpecForDrillDatasource(String datasource)
+  {
+    switch (datasource) {
+      case CalciteTests.TBL_WITH_NULLS_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                new LongDimensionSchema("c1"),
+                new StringDimensionSchema("c2")
+            )
+        );
+      }
+      case CalciteTests.SML_TBL_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                // "col_int": 8122,
+                new LongDimensionSchema("col_int"),
+                // "col_bgint": 817200,
+                new LongDimensionSchema("col_bgint"),
+                // "col_char_2": "IN",
+                new StringDimensionSchema("col_char_2"),
+                // "col_vchar_52":
+                // "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
+                new StringDimensionSchema("col_vchar_52"),
+                // "col_tmstmp": 1409617682418,
+                new LongDimensionSchema("col_tmstmp"),
+                // "col_dt": 422717616000000,
+                new LongDimensionSchema("col_dt"),
+                // "col_booln": false,
+                new StringDimensionSchema("col_booln"),
+                // "col_dbl": 12900.48,
+                new DoubleDimensionSchema("col_dbl"),
+                // "col_tm": 33109170
+                new LongDimensionSchema("col_tm")
+            )
+        );
+      }
+      case CalciteTests.ALL_TYPES_UNIQ_PARQUET: {
+        // {"col0":1,"col1":65534,"col2":256.0,"col3":1234.9,"col4":73578580,"col5":1393720082338,"col6":421185052800000,"col7":false,"col8":"CA","col9":"AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXZ"}
+        return new DimensionsSpec(
+            ImmutableList.of(
+                new LongDimensionSchema("col0"),
+                new LongDimensionSchema("col1"),
+                new DoubleDimensionSchema("col2"),
+                new DoubleDimensionSchema("col3"),
+                new LongDimensionSchema("col4"),
+                new LongDimensionSchema("col5"),
+                new LongDimensionSchema("col6"),
+                new StringDimensionSchema("col7"),
+                new StringDimensionSchema("col8"),
+                new StringDimensionSchema("col9")
+            )
+        );
+      }
+      case CalciteTests.FEW_ROWS_ALL_DATA_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                // "col0":12024,
+                new LongDimensionSchema("col0"),
+                // "col1":307168,
+                new LongDimensionSchema("col1"),
+                // "col2":"VT",
+                new StringDimensionSchema("col2"),
+                // "col3":"DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF",
+                new StringDimensionSchema("col3"),
+                // "col4":1338596882419,
+                new LongDimensionSchema("col4"),
+                // "col5":422705433600000,
+                new LongDimensionSchema("col5"),
+                // "col6":true,
+                new StringDimensionSchema("col6"),
+                // "col7":3.95110006277E8,
+                new DoubleDimensionSchema("col7"),
+                // "col8":67465430
+                new LongDimensionSchema("col8")
+            )
+        );
+      }
+      case CalciteTests.T_ALL_TYPE_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                // "c1":1,
+                new LongDimensionSchema("c1"),
+                // "c2":592475043,
+                new LongDimensionSchema("c2"),
+                // "c3":616080519999272,
+                new LongDimensionSchema("c3"),
+                // "c4":"ObHeWTDEcbGzssDwPwurfs",
+                new StringDimensionSchema("c4"),
+                // "c5":"0sZxIfZ CGwTOaLWZ6nWkUNx",
+                new StringDimensionSchema("c5"),
+                // "c6":1456290852307,
+                new LongDimensionSchema("c6"),
+                // "c7":421426627200000,
+                new LongDimensionSchema("c7"),
+                // "c8":true,
+                new StringDimensionSchema("c8"),
+                // "c9":0.626179100469
+                new DoubleDimensionSchema("c9")
+            )
+        );
+      }
+      default:
+        throw new RuntimeException("Invalid datasource supplied for drill tests");
+    }
+  }
+
+  private static Iterable<InputRow> getInputRowsForDrillDatasource(String datasource)
+  {
+    DimensionsSpec dimensionSpecForDrillDatasource = getDimensionSpecForDrillDatasource(datasource);
+    return () -> {
+      try {
+        return Iterators.transform(
+              MAPPER.readerFor(Map.class)
+                    .readValues(
+                        ClassLoader.getSystemResource("drill/window/datasources/" + datasource + ".json")),
+              (Function<Map, InputRow>) input -> new MapBasedInputRow(0, dimensionSpecForDrillDatasource.getDimensionNames(), input)
+        );
+      }
+      catch (IOException e) {
+        throw new RE(e, "problem reading file");
+      }
+    };
   }
 
   private static MapBasedInputRow toRow(String time, List<String> dimensions, Map<String, Object> event)

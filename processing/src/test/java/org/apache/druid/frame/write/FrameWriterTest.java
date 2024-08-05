@@ -37,7 +37,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
@@ -92,7 +92,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
 
   static {
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private static final int DEFAULT_ALLOCATOR_CAPACITY = 1_000_000;
@@ -582,12 +582,21 @@ public class FrameWriterTest extends InitializedNullHandlingTest
                            null,
                            (retVal, cursor) -> {
                              int numRows = 0;
-                             final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-                                 outputFrameType,
-                                 new SingleMemoryAllocatorFactory(allocator),
-                                 signature,
-                                 keyColumns
-                             );
+                             final FrameWriterFactory frameWriterFactory;
+                             if (FrameType.ROW_BASED.equals(outputFrameType)) {
+                               frameWriterFactory = FrameWriters.makeRowBasedFrameWriterFactory(
+                                   new SingleMemoryAllocatorFactory(allocator),
+                                   signature,
+                                   keyColumns,
+                                   false
+                               );
+                             } else {
+                               frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+                                   new SingleMemoryAllocatorFactory(allocator),
+                                   signature,
+                                   keyColumns
+                               );
+                             }
 
                              ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

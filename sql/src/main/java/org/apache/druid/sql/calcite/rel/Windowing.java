@@ -160,15 +160,13 @@ public class Windowing
               Collections.emptyList(),
               aggName,
               aggregateCall,
-              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
+              false // Windowed aggregations finalize later when we write the computed value to result RAC
           );
 
           if (aggregation == null
               || aggregation.getPostAggregator() != null
               || aggregation.getAggregatorFactories().size() != 1) {
-            if (null == plannerContext.getPlanningError()) {
-              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
-            }
+            plannerContext.setPlanningError("Aggregation [%s] is currently not supported for window functions", aggregateCall.getAggregation().getName());
             throw new CannotBuildQueryException(window, aggregateCall);
           }
 
@@ -451,22 +449,27 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      return new WindowFrame(
-          group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
-          group.lowerBound.isUnbounded(),
-          figureOutOffset(group.lowerBound),
-          group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound),
-          group.isRows ? null : getOrdering()
-      );
+      if (group.isRows) {
+        return WindowFrame.rows(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound));
+      } else {
+        /* Right now we support GROUPS based framing in the native layer;
+         * but the SQL layer doesn't accept that as of now.
+         */
+        return WindowFrame.groups(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound), getOrderingColumNames());
+      }
     }
 
-    private int figureOutOffset(RexWindowBound bound)
+    private Integer getBoundAsInteger(RexWindowBound bound)
     {
-      if (bound.isUnbounded() || bound.isCurrentRow()) {
+      if (bound.isUnbounded()) {
+        return null;
+      }
+      if (bound.isCurrentRow()) {
         return 0;
       }
-      return getConstant(((RexInputRef) bound.getOffset()).getIndex());
+
+      final int value = getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      return bound.isPreceding() ? -value : value;
     }
 
     private int getConstant(int refIndex)

@@ -37,7 +37,7 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -85,7 +85,7 @@ public class FrameChannelMergerBenchmark
 {
   static {
     NullHandling.initializeForTests();
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private static final String KEY = "key";
@@ -351,11 +351,11 @@ public class FrameChannelMergerBenchmark
         channels.stream().map(BlockingQueueFrameChannel::readable).collect(Collectors.toList()),
         frameReader,
         outputChannel.writable(),
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+        FrameWriters.makeRowBasedFrameWriterFactory(
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,
-            sortKey
+            sortKey,
+            false
         ),
         sortKey,
         null,

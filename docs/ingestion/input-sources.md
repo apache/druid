@@ -30,12 +30,15 @@ For general information on native batch indexing and parallel task indexing, see
 ## S3 input source
 
 :::info
- You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+
+You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
+
 :::
 
 The S3 input source reads objects directly from S3. You can specify either:
-- a list of S3 URI strings
-- a list of S3 location prefixes that attempts to list the contents and ingest
+
+* a list of S3 URI strings
+* a list of S3 location prefixes that attempts to list the contents and ingest
 all objects contained within the locations.
 
 The S3 input source is splittable. Therefore, you can use it with the [Parallel task](./native-batch.md). Each worker task of `index_parallel` reads one or multiple objects.
@@ -75,7 +78,6 @@ Sample specs:
     },
 ...
 ```
-
 
 ```json
 ...
@@ -210,13 +212,17 @@ Properties Object:
 |assumeRoleExternalId|A unique identifier that might be required when you assume a role in another account [see](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_request.html)|None|no|
 
 :::info
- **Note:** If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+
+If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credentials provider chain](../development/extensions-core/s3.md#s3-authentication-methods) is used.
+
 :::
 
 ## Google Cloud Storage input source
 
 :::info
- You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+
+You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
+
 :::
 
 The Google Cloud Storage input source is to support reading objects directly
@@ -261,7 +267,6 @@ Sample specs:
 ...
 ```
 
-
 ```json
 ...
     "ioConfig": {
@@ -300,16 +305,18 @@ Google Cloud Storage object:
 |path|The path where data is located.|None|yes|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Google Cloud Storage URI starting with `gs://`), `__file_bucket` (GCS bucket), and `__file_path` (GCS key).|None|no|
 
-## Azure input source 
+## Azure input source
 
 :::info
- You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+
+You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
+
 :::
 
 The Azure input source (that uses the type `azureStorage`) reads objects directly from Azure Blob store or Azure Data Lake sources. You can
 specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
-The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema. 
+The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema.
 
 Sample specs:
 
@@ -347,7 +354,6 @@ Sample specs:
 ...
 ```
 
-
 ```json
 ...
     "ioConfig": {
@@ -379,7 +385,7 @@ Sample specs:
 |objects|JSON array of Azure objects to ingest.|None|One of the following must be set:`uris`, `prefixes`, or `objects`.|
 |objectGlob|A glob for the object part of the Azure URI. In the URI `azureStorage://foo/bar/file.json`, the glob is applied to `bar/file.json`.<br /><br />The glob must match the entire object part, not just the filename. For example, the glob `*.json` does not match `azureStorage://foo/bar/file.json` because the object part is `bar/file.json`, and the`*` does not match the slash. To match all objects ending in `.json`, use `**.json` instead.<br /><br />For more information, refer to the documentation for [`FileSystem#getPathMatcher`](https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-).|None|no|
 |systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (Azure blob URI starting with `azureStorage://`), `__file_bucket` (Azure bucket), and `__file_path` (Azure object path).|None|no|
-|properties|Properties object for overriding the default Azure configuration. See below for more information.|None|No (defaults will be used if not given)
+|properties|Properties object for overriding the default Azure configuration. See below for more information.|None|No (defaults will be used if not given)|
 
 Note that the Azure input source skips all empty objects only when `prefixes` is specified.
 
@@ -390,14 +396,12 @@ The `objects` property can one of the following:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake storage account|None|yes|
 |path|The container and path where data is located.|None|yes|
 
-
 The `properties` property can be one of the following:
 
-- `sharedAccessStorageToken`
-- `key` 
-- `appRegistrationClientId`, `appRegistrationClientSecret`, and `tenantId` 
-- empty
-
+* `sharedAccessStorageToken`
+* `key`
+* `appRegistrationClientId`, `appRegistrationClientSecret`, and `tenantId`
+* empty
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|---------|
@@ -407,8 +411,7 @@ The `properties` property can be one of the following:
 |appRegistrationClientSecret|The client secret of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 |tenantId|The tenant ID of the Azure App registration to authenticate as|None|Yes if `appRegistrationClientId` is provided|
 
-
-#### `azure` input source
+### Legacy `azure` input source
 
 The Azure input source that uses the type `azure` is an older version of the Azure input type and is not recommended. It doesn't support specifying which storage account to ingest from. We recommend using the [`azureStorage` input source schema](#azure-input-source) instead since it provides more functionality.
 
@@ -448,7 +451,6 @@ Sample specs:
 ...
 ```
 
-
 ```json
 ...
     "ioConfig": {
@@ -487,11 +489,12 @@ The `objects` property is:
 |bucket|Name of the Azure Blob Storage or Azure Data Lake container|None|yes|
 |path|The path where data is located.|None|yes|
 
-
 ## HDFS input source
 
 :::info
- You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+
+You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
+
 :::
 
 The HDFS input source is to support reading files directly
@@ -580,10 +583,12 @@ in `druid.ingestion.hdfs.allowedProtocols`. See [HDFS input source security conf
 
 The HTTP input source is to support reading files directly from remote sites via HTTP.
 
-:::info
- **Security notes:** Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+:::info Security notes
 
- The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+Ingestion tasks run under the operating system account that runs the Druid processes, for example the Indexer, Middle Manager, and Peon. This means any user who can submit an ingestion task can specify an input source referring to any location that the Druid process can access. For example, using `http` input source, users may have access to internal network servers.
+
+The `http` input source is not limited to the HTTP or HTTPS protocols. It uses the Java URI class that supports HTTP, HTTPS, FTP, file, and jar protocols by default.
+
 :::
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
@@ -725,7 +730,7 @@ Sample spec:
 |filter|A wildcard filter for files. See [here](http://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter) for more information. Files matching the filter criteria are considered for ingestion. Files not matching the filter criteria are ignored.|yes if `baseDir` is specified|
 |baseDir|Directory to search recursively for files to be ingested. Empty files under the `baseDir` will be skipped.|At least one of `baseDir` or `files` should be specified|
 |files|File paths to ingest. Some files can be ignored to avoid ingesting duplicate files if they are located under the specified `baseDir`. Empty files will be skipped.|At least one of `baseDir` or `files` should be specified|
-|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (File URI starting with `file:`) and `__file_path` (file path).|None|no|
+|systemFields|JSON array of system fields to return as part of input rows. Possible values: `__file_uri` (File URI starting with `file:`) and `__file_path` (file path).|no|
 
 ## Druid input source
 
@@ -744,9 +749,9 @@ no `inputFormat` field needs to be specified in the ingestion spec when using th
 
 The Druid input source can be used for a variety of purposes, including:
 
-- Creating new datasources that are rolled-up copies of existing datasources.
-- Changing the [partitioning or sorting](./partitioning.md) of a datasource to improve performance.
-- Updating or removing rows using a [`transformSpec`](./ingestion-spec.md#transformspec).
+* Creating new datasources that are rolled-up copies of existing datasources.
+* Changing the [partitioning or sorting](./partitioning.md) of a datasource to improve performance.
+* Updating or removing rows using a [`transformSpec`](./ingestion-spec.md#transformspec).
 
 When using the Druid input source, the timestamp column shows up as a numeric field named `__time` set to the number
 of milliseconds since the epoch (January 1, 1970 00:00:00 UTC). It is common to use this in the timestampSpec, if you
@@ -813,16 +818,16 @@ rolled-up datasource `wikipedia_rollup` by grouping on hour, "countryName", and 
 ```
 
 :::info
- Note: Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you
- have ingestion specs that rely on this and cannot rewrite them, set
- [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration)
- to `true` to enable a compatibility mode where the timestampSpec is ignored.
+
+Older versions (0.19 and earlier) did not respect the timestampSpec when using the Druid input source. If you have ingestion specs that rely on this and cannot rewrite them, set [`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`](../configuration/index.md#indexer-general-configuration) to `true` to enable a compatibility mode where the timestampSpec is ignored.
+
 :::
 
 The [secondary partitioning method](native-batch.md#partitionsspec) determines the requisite number of concurrent worker tasks that run in parallel to complete ingestion with the Combining input source.
 Set this value in `maxNumConcurrentSubTasks` in `tuningConfig` based on the secondary partitioning method:
-- `range` or `single_dim` partitioning: greater than or equal to 1
-- `hashed` or `dynamic` partitioning: greater than or equal to 2
+
+* `range` or `single_dim` partitioning: greater than or equal to 1
+* `hashed` or `dynamic` partitioning: greater than or equal to 2
 
 For more information on the `maxNumConcurrentSubTasks` field, see [Implementation considerations](native-batch.md#implementation-considerations).
 
@@ -866,7 +871,7 @@ The following is an example of an SQL input source spec:
 The spec above will read all events from two separate SQLs for the interval `2013-01-01/2013-01-02`.
 Each of the SQL queries will be run in its own sub-task and thus for the above example, there would be two sub-tasks.
 
-**Recommended practices**
+### Recommended practices
 
 Compared to the other native batch input sources, SQL input source behaves differently in terms of reading the input data. Therefore, consider the following points before using this input source in a production environment:
 
@@ -877,7 +882,6 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 * Pagination may be used on the SQL queries to ensure that each query pulls a similar amount of data, thereby improving the efficiency of the sub-tasks.
 
 * Similar to file-based input formats, any updates to existing data will replace the data in segments specific to the intervals specified in the `granularitySpec`.
-
 
 ## Combining input source
 
@@ -928,7 +932,9 @@ The following is an example of a Combining input source spec:
 ## Iceberg input source
 
 :::info
+
 To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md).
+
 :::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
@@ -1133,13 +1139,15 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 ## Delta Lake input source
 
 :::info
+
 To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md).
+
 :::
 
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
- | Property|Description|Required|
+| Property|Description|Required|
 |---------|-----------|--------|
 | type|Set this value to `delta`.|yes|
 | tablePath|The location of the Delta table.|yes|
@@ -1154,7 +1162,6 @@ When a filter is applied on non-partitioned columns, the filtering is best-effor
 on statistics collected when the non-partitioned table is created. In this scenario, this Druid connector may ingest
 data that doesn't match the filter. To guarantee that the Delta Kernel prunes out unnecessary column values, only use
 filters on partitioned columns.
-
 
 `and` filter:
 
@@ -1216,7 +1223,6 @@ filters on partitioned columns.
 | type     | Set this value to `<=`.                  | yes      |
 | column   | The table column to apply the filter on. | yes      |
 | value    | The value to use in the filter.          | yes      |
-
 
 The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
 

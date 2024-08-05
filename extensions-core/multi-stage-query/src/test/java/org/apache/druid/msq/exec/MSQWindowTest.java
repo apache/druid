@@ -106,7 +106,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d0")
     };
@@ -196,7 +196,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d1")
     };
@@ -306,7 +306,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d1")
     };
@@ -419,7 +419,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d0")
     };
@@ -523,7 +523,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d0")
     };
@@ -589,7 +589,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -609,7 +609,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -655,7 +654,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -678,7 +677,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "m2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -727,7 +725,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -750,7 +748,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1", "m2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -796,7 +793,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "d1")
     };
@@ -881,7 +878,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -896,7 +893,6 @@ public class MSQWindowTest extends MSQTestBase
                 .virtualColumns(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -955,7 +951,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -969,7 +965,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1033,17 +1028,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("m2", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(
-        WindowFrame.PeerType.RANGE,
-        true,
-        0,
-        false,
-        0,
-        ImmutableList.of(new ColumnWithDirection(
-            "m1",
-            ColumnWithDirection.Direction.ASC
-        ))
-    );
+    final WindowFrame theFrame = WindowFrame.forOrderBy("m1");
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -1063,7 +1048,6 @@ public class MSQWindowTest extends MSQTestBase
                                 .columns("m2", "v0")
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
-                                .legacy(false)
                                 .build()
                         ),
                         "j0.",
@@ -1078,7 +1062,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.m2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1149,14 +1132,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("m2", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(
-        WindowFrame.PeerType.ROWS,
-        true,
-        0,
-        true,
-        0,
-        null
-    );
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -1176,7 +1152,6 @@ public class MSQWindowTest extends MSQTestBase
                                 .columns("m2", "v0")
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
-                                .legacy(false)
                                 .build()
                         ),
                         "j0.",
@@ -1191,7 +1166,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.m2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1242,7 +1216,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.DOUBLE)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -1265,7 +1239,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("dim2", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1332,14 +1305,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("d3", ColumnType.STRING)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(
-        WindowFrame.PeerType.ROWS,
-        true,
-        0,
-        true,
-        0,
-        null
-    );
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -1359,7 +1325,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.unnest", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1423,14 +1388,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("d3", ColumnType.STRING)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(
-        WindowFrame.PeerType.ROWS,
-        true,
-        0,
-        true,
-        0,
-        null
-    );
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new DoubleSumAggregatorFactory("w0", "m1")
     };
@@ -1450,7 +1408,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("j0.unnest", "m1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1627,7 +1584,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 6.0, null}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1658,7 +1615,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 6.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1689,7 +1646,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 21.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1720,7 +1677,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 21.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1752,7 +1709,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 21.0, 21.0}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 
@@ -1784,7 +1741,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f, 6.0, 6.0}
                          )
                      )
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0),
                              SegmentId.of("foo1", Intervals.of("2000-01-02T/P1D"), "test", 0),
@@ -1808,7 +1765,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.LONG)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new LongSumAggregatorFactory("w0", "added")
     };
@@ -1832,7 +1789,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("added", "cityName")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1900,7 +1856,7 @@ public class MSQWindowTest extends MSQTestBase
                                             .add("cc", ColumnType.LONG)
                                             .build();
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new LongSumAggregatorFactory("w0", "added")
     };
@@ -1924,7 +1880,6 @@ public class MSQWindowTest extends MSQTestBase
                 .columns("added", "cityName", "countryIsoCode")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(innerContextWithRowSignature)
-                .legacy(false)
                 .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
         context,
@@ -1954,7 +1909,6 @@ public class MSQWindowTest extends MSQTestBase
                                   .limit(5)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .context(outerContextWithRowSignature)
-                                  .legacy(false)
                                   .build();
 
     testSelectQuery()
@@ -2016,7 +1970,7 @@ public class MSQWindowTest extends MSQTestBase
                                            .build();
 
 
-    final WindowFrame theFrame = new WindowFrame(WindowFrame.PeerType.ROWS, true, 0, true, 0, null);
+    final WindowFrame theFrame = WindowFrame.unbounded();
     final AggregatorFactory[] theAggs = {
         new LongSumAggregatorFactory("w0", "d1")
     };
@@ -2091,7 +2045,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{0L, 129L, "Albuquerque", 140L}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .verifyResults();
   }
 }

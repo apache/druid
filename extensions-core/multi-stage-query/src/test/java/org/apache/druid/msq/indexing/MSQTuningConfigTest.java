@@ -53,6 +53,7 @@ public class MSQTuningConfigTest
         2,
         3,
         4,
+        10,
         IndexSpec.builder()
                  .withStringDictionaryEncoding(
                      new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1)

@@ -62,6 +62,7 @@ public class CollectSegmentAndServerStatsTest
     CoordinatorRunStats stats = params.getCoordinatorStats();
     Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.NUM_TO_LOAD));
     Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.NUM_TO_DROP));
+    Assert.assertTrue(stats.hasStat(Stats.SegmentQueue.LOAD_RATE_KBPS));
   }
 
 }

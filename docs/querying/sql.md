@@ -209,7 +209,10 @@ The UNNEST clause unnests ARRAY typed values. The source for UNNEST can be an ar
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
 
 ```sql
-SELECT column_alias_name FROM datasource CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1) CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2) ...
+SELECT column_alias_name
+FROM datasource
+CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1)
+CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2) ...
 ```
 
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
