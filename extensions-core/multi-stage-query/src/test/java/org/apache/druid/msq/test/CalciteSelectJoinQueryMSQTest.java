@@ -19,24 +19,14 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.msq.exec.TestMSQSqlModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
 import java.util.Map;
 
@@ -48,7 +38,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
-  @SqlTestFrameworkConfig.ComponentSupplier(JoinComponentSupplier.class)
+  @SqlTestFrameworkConfig.ComponentSupplier(StandardMSQComponentSupplier.class)
   public static class BroadcastTest extends Base
   {
     @Override
@@ -68,7 +58,7 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
-  @SqlTestFrameworkConfig.ComponentSupplier(JoinComponentSupplier.class)
+  @SqlTestFrameworkConfig.ComponentSupplier(StandardMSQComponentSupplier.class)
   public static class SortMergeTest extends Base
   {
     @Override
@@ -110,34 +100,6 @@ public class CalciteSelectJoinQueryMSQTest
               new ExtractResultsFactory(
                   () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
           .skipVectorize(true);
-    }
-  }
-
-  public static final class JoinComponentSupplier extends StandardComponentSupplier
-  {
-    public JoinComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
-      );
-      builder.addModule(new TestMSQSqlModule());
-    }
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      return injector.getInstance(MSQTaskSqlEngine.class);
     }
   }
 }

@@ -29,7 +29,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.exec.TestMSQSqlModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.test.CalciteSelectQueryMSQTest.SelectMSQComponentSupplier;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
@@ -48,35 +47,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
  */
-@SqlTestFrameworkConfig.ComponentSupplier(SelectMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(StandardMSQComponentSupplier.class)
 public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
-  public static class SelectMSQComponentSupplier extends StandardComponentSupplier
-  {
-    public SelectMSQComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
-      builder.addModule(new TestMSQSqlModule());
-    }
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      return injector.getInstance(MSQTaskSqlEngine.class);
-    }
-  }
-
   @Override
   protected QueryTestBuilder testBuilder()
   {
