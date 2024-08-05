@@ -21,13 +21,7 @@ package org.apache.druid.sql.avatica;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
-import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter.SerializeExceptFilter;
-import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.rel.type.RelDataType;
@@ -48,7 +42,6 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 public class MSQDruidMeta extends DruidMeta
 {
@@ -97,26 +90,10 @@ public class MSQDruidMeta extends DruidMeta
       throw new ISE("Results report not present in the task's report payload");
     }
     try {
-//      objectMapper.setexc
-//      objectMapper.wit
-
-      Set<String> ignorableFieldNames = ImmutableSet.of("sqlQueryId", "startTime", "duration");
-      SimpleBeanPropertyFilter simpleFilterProvider = SerializeExceptFilter.serializeAllExcept(ignorableFieldNames);
-//      simpleFilterProvider.serializeAllExcept(ignorableFieldNames);
-//      FilterProvider filters = simpleFilterProvider.addFilter("customerFilter", SimpleBeanPropertyFilter.serializeAllExcept(ignorableFieldNames));
-
-      SerializationFeature f1;
-
-      SimpleFilterProvider ff = new SimpleFilterProvider();
-      ff.addFilter("removeSome",simpleFilterProvider);
-      ;
-      ObjectWriter writerWithDefaultPrettyPrinter = objectMapper.copy().setFilterProvider(ff)
-          .writerWithDefaultPrettyPrinter();
-
-      String str = writerWithDefaultPrettyPrinter
+      String str = objectMapper
+          .writerWithDefaultPrettyPrinter()
           .writeValueAsString(payload.getStages());
       str = str.replaceAll(taskId, "<taskId>");
-
       hookDispatcher.dispatch(DruidHook.MSQ_PLAN, str);
     }
     catch (JsonProcessingException e) {
