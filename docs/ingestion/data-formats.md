@@ -736,7 +736,7 @@ This query returns:
 The `kinesis` input format lets you parse the Kinesis metadata fields in addition to the Kinesis payload value contents.
 It should only be used when ingesting from Kinesis.
 
-The `kinesis` input format wraps around the payload parsing input format and augments the data it outputs with the Kinesis event timestamp, and partition key.
+The `kinesis` input format wraps around the payload parsing input format and augments the data it outputs with the Kinesis event timestamp and partition key, the `ApproximateArrivalTimestamp ` and `PartitionKey` fields in the Kinesis record.
 
 If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
 This ensures that upgrading a Kinesis ingestion to use the Kinesis input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.
@@ -755,7 +755,7 @@ Configure the Kinesis `inputFormat` as follows:
 Using `{ "type": "json" }` as the input format would only parse the payload value.
 To parse the Kinesis metadata in addition to the payload, use the `kinesis` input format.
 
-For example, consider the following structure for a Kinesis message that represents an edit in a development environment:
+For example, consider the following structure for a Kinesis record that represents an edit in a development environment:
 
 - **Kinesis timestamp**: `1680795276351`
 - **Kinesis partition key**: `partition-1`
@@ -778,7 +778,7 @@ You would configure it as follows:
 }
 ```
 
-You would parse the example message as follows:
+You would parse the example record as follows:
 
 ```json
 {
@@ -801,7 +801,7 @@ If you want to use `kinesis.timestamp` as Druid's primary timestamp (`__time`), 
 }
 ```
 
-Finally, add these Kinesis metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to auto-detect columns.
+Finally, add these Kinesis metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to automatically detect columns.
 
 The following supervisor spec demonstrates how to ingest the Kinesis timestamp, and partition key into Druid dimensions:
 
