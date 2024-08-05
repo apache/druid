@@ -508,7 +508,7 @@ Concatenates a list of expressions.
 
 <details><summary>Example</summary>
 
-The following example concatenates the `OriginCityName` column, the word ` to `, and the `DestCityName` column. The `OriginCityName` and `DestCityName` are both from the `flight-carriers` datasource. 
+The following example concatenates the `OriginCityName` column from `flight-carriers`, the string ` to `, and the `DestCityName` column from `flight-carriers`. 
 
 ```sql
 SELECT
@@ -1121,19 +1121,19 @@ Returns the `N` leftmost characters of an expression, where `N` is an integer va
 
 <details><summary>Example</summary>
 
-  The following example returns the `3` leftmost characters of the expression `ABCDEFG`.
+The following example returns the `3` leftmost characters of the expression `ABCDEFG`.
 
-  ```sql
-  SELECT
-    'ABCDEFG' AS "expression",
-    LEFT('ABCDEFG', 3) AS "leftmost_characters"
-  ```
+```sql
+SELECT
+  'ABCDEFG' AS "expression",
+  LEFT('ABCDEFG', 3) AS "leftmost_characters"
+```
 
-  Returns the following:
+Returns the following:
 
-  | `expression` | `leftmost_characters` |
-  | -- | -- |
-  | `ABCDEFG` | `ABC` |
+| `expression` | `leftmost_characters` |
+| -- | -- |
+| `ABCDEFG` | `ABC` |
 
 </details>
 
@@ -1148,15 +1148,15 @@ Returns the length of the expression in UTF-16 code units.
 
 <details><summary>Example</summary>
 
-  The following example returns the character length of the `OriginCityName` column from the `flight-carriers` datasource.
+The following example returns the character length of the `OriginCityName` column from the `flight-carriers` datasource.
 
-  ```sql
-  SELECT 
-    "OriginCityName" AS "origin_city_name",
-    LENGTH("OriginCityName") AS "city_name_length"
-  FROM "flight-carriers"
-  LIMIT 1
-  ```
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city_name",
+  LENGTH("OriginCityName") AS "city_name_length"
+FROM "flight-carriers"
+LIMIT 1
+```
 
 Returns the following:
 
@@ -1525,19 +1525,19 @@ Returns the `N` rightmost characters of an expression, where `N` is an integer v
 
 <details><summary>Example</summary>
 
-  The following example returns the `3` rightmost characters of the expression `ABCDEFG`.
+The following example returns the `3` rightmost characters of the expression `ABCDEFG`.
 
-  ```sql
-  SELECT
-    'ABCDEFG' AS "expression",
-    RIGHT('ABCDEFG', 3) AS "rightmost_characters"
-  ```
+```sql
+SELECT
+  'ABCDEFG' AS "expression",
+  RIGHT('ABCDEFG', 3) AS "rightmost_characters"
+```
 
-  Returns the following:
+Returns the following:
 
-  | `expression` | `rightmost_characters` |
-  | -- | -- |
-  | `ABCDEFG` | `EFG` |
+| `expression` | `rightmost_characters` |
+| -- | -- |
+| `ABCDEFG` | `EFG` |
 
 </details>
 
@@ -1730,15 +1730,15 @@ Concatenates two string expressions.
   
 <details><summary>Example</summary>
 
-  The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`,
+The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`,
 
-  ```sql
-  SELECT
-    "OriginState" AS "origin_state",
-    TEXTCAT("OriginState", ', USA') AS "concatenate_state_with_USA"
-  FROM "flight-carriers"
-  LIMIT 1
-  ```
+```sql
+SELECT
+  "OriginState" AS "origin_state",
+  TEXTCAT("OriginState", ', USA') AS "concatenate_state_with_USA"
+FROM "flight-carriers"
+LIMIT 1
+```
 
 Returns the following:
 
