@@ -89,7 +89,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     private int numAdvanced;
     private boolean done;
     private DateTime markDate;
-    private int markAdvanced = 0;
+    private int markRowId = 0;
 
     IncrementalIndexCursor(
         IncrementalIndexStorageAdapter storageAdapter,
@@ -201,26 +201,44 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     public void mark(DateTime mark)
     {
       markDate = mark;
-      markAdvanced = numAdvanced;
+      markRowId = currEntry.get() != null ? currEntry.get().getRowIndex() : -1;
     }
 
     @Override
     public void resetToMark()
     {
-      numAdvanced = markAdvanced;
+      numAdvanced = markRowId;
       baseIter = facts.timeRangeIterable(
           isDescending,
           isDescending ? interval.getStartMillis() : markDate.getMillis(),
           isDescending ? markDate.getMillis() : interval.getEndMillis()
       ).iterator();
 
-      seekNextOffset();
+      BaseQuery.checkInterrupted();
+
+      boolean foundMatched = false;
+      while (baseIter.hasNext()) {
+        IncrementalIndexRow entry = baseIter.next();
+        if (beyondMaxRowIndex(entry.getRowIndex())) {
+          numAdvanced++;
+          continue;
+        }
+        currEntry.set(entry);
+        if (filterMatcher.matches(false) && (markRowId < 0 || entry.getRowIndex() == markRowId)) {
+          foundMatched = true;
+          break;
+        }
+
+        numAdvanced++;
+      }
+
+      done = !foundMatched && (emptyRange || !baseIter.hasNext());
     }
 
     @Override
     public void reset()
     {
-      markAdvanced = 0;
+      markRowId = 0;
       markDate = isDescending ? interval.getEnd() : interval.getStart();
       baseIter = cursorIterable.iterator();
 
@@ -230,11 +248,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         Iterators.advance(baseIter, numAdvanced);
       }
 
-      seekNextOffset();
-    }
-
-    private void seekNextOffset()
-    {
       BaseQuery.checkInterrupted();
 
       boolean foundMatched = false;
