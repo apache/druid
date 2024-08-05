@@ -33,15 +33,12 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
  */
 public class JettyHttpClientModule implements Module
 {
-  private static final long CLIENT_CONNECT_TIMEOUT_MILLIS = TimeUnit.MILLISECONDS.toMillis(500);
-
   public static JettyHttpClientModule global()
   {
     return new JettyHttpClientModule("druid.global.http", Global.class);
