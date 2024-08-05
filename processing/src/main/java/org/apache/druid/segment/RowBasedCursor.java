@@ -127,8 +127,12 @@ public class RowBasedCursor<RowType> implements Cursor
   public void resetToMark()
   {
     rowWalker.reset();
-    rowId = markId;
+    rowId = 0;
     rowWalker.skipToDateTime(markDate, descending);
+    while (!isDone() && !valueMatcher.matches(false) && rowId < markId) {
+      rowWalker.advance();
+      rowId++;
+    }
   }
 
   @Override
