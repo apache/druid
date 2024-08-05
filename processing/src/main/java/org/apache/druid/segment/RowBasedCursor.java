@@ -41,12 +41,12 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ToLongFunction<RowType> timestampFunction;
   private final Interval interval;
   private final boolean descending;
+  private DateTime startTime;
   private final ColumnSelectorFactory columnSelectorFactory;
   private final ValueMatcher valueMatcher;
 
   private long rowId = 0;
   private long markId = 0;
-  private DateTime markDate;
 
   public RowBasedCursor(
       final RowWalker<RowType> rowWalker,
@@ -62,6 +62,7 @@ public class RowBasedCursor<RowType> implements Cursor
     this.timestampFunction = rowAdapter.timestampFunction();
     this.interval = interval;
     this.descending = descending;
+    this.startTime = descending ? interval.getEnd().minus(1) : interval.getStart();
     this.columnSelectorFactory = virtualColumns.wrap(
         new RowBasedColumnSelectorFactory<>(
             rowWalker::currentRow,
@@ -78,8 +79,7 @@ public class RowBasedCursor<RowType> implements Cursor
     } else {
       this.valueMatcher = filter.makeMatcher(this.columnSelectorFactory);
     }
-
-    rowWalker.skipToDateTime(descending ? interval.getEnd().minus(1) : interval.getStart(), descending);
+    rowWalker.skipToDateTime(startTime, descending);
     advanceToMatchingRow();
   }
 
@@ -120,35 +120,38 @@ public class RowBasedCursor<RowType> implements Cursor
   public void mark(DateTime mark)
   {
     markId = rowId;
-    markDate = mark;
   }
 
   @Override
   public void resetToMark()
   {
-    rowWalker.reset();
     rowId = 0;
-    rowWalker.skipToDateTime(markDate, descending);
-    while (!isDone() && !valueMatcher.matches(false) && rowId < markId) {
-      rowWalker.advance();
-      rowId++;
-    }
+    rowWalker.reset();
+    rowWalker.skipToDateTime(startTime, descending);
+    advanceToMatchingMarkRow();
   }
 
   @Override
   public void reset()
-  {
+  {g
     rowId = 0;
     markId = 0;
-    markDate = descending ? interval.getEnd().minus(1) : interval.getStart();
     rowWalker.reset();
-    rowWalker.skipToDateTime(markDate, descending);
+    rowWalker.skipToDateTime(startTime, descending);
     advanceToMatchingRow();
   }
 
   private void advanceToMatchingRow()
   {
     while (!isDone() && !valueMatcher.matches(false)) {
+      rowWalker.advance();
+      rowId++;
+    }
+  }
+
+  private void advanceToMatchingMarkRow()
+  {
+    while (!isDone() && !valueMatcher.matches(false) && rowId < markId) {
       rowWalker.advance();
       rowId++;
     }
