@@ -86,12 +86,12 @@ public interface Cursor
   boolean isDoneOrInterrupted();
 
   /**
-   * Mark a position on the cursor which can recalled with {@link #resetToMark()}. This method is used by
-   * {@link org.apache.druid.query.topn.TopNQueryEngine} when computing results in query granularity buckets. The
-   * {@link DateTime} parameter supplied to this method corresponds to the start of the bucket interval. The mark is
-   * not guaranteed to be a row with the specified timestamp, rather it is to assist to seeking to the actual offset
-   * at the time of marking for cursor implementations which do not have random access offsets or might be mutable.
-   * Cursor implementations may use this parameter if useful, or ignore it and mark the current offset if not.
+   * Mark a position on the cursor which can recalled with {@link #resetToMark()}. The {@link DateTime} parameter
+   * supplied to this method corresponds to the start of the bucket interval and acts as a lower/upper bound on the
+   * first possible timestamp, it is to assist to seeking to the actual offset at the time of marking for cursor
+   * implementations which do not have random access offsets or might be mutable. Cursor implementations may use this
+   * parameter if useful, or ignore it and mark the current offset if not. This method is used by
+   * {@link org.apache.druid.query.topn.TopNQueryEngine} when computing results in query granularity buckets.
    */
   void mark(DateTime mark);
 
