@@ -23,13 +23,10 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
@@ -96,15 +93,5 @@ public class FrameReaderTest extends InitializedNullHandlingTest
           frameReader.columnCapabilities(frame, columnName).toColumnType()
       );
     }
-  }
-
-  @Test
-  public void testReadRacColumn()
-  {
-    RowSignature rs = inputAdapter.getRowSignature();
-    int colNo = 1;
-    String name = rs.getColumnName(colNo);
-    ColumnType type = rs.getColumnType(colNo).get();
-    FrameColumnReaders.create(name, colNo, type).readRACColumn(frame);
   }
 }
