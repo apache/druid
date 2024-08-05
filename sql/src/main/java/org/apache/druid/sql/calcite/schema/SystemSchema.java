@@ -32,6 +32,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.DefaultEnumerable;
 import org.apache.calcite.linq4j.Enumerable;
@@ -39,6 +41,8 @@ import org.apache.calcite.linq4j.Enumerator;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.impl.AbstractSchema;
@@ -157,6 +161,11 @@ public class SystemSchema extends AbstractSchema
       .add("replication_factor", ColumnType.LONG)
       .build();
 
+  static final int SEGMENTS_SHARD_SPEC_INDEX = SEGMENTS_SIGNATURE.indexOf("shard_spec");
+  static final int SEGMENTS_DIMENSIONS_INDEX = SEGMENTS_SIGNATURE.indexOf("dimensions");
+  static final int SEGMENTS_METRICS_INDEX = SEGMENTS_SIGNATURE.indexOf("metrics");
+  static final int SEGMENTS_LAST_COMPACTION_STATE_INDEX = SEGMENTS_SIGNATURE.indexOf("last_compaction_state");
+
   static final RowSignature SERVERS_SIGNATURE = RowSignature
       .builder()
       .add("server", ColumnType.STRING)
@@ -241,7 +250,7 @@ public class SystemSchema extends AbstractSchema
   /**
    * This table contains row per segment from metadata store as well as served segments.
    */
-  static class SegmentsTable extends AbstractTable implements ScannableTable
+  static class SegmentsTable extends AbstractTable implements ScannableTable, ProjectableFilterableTable
   {
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
@@ -276,6 +285,19 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
+      return scan(root, Collections.emptyList(), null);
+    }
+
+    @Override
+    public Enumerable<Object[]> scan(
+        final DataContext root,
+        final List<RexNode> filters,
+        @Nullable final int[] projects
+    )
+    {
+      // Set of fields to include in the returned Object[]s
+      final IntSet projectSet = projects == null ? null : new IntOpenHashSet(projects);
+
       // get available segments from druidSchema
       final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
           druidSchema.cache().getSegmentMetadataSnapshot();
@@ -328,8 +350,38 @@ public class SystemSchema extends AbstractSchema
             boolean isActive = isPublished ? !val.isOvershadowed() : val.isRealtime();
 
             try {
+              final String shardSpec;
+              final String dimensions;
+              final String metrics;
+              final String lastCompactionState;
+
+              if (segment.getShardSpec() != null && doesProject(projectSet, SEGMENTS_SHARD_SPEC_INDEX)) {
+                shardSpec = jsonMapper.writeValueAsString(segment.getShardSpec());
+              } else {
+                shardSpec = null;
+              }
+
+              if (segment.getDimensions() != null && doesProject(projectSet, SEGMENTS_DIMENSIONS_INDEX)) {
+                dimensions = jsonMapper.writeValueAsString(segment.getDimensions());
+              } else {
+                dimensions = null;
+              }
+
+              if (segment.getMetrics() != null && doesProject(projectSet, SEGMENTS_METRICS_INDEX)) {
+                metrics = jsonMapper.writeValueAsString(segment.getMetrics());
+              } else {
+                metrics = null;
+              }
+
+              if (segment.getLastCompactionState() != null
+                  && doesProject(projectSet, SEGMENTS_LAST_COMPACTION_STATE_INDEX)) {
+                lastCompactionState = jsonMapper.writeValueAsString(segment.getLastCompactionState());
+              } else {
+                lastCompactionState = null;
+              }
+
               return new Object[]{
-                  segment.getId(),
+                  segment.getId().toString(),
                   segment.getDataSource(),
                   segment.getInterval().getStart().toString(),
                   segment.getInterval().getEnd().toString(),
@@ -343,10 +395,10 @@ public class SystemSchema extends AbstractSchema
                   isAvailable,
                   isRealtime,
                   val.isOvershadowed() ? IS_OVERSHADOWED_TRUE : IS_OVERSHADOWED_FALSE,
-                  segment.getShardSpec() == null ? null : jsonMapper.writeValueAsString(segment.getShardSpec()),
-                  segment.getDimensions() == null ? null : jsonMapper.writeValueAsString(segment.getDimensions()),
-                  segment.getMetrics() == null ? null : jsonMapper.writeValueAsString(segment.getMetrics()),
-                  segment.getLastCompactionState() == null ? null : jsonMapper.writeValueAsString(segment.getLastCompactionState()),
+                  shardSpec,
+                  dimensions,
+                  metrics,
+                  lastCompactionState,
                   // If the segment is unpublished, we won't have this information yet.
                   // If the value is null, the load rules might have not evaluated yet, and we don't know the replication factor.
                   // This should be automatically updated in the next Coordinator poll.
@@ -372,14 +424,38 @@ public class SystemSchema extends AbstractSchema
             final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
             final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
             try {
+              final String shardSpec;
+              final String dimensions;
+              final String metrics;
+
+              final DataSegment segment = val.getValue().getSegment();
+
+              if (segment.getShardSpec() != null && doesProject(projectSet, SEGMENTS_SHARD_SPEC_INDEX)) {
+                shardSpec = jsonMapper.writeValueAsString(segment.getShardSpec());
+              } else {
+                shardSpec = null;
+              }
+
+              if (segment.getDimensions() != null && doesProject(projectSet, SEGMENTS_DIMENSIONS_INDEX)) {
+                dimensions = jsonMapper.writeValueAsString(segment.getDimensions());
+              } else {
+                dimensions = null;
+              }
+
+              if (segment.getMetrics() != null && doesProject(projectSet, SEGMENTS_METRICS_INDEX)) {
+                metrics = jsonMapper.writeValueAsString(segment.getMetrics());
+              } else {
+                metrics = null;
+              }
+
               return new Object[]{
-                  val.getKey(),
+                  val.getKey().toString(),
                   val.getKey().getDataSource(),
                   val.getKey().getInterval().getStart().toString(),
                   val.getKey().getInterval().getEnd().toString(),
-                  val.getValue().getSegment().getSize(),
+                  segment.getSize(),
                   val.getKey().getVersion(),
-                  (long) val.getValue().getSegment().getShardSpec().getPartitionNum(),
+                  (long) segment.getShardSpec().getPartitionNum(),
                   numReplicas,
                   val.getValue().getNumRows(),
                   // is_active is true for unpublished segments iff they are realtime
@@ -391,9 +467,9 @@ public class SystemSchema extends AbstractSchema
                   val.getValue().isRealtime(),
                   IS_OVERSHADOWED_FALSE,
                   // there is an assumption here that unpublished segments are never overshadowed
-                  val.getValue().getSegment().getShardSpec() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getShardSpec()),
-                  val.getValue().getSegment().getDimensions() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getDimensions()),
-                  val.getValue().getSegment().getMetrics() == null ? null : jsonMapper.writeValueAsString(val.getValue().getSegment().getMetrics()),
+                  shardSpec,
+                  dimensions,
+                  metrics,
                   null, // unpublished segments from realtime tasks will not be compacted yet
                   REPLICATION_FACTOR_UNKNOWN // If the segment is unpublished, we won't have this information yet.
               };
@@ -407,7 +483,9 @@ public class SystemSchema extends AbstractSchema
           Iterables.concat(publishedSegments, availableSegments)
       );
 
-      return Linq4j.asEnumerable(allSegments).where(Objects::nonNull);
+      return Linq4j.asEnumerable(allSegments)
+                   .where(Objects::nonNull)
+                   .select(row -> projectRow(row, projects));
     }
 
     private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
@@ -638,7 +716,10 @@ public class SystemSchema extends AbstractSchema
     /**
      * Returns a row for all node types which don't serve data. The returned row contains only static information.
      */
-    private static Object[] buildRowForNonDataServerWithLeadership(DiscoveryDruidNode discoveryDruidNode, boolean isLeader)
+    private static Object[] buildRowForNonDataServerWithLeadership(
+        DiscoveryDruidNode discoveryDruidNode,
+        boolean isLeader
+    )
     {
       final DruidNode node = discoveryDruidNode.getDruidNode();
       return new Object[]{
@@ -775,7 +856,7 @@ public class SystemSchema extends AbstractSchema
         for (DataSegment segment : authorizedServerSegments) {
           Object[] row = new Object[serverSegmentsTableSize];
           row[0] = druidServer.getHost();
-          row[1] = segment.getId();
+          row[1] = segment.getId().toString();
           rows.add(row);
         }
       }
@@ -1137,5 +1218,26 @@ public class SystemSchema extends AbstractSchema
     if (!stateAccess.isAllowed()) {
       throw new ForbiddenException("Insufficient permission to view servers: " + stateAccess.toMessage());
     }
+  }
+
+  /**
+   * Project a row using "projects" from {@link ProjectableFilterableTable}.
+   */
+  private static Object[] projectRow(final Object[] row, @Nullable final int[] projects)
+  {
+    if (projects == null) {
+      return row;
+    } else {
+      final Object[] projectedRow = new Object[projects.length];
+      for (int i = 0; i < projects.length; i++) {
+        projectedRow[i] = row[projects[i]];
+      }
+      return projectedRow;
+    }
+  }
+
+  private static boolean doesProject(@Nullable final IntSet projectSet, final int fieldNumber)
+  {
+    return projectSet == null || projectSet.contains(fieldNumber);
   }
 }
