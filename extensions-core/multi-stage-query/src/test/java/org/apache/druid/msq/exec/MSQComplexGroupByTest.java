@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -64,7 +64,7 @@ import java.util.Map;
 public class MSQComplexGroupByTest extends MSQTestBase
 {
   static {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private String dataFileNameJsonString;
@@ -109,7 +109,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
         dataFileSignature
     );
 
-    objectMapper.registerModules(NestedDataModule.getJacksonModulesList());
+    objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
   }
 
   @MethodSource("data")
@@ -129,7 +129,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " GROUP BY 1\n"
                              + " PARTITIONED BY ALL")
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)
@@ -257,7 +257,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                              + " GROUP BY 1\n"
                              + " PARTITIONED BY ALL")
                      .setQueryContext(adjustedContext)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)

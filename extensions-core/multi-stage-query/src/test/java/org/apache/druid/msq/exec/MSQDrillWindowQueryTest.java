@@ -27,6 +27,7 @@ import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComp
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper;
 import org.apache.druid.msq.test.ExtractResultsFactory;
+import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.query.groupby.TestGroupByBuffers;

@@ -184,7 +184,7 @@ export async function getTaskExecution(
 
   if (!execution) {
     const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
+      `/druid/v2/sql/statements/${encodedId}?detail=true`,
       {
         cancelToken,
       },

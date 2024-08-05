@@ -43,6 +43,7 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
@@ -56,7 +57,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerModule;
@@ -273,6 +273,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
    */
   private void installForServerModules(CoreInjectorBuilder builder)
   {
+
     builder.add(
         new Log4jShutterDownerModule(),
         new LifecycleModule(),
@@ -291,7 +292,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
-        new NestedDataModule(),
+        new BuiltInTypesModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),

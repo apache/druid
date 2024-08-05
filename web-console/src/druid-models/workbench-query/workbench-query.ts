@@ -151,11 +151,12 @@ export class WorkbenchQuery {
     return WorkbenchQuery.enabledQueryEngines;
   }
 
-  static fromEffectiveQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
+  static fromTaskQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
     const noSqlOuterLimit = typeof context['sqlOuterLimit'] === 'undefined';
     const cleanContext = deleteKeys(context, ['sqlOuterLimit']);
 
     let retQuery = WorkbenchQuery.blank()
+      .changeEngine('sql-msq-task')
       .changeQueryString(queryString)
       .changeQueryContext(cleanContext);
 

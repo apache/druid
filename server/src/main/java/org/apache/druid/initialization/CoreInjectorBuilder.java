@@ -24,6 +24,7 @@ import org.apache.druid.curator.CuratorModule;
 import org.apache.druid.curator.discovery.DiscoveryModule;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
@@ -34,7 +35,6 @@ import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
@@ -113,7 +113,7 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
-        new NestedDataModule(),
+        new BuiltInTypesModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),

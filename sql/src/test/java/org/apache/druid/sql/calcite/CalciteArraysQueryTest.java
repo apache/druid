@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -130,7 +130,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModule(new NestedDataModule());
+      builder.addModule(new BuiltInTypesModule());
     }
   }
 
