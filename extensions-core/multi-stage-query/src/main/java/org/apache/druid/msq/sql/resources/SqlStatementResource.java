@@ -113,7 +113,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
@@ -588,19 +587,19 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
-    Supplier<Optional<MSQTaskReportPayload>> msqTaskReportPayloadSupplier = () -> {
+    MSQTaskReportPayload taskReportPayload = null;
+    if (detail || SqlStatementState.FAILED == sqlStatementState) {
       try {
-        return Optional.ofNullable(SqlStatementResourceHelper.getPayload(
+        taskReportPayload = SqlStatementResourceHelper.getPayload(
             contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
-        ));
+        );
       }
       catch (DruidException e) {
-        if (e.getErrorCode().equals("notFound") || e.getMessage().contains("Unable to contact overlord")) {
-          return Optional.empty();
+        if (!e.getErrorCode().equals("notFound") && !e.getMessage().contains("Unable to contact overlord")) {
+          throw e;
         }
-        throw e;
       }
-    };
+    }
 
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
@@ -608,7 +607,7 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          msqTaskReportPayloadSupplier.get().orElse(null),
+          taskReportPayload,
           jsonMapper,
           detail
       );
@@ -627,9 +626,9 @@ public class SqlStatementResource
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
           null,
-          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayloadSupplier.get().orElse(null)) : null,
-          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayloadSupplier.get().orElse(null)) : null,
-          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayloadSupplier.get().orElse(null)) : null
+          SqlStatementResourceHelper.getQueryStagesReport(taskReportPayload),
+          SqlStatementResourceHelper.getQueryCounters(taskReportPayload),
+          SqlStatementResourceHelper.getQueryWarningDetails(taskReportPayload)
       ));
     }
   }
