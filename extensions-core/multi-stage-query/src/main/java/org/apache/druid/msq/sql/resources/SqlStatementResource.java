@@ -22,6 +22,7 @@ package org.apache.druid.msq.sql.resources;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -588,19 +589,19 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
-    Supplier<Optional<MSQTaskReportPayload>> msqTaskReportPayloadSupplier = () -> {
+    Supplier<MSQTaskReportPayload> msqTaskReportPayloadSupplier = Suppliers.memoize(() -> {
       try {
-        return Optional.ofNullable(SqlStatementResourceHelper.getPayload(
+        return SqlStatementResourceHelper.getPayload(
             contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
-        ));
+        );
       }
       catch (DruidException e) {
         if (e.getErrorCode().equals("notFound") || e.getMessage().contains("Unable to contact overlord")) {
-          return Optional.empty();
+          return null;
         }
         throw e;
       }
-    };
+    });
 
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
@@ -608,7 +609,7 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          msqTaskReportPayloadSupplier.get().orElse(null),
+          msqTaskReportPayloadSupplier.get(),
           jsonMapper,
           detail
       );
@@ -627,9 +628,9 @@ public class SqlStatementResource
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
           null,
-          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayloadSupplier.get().orElse(null)) : null,
-          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayloadSupplier.get().orElse(null)) : null,
-          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayloadSupplier.get().orElse(null)) : null
+          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayloadSupplier.get()) : null,
+          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayloadSupplier.get()) : null,
+          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayloadSupplier.get()) : null
       ));
     }
   }
