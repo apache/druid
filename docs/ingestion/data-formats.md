@@ -736,7 +736,7 @@ This query returns:
 The `kinesis` input format lets you parse the Kinesis metadata fields in addition to the Kinesis payload value contents.
 It should only be used when ingesting from Kinesis.
 
-The `kinesis` input format wraps around the payload parsing input format and augments the data it outputs with the kinesis event timestamp, and partition key.
+The `kinesis` input format wraps around the payload parsing input format and augments the data it outputs with the Kinesis event timestamp, and partition key.
 
 If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
 This ensures that upgrading a Kinesis ingestion to use the Kinesis input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.
