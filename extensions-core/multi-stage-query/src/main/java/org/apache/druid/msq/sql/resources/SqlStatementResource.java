@@ -22,7 +22,6 @@ package org.apache.druid.msq.sql.resources;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -114,7 +113,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
@@ -589,19 +587,19 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
-    Supplier<MSQTaskReportPayload> msqTaskReportPayloadSupplier = Suppliers.memoize(() -> {
+    MSQTaskReportPayload taskReportPayload = null;
+    if (detail || SqlStatementState.FAILED == sqlStatementState) {
       try {
-        return SqlStatementResourceHelper.getPayload(
+        taskReportPayload = SqlStatementResourceHelper.getPayload(
             contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
         );
       }
       catch (DruidException e) {
-        if (e.getErrorCode().equals("notFound") || e.getMessage().contains("Unable to contact overlord")) {
-          return null;
+        if (!e.getErrorCode().equals("notFound") && !e.getMessage().contains("Unable to contact overlord")) {
+          throw e;
         }
-        throw e;
       }
-    });
+    }
 
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
@@ -609,7 +607,7 @@ public class SqlStatementResource
           taskResponse,
           statusPlus,
           sqlStatementState,
-          msqTaskReportPayloadSupplier.get(),
+          taskReportPayload,
           jsonMapper,
           detail
       );
@@ -628,9 +626,9 @@ public class SqlStatementResource
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
           null,
-          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayloadSupplier.get()) : null,
-          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayloadSupplier.get()) : null,
-          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayloadSupplier.get()) : null
+          SqlStatementResourceHelper.getQueryStagesReport(taskReportPayload),
+          SqlStatementResourceHelper.getQueryCounters(taskReportPayload),
+          SqlStatementResourceHelper.getQueryWarningDetails(taskReportPayload)
       ));
     }
   }
