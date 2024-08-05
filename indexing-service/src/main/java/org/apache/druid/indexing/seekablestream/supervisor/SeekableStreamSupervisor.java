@@ -1273,7 +1273,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (!comittedOffsets.isEmpty() && comittedOffsets.equals(latestSequencesFromStream)) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
       previousSequencesFromStream.putAll(comittedOffsets);
-      lastActiveTimeMillis = DateTime.now().getMillis();
+      lastActiveTimeMillis = DateTimes.nowUtc().getMillis();
       return true;
     }
 
