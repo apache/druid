@@ -31,7 +31,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -102,83 +101,6 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
-  public static class OrderBy
-  {
-    private final String columnName;
-    private final Order order;
-
-    @JsonCreator
-    public OrderBy(
-        @JsonProperty("columnName") final String columnName,
-        @JsonProperty("order") final Order order
-    )
-    {
-      this.columnName = Preconditions.checkNotNull(columnName, "columnName");
-      this.order = Preconditions.checkNotNull(order, "order");
-
-      if (order == Order.NONE) {
-        throw new IAE("Order required for column [%s]", columnName);
-      }
-    }
-
-    @JsonProperty
-    public String getColumnName()
-    {
-      return columnName;
-    }
-
-    @JsonProperty
-    public Order getOrder()
-    {
-      return order;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      OrderBy that = (OrderBy) o;
-      return Objects.equals(columnName, that.columnName) && order == that.order;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(columnName, order);
-    }
-
-    @Override
-    public String toString()
-    {
-      return StringUtils.format("%s %s", columnName, order == Order.ASCENDING ? "ASC" : "DESC");
-    }
-  }
-
-  public enum Order
-  {
-    ASCENDING,
-    DESCENDING,
-    NONE;
-
-    @JsonValue
-    @Override
-    public String toString()
-    {
-      return StringUtils.toLowerCase(this.name());
-    }
-
-    @JsonCreator
-    public static Order fromString(String name)
-    {
-      return valueOf(StringUtils.toUpperCase(name));
-    }
-  }
-
   /**
    * This context flag corresponds to whether the query is running on the "outermost" process (i.e. the process
    * the query is sent to).
@@ -216,7 +138,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
       @JsonProperty("columnTypes") List<ColumnType> columnTypes
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, context);
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.resultFormat = (resultFormat == null) ? ResultFormat.RESULT_FORMAT_LIST : resultFormat;
     this.batchSize = (batchSize == 0) ? DEFAULT_BATCH_SIZE : batchSize;
@@ -510,8 +432,8 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
                           .setInterval(interval)
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
                           .setVirtualColumns(getVirtualColumns())
+                          .setPreferredOrdering(getOrderBys())
                           .setQueryContext(context())
-                          .isDescending(isDescending() || Order.DESCENDING.equals(timeOrder))
                           .setQueryMetrics(queryMetrics)
                           .build();
   }

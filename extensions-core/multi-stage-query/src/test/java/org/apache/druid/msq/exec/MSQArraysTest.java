@@ -38,7 +38,8 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -862,7 +863,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayString")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayString", ScanQuery.Order.DESCENDING)))
+        .orderBy(Collections.singletonList(new OrderBy("arrayString", Order.DESCENDING)))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -925,7 +926,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayLong")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayLong", ScanQuery.Order.ASCENDING)))
+        .orderBy(Collections.singletonList(new OrderBy("arrayLong", Order.ASCENDING)))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -988,7 +989,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayDouble")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayDouble", ScanQuery.Order.ASCENDING)))
+        .orderBy(Collections.singletonList(new OrderBy("arrayDouble", Order.ASCENDING)))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 

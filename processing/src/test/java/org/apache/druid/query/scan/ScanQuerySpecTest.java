@@ -57,7 +57,7 @@ public class ScanQuerySpecTest
         0,
         0,
         3,
-        ScanQuery.Order.NONE,
+        Order.NONE,
         null,
         null,
         Arrays.asList("market", "quality", "index"),
@@ -85,7 +85,7 @@ public class ScanQuerySpecTest
         0,
         0,
         3,
-        ScanQuery.Order.ASCENDING,
+        Order.ASCENDING,
         null,
         null,
         Arrays.asList("market", "quality", "index", "__time"),
@@ -96,9 +96,9 @@ public class ScanQuerySpecTest
     String serializedJson = JSON_MAPPER.writeValueAsString(expectedQuery);
     Assert.assertEquals(originalJson, serializedJson);
     Assert.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
-    Assert.assertEquals(ScanQuery.Order.ASCENDING, expectedQuery.getTimeOrder());
+    Assert.assertEquals(Order.ASCENDING, expectedQuery.getTimeOrder());
     Assert.assertEquals(
-        Collections.singletonList(new ScanQuery.OrderBy("__time", ScanQuery.Order.ASCENDING)),
+        Collections.singletonList(new OrderBy("__time", Order.ASCENDING)),
         expectedQuery.getOrderBys()
     );
   }
@@ -118,7 +118,7 @@ public class ScanQuerySpecTest
         0,
         3,
         null,
-        Collections.singletonList(new ScanQuery.OrderBy("quality", ScanQuery.Order.ASCENDING)),
+        Collections.singletonList(new OrderBy("quality", Order.ASCENDING)),
         null,
         Arrays.asList("market", "quality", "index", "__time"),
         null,
@@ -128,9 +128,9 @@ public class ScanQuerySpecTest
     String serializedJson = JSON_MAPPER.writeValueAsString(expectedQuery);
     Assert.assertEquals(originalJson, serializedJson);
     Assert.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
-    Assert.assertEquals(ScanQuery.Order.NONE, expectedQuery.getTimeOrder());
+    Assert.assertEquals(Order.NONE, expectedQuery.getTimeOrder());
     Assert.assertEquals(
-        Collections.singletonList(new ScanQuery.OrderBy("quality", ScanQuery.Order.ASCENDING)),
+        Collections.singletonList(new OrderBy("quality", Order.ASCENDING)),
         expectedQuery.getOrderBys()
     );
   }
@@ -146,7 +146,7 @@ public class ScanQuerySpecTest
         0,
         1,
         3,
-        ScanQuery.Order.NONE,
+        Order.NONE,
         null,
         null,
         Arrays.asList("market", "quality", "index"),

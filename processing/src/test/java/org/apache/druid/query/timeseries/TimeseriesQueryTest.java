@@ -149,7 +149,6 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         buildSpec.getAggregators()
     );
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
-    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 
   @Test
@@ -202,6 +201,5 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
-    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

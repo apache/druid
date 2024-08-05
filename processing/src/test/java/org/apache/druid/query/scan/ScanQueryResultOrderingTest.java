@@ -207,7 +207,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.NONE)
+              .order(Order.NONE)
               .build(),
         ImmutableList.of(
             101,
@@ -241,7 +241,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.ASCENDING)
+              .order(Order.ASCENDING)
               .build(),
         ImmutableList.of(
             101,
@@ -275,7 +275,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.DESCENDING)
+              .order(Order.DESCENDING)
               .build(),
         ImmutableList.of(
             8,

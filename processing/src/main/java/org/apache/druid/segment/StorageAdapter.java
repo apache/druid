@@ -52,7 +52,11 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorMa
       @Override
       public boolean canVectorize()
       {
-        return StorageAdapter.this.canVectorize(spec.getFilter(), spec.getVirtualColumns(), spec.isDescending());
+        return StorageAdapter.this.canVectorize(
+            spec.getFilter(),
+            spec.getVirtualColumns(),
+            CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering())
+        );
       }
 
       @Override
@@ -64,7 +68,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorMa
                 spec.getInterval(),
                 spec.getVirtualColumns(),
                 Granularities.ALL,
-                spec.isDescending(),
+                CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
                 spec.getQueryMetrics()
             ).toList()
         );
@@ -77,7 +81,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorMa
             spec.getFilter(),
             spec.getInterval(),
             spec.getVirtualColumns(),
-            spec.isDescending(),
+            CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
             spec.getQueryContext().getVectorSize(),
             spec.getQueryMetrics()
         );

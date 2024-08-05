@@ -42,7 +42,8 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
@@ -581,8 +582,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("d", ScanQuery.Order.ASCENDING)
+                        new OrderBy("b", Order.ASCENDING),
+                        new OrderBy("d", Order.ASCENDING)
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -643,7 +644,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING)
+                        new OrderBy("b", Order.ASCENDING)
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -708,7 +709,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("e", ScanQuery.Order.ASCENDING)
+                        new OrderBy("e", Order.ASCENDING)
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the

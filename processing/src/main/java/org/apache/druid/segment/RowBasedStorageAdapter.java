@@ -175,9 +175,10 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
       @Override
       public Cursor asCursor()
       {
+        final boolean descendingTimeOrder = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
         final RowWalker<RowType> rowWalker = closer.register(
             new RowWalker<>(
-                spec.isDescending() ? reverse(rowSequence) : rowSequence,
+                 descendingTimeOrder ? reverse(rowSequence) : rowSequence,
                 rowAdapter
             )
         );
@@ -187,7 +188,7 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
             spec.getFilter(),
             spec.getInterval(),
             spec.getVirtualColumns(),
-            spec.isDescending(),
+            descendingTimeOrder,
             rowSignature
         );
       }

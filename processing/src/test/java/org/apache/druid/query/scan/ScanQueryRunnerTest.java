@@ -535,7 +535,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .limit(limit)
-          .order(ScanQuery.Order.ASCENDING)
+          .order(Order.ASCENDING)
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
@@ -607,7 +607,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .limit(limit)
-          .order(ScanQuery.Order.DESCENDING)
+          .order(Order.DESCENDING)
           .build();
 
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
@@ -703,7 +703,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-          .order(ScanQuery.Order.ASCENDING)
+          .order(Order.ASCENDING)
           .limit(limit)
           .build();
 
@@ -776,7 +776,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-          .order(ScanQuery.Order.DESCENDING)
+          .order(Order.DESCENDING)
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .limit(limit)
           .build();

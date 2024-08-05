@@ -96,7 +96,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
       final long timeoutAt = System.currentTimeMillis() + queryPlus.getQuery().context().getTimeout();
       responseContext.putTimeoutTime(timeoutAt);
 
-      if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+      if (query.getTimeOrder().equals(Order.NONE)) {
         // Use normal strategy
         Sequence<ScanResultValue> returnedRows = Sequences.concat(
             Sequences.map(
@@ -113,7 +113,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         List<Interval> intervalsOrdered = getIntervalsFromSpecificQuerySpec(query.getQuerySegmentSpec());
         List<QueryRunner<ScanResultValue>> queryRunnersOrdered = Lists.newArrayList(queryRunners);
 
-        if (ScanQuery.Order.DESCENDING.equals(query.getTimeOrder())) {
+        if (Order.DESCENDING.equals(query.getTimeOrder())) {
           intervalsOrdered = Lists.reverse(intervalsOrdered);
           queryRunnersOrdered = Lists.reverse(queryRunnersOrdered);
         }

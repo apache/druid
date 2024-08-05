@@ -71,6 +71,7 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
@@ -5872,7 +5873,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .columns("__time")
-                .order(ScanQuery.Order.ASCENDING)
+                .order(Order.ASCENDING)
                 .context(context)
                 .build()
         ),

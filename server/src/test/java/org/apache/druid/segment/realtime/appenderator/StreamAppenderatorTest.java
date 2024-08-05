@@ -40,6 +40,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -1421,7 +1422,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                              )
                                          )
                                      )
-                                     .order(ScanQuery.Order.ASCENDING)
+                                     .order(Order.ASCENDING)
                                      .batchSize(10)
                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                      .build();

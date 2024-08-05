@@ -88,7 +88,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.virtualColumns = cursorBuildSpec.getVirtualColumns();
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
-    this.descending = cursorBuildSpec.isDescending();
+    this.descending = CursorBuildSpec.preferDescendingTimeOrder(cursorBuildSpec.getPreferredOrdering());
     this.queryContext = cursorBuildSpec.getQueryContext();
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();

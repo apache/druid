@@ -29,6 +29,8 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
@@ -97,7 +99,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     super(
         validateMaybeRewriteDataSource(dataSource, leafOperators != null),
         intervals,
-        false,
         context
     );
     this.rowSignature = rowSignature;
@@ -114,11 +115,11 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
           ScanQuery scan = (ScanQuery) subQuery;
 
           ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+          for (OrderBy orderBy : scan.getOrderBys()) {
             ordering.add(
                 new ColumnWithDirection(
                     orderBy.getColumnName(),
-                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                    Order.DESCENDING == orderBy.getOrder()
                     ? ColumnWithDirection.Direction.DESC
                     : ColumnWithDirection.Direction.ASC
                 )

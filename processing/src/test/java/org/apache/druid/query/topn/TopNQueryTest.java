@@ -295,7 +295,6 @@ public class TopNQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of("v"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
-    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 
   @Test
@@ -331,6 +330,5 @@ public class TopNQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getVirtualColumns()
     );
-    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

@@ -62,6 +62,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -1305,7 +1306,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .offset(6L)
                                 .limit(1L)
-                                .order(ScanQuery.Order.DESCENDING)
+                                .order(Order.DESCENDING)
                                 .columns("__time", "channel")
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()

@@ -59,6 +59,7 @@ import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
+import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -173,7 +174,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    */
   private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
   {
-    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
+    if (Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
       return Druids.ScanQueryBuilder.copy(scanQuery)
                                     .orderBy(ImmutableList.of())
                                     .limit(0)

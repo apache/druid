@@ -308,7 +308,7 @@ public class UnnestScanQueryRunnerTest extends InitializedNullHandlingTest
         .columns(QueryRunnerTestHelper.TIME_DIMENSION, QueryRunnerTestHelper.PLACEMENTISH_DIMENSION_UNNEST)
         .limit(3)
         .filters(new SelectorDimFilter(QueryRunnerTestHelper.MARKET_DIMENSION, "spot", null))
-        .order(ScanQuery.Order.ASCENDING)
+        .order(Order.ASCENDING)
         .build();
 
 

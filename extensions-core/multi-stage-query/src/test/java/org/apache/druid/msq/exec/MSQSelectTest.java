@@ -67,6 +67,8 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -463,7 +465,7 @@ public class MSQSelectTest extends MSQTestBase
                            .columns("cnt", "dim1")
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
-                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                           .orderBy(ImmutableList.of(new OrderBy("dim1", Order.ASCENDING)))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))

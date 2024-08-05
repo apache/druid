@@ -40,9 +40,11 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeFilter;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
@@ -218,7 +220,13 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
                           .setGroupingAndVirtualColumns(getGranularity(), null, virtualColumns)
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())
-                          .isDescending(isDescending())
+                          .setPreferredOrdering(
+                              Collections.singletonList(
+                                  isDescending() ?
+                                  OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME) :
+                                  OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)
+                              )
+                          )
                           .setQueryMetrics(queryMetrics)
                           .build();
   }

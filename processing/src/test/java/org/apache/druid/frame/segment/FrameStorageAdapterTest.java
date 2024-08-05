@@ -35,6 +35,7 @@ import org.apache.druid.query.extraction.UpperExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
@@ -270,7 +271,13 @@ public class FrameStorageAdapterTest
                                       .setFilter(this.filter)
                                       .setInterval(this.interval)
                                       .setVirtualColumns(this.virtualColumns)
-                                      .isDescending(this.descending)
+                                      .setPreferredOrdering(
+                                          descending ?
+                                          Collections.singletonList(
+                                              OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                          ) :
+                                          null
+                                      )
                                       .setQueryContext(queryContext)
                                       .build();
     }

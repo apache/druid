@@ -74,7 +74,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
       {
         final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
 
-        final SimpleSettableOffset baseOffset = spec.isDescending()
+        final SimpleSettableOffset baseOffset = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering())
                                                 ? new SimpleDescendingOffset(frame.numRows())
                                                 : new SimpleAscendingOffset(frame.numRows());
 

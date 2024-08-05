@@ -106,6 +106,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -15282,7 +15283,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
                 .limit(1)
                 .columns(ImmutableList.of("__time", "m1"))
-                .order(ScanQuery.Order.ASCENDING)
+                .order(Order.ASCENDING)
                 .build()
         ),
         ImmutableList.of(
@@ -15324,7 +15325,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
                 .limit(1)
                 .columns(ImmutableList.of("__time", "m1"))
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .build()
         ),
         ImmutableList.of(

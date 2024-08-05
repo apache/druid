@@ -66,7 +66,7 @@ public class ScanQueryEngine
   )
   {
     final Long numScannedRows = responseContext.getRowScanCount();
-    if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+    if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(Order.NONE)) {
       return Sequences.empty();
     }
     final boolean hasTimeout = query.context().hasTimeout();
@@ -231,7 +231,7 @@ public class ScanQueryEngine
    */
   private long calculateRemainingScanRowsLimit(ScanQuery query, ResponseContext responseContext)
   {
-    if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+    if (query.getTimeOrder().equals(Order.NONE)) {
       return query.getScanRowsLimit() - (Long) responseContext.getRowScanCount();
     }
     return query.getScanRowsLimit();

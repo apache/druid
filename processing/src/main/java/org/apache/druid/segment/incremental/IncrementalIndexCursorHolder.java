@@ -68,7 +68,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         storageAdapter,
         index,
         spec.getVirtualColumns(),
-        spec.isDescending(),
+        CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
         spec.getFilter(),
         spec.getInterval()
     );

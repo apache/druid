@@ -203,7 +203,7 @@ public class ExpressionSelectorBenchmark
           cursor,
           Granularities.HOUR,
           buildSpec.getInterval(),
-          buildSpec.isDescending()
+          false
       );
       final Sequence<Long> results =
           Sequences.simple(granularizer.getBucketIterable())

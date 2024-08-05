@@ -83,7 +83,7 @@ public class TopNQueryEngine
         cursor,
         query.getGranularity(),
         buildSpec.getInterval(),
-        buildSpec.isDescending()
+        false
     );
     if (granularizer == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
@@ -96,7 +96,7 @@ public class TopNQueryEngine
         Sequences.simple(granularizer.getBucketIterable())
                  .map(bucketInterval -> {
                    granularizer.advanceToBucket(bucketInterval);
-                   cursor.mark(buildSpec.isDescending() ? bucketInterval.getEnd() : bucketInterval.getStart());
+                   cursor.mark(bucketInterval.getStart());
                    return mapFn.apply(cursor, granularizer, queryMetrics);
                  }),
                  Predicates.notNull()

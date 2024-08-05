@@ -114,7 +114,7 @@ public class GroupByQueryEngine
         cursor,
         query.getGranularity(),
         buildSpec.getInterval(),
-        buildSpec.isDescending()
+        false
     );
     if (granularizer == null) {
       return Sequences.empty();

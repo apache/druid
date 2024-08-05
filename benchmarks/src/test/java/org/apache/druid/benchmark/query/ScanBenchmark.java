@@ -49,6 +49,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -116,7 +117,7 @@ public class ScanBenchmark
   private int limit;
 
   @Param({"NONE", "DESCENDING", "ASCENDING"})
-  private static ScanQuery.Order ordering;
+  private static Order ordering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final int RNG_SEED = 9999;

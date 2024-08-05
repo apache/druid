@@ -218,19 +218,15 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder =
-        CursorBuildSpec.builder()
-                       .setInterval(spec.getInterval())
-                       .isDescending(spec.isDescending())
-                       .setQueryMetrics(spec.getQueryMetrics());
+    // make a copy of CursorBuildSpec with filters removed
+    final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder = CursorBuildSpec.builder(spec)
+                                                                                         .setFilter(null);
 
     final Filter combinedFilter = baseFilterAnd(spec.getFilter());
-
 
     if (clauses.isEmpty()) {
       // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
       final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
-                                                            .setVirtualColumns(spec.getVirtualColumns())
                                                             .build();
       return baseAdapter.makeCursorHolder(newSpec);
     }
@@ -294,9 +290,10 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         }
 
         Cursor retVal = baseCursor;
+        final boolean isDescendingTimeOrdering = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
 
         for (JoinableClause clause : clauses) {
-          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, spec.isDescending(), joinablesCloser);
+          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, isDescendingTimeOrdering, joinablesCloser);
         }
 
         return PostJoinCursor.wrap(

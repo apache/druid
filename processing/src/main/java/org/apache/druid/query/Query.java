@@ -285,12 +285,12 @@ public interface Query<T>
             i
         )
     );
+
     return CursorBuildSpec.builder()
                           .setInterval(interval)
                           .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
                           .setVirtualColumns(getVirtualColumns())
                           .setQueryContext(context())
-                          .isDescending(isDescending())
                           .setQueryMetrics(queryMetrics)
                           .build();
   }

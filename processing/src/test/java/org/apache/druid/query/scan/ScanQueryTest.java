@@ -123,7 +123,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   public void testAscendingScanQueryWithInvalidColumns()
   {
     Druids.newScanQueryBuilder()
-          .order(ScanQuery.Order.ASCENDING)
+          .order(Order.ASCENDING)
           .columns(ImmutableList.of("not time", "also not time"))
           .dataSource("source")
           .intervals(intervalSpec)
@@ -134,7 +134,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   public void testDescendingScanQueryWithInvalidColumns()
   {
     Druids.newScanQueryBuilder()
-          .order(ScanQuery.Order.DESCENDING)
+          .order(Order.DESCENDING)
           .columns(ImmutableList.of("not time", "also not time"))
           .dataSource("source")
           .intervals(intervalSpec)
@@ -149,12 +149,12 @@ public class ScanQueryTest extends InitializedNullHandlingTest
         IllegalArgumentException.class,
         () ->
             Druids.newScanQueryBuilder()
-                  .order(ScanQuery.Order.ASCENDING)
+                  .order(Order.ASCENDING)
                   .orderBy(
                       // Not ok, even though it starts with __time ASC, because it also has non-time component.
                       ImmutableList.of(
-                          new ScanQuery.OrderBy("__time", ScanQuery.Order.ASCENDING),
-                          new ScanQuery.OrderBy("quality", ScanQuery.Order.DESCENDING)
+                          new OrderBy("__time", Order.ASCENDING),
+                          new OrderBy("quality", Order.DESCENDING)
                       )
                   )
                   .columns(ImmutableList.of("__time", "quality"))
@@ -169,8 +169,8 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   {
     Assert.assertNotNull(
         Druids.newScanQueryBuilder()
-              .order(ScanQuery.Order.ASCENDING)
-              .orderBy(ImmutableList.of(new ScanQuery.OrderBy("__time", ScanQuery.Order.ASCENDING)))
+              .order(Order.ASCENDING)
+              .orderBy(ImmutableList.of(new OrderBy("__time", Order.ASCENDING)))
               .columns(ImmutableList.of("__time", "quality"))
               .dataSource("source")
               .intervals(intervalSpec)
@@ -182,9 +182,9 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testValidScanQueryInitialization()
   {
-    List<ScanQuery.Order> nonOrderedOrders = Arrays.asList(null, ScanQuery.Order.NONE);
+    List<Order> nonOrderedOrders = Arrays.asList(null, Order.NONE);
 
-    for (ScanQuery.Order order : nonOrderedOrders) {
+    for (Order order : nonOrderedOrders) {
       Druids.newScanQueryBuilder()
             .order(order)
             .columns(ImmutableList.of("not time"))
@@ -214,9 +214,9 @@ public class ScanQueryTest extends InitializedNullHandlingTest
             .build();
     }
 
-    Set<ScanQuery.Order> orderedOrders = ImmutableSet.of(ScanQuery.Order.ASCENDING, ScanQuery.Order.DESCENDING);
+    Set<Order> orderedOrders = ImmutableSet.of(Order.ASCENDING, Order.DESCENDING);
 
-    for (ScanQuery.Order order : orderedOrders) {
+    for (Order order : orderedOrders) {
       Druids.newScanQueryBuilder()
             .order(order)
             .columns((List<String>) null)
@@ -252,7 +252,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   {
     // Should be able to handle merging s1, s2, s3
     ScanQuery noOrderScan = Druids.newScanQueryBuilder()
-                                  .order(ScanQuery.Order.NONE)
+                                  .order(Order.NONE)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                                   .dataSource("some src")
                                   .intervals(intervalSpec)
@@ -260,7 +260,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
 
     // Should only handle s1 and s2
     ScanQuery descendingOrderScan = Druids.newScanQueryBuilder()
-                                          .order(ScanQuery.Order.DESCENDING)
+                                          .order(Order.DESCENDING)
                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                                           .dataSource("some src")
                                           .intervals(intervalSpec)
@@ -268,7 +268,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
 
     // Should only handle s1 and s2
     ScanQuery ascendingOrderScan = Druids.newScanQueryBuilder()
-                                         .order(ScanQuery.Order.ASCENDING)
+                                         .order(Order.ASCENDING)
                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                                          .dataSource("some src")
                                          .intervals(intervalSpec)
@@ -317,7 +317,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   public void testTimeOrderingWithoutTimeColumn()
   {
     ScanQuery descendingOrderScan = Druids.newScanQueryBuilder()
-                                          .order(ScanQuery.Order.DESCENDING)
+                                          .order(Order.DESCENDING)
                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
                                           .dataSource("some src")
                                           .intervals(intervalSpec)
@@ -340,7 +340,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
               .columns("__time")
-              .orderBy(Collections.singletonList(new ScanQuery.OrderBy("__time", ScanQuery.Order.DESCENDING)))
+              .orderBy(Collections.singletonList(new OrderBy("__time", Order.DESCENDING)))
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .dataSource("some src")
               .intervals(intervalSpec)
@@ -356,7 +356,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
               .columns("quality")
-              .orderBy(Collections.singletonList(new ScanQuery.OrderBy("quality", ScanQuery.Order.ASCENDING)))
+              .orderBy(Collections.singletonList(new OrderBy("quality", Order.ASCENDING)))
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .dataSource("some src")
               .intervals(intervalSpec)
@@ -370,7 +370,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   {
     final ScanQuery query =
         Druids.newScanQueryBuilder()
-              .order(ScanQuery.Order.DESCENDING)
+              .order(Order.DESCENDING)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .dataSource("some src")
               .intervals(intervalSpec)
@@ -384,7 +384,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   {
     final ScanQuery query =
         Druids.newScanQueryBuilder()
-              .order(ScanQuery.Order.DESCENDING)
+              .order(Order.DESCENDING)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .dataSource("some src")
               .intervals(intervalSpec)
@@ -446,6 +446,5 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertNull(buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
-    Assert.assertEquals(query.isDescending(), buildSpec.isDescending());
   }
 }

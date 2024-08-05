@@ -35,7 +35,9 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -534,7 +536,13 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder().isDescending(true).build();
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setPreferredOrdering(
+                                                         Collections.singletonList(
+                                                             OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                                         )
+                                                     )
+                                                     .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
@@ -647,7 +655,11 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT2H"))
-                                                     .isDescending(true)
+                                                     .setPreferredOrdering(
+                                                         Collections.singletonList(
+                                                             OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                                         )
+                                                     )
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -829,7 +841,7 @@ public class RowBasedStorageAdapterTest
         cursor,
         granularity,
         buildSpec.getInterval(),
-        buildSpec.isDescending()
+        CursorBuildSpec.preferDescendingTimeOrder(buildSpec.getPreferredOrdering())
     );
 
     final List<Supplier<Object>> suppliers = new ArrayList<>();

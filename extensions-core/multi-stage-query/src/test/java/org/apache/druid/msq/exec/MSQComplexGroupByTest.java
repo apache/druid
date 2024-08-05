@@ -36,7 +36,8 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
@@ -393,7 +394,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                                         .columns("obj")
                                                         .context(defaultScanQueryContext(context, rowSignature))
-                                                        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("obj", ScanQuery.Order.ASCENDING)))
+                                                        .orderBy(Collections.singletonList(new OrderBy("obj", Order.ASCENDING)))
                                                         .build()
                                              )
                                              .columnMappings(new ColumnMappings(ImmutableList.of(

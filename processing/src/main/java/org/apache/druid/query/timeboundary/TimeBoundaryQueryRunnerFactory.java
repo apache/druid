@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -49,6 +50,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Iterator;
 
 /**
@@ -115,10 +117,14 @@ public class TimeBoundaryQueryRunnerFactory
     @Nullable
     private DateTime getTimeBoundary(StorageAdapter adapter, TimeBoundaryQuery legacyQuery, boolean descending)
     {
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder(legacyQuery.asCursorBuildSpec(null))
-                                                       .isDescending(descending)
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final CursorBuildSpec.CursorBuildSpecBuilder bob = CursorBuildSpec.builder(legacyQuery.asCursorBuildSpec(null));
+      if (descending) {
+        bob.setPreferredOrdering(Collections.singletonList(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)));
+      } else {
+        bob.setPreferredOrdering(Collections.singletonList(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)));
+      }
+
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(bob.build())) {
         final Cursor cursor = cursorHolder.asCursor();
         if (cursor == null) {
           return null;

@@ -104,7 +104,7 @@ public class ScanQueryLimitRowIteratorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .order(ScanQuery.Order.NONE)
+                            .order(Order.NONE)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -145,7 +145,7 @@ public class ScanQueryLimitRowIteratorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -184,7 +184,7 @@ public class ScanQueryLimitRowIteratorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)

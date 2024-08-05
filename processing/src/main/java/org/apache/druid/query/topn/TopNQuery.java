@@ -204,7 +204,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
                           )
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())
-                          .isDescending(isDescending())
                           .setQueryMetrics(queryMetrics)
                           .build();
   }

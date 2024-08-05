@@ -824,7 +824,6 @@ public class GroupByQuery extends BaseQuery<ResultRow>
                           .setGroupingAndVirtualColumns(getGranularity(), groupingColumns, virtualColumns)
                           .setAggregators(getAggregatorSpecs())
                           .setQueryContext(context())
-                          .isDescending(isDescending())
                           .setQueryMetrics(queryMetrics)
                           .build();
   }

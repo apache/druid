@@ -34,6 +34,8 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -585,8 +587,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                        new OrderBy("v0", Order.ASCENDING),
+                        new OrderBy("dim1", Order.ASCENDING)
                     )
                 )
                 .context(
@@ -759,7 +761,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
         .orderBy(
             ImmutableList.of(
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                new OrderBy("dim1", Order.ASCENDING)
             )
         )
         .columnTypes(LONG, LONG, STRING, STRING, STRING, FLOAT, DOUBLE, ofComplex("hyperUnique"))
@@ -842,10 +844,10 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .limit(10)
         .orderBy(
             ImmutableList.of(
-                new ScanQuery.OrderBy("__time", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim3", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim2", ScanQuery.Order.ASCENDING)
+                new OrderBy("__time", Order.ASCENDING),
+                new OrderBy("dim1", Order.ASCENDING),
+                new OrderBy("dim3", Order.ASCENDING),
+                new OrderBy("dim2", Order.ASCENDING)
             )
         )
         .columnTypes(LONG, LONG, STRING, STRING, STRING, FLOAT, DOUBLE, ColumnType.ofComplex("hyperUnique"))

@@ -39,6 +39,8 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.search.FragmentSearchQuerySpec;
@@ -824,8 +826,8 @@ public class Druids
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns = new ArrayList<>();
-    private ScanQuery.Order order;
-    private List<ScanQuery.OrderBy> orderBy;
+    private Order order;
+    private List<OrderBy> orderBy;
     private List<ColumnType> columnTypes = null;
 
     public ScanQuery build()
@@ -956,13 +958,13 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder order(ScanQuery.Order order)
+    public ScanQueryBuilder order(Order order)
     {
       this.order = order;
       return this;
     }
 
-    public ScanQueryBuilder orderBy(List<ScanQuery.OrderBy> orderBys)
+    public ScanQueryBuilder orderBy(List<OrderBy> orderBys)
     {
       this.orderBy = orderBys;
       return this;

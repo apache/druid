@@ -85,7 +85,7 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
       {
         return (spec.getFilter() == null || spec.getFilter().canVectorizeMatcher(signature))
                && spec.getVirtualColumns().canVectorize(signature)
-               && !spec.isDescending();
+               && CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
       }
 
       @Override
@@ -94,13 +94,14 @@ public class FrameCursorMakerFactory implements CursorMakerFactory
         final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
         final ColumnCache columnCache = new ColumnCache(index, closer);
         final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
-        final SimpleSettableOffset baseOffset = spec.isDescending()
+
+        final SimpleSettableOffset baseOffset = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering())
                                                 ? new SimpleDescendingOffset(frame.numRows())
                                                 : new SimpleAscendingOffset(frame.numRows());
 
         final QueryableIndexColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
                 spec.getVirtualColumns(),
-                spec.isDescending(),
+                spec.isPreferDescendingTimeOrder(),
                 baseOffset,
                 columnCache
         );

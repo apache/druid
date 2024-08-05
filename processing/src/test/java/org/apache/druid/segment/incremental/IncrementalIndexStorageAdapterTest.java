@@ -52,6 +52,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
@@ -62,6 +63,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -281,7 +283,13 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setFilter(new SelectorFilter("sally", "bo"))
                                                        .setInterval(interval)
-                                                       .isDescending(descending)
+                                                       .setPreferredOrdering(
+                                                           descending ?
+                                                           Collections.singletonList(
+                                                               OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                                           ) :
+                                                           null
+                                                       )
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
         Cursor cursor = cursorHolder.asCursor();

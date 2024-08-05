@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -46,6 +48,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class CursorGranularizerTest extends InitializedNullHandlingTest
@@ -203,7 +206,11 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   public void testGranularizeFullScanDescending()
   {
     final CursorBuildSpec descending = CursorBuildSpec.builder()
-                                                      .isDescending(true)
+                                                      .setPreferredOrdering(
+                                                          Collections.singletonList(
+                                                              OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                                          )
+                                                      )
                                                       .build();
     try (CursorHolder cursorHolder = adapter.makeCursorHolder(descending)) {
       final Cursor cursor = cursorHolder.asCursor();

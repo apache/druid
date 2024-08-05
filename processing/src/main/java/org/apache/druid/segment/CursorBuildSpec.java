@@ -28,6 +28,9 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.scan.OrderBy;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -57,10 +60,11 @@ public class CursorBuildSpec
   private final VirtualColumns virtualColumns;
   @Nullable
   private final List<AggregatorFactory> aggregators;
+  @Nullable
+  private final List<OrderBy> orderByColumns;
 
   private final QueryContext queryContext;
 
-  private final boolean descending;
   @Nullable
   private final QueryMetrics<?> queryMetrics;
 
@@ -70,8 +74,8 @@ public class CursorBuildSpec
       @Nullable List<String> groupingColumns,
       VirtualColumns virtualColumns,
       @Nullable List<AggregatorFactory> aggregators,
+      @Nullable List<OrderBy> preferredOrdering,
       QueryContext queryContext,
-      boolean descending,
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
@@ -80,7 +84,7 @@ public class CursorBuildSpec
     this.groupingColumns = groupingColumns;
     this.virtualColumns = virtualColumns;
     this.aggregators = aggregators;
-    this.descending = descending;
+    this.orderByColumns = preferredOrdering;
     this.queryContext = queryContext;
     this.queryMetrics = queryMetrics;
   }
@@ -113,9 +117,10 @@ public class CursorBuildSpec
     return aggregators;
   }
 
-  public boolean isDescending()
+  @Nullable
+  public List<OrderBy> getPreferredOrdering()
   {
-    return descending;
+    return orderByColumns;
   }
 
   public QueryContext getQueryContext()
@@ -129,6 +134,15 @@ public class CursorBuildSpec
     return queryMetrics;
   }
 
+  public static boolean preferDescendingTimeOrder(@Nullable List<OrderBy> preferredOrdering)
+  {
+    if (preferredOrdering != null && preferredOrdering.size() == 1) {
+      final OrderBy orderBy = Iterables.getOnlyElement(preferredOrdering);
+      return ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()) && Order.DESCENDING == orderBy.getOrder();
+    }
+    return false;
+  }
+
   public static class CursorBuildSpecBuilder
   {
     @Nullable
@@ -140,7 +154,8 @@ public class CursorBuildSpec
     private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
     @Nullable
     private List<AggregatorFactory> aggregators;
-    private boolean descending = false;
+    @Nullable
+    private List<OrderBy> preferredOrdering;
 
     private QueryContext queryContext = QueryContext.empty();
     @Nullable
@@ -158,7 +173,7 @@ public class CursorBuildSpec
       this.groupingColumns = buildSpec.groupingColumns;
       this.virtualColumns = buildSpec.virtualColumns;
       this.aggregators = buildSpec.aggregators;
-      this.descending = buildSpec.descending;
+      this.preferredOrdering = buildSpec.orderByColumns;
       this.queryContext = buildSpec.queryContext;
       this.queryMetrics = buildSpec.queryMetrics;
     }
@@ -214,9 +229,9 @@ public class CursorBuildSpec
       return this;
     }
 
-    public CursorBuildSpecBuilder isDescending(boolean descending)
+    public CursorBuildSpecBuilder setPreferredOrdering(@Nullable List<OrderBy> orderBy)
     {
-      this.descending = descending;
+      this.preferredOrdering = orderBy;
       return this;
     }
 
@@ -240,8 +255,8 @@ public class CursorBuildSpec
           groupingColumns,
           virtualColumns,
           aggregators,
+          preferredOrdering,
           queryContext,
-          descending,
           queryMetrics
       );
     }
