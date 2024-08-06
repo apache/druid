@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -234,6 +235,12 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
 
   private final DimensionsSpec dimensionsSpec;
   private final Map<String, DimensionDesc> dimensionDescs;
+  /**
+   * Position of {@link ColumnHolder#TIME_COLUMN_NAME} in the sort order, relative to elements of
+   * {@link #dimensionDescs}. For example, for the sort order [x, __time, y], dimensionDescs contains [x, y] and
+   * timePosition is 1.
+   */
+  protected final int timePosition;
   private final List<DimensionDesc> dimensionDescsList;
   // dimension capabilities are provided by the indexers
   private final Map<String, ColumnCapabilities> timeAndMetricsColumnCapabilities;
@@ -280,13 +287,6 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     this.timeAndMetricsColumnFormats = new HashMap<>();
     this.metricDescs = Maps.newLinkedHashMap();
     this.dimensionDescs = Maps.newLinkedHashMap();
-    this.metadata = new Metadata(
-        null,
-        getCombiningAggregators(metrics),
-        incrementalIndexSchema.getTimestampSpec(),
-        this.gran,
-        this.rollup
-    );
 
     initAggs(metrics, inputRowHolder);
 
@@ -319,8 +319,23 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     this.dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
 
     this.dimensionDescsList = new ArrayList<>();
-    for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
-      addNewDimension(dimSchema.getName(), dimSchema.getDimensionHandler());
+
+    int foundTimePosition = -1;
+    final List<DimensionSchema> dimSchemas = dimensionsSpec.getDimensions();
+    for (int i = 0; i < dimSchemas.size(); i++) {
+      final DimensionSchema dimSchema = dimSchemas.get(i);
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(dimSchema.getName())) {
+        foundTimePosition = i;
+      } else {
+        addNewDimension(dimSchema.getName(), dimSchema.getDimensionHandler());
+      }
+    }
+
+    if (foundTimePosition == -1) {
+      // __time not found: that means it either goes at the end, or the beginning, based on useExplicitSegmentSortOrder.
+      this.timePosition = dimensionsSpec.isUseExplicitSegmentSortOrder() ? dimensionDescsList.size() : 0;
+    } else {
+      this.timePosition = foundTimePosition;
     }
 
     //__time capabilities
@@ -334,6 +349,17 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+
+    // Set metadata last, so dimensionOrder is populated
+    final List<String> dimensionOrder = getDimensionOrder();
+    this.metadata = new Metadata(
+        null,
+        getCombiningAggregators(metrics),
+        incrementalIndexSchema.getTimestampSpec(),
+        this.gran,
+        this.rollup,
+        ColumnHolder.TIME_COLUMN_NAME.equals(Iterables.getFirst(dimensionOrder, null)) ? null : dimensionOrder
+    );
   }
 
   public abstract FactsHolder getFacts();
@@ -582,7 +608,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
       // first, process dimension values present in the row
       dims = new Object[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
-        if (Strings.isNullOrEmpty(dimension)) {
+        if (Strings.isNullOrEmpty(dimension) || ColumnHolder.TIME_COLUMN_NAME.equals(dimension)) {
           continue;
         }
         boolean wasNewDim = false;
@@ -789,13 +815,38 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     return dimensionsSpec;
   }
 
-  public List<String> getDimensionNames()
+  /**
+   * Returns names of dimension columns.
+   *
+   * @param includeTime whether to include {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
+  public List<String> getDimensionNames(final boolean includeTime)
   {
     synchronized (dimensionDescs) {
-      return ImmutableList.copyOf(dimensionDescs.keySet());
+      if (includeTime) {
+        final ImmutableList.Builder<String> listBuilder =
+            ImmutableList.builderWithExpectedSize(dimensionDescs.size() + 1);
+        int i = 0;
+        if (i == timePosition) {
+          listBuilder.add(ColumnHolder.TIME_COLUMN_NAME);
+        }
+        for (String dimName : dimensionDescs.keySet()) {
+          listBuilder.add(dimName);
+          i++;
+          if (i == timePosition) {
+            listBuilder.add(ColumnHolder.TIME_COLUMN_NAME);
+          }
+        }
+        return listBuilder.build();
+      } else {
+        return ImmutableList.copyOf(dimensionDescs.keySet());
+      }
     }
   }
 
+  /**
+   * Returns a descriptor for each dimension. Does not inclue {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
   public List<DimensionDesc> getDimensions()
   {
     synchronized (dimensionDescs) {
@@ -803,6 +854,9 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     }
   }
 
+  /**
+   * Returns the descriptor for a particular dimension.
+   */
   @Nullable
   public DimensionDesc getDimension(String dimension)
   {
@@ -859,11 +913,12 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     return dimSpec == null ? null : dimSpec.getIndex();
   }
 
+  /**
+   * Returns names of time and dimension columns, in sort order. Includes {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
   public List<String> getDimensionOrder()
   {
-    synchronized (dimensionDescs) {
-      return ImmutableList.copyOf(dimensionDescs.keySet());
-    }
+    return getDimensionNames(true);
   }
 
   public static ColumnCapabilitiesImpl makeDefaultCapabilitiesFromValueType(ColumnType type)
@@ -887,19 +942,23 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
    * Currently called to initialize IncrementalIndex dimension order during index creation
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/apache/druid/issues/2011
+   *
+   * @param oldDimensionOrder dimension order to initialize
+   * @param oldColumnFormats  formats for the dimensions
    */
   public void loadDimensionIterable(
       Iterable<String> oldDimensionOrder,
-      Map<String, ColumnFormat> oldColumnCapabilities
+      Map<String, ColumnFormat> oldColumnFormats
   )
   {
     synchronized (dimensionDescs) {
-      if (!dimensionDescs.isEmpty()) {
-        throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionDescs.keySet());
+      if (size() != 0) {
+        throw new ISE("Cannot load dimension order when existing index is not empty.", dimensionDescs.keySet());
       }
       for (String dim : oldDimensionOrder) {
-        if (dimensionDescs.get(dim) == null) {
-          ColumnFormat format = oldColumnCapabilities.get(dim);
+        // Skip __time; its position is solely based on configuration at index creation time.
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(dim) && dimensionDescs.get(dim) == null) {
+          ColumnFormat format = oldColumnFormats.get(dim);
           addNewDimension(dim, format.getColumnHandler(dim));
         }
       }
@@ -925,9 +984,12 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     return ImmutableList.copyOf(metricDescs.keySet());
   }
 
+  /**
+   * Returns all column names, including {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
   public List<String> getColumnNames()
   {
-    List<String> columnNames = new ArrayList<>(getDimensionNames());
+    List<String> columnNames = new ArrayList<>(getDimensionNames(true));
     columnNames.addAll(getMetricNames());
     return columnNames;
   }
@@ -1068,33 +1130,48 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
 
   protected final Comparator<IncrementalIndexRow> dimsComparator()
   {
-    return new IncrementalIndexRowComparator(dimensionDescsList);
+    return new IncrementalIndexRowComparator(timePosition, dimensionDescsList);
   }
 
   @VisibleForTesting
   static final class IncrementalIndexRowComparator implements Comparator<IncrementalIndexRow>
   {
-    private List<DimensionDesc> dimensionDescs;
+    /**
+     * Position of {@link ColumnHolder#TIME_COLUMN_NAME} in the sort order.
+     */
+    private final int timePosition;
+    private final List<DimensionDesc> dimensionDescs;
 
-    public IncrementalIndexRowComparator(List<DimensionDesc> dimDescs)
+    public IncrementalIndexRowComparator(int timePosition, List<DimensionDesc> dimDescs)
     {
+      this.timePosition = timePosition;
       this.dimensionDescs = dimDescs;
     }
 
     @Override
     public int compare(IncrementalIndexRow lhs, IncrementalIndexRow rhs)
     {
-      int retVal = Longs.compare(lhs.timestamp, rhs.timestamp);
-      int numComparisons = Math.min(lhs.dims.length, rhs.dims.length);
+      int retVal = 0;
 
-      int index = 0;
-      while (retVal == 0 && index < numComparisons) {
-        final Object lhsIdxs = lhs.dims[index];
-        final Object rhsIdxs = rhs.dims[index];
+      // Number of dimension comparisons, not counting __time.
+      int numDimComparisons = Math.min(lhs.dims.length, rhs.dims.length);
+
+      int dimIndex = 0;
+      while (retVal == 0 && dimIndex < numDimComparisons) {
+        if (dimIndex == timePosition) {
+          retVal = Longs.compare(lhs.timestamp, rhs.timestamp);
+
+          if (retVal != 0) {
+            break;
+          }
+        }
+
+        final Object lhsIdxs = lhs.dims[dimIndex];
+        final Object rhsIdxs = rhs.dims[dimIndex];
 
         if (lhsIdxs == null) {
           if (rhsIdxs == null) {
-            ++index;
+            ++dimIndex;
             continue;
           }
           return -1;
@@ -1104,9 +1181,13 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
           return 1;
         }
 
-        final DimensionIndexer indexer = dimensionDescs.get(index).getIndexer();
+        final DimensionIndexer indexer = dimensionDescs.get(dimIndex).getIndexer();
         retVal = indexer.compareUnsortedEncodedKeyComponents(lhsIdxs, rhsIdxs);
-        ++index;
+        ++dimIndex;
+      }
+
+      if (retVal == 0 && dimIndex == numDimComparisons && timePosition >= numDimComparisons) {
+        retVal = Longs.compare(lhs.timestamp, rhs.timestamp);
       }
 
       if (retVal == 0) {
@@ -1115,7 +1196,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
           return 0;
         }
         Object[] largerDims = lengthDiff > 0 ? lhs.dims : rhs.dims;
-        return allNull(largerDims, numComparisons) ? 0 : lengthDiff;
+        return allNull(largerDims, numDimComparisons) ? 0 : lengthDiff;
       }
 
       return retVal;

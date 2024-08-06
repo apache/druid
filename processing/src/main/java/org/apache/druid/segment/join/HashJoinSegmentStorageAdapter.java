@@ -209,6 +209,22 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public List<String> getSortOrder()
+  {
+    final List<String> baseSortOrder = baseAdapter.getSortOrder();
+
+    // Sorted the same way as the base segment, unless a joined-in column shadows one of the base columns.
+    int limit = 0;
+    for (; limit < baseSortOrder.size(); limit++) {
+      if (!isBaseColumn(baseSortOrder.get(limit))) {
+        break;
+      }
+    }
+
+    return limit == baseSortOrder.size() ? baseSortOrder : baseSortOrder.subList(0, limit);
+  }
+
+  @Override
   public boolean hasBuiltInFilters()
   {
     // if the baseFilter is not null, then rows from underlying storage adapter can be potentially filtered.

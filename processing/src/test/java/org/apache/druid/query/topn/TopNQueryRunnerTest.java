@@ -47,6 +47,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.TestQueryRunner;
 import org.apache.druid.query.TestQueryRunners;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -96,6 +97,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -167,7 +169,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 defaultPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            true
         )
     );
     retVal.addAll(
@@ -176,7 +179,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 customPool,
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            true
         )
     );
 
@@ -191,7 +195,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     return retVal;
   }
 
-  private final QueryRunner<Result<TopNResultValue>> runner;
+  private final TestQueryRunner<Result<TopNResultValue>> runner;
   private final boolean duplicateSingleAggregatorQueries;
   private final List<AggregatorFactory> commonAggregators;
 
@@ -201,7 +205,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
   @SuppressWarnings("unused")
   public TopNQueryRunnerTest(
-      QueryRunner<Result<TopNResultValue>> runner,
+      TestQueryRunner<Result<TopNResultValue>> runner,
       boolean specializeGeneric1AggPooledTopN,
       boolean specializeGeneric2AggPooledTopN,
       boolean specializeHistorical1SimpleDoubleAggPooledTopN,
@@ -819,6 +823,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNOverFirstLastAggregator()
   {
+    // Granularity != ALL requires time-ordering.
+    Assume.assumeTrue(runner.getSegment().asStorageAdapter().isTimeOrdered());
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -928,6 +935,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNOverFirstLastFloatAggregatorUsingDoubleColumn()
   {
+    // Granularity != ALL requires time-ordering.
+    Assume.assumeTrue(runner.getSegment().asStorageAdapter().isTimeOrdered());
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -1037,6 +1047,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNOverFirstLastFloatAggregatorUsingFloatColumn()
   {
+    // Granularity != ALL requires time-ordering.
+    Assume.assumeTrue(runner.getSegment().asStorageAdapter().isTimeOrdered());
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)

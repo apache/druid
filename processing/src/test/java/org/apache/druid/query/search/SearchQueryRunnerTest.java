@@ -94,7 +94,8 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                 SELECTOR,
                 TOOL_CHEST,
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            true
         )
     );
   }

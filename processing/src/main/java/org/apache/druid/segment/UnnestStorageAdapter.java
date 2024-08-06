@@ -257,6 +257,23 @@ public class UnnestStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public List<String> getSortOrder()
+  {
+    final List<String> baseSortOrder = baseAdapter.getSortOrder();
+
+    // Sorted the same way as the base segment, unless the unnested column shadows one of the base columns.
+    int limit = 0;
+    for (; limit < baseSortOrder.size(); limit++) {
+      final String columnName = baseSortOrder.get(limit);
+      if (columnName.equals(outputColumnName) || columnName.equals(unnestColumn.getOutputName())) {
+        break;
+      }
+    }
+
+    return limit == baseSortOrder.size() ? baseSortOrder : baseSortOrder.subList(0, limit);
+  }
+
+  @Override
   public boolean isFromTombstone()
   {
     return baseAdapter.isFromTombstone();

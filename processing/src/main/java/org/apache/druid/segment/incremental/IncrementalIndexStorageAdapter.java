@@ -22,6 +22,7 @@ package org.apache.druid.segment.incremental;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -48,7 +49,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -138,7 +141,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<>(index.getDimensionNames());
+    return new ListIndexed<>(index.getDimensionNames(false));
   }
 
   @Override
@@ -265,6 +268,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
+    Granularities.validateGranularity(this, gran);
+
     if (index.isEmpty()) {
       return Sequences.empty();
     }
@@ -293,6 +298,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
+  }
+
+  @Override
+  public List<String> getSortOrder()
+  {
+    if (index.timePosition == 0) {
+      return Metadata.SORTED_BY_TIME_ONLY;
+    } else {
+      return Collections.emptyList();
+    }
   }
 
   private class IncrementalIndexCursor implements Cursor

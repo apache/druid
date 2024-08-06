@@ -620,10 +620,18 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (storeCompactionState) {
       TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
       GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
-      // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
-      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
-                                      ? null
-                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions());
+      DimensionsSpec dimensionsSpec;
+      if (ingestionSpec.getDataSchema().getDimensionsSpec() == null) {
+        dimensionsSpec = null;
+      } else {
+        // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
+        final DimensionsSpec inputDimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec();
+        dimensionsSpec =
+            DimensionsSpec.builder()
+                          .setDimensions(inputDimensionsSpec.getDimensions())
+                          .setUseExplicitSegmentSortOrder(inputDimensionsSpec.isUseExplicitSegmentSortOrder())
+                          .build();
+      }
       // We only need to store filter since that is the only field auto compaction support
       Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
                                           ? null

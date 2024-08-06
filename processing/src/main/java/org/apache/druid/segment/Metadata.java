@@ -19,15 +19,18 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +42,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @PublicApi
 public class Metadata
 {
+  /**
+   * Return value for {@link #getSortOrder()} when a segment is sorted by {@link ColumnHolder#TIME_COLUMN_NAME} only.
+   */
+  public static final List<String> SORTED_BY_TIME_ONLY = Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME);
+
   // container is used for arbitrary key-value pairs in segment metadata e.g.
   // kafka input reader uses it to store commit offset
   private final Map<String, Object> container;
@@ -50,13 +58,16 @@ public class Metadata
   private final Granularity queryGranularity;
   @Nullable
   private final Boolean rollup;
+  @Nullable
+  private final List<String> sortOrder;
 
   public Metadata(
       @JsonProperty("container") @Nullable Map<String, Object> container,
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
       @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
-      @JsonProperty("rollup") @Nullable Boolean rollup
+      @JsonProperty("rollup") @Nullable Boolean rollup,
+      @JsonProperty("sortOrder") @Nullable List<String> sortOrder
   )
   {
     this.container = container == null ? new ConcurrentHashMap<>() : container;
@@ -64,6 +75,7 @@ public class Metadata
     this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
+    this.sortOrder = sortOrder;
   }
 
   @JsonProperty
@@ -100,6 +112,14 @@ public class Metadata
     return rollup;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<String> getSortOrder()
+  {
+    return sortOrder;
+  }
+
   public Metadata putAll(@Nullable Map<String, Object> other)
   {
     if (other != null) {
@@ -130,6 +150,7 @@ public class Metadata
     List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
     List<Granularity> gransToMerge = new ArrayList<>();
     List<Boolean> rollupToMerge = new ArrayList<>();
+    List<List<String>> sortOrdersToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
@@ -149,6 +170,8 @@ public class Metadata
         if (rollupToMerge != null) {
           rollupToMerge.add(metadata.isRollup());
         }
+
+        sortOrdersToMerge.add(metadata.getSortOrder());
         mergedContainer.putAll(metadata.container);
       } else {
         //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
@@ -176,6 +199,8 @@ public class Metadata
                                           null :
                                           Granularity.mergeGranularities(gransToMerge);
 
+    final List<String> mergedSortOrder = mergeSortOrders(sortOrdersToMerge);
+
     Boolean rollup = null;
     if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
       rollup = rollupToMerge.get(0);
@@ -197,7 +222,8 @@ public class Metadata
         mergedAggregators,
         mergedTimestampSpec,
         mergedGranularity,
-        rollup
+        rollup,
+        mergedSortOrder
     );
   }
 
@@ -215,7 +241,8 @@ public class Metadata
            Arrays.equals(aggregators, metadata.aggregators) &&
            Objects.equals(timestampSpec, metadata.timestampSpec) &&
            Objects.equals(queryGranularity, metadata.queryGranularity) &&
-           Objects.equals(rollup, metadata.rollup);
+           Objects.equals(rollup, metadata.rollup) &&
+           Objects.equals(sortOrder, metadata.sortOrder);
   }
 
   @Override
@@ -233,6 +260,39 @@ public class Metadata
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
+           ", sortOrder=" + sortOrder +
            '}';
+  }
+
+  @Nullable
+  private static List<String> mergeSortOrders(List<List<String>> sortOrdersToMerge)
+  {
+    if (sortOrdersToMerge.isEmpty()) {
+      return null;
+    }
+
+    if (sortOrdersToMerge.stream().anyMatch(Objects::isNull)) {
+      return null;
+    }
+
+    final List<String> mergedSortOrder = new ArrayList<>();
+
+    while (true) {
+      String column = null;
+
+      for (final List<String> sortOrder : sortOrdersToMerge) {
+        if (mergedSortOrder.size() >= sortOrder.size()) {
+          return mergedSortOrder;
+        }
+
+        if (column == null) {
+          column = sortOrder.get(mergedSortOrder.size());
+        } else if (!column.equals(sortOrder.get(mergedSortOrder.size()))) {
+          return mergedSortOrder;
+        }
+      }
+
+      mergedSortOrder.add(column);
+    }
   }
 }

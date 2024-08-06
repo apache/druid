@@ -349,7 +349,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           Map<String, ColumnFormat> oldFormat = null;
           newCount = lastHydrant.getCount() + 1;
 
-          boolean customDimensions = !indexSchema.getDimensionsSpec().hasCustomDimensions();
+          boolean variableDimensions = !indexSchema.getDimensionsSpec().hasFixedDimensions();
 
           if (lastHydrant.hasSwapped()) {
             oldFormat = new HashMap<>();
@@ -357,7 +357,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             try {
               QueryableIndex oldIndex = segment.asQueryableIndex();
               overwriteIndexDimensions(new QueryableIndexStorageAdapter(oldIndex));
-              if (customDimensions) {
+              if (variableDimensions) {
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
                   oldFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
@@ -370,12 +370,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           } else {
             IncrementalIndex oldIndex = lastHydrant.getIndex();
             overwriteIndexDimensions(new IncrementalIndexStorageAdapter(oldIndex));
-            if (customDimensions) {
+            if (variableDimensions) {
               dimOrder.addAll(oldIndex.getDimensionOrder());
               oldFormat = oldIndex.getColumnFormats();
             }
           }
-          if (customDimensions) {
+          if (variableDimensions) {
             newIndex.loadDimensionIterable(dimOrder, oldFormat);
           }
         }

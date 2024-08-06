@@ -98,7 +98,7 @@ public class UseIndexesStrategy extends SearchStrategy
         // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
-        if (filter == null || filter.getBitmapColumnIndex(selector) != null) {
+        if ((filter == null || filter.getBitmapColumnIndex(selector) != null) && adapter.isTimeOrdered()) {
           final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(
               index,
               segment,

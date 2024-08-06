@@ -58,7 +58,8 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   public RowBasedStorageAdapter(
       final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
-      final RowSignature rowSignature)
+      final RowSignature rowSignature
+  )
   {
     this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
     this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
@@ -165,6 +166,15 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   public Metadata getMetadata()
   {
     throw new UnsupportedOperationException("Cannot retrieve metadata");
+  }
+
+  @Override
+  public List<String> getSortOrder()
+  {
+    // It's possibly incorrect in some cases for sort order to be SORTED_BY_TIME_ONLY here, but for historical reasons,
+    // we're keeping this in place for now. The handling of "interval" in "makeCursors", which has been in place for
+    // some time, suggests we think the data is always sorted by time.
+    return Metadata.SORTED_BY_TIME_ONLY;
   }
 
   @Override

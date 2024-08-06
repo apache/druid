@@ -19,8 +19,9 @@
 
 package org.apache.druid.query.timeboundary;
 
-import com.google.common.base.Function;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.Pair;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -50,6 +51,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.List;
 
@@ -92,29 +94,18 @@ public class TimeBoundaryQueryRunnerFactory
   private static class TimeBoundaryQueryRunner implements QueryRunner<Result<TimeBoundaryResultValue>>
   {
     private final StorageAdapter adapter;
-    private final Function<Cursor, Result<DateTime>> skipToFirstMatching;
 
     public TimeBoundaryQueryRunner(Segment segment)
     {
       this.adapter = segment.asStorageAdapter();
-      this.skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
-      {
-        @SuppressWarnings("ArgumentParameterSwap")
-        @Override
-        public Result<DateTime> apply(Cursor cursor)
-        {
-          if (cursor.isDone()) {
-            return null;
-          }
-          final BaseLongColumnValueSelector timestampColumnSelector =
-              cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
-          final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
-          return new Result<>(adapter.getInterval().getStart(), timestamp);
-        }
-      };
     }
 
-    private DateTime getTimeBoundary(StorageAdapter adapter, TimeBoundaryQuery legacyQuery, boolean descending)
+    @Nullable
+    private DateTime getTimeBoundaryFromTimeOrderedAdapter(
+        StorageAdapter adapter,
+        TimeBoundaryQuery legacyQuery,
+        boolean descending
+    )
     {
       final Sequence<Result<DateTime>> resultSequence = QueryRunnerHelper.makeCursorBasedQuery(
           adapter,
@@ -123,15 +114,58 @@ public class TimeBoundaryQueryRunnerFactory
           VirtualColumns.EMPTY,
           descending,
           Granularities.ALL,
-          this.skipToFirstMatching,
+          cursor -> returnFirstTimestamp(cursor),
           null
       );
       final List<Result<DateTime>> resultList = resultSequence.limit(1).toList();
-      if (resultList.size() > 0) {
+      if (!resultList.isEmpty()) {
         return resultList.get(0).getValue();
       }
 
       return null;
+    }
+
+    private Pair<DateTime, DateTime> getTimeBoundaryFromNonTimeOrderedAdapter(
+        StorageAdapter adapter,
+        TimeBoundaryQuery legacyQuery
+    )
+    {
+      final Sequence<Pair<DateTime, DateTime>> resultSequence = adapter.makeCursors(
+          Filters.toFilter(legacyQuery.getFilter()),
+          CollectionUtils.getOnlyElement(
+              legacyQuery.getQuerySegmentSpec().getIntervals(),
+              intervals -> DruidException.defensive("Can only handle a single interval, got[%s]", intervals)
+          ),
+          VirtualColumns.EMPTY,
+          Granularities.ALL,
+          false,
+          null
+      ).map(
+          cursor -> {
+            if (cursor.isDone()) {
+              return Pair.of(null, null);
+            }
+
+            final BaseLongColumnValueSelector timeSelector =
+                cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+
+            long minTime = Long.MAX_VALUE, maxTime = Long.MIN_VALUE;
+            while (!cursor.isDone()) {
+              final long timestamp = timeSelector.getLong();
+              minTime = Math.min(minTime, timestamp);
+              maxTime = Math.max(maxTime, timestamp);
+              cursor.advance();
+            }
+
+            return Pair.of(
+                !legacyQuery.isMaxTime() ? DateTimes.utc(minTime) : null,
+                !legacyQuery.isMinTime() ? DateTimes.utc(maxTime) : null
+            );
+          }
+      );
+
+      final List<Pair<DateTime, DateTime>> resultList = resultSequence.limit(1).toList();
+      return !resultList.isEmpty() ? resultList.get(0) : Pair.of(null, null);
     }
 
     @Override
@@ -170,16 +204,20 @@ public class TimeBoundaryQueryRunnerFactory
                 if (!query.isMinTime()) {
                   maxTime = adapter.getMaxTime();
                 }
-              } else {
+              } else if (adapter.isTimeOrdered()) {
                 if (!query.isMaxTime()) {
-                  minTime = getTimeBoundary(adapter, query, false);
+                  minTime = getTimeBoundaryFromTimeOrderedAdapter(adapter, query, false);
                 }
 
                 if (!query.isMinTime()) {
                   if (query.isMaxTime() || minTime != null) {
-                    maxTime = getTimeBoundary(adapter, query, true);
+                    maxTime = getTimeBoundaryFromTimeOrderedAdapter(adapter, query, true);
                   }
                 }
+              } else {
+                final Pair<DateTime, DateTime> minMaxTime = getTimeBoundaryFromNonTimeOrderedAdapter(adapter, query);
+                minTime = minMaxTime.left();
+                maxTime = minMaxTime.right();
               }
 
               return query.buildResult(
@@ -210,8 +248,8 @@ public class TimeBoundaryQueryRunnerFactory
       return false;
     }
 
-    if (!(query.getDataSource() instanceof TableDataSource)) {
-      // In general, minTime / maxTime are only guaranteed to match data for regular tables.
+    if (!(query.getDataSource() instanceof TableDataSource) || !adapter.isTimeOrdered()) {
+      // In general, minTime / maxTime are only guaranteed to match data for regular tables that are time-ordered.
       //
       // One example: an INNER JOIN can act as a filter and remove some rows. Another example: RowBasedStorageAdapter
       // (used by e.g. inline data) uses nominal interval, not actual data, for minTime / maxTime.
@@ -231,5 +269,16 @@ public class TimeBoundaryQueryRunnerFactory
 
     // Passed all checks.
     return true;
+  }
+
+  private static Result<DateTime> returnFirstTimestamp(final Cursor cursor)
+  {
+    if (cursor.isDone()) {
+      return null;
+    }
+    final BaseLongColumnValueSelector timestampColumnSelector =
+        cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
+    final DateTime timestamp = DateTimes.utc(timestampColumnSelector.getLong());
+    return new Result<>(DateTimes.EPOCH /* Unused */, timestamp);
   }
 }

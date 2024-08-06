@@ -362,8 +362,12 @@ For more information about partitioning, see [Partitioning](concepts.md#partitio
 ### `CLUSTERED BY`
 
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
-column names or expressions. Druid's segment generation only supports ascending order, so an `INSERT` or `REPLACE` query with
-`CLUSTERED BY` columns in `DESC` ordering is not allowed.
+column names or expressions.
+
+This column list is used for [secondary partitioning](../ingestion/concepts.md#secondary-partitioning) of segments
+within a time chunk, and [sorting](../ingestion/concepts#sorting) of rows within a segment. For sorting purposes, Druid
+implicitly prepends `__time` to the `CLUSTERED BY` column list, unless [`useExplicitSegmentSortOrder`](#context)
+(an experimental feature; see [Sorting](../ingestion/partitioning#sorting) for details) is set to `true`.
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
 
@@ -398,6 +402,7 @@ The following table lists the context parameters for the MSQ task engine:
 | `sqlJoinAlgorithm` | SELECT, INSERT, REPLACE<br /><br />Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](#joins) for more details. | `broadcast` |
 | `rowsInMemory` | INSERT or REPLACE<br /><br />Maximum number of rows to store in memory at once before flushing to disk during the segment generation process. Ignored for non-INSERT queries. In most cases, use the default value. You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage. | 100,000 |
 | `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid sorts rows in segments using this column list first, followed by the CLUSTERED BY order.<br /><br />You provide the column list as comma-separated values or as a JSON array in string form. If your query includes `__time`, then this list must begin with `__time`. For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
+| `useExplicitSegmentSortOrder` | INSERT or REPLACE<br /><br /> When set to true, `CLUSTERED BY` and `segmentSortOrder` are permitted to include `__time` in some position other than the first. Additionally, `CLUSTERED BY x` will sort segments by `x`, rather than `{__time, x}`. This enables creation of segments that are sorted by something other than `__time`.<br /><br />This is an experimental feature; see [Sorting](../ingestion/partitioning#sorting) for details. | `false` |
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1. | 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |

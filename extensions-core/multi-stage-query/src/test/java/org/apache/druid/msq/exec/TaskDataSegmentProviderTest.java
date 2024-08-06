@@ -335,6 +335,12 @@ public class TaskDataSegmentProviderTest
     }
 
     @Override
+    public List<String> getSortOrder()
+    {
+      return Collections.emptyList();
+    }
+
+    @Override
     public void close()
     {
 

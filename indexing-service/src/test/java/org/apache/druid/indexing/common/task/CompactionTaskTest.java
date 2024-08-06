@@ -1874,6 +1874,7 @@ public class CompactionTaskTest
                     aggregatorFactories.toArray(new AggregatorFactory[0]),
                     null,
                     null,
+                    null,
                     null
                 );
               }

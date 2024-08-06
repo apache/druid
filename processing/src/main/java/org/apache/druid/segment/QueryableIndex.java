@@ -42,9 +42,17 @@ public interface QueryableIndex extends Closeable, ColumnInspector
 {
   Interval getDataInterval();
   int getNumRows();
+  /**
+   * List of dimensions, not including {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
   Indexed<String> getAvailableDimensions();
   BitmapFactory getBitmapFactoryForDimensions();
   @Nullable Metadata getMetadata();
+
+  /**
+   * Map of column name to {@link DimensionHandler}, whose contents and iteration order matches
+   * {@link #getAvailableDimensions()}.
+   */
   Map<String, DimensionHandler> getDimensionHandlers();
 
   List<String> getColumnNames();
@@ -62,6 +70,11 @@ public interface QueryableIndex extends Closeable, ColumnInspector
     }
     return columnHolder.getCapabilities();
   }
+
+  /**
+   * Returns column names that this index is sorted by.
+   */
+  List<String> getSortOrder();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

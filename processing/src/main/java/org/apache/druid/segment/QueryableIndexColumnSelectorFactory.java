@@ -44,6 +44,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
 {
   private final VirtualColumns virtualColumns;
   private final boolean descending;
+  private final boolean timeOrdered;
   protected final ReadableOffset offset;
 
   // Share Column objects, since they cache decompressed buffers internally, and we can avoid recomputation if the
@@ -57,12 +58,14 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   public QueryableIndexColumnSelectorFactory(
       VirtualColumns virtualColumns,
       boolean descending,
+      boolean timeOrdered,
       ReadableOffset offset,
       ColumnCache columnCache
   )
   {
     this.virtualColumns = virtualColumns;
     this.descending = descending;
+    this.timeOrdered = timeOrdered;
     this.offset = offset;
     this.columnCache = columnCache;
     this.dimensionSelectorCache = new HashMap<>();
@@ -107,7 +110,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
       return DimensionSelector.constant(null, extractionFn);
     }
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrdered) {
       return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 

@@ -52,7 +52,8 @@ public class MetadataTest
         aggregators,
         null,
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     Metadata other = jsonMapper.readValue(
@@ -83,7 +84,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     final Metadata m2 = new Metadata(
@@ -91,7 +93,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     final Metadata m3 = new Metadata(
@@ -99,7 +102,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.TRUE
+        Boolean.TRUE,
+        null
     );
 
     final Metadata merged = new Metadata(
@@ -109,7 +113,8 @@ public class MetadataTest
         },
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -119,7 +124,7 @@ public class MetadataTest
     metadataToBeMerged.add(m2);
     metadataToBeMerged.add(null);
 
-    final Metadata merged2 = new Metadata(Collections.singletonMap("k", "v"), null, null, null, null);
+    final Metadata merged2 = new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, null);
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
@@ -128,7 +133,7 @@ public class MetadataTest
         new DoubleMaxAggregatorFactory("x", "y")
     };
 
-    final Metadata merged3 = new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null);
+    final Metadata merged3 = new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, null);
 
     Assert.assertEquals(
         merged3,
@@ -140,6 +145,7 @@ public class MetadataTest
         explicitAggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
+        null,
         null
     );
     Assert.assertEquals(
