@@ -62,6 +62,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -238,19 +239,82 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
 
       DimensionSelector dimSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of(OUTPUT_COLUMN_NAME));
       int count = 0;
+
+      List<Object> rows = new ArrayList<>();
       while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        if (dimSelectorVal == null) {
-          Assert.assertNull(dimSelectorVal);
+        cursor.advance();
+      }
+      cursor.reset();
+
+      int mark = 2;
+      while (!cursor.isDone()) {
+        if (count == mark) {
+          cursor.mark();
         }
+        Object dimSelectorVal = dimSelector.getObject();
+        rows.add(dimSelectorVal);
         cursor.advance();
         count++;
+      }
+      cursor.resetToMark();
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        rows.set(mark++, dimSelectorVal);
+        cursor.advance();
       }
         /*
       each row has 8 entries.
       unnest 2 rows -> 16 rows after unnest
        */
       Assert.assertEquals(count, 16);
+      Assert.assertEquals(
+          Arrays.asList("0", "1", "2", "3", "4", "5", "6", "7", "10", "11", "12", "13", "14", "15", "8", "9"),
+          rows
+      );
+    }
+  }
+
+  @Test
+  public void test_unnest_adapters_basic_array_column()
+  {
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(UNNEST_ARRAYS.getInterval())
+                                                     .build();
+    try (final CursorHolder cursorHolder = UNNEST_ARRAYS.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
+
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      ColumnValueSelector dimSelector = factory.makeColumnValueSelector("u");
+      int count = 0;
+
+      List<Object> rows = new ArrayList<>();
+      while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
+
+      int mark = 2;
+      while (!cursor.isDone()) {
+        if (count == mark) {
+          cursor.mark();
+        }
+        Object dimSelectorVal = dimSelector.getObject();
+        rows.add(dimSelectorVal);
+        cursor.advance();
+        count++;
+      }
+      cursor.resetToMark();
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        rows.set(mark++, dimSelectorVal);
+        cursor.advance();
+      }
+      Assert.assertEquals(count, 12);
+      Assert.assertEquals(
+          Arrays.asList(2L, 3L, 1L, null, 3L, 1L, null, 2L, 9L, 1L, 2L, 3L),
+          rows
+      );
     }
   }
 
