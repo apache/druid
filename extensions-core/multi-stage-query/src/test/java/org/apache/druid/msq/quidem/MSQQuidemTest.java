@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.exec;
+package org.apache.druid.msq.quidem;
 
 import org.apache.druid.quidem.DruidQuidemTestBase;
 import org.apache.druid.quidem.ProjectPathUtils;
