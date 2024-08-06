@@ -20,6 +20,7 @@
 package org.apache.druid.frame.read;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
@@ -44,7 +45,7 @@ import java.util.Set;
 
 /**
  * Embeds the logic to read frames with a given {@link RowSignature}.
- *
+ * <p>
  * Stateless and immutable.
  */
 public class FrameReader
@@ -146,7 +147,7 @@ public class FrameReader
       case ROW_BASED:
         return new FrameCursorMakerFactory(frame, this, fieldReaders);
       default:
-        throw new ISE("Unrecognized frame type [%s]", frame.type());
+        throw DruidException.defensive("Unrecognized frame type [%s]", frame.type());
     }
   }
 

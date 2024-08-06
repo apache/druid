@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -27,24 +28,22 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 
-public class ConstantObjectColumn implements Column
+public class LongArrayColumn implements Column
 {
-  private final Object obj;
-  private final int numRows;
-  private final ColumnType type;
+  private final long[] vals;
 
-  public ConstantObjectColumn(Object obj, int numRows, ColumnType type)
+  public LongArrayColumn(
+      long[] vals
+  )
   {
-    this.obj = obj;
-    this.numRows = numRows;
-    this.type = type;
+    this.vals = vals;
   }
 
   @Nonnull
   @Override
   public ColumnAccessor toAccessor()
   {
-    return new ConstantColumnAccessor();
+    return new MyColumnAccessor();
   }
 
   @Nullable
@@ -54,123 +53,152 @@ public class ConstantObjectColumn implements Column
   {
     if (VectorCopier.class.equals(clazz)) {
       return (T) (VectorCopier) (into, intoStart) -> {
-        if (Integer.MAX_VALUE - numRows < intoStart) {
+        if (Integer.MAX_VALUE - vals.length < intoStart) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
                               .build(
                                   "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
                                   intoStart,
-                                  numRows
+                                  vals.length
                               );
         }
-        Arrays.fill(into, intoStart, intoStart + numRows, obj);
+        for (int i = 0; i < vals.length; ++i) {
+          into[intoStart + i] = vals[i];
+        }
       };
     }
     if (ColumnValueSwapper.class.equals(clazz)) {
       return (T) (ColumnValueSwapper) (lhs, rhs) -> {
+        long tmp = vals[lhs];
+        vals[lhs] = vals[rhs];
+        vals[rhs] = tmp;
       };
     }
-
     return null;
   }
 
-  private class ConstantColumnAccessor implements BinarySearchableAccessor
+  private class MyColumnAccessor implements BinarySearchableAccessor
   {
     @Override
     public ColumnType getType()
     {
-      return type;
+      return ColumnType.LONG;
     }
 
     @Override
     public int numRows()
     {
-      return numRows;
+      return vals.length;
     }
 
     @Override
     public boolean isNull(int rowNum)
     {
-      return obj == null;
+      return false;
     }
 
     @Override
     public Object getObject(int rowNum)
     {
-      return obj;
+      return vals[rowNum];
     }
 
     @Override
     public double getDouble(int rowNum)
     {
-      return ((Number) obj).doubleValue();
+      return vals[rowNum];
     }
 
     @Override
     public float getFloat(int rowNum)
     {
-      return ((Number) obj).floatValue();
+      return vals[rowNum];
     }
 
     @Override
     public long getLong(int rowNum)
     {
-      return ((Number) obj).longValue();
+      return vals[rowNum];
     }
 
     @Override
     public int getInt(int rowNum)
     {
-      return ((Number) obj).intValue();
+      return (int) vals[rowNum];
     }
 
     @Override
     public int compareRows(int lhsRowNum, int rhsRowNum)
     {
-      return 0;
+      return Long.compare(vals[lhsRowNum], vals[rhsRowNum]);
     }
+
 
     @Override
     public FindResult findNull(int startIndex, int endIndex)
     {
-      return findComplex(startIndex, endIndex, null);
+      return FindResult.notFound(endIndex);
     }
 
     @Override
     public FindResult findDouble(int startIndex, int endIndex, double val)
     {
-      return findComplex(startIndex, endIndex, val);
+      return findLong(startIndex, endIndex, (long) val);
     }
 
     @Override
     public FindResult findFloat(int startIndex, int endIndex, float val)
     {
-      return findComplex(startIndex, endIndex, val);
+      return findLong(startIndex, endIndex, (long) val);
     }
 
     @Override
     public FindResult findLong(int startIndex, int endIndex, long val)
     {
-      return findComplex(startIndex, endIndex, val);
+      if (vals[startIndex] == val) {
+        int end = startIndex + 1;
+
+        while (end < endIndex && vals[end] == val) {
+          ++end;
+        }
+        return FindResult.found(startIndex, end);
+      }
+
+      int i = Arrays.binarySearch(vals, startIndex, endIndex, val);
+      if (i > 0) {
+        int foundStart = i;
+        int foundEnd = i + 1;
+
+        while (foundStart - 1 >= startIndex && vals[foundStart - 1] == val) {
+          --foundStart;
+        }
+
+        while (foundEnd < endIndex && vals[foundEnd] == val) {
+          ++foundEnd;
+        }
+
+        return FindResult.found(foundStart, foundEnd);
+      } else {
+        return FindResult.notFound(-(i + 1));
+      }
+    }
+
+    @SuppressWarnings("unused")
+    public FindResult findInt(int startIndex, int endIndex, int val)
+    {
+      return findLong(startIndex, endIndex, val);
     }
 
     @Override
     public FindResult findString(int startIndex, int endIndex, String val)
     {
-      return findComplex(startIndex, endIndex, val);
+      throw NotYetImplemented.ex(null, "findString is not currently supported for LongArrayColumns");
     }
 
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      final boolean same;
-      if (obj == null) {
-        same = val == null;
-      } else {
-        same = obj.equals(val);
-      }
-
-      return same ? FindResult.found(startIndex, endIndex) : FindResult.notFound(endIndex);
+      throw NotYetImplemented.ex(null, "findComplex is not currently supported for LongArrayColumns");
     }
   }
 }
