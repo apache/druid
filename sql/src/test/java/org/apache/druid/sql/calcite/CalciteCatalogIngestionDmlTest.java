@@ -42,7 +42,6 @@ import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -582,8 +581,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("b", Order.ASCENDING),
-                        new OrderBy("d", Order.ASCENDING)
+                        OrderBy.ascending("b"),
+                        OrderBy.ascending("d")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -644,7 +643,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("b", Order.ASCENDING)
+                        OrderBy.ascending("b")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -709,7 +708,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("e", Order.ASCENDING)
+                        OrderBy.ascending("e")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the

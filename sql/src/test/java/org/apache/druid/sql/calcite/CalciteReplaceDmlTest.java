@@ -34,7 +34,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -587,8 +586,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("v0", Order.ASCENDING),
-                        new OrderBy("dim1", Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1")
                     )
                 )
                 .context(
@@ -759,11 +758,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .dataSource("foo")
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
-        .orderBy(
-            ImmutableList.of(
-                new OrderBy("dim1", Order.ASCENDING)
-            )
-        )
+        .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
         .columnTypes(LONG, LONG, STRING, STRING, STRING, FLOAT, DOUBLE, ofComplex("hyperUnique"))
         .context(
             queryJsonMapper.readValue(
@@ -844,10 +839,10 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .limit(10)
         .orderBy(
             ImmutableList.of(
-                new OrderBy("__time", Order.ASCENDING),
-                new OrderBy("dim1", Order.ASCENDING),
-                new OrderBy("dim3", Order.ASCENDING),
-                new OrderBy("dim2", Order.ASCENDING)
+                OrderBy.ascending("__time"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("dim3"),
+                OrderBy.ascending("dim2")
             )
         )
         .columnTypes(LONG, LONG, STRING, STRING, STRING, FLOAT, DOUBLE, ColumnType.ofComplex("hyperUnique"))

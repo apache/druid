@@ -37,7 +37,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -191,7 +190,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
-                           .orderBy(ImmutableList.of(new OrderBy("dim1", Order.ASCENDING)))
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
                            .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
                            .build()
                    )

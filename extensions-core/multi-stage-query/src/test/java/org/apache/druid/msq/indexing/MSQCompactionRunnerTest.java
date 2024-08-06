@@ -54,7 +54,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexSpec;
@@ -305,10 +304,10 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertNull(msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY));
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
-    Assert.assertEquals(PARTITION_DIMENSIONS.stream().map(col -> new OrderBy(
-        col,
-        Order.ASCENDING
-    )).collect(Collectors.toList()), ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys());
+    Assert.assertEquals(
+        PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys()
+    );
   }
 
   @Test

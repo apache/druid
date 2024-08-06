@@ -50,7 +50,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -411,7 +410,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                                         .columns("obj")
                                                         .context(defaultScanQueryContext(context, rowSignature))
-                                                        .orderBy(Collections.singletonList(new OrderBy("obj", Order.ASCENDING)))
+                                                        .orderBy(Collections.singletonList(OrderBy.ascending("obj")))
                                                         .build()
                                              )
                                              .columnMappings(new ColumnMappings(ImmutableList.of(

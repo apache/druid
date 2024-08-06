@@ -98,7 +98,7 @@ public class ScanQuerySpecTest
     Assert.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
     Assert.assertEquals(Order.ASCENDING, expectedQuery.getTimeOrder());
     Assert.assertEquals(
-        Collections.singletonList(new OrderBy("__time", Order.ASCENDING)),
+        Collections.singletonList(OrderBy.ascending("__time")),
         expectedQuery.getOrderBys()
     );
   }
@@ -118,7 +118,7 @@ public class ScanQuerySpecTest
         0,
         3,
         null,
-        Collections.singletonList(new OrderBy("quality", Order.ASCENDING)),
+        Collections.singletonList(OrderBy.ascending("quality")),
         null,
         Arrays.asList("market", "quality", "index", "__time"),
         null,
@@ -130,7 +130,7 @@ public class ScanQuerySpecTest
     Assert.assertEquals(expectedQuery, JSON_MAPPER.readValue(originalJson, ScanQuery.class));
     Assert.assertEquals(Order.NONE, expectedQuery.getTimeOrder());
     Assert.assertEquals(
-        Collections.singletonList(new OrderBy("quality", Order.ASCENDING)),
+        Collections.singletonList(OrderBy.ascending("quality")),
         expectedQuery.getOrderBys()
     );
   }

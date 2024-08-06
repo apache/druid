@@ -38,7 +38,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.Order;
 import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -729,9 +728,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .orderBy(
             ImmutableList.of(
-                new OrderBy("v0", Order.ASCENDING),
-                new OrderBy("dim1", Order.ASCENDING),
-                new OrderBy("v1", Order.ASCENDING)
+                OrderBy.ascending("v0"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("v1")
             )
         )
         .context(
@@ -932,9 +931,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("v0", Order.ASCENDING),
-                        new OrderBy("dim1", Order.ASCENDING),
-                        new OrderBy("v1", Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1"),
+                        OrderBy.ascending("v1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -973,9 +972,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("v0", Order.ASCENDING),
-                        new OrderBy("dim1", Order.ASCENDING),
-                        new OrderBy("v1", Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1"),
+                        OrderBy.ascending("v1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -1023,8 +1022,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("v0", Order.ASCENDING),
-                        new OrderBy("dim1", Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -1212,9 +1211,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .orderBy(
             ImmutableList.of(
-                new OrderBy("v0", Order.ASCENDING),
-                new OrderBy("dim1", Order.ASCENDING),
-                new OrderBy("v1", Order.ASCENDING)
+                OrderBy.ascending("v0"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("v1")
             )
         )
         .context(
@@ -1327,8 +1326,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .columns("v0", "z")
                 .orderBy(
                     ImmutableList.of(
-                        new OrderBy("v0", Order.ASCENDING),
-                        new OrderBy("z", Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("z")
                     )
                 )
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)

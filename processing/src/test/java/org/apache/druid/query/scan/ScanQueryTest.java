@@ -153,8 +153,8 @@ public class ScanQueryTest extends InitializedNullHandlingTest
                   .orderBy(
                       // Not ok, even though it starts with __time ASC, because it also has non-time component.
                       ImmutableList.of(
-                          new OrderBy("__time", Order.ASCENDING),
-                          new OrderBy("quality", Order.DESCENDING)
+                          OrderBy.ascending("__time"),
+                          OrderBy.descending("quality")
                       )
                   )
                   .columns(ImmutableList.of("__time", "quality"))
@@ -170,7 +170,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     Assert.assertNotNull(
         Druids.newScanQueryBuilder()
               .order(Order.ASCENDING)
-              .orderBy(ImmutableList.of(new OrderBy("__time", Order.ASCENDING)))
+              .orderBy(ImmutableList.of(OrderBy.ascending("__time")))
               .columns(ImmutableList.of("__time", "quality"))
               .dataSource("source")
               .intervals(intervalSpec)
@@ -340,7 +340,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
               .columns("__time")
-              .orderBy(Collections.singletonList(new OrderBy("__time", Order.DESCENDING)))
+              .orderBy(Collections.singletonList(OrderBy.descending("__time")))
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .dataSource("some src")
               .intervals(intervalSpec)
@@ -356,7 +356,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     final ScanQuery scanQuery =
         Druids.newScanQueryBuilder()
               .columns("quality")
-              .orderBy(Collections.singletonList(new OrderBy("quality", Order.ASCENDING)))
+              .orderBy(Collections.singletonList(OrderBy.ascending("quality")))
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .dataSource("some src")
               .intervals(intervalSpec)
