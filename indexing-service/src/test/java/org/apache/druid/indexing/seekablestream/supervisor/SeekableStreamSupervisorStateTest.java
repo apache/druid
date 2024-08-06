@@ -2778,7 +2778,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private class TestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
   {
-    Map<String, String> streamOffsets;
+    Map<String, String> streamOffsets = new HashMap<>();
 
     @Override
     protected void scheduleReporting(ScheduledExecutorService reportingExec)
