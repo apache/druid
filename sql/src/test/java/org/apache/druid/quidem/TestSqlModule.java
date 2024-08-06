@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
-import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -68,6 +67,5 @@ public class TestSqlModule extends TestDruidModule
     binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
     binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
     binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-    binder.install(new BuiltInTypesModule());
   }
 }

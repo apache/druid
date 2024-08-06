@@ -26,13 +26,14 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CompositeDruidModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -545,22 +546,23 @@ public class SqlTestFramework
    * This is an intermediate solution: the ultimate solution is to create things
    * in Guice itself.
    */
-  private class TestSetupModule implements DruidModule
+  private class TestSetupModule extends CompositeDruidModule
   {
     private final Builder builder;
 
     public TestSetupModule(Builder builder)
     {
+      super(new BuiltInTypesModule(), new TestSqlModule());
       this.builder = builder;
     }
 
     @Override
     public void configure(Binder binder)
     {
+      super.configure(binder);
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
-      binder.install(new TestSqlModule());
     }
 
     @Provides
