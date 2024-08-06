@@ -17,7 +17,8 @@
  */
 
 @import 'normalize.css/normalize';
-@import 'fontsource-open-sans/index.css';
+@import '@fontsource/open-sans/400.css'; // Normal
+@import '@fontsource/open-sans/700.css'; // Bold
 @import './blueprint-overrides';
 @import '@blueprintjs/core/src/blueprint';
 @import '@blueprintjs/datetime/src/blueprint-datetime';

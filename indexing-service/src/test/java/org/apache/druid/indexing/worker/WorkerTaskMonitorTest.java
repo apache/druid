@@ -160,7 +160,6 @@ public class WorkerTaskMonitorTest
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setBaseDir(FileUtils.createTempDir().toString())
         .setDefaultRowFlushBoundary(0)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
