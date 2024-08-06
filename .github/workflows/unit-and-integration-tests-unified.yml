@@ -47,8 +47,6 @@ concurrency:
 env:
   MYSQL_DRIVER_CLASSNAME: com.mysql.jdbc.Driver # Used to set druid config in docker image for revised ITs
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 5
-  DRUID_PREVIOUS_VERSION: 30.0.0
-  DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: https://dlcdn.apache.org/druid/30.0.0/apache-druid-30.0.0-bin.tar.gz
 
 jobs:
   set-env-var:
