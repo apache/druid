@@ -410,7 +410,7 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
-Dynamic parameters can even replace arrays, reducing the parsing time. Refer to parameters in [api request-body](../api-reference/sql-api.md#request-body) for usage.
+Dynamic parameters can even replace arrays, reducing the parsing time. Refer to the parameters in the [API request body](../api-reference/sql-api.md#request-body) for usage.
 
 ```sql
 SELECT arrayColumn from druid.table where ARRAY_CONTAINS(?, arrayColumn)
