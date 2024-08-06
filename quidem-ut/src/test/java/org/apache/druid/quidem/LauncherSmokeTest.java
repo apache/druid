@@ -69,8 +69,8 @@ public class LauncherSmokeTest
     HttpGet request = new HttpGet("http://localhost:12345/status");
     request.addHeader("Content-Type", "application/json");
     CloseableHttpResponse response = client.execute(request);
+    assertEquals(200, response.getStatusLine().getStatusCode());
     String responseStr = EntityUtils.toString(response.getEntity());
     MatcherAssert.assertThat(responseStr, Matchers.containsString("\"version\":\""));
-    assertEquals(200, response.getStatusLine().getStatusCode());
   }
 }
