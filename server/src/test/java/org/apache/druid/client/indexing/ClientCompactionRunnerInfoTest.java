@@ -149,6 +149,49 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
+  public void testMSQEngineWithRollupTrueWithoutMetricsSpecIsInvalid()
+  {
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, true),
+        null
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
+  {
+    // Aggregators having combiningFactory different from the aggregatorFactory are unsupported.
+    final String inputColName = "added";
+    final String outputColName = "sum_added";
+    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, null),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
   public void testMSQEngineWithRollupNullWithMetricsSpecIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createCompactionConfig(
