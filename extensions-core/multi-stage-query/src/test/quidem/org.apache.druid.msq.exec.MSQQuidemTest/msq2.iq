@@ -1,3 +1,5 @@
+!set isNative false
+!set isMSQ true
 !set plannerStrategy DECOUPLED
 !if (isMSQ) {
 !use druidtest://?componentSupplier=DrillWindowQueryMSQComponentSupplier

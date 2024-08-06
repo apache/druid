@@ -160,14 +160,4 @@ public class MSQDruidMeta extends DruidMeta
 
   }
 
-  @Override
-  public Map<String, String> getEngineProperties()
-  {
-    return ImmutableMap.<String, String>builder()
-        .putAll(super.getEngineProperties())
-        .put("isMSQ", "true")
-        .put("isNative", "false")
-        .build();
-  }
-
 }

@@ -21,16 +21,13 @@ package org.apache.druid.quidem;
 
 import net.hydromatic.quidem.Quidem.ConnectionFactory;
 import net.hydromatic.quidem.Quidem.PropertyHandler;
-
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.Map;
 import java.util.Properties;
 
 public class DruidQuidemConnectionFactory implements ConnectionFactory, PropertyHandler
 {
   private Properties props = new Properties();
-  private Map<String, String> engineProperties;
 
   public DruidQuidemConnectionFactory()
   {
@@ -42,33 +39,14 @@ public class DruidQuidemConnectionFactory implements ConnectionFactory, Property
   public Connection connect(String name, boolean reference) throws Exception
   {
     if (name.startsWith("druidtest://")) {
-      Connection connection = DriverManager.getConnection(name, props);
-      engineProperties = unwrapEngineProperties(connection);
-      return connection;
+      return DriverManager.getConnection(name, props);
     }
     throw new RuntimeException("unknown connection '" + name + "'");
-  }
-
-  private Map<String, String> unwrapEngineProperties(Connection connection)
-  {
-    if(connection instanceof DruidConnectionExtras) {
-      DruidConnectionExtras extras = ((DruidConnectionExtras) connection);
-      return extras.getEngineProperties();
-    }
-    return null;
   }
 
   @Override
   public void onSet(String key, Object value)
   {
     props.setProperty(key, value.toString());
-  }
-
-  public Object getEnv(String env)
-  {
-    if (engineProperties == null) {
-      return null;
-    }
-    return engineProperties.get(env);
   }
 }

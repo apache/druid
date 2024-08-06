@@ -933,9 +933,4 @@ public class DruidMeta extends MetaImpl
   {
     return Calcites.escapeStringLiteral(toEscape) + " ESCAPE '\\'";
   }
-
-  public Map<String, String> getEngineProperties()
-  {
-    return ImmutableMap.of("isNative", "true");
-  }
 }
