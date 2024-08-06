@@ -65,7 +65,6 @@ import org.apache.druid.guice.StartupLoggingModule;
 import org.apache.druid.guice.StorageNodeModule;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.EscalatedClient;
-import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.HttpClientModule;
 import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
@@ -77,7 +76,6 @@ import org.apache.druid.initialization.TombstoneDataStorageModule;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.guice.ServiceClientModule;
@@ -87,7 +85,6 @@ import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.SubqueryGuardrailHelper;
@@ -100,17 +97,10 @@ import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.initialization.ExternalStorageAccessSecurityModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.initialization.jetty.JettyServerModule;
-import org.apache.druid.server.log.NoopRequestLogger;
-import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
-import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.TLSCertificateCheckerModule;
-import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
-import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
@@ -213,36 +203,11 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
     return delegate.getPlannerComponentSupplier();
   }
 
-
-  // FIXME
   public static class BrokerTestModule extends AbstractModule
   {
     @Override
     protected void configure()
     {
-      if(false) {
-        bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-      }
-      if(false) {
-        bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-      }
-      if(false) {
-        bind(RequestLogger.class).toInstance(new NoopRequestLogger());
-      }
-      if(false) {
-        bind(String.class)
-            .annotatedWith(DruidSchemaName.class)
-            .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-      }
-      if(false) {
-        bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-      }
-      if(false) {
-        bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
-      }
-      if(false) {
-        bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
-      }
     }
 
     @Provides
@@ -263,16 +228,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
       localProps.put("druid.host", "localhost");
       localProps.put("druid.broker.segment.awaitInitializationOnStart", "false");
       return localProps;
-    }
-
-    @Provides
-    @LazySingleton
-    public SqlEngine createMockSqlEngine(
-        final QuerySegmentWalker walker,
-        final QueryRunnerFactoryConglomerate conglomerate,
-        @Json ObjectMapper jsonMapper)
-    {
-      return new NativeSqlEngine(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate), jsonMapper);
     }
 
     @Provides
