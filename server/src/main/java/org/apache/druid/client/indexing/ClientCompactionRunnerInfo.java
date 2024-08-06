@@ -162,7 +162,7 @@ public class ClientCompactionRunnerInfo
       return CompactionConfigValidationResult.failure(
           "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified"
       );
-    } else if (metricsSpec == null && isRollup != null && isRollup) {
+    } else if ((metricsSpec == null || metricsSpec.length == 0) && isRollup != null && isRollup) {
       return CompactionConfigValidationResult.failure(
           "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null"
       );
