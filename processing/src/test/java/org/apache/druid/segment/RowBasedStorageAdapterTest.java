@@ -452,6 +452,28 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
+  public void test_makeCursor()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("0"),
+              ImmutableList.of("1"),
+              ImmutableList.of("2")
+          ),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+    Assert.assertEquals(3, numCloses.get());
+  }
+
+  @Test
   public void test_makeCursor_filterOnLong()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
@@ -471,7 +493,7 @@ public class RowBasedStorageAdapterTest
     }
 
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   @Test
@@ -494,7 +516,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   @Test
@@ -528,7 +550,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   @Test
@@ -574,7 +596,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   @Test
@@ -595,7 +617,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   @Test
@@ -779,7 +801,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   @Test
@@ -799,7 +821,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assert.assertEquals(3, numCloses.get());
   }
 
   private static List<List<Object>> walkCursor(
@@ -815,6 +837,16 @@ public class RowBasedStorageAdapterTest
     final List<List<Object>> retVal = new ArrayList<>();
 
     while (!cursor.isDone()) {
+      cursor.advanceUninterruptibly();
+    }
+
+    cursor.reset();
+
+    int ctr = 0;
+    while (!cursor.isDone()) {
+      if (ctr == 1) {
+        cursor.mark();
+      }
       final List<Object> row = new ArrayList<>();
 
       for (Supplier<Object> supplier : suppliers) {
@@ -822,7 +854,24 @@ public class RowBasedStorageAdapterTest
       }
 
       retVal.add(row);
+      ctr++;
       cursor.advanceUninterruptibly();
+    }
+
+    cursor.resetToMark();
+    int mark = 1;
+    if (ctr > 1) {
+      while (!cursor.isDone()) {
+
+        final List<Object> row = new ArrayList<>();
+
+        for (Supplier<Object> supplier : suppliers) {
+          row.add(supplier.get());
+        }
+
+        retVal.set(mark++, row);
+        cursor.advanceUninterruptibly();
+      }
     }
 
     return retVal;

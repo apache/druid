@@ -151,7 +151,7 @@ public class RowBasedCursor<RowType> implements Cursor
 
   private void advanceToMatchingMarkRow()
   {
-    while (!isDone() && !valueMatcher.matches(false) && rowId < markId) {
+    while (!isDone() && rowId < markId) {
       rowWalker.advance();
       rowId++;
     }
