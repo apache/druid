@@ -212,20 +212,36 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
     return delegate.getPlannerComponentSupplier();
   }
 
+
+  // FIXME
   public static class BrokerTestModule extends AbstractModule
   {
     @Override
     protected void configure()
     {
-      bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-      bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-      bind(RequestLogger.class).toInstance(new NoopRequestLogger());
-      bind(String.class)
-          .annotatedWith(DruidSchemaName.class)
-          .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-      bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-      bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
-      bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+      if(false) {
+        bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
+      }
+      if(false) {
+        bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
+      }
+      if(false) {
+        bind(RequestLogger.class).toInstance(new NoopRequestLogger());
+      }
+      if(false) {
+        bind(String.class)
+            .annotatedWith(DruidSchemaName.class)
+            .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
+      }
+      if(false) {
+        bind(QuerySchedulerProvider.class).in(LazySingleton.class);
+      }
+      if(false) {
+        bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
+      }
+      if(false) {
+        bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+      }
     }
 
     @Provides

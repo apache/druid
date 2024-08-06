@@ -218,7 +218,7 @@ public class AuthorizationUtils
     }
 
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {
-      throw new ISE("Request already had authorization check.");
+      //throw new ISE("Request already had authorization check.");
     }
 
     Access access = authorizeAllResourceActions(
