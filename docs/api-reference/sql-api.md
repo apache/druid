@@ -93,6 +93,10 @@ The request body takes the following properties:
         {
             "type": "VARCHAR",
             "value": "bar"
+        },
+        {
+            "type": "ARRAY",
+            "value": [-25.7, null, 36.85]
         }
     ]
     ```

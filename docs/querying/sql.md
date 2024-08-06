@@ -406,29 +406,19 @@ SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', ?, '%')
 
 To solve this issue, explicitly provide the type of the dynamic parameter using the `CAST` keyword. Consider the fix for the preceding example:
 
-```
+```sql
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
-Dynamic parameters can also replace arrays, reducing the parsing time.
+Dynamic parameters can even replace arrays, reducing the parsing time. Refer to parameters in [api request-body](../api-reference/sql-api.md#request-body) for usage.
 
-for example:
-```json
-{
-    "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
-    "parameters":[
-      {"type":"ARRAY", "value":[-25.7, null, 36.85]}
-    ]
-}
+```sql
+SELECT arrayColumn from druid.table where ARRAY_CONTAINS(?, arrayColumn)
 ```
 
-Also, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array)
-```json
-{
-    "query": "SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)",
-    "parameters":[
-      {"type":"ARRAY", "value":["Vienna", "Seoul", "San Francisco"]}
-    ]
-}
+With this, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array)
+
+```sql
+SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)
 ```
 
