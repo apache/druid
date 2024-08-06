@@ -112,7 +112,11 @@ public final class MetaSerdeHelper<T>
 
   public int size(T x)
   {
-    return fieldWriters.stream().mapToInt(w -> w.size(x)).sum();
+    int retVal = 0;
+    for (FieldWriter<T> fieldWriter : fieldWriters) {
+      retVal += fieldWriter.size(x);
+    }
+    return retVal;
   }
 
   public interface FieldWriter<T>

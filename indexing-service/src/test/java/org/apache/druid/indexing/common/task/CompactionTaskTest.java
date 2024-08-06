@@ -737,7 +737,7 @@ public class CompactionTaskTest
     );
     provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
   }
-  
+
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
@@ -749,8 +749,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -811,8 +810,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -874,8 +872,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -938,8 +935,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1009,8 +1005,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1060,8 +1055,7 @@ public class CompactionTaskTest
         null,
         customMetricsSpec,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1104,8 +1098,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1155,8 +1148,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1186,8 +1178,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1228,8 +1219,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1273,8 +1263,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
@@ -1319,8 +1308,7 @@ public class CompactionTaskTest
             new PeriodGranularity(Period.months(3), null, null),
             null
         ),
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1367,8 +1355,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1413,8 +1400,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1459,8 +1445,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1490,8 +1475,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER,
-        null
+        METRIC_BUILDER
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1871,14 +1855,6 @@ public class CompactionTaskTest
           }
         }
 
-        final Metadata metadata = new Metadata(
-            null,
-            aggregatorFactories.toArray(new AggregatorFactory[0]),
-            null,
-            null,
-            null
-        );
-
         queryableIndexMap.put(
             entry.getValue(),
             new SimpleQueryableIndex(
@@ -1887,9 +1863,21 @@ public class CompactionTaskTest
                 null,
                 columnMap,
                 null,
-                metadata,
                 false
             )
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return new Metadata(
+                    null,
+                    aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
+                    null,
+                    null
+                );
+              }
+            }
         );
       }
     }
@@ -1912,10 +1900,15 @@ public class CompactionTaskTest
                 index.getBitmapFactoryForDimensions(),
                 index.getColumns(),
                 index.getFileMapper(),
-                null,
                 false
             )
-        );
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return null;
+              }
+            });
       }
     }
 

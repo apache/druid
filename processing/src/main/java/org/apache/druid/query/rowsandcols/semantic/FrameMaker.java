@@ -17,27 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.segment.data;
+package org.apache.druid.query.rowsandcols.semantic;
 
-import org.apache.druid.segment.serde.Serializer;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.segment.column.RowSignature;
 
-import java.io.IOException;
-
-/**
- * Serializer that produces {@link ColumnarLongs}.
- */
-public interface ColumnarLongsSerializer extends Serializer
+public interface FrameMaker
 {
-  void open() throws IOException;
-
-  int size();
-
-  void add(long value) throws IOException;
-
-  default void addAll(long[] values, int start, int end) throws IOException
+  static FrameMaker fromRAC(RowsAndColumns rac)
   {
-    for (int i = start; i < end; ++i) {
-      add(values[i]);
+    FrameMaker retVal = rac.as(FrameMaker.class);
+    if (retVal == null) {
+      retVal = new DefaultFrameMaker(rac);
     }
+    return retVal;
   }
+
+  RowSignature computeSignature();
+
+  Frame toColumnBasedFrame();
 }

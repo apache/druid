@@ -80,7 +80,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -184,7 +183,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
               new HllSketchBuildAggregatorFactory("HLLSketchBuild", "user", 12, TgtHllType.HLL_4.name(), null, false, false),
               new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
           },
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       // should now only have 1 row after compaction
       // added = null, count = 3, sum_added = 93.0
@@ -286,7 +286,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
               ),
               new DoublesSketchAggregatorFactory("quantilesDoublesSketch", "delta", 128, 1000000000L, null)
           },
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       // should now only have 1 row after compaction
       // added = null, count = 3, sum_added = 93
@@ -328,8 +329,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test(dataProvider = "engine")
-  public void testAutoCompactionOnlyRowsWithoutMetricShouldAddNewMetrics(CompactionEngine engine) throws Exception
+  @Test()
+  public void testAutoCompactionOnlyRowsWithoutMetricShouldAddNewMetrics() throws Exception
   {
     // added = 31, count = null, sum_added = null
     loadData(INDEX_TASK_WITHOUT_ROLLUP_FOR_PRESERVE_METRICS);
@@ -357,7 +358,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           new AggregatorFactory[] {new CountAggregatorFactory("count"), new LongSumAggregatorFactory("sum_added", "added")},
           false,
-          engine
+          CompactionEngine.NATIVE
       );
       // should now only have 1 row after compaction
       // added = null, count = 2, sum_added = 62
@@ -480,7 +481,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("language"))),
           null,
           new AggregatorFactory[] {new CountAggregatorFactory("count"), new LongSumAggregatorFactory("sum_added", "added")},
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       // should now only have 1 row after compaction
       // added = null, count = 4, sum_added = 124
@@ -521,7 +523,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1));
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, Period.days(1), CompactionEngine.NATIVE);
       //...compacted into 1 new segment for 1 day. 1 day compacted and 1 day skipped/remains uncompacted. (3 total)
       forceTriggerAutoCompaction(3);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -539,7 +541,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           0,
           1,
           1);
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, CompactionEngine.NATIVE);
       //...compacted into 1 new segment for the remaining one day. 2 day compacted and 0 day uncompacted. (2 total)
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -651,7 +653,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET);
+      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, CompactionEngine.NATIVE);
       // ...should remains unchanged (4 total)
       forceTriggerAutoCompaction(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
@@ -863,7 +865,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to true
       // "interval": "2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true, engine);
+      submitCompactionConfig(
+          1000,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newGranularity, null, null),
+          true,
+          engine
+      );
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       for (String interval : intervalsBeforeCompaction) {
@@ -881,7 +889,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       //  "interval": "2013-01-01T00:00:00.000Z/2014-01-01T00:00:00.000Z",
       newGranularity = Granularities.MONTH;
       // Set dropExisting to true
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), true, engine);
+      submitCompactionConfig(
+          1000,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newGranularity, null, null),
+          true,
+          engine
+      );
 
       // Since dropExisting is set to true...
       // Again data is only in two days
@@ -950,7 +964,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to false
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
+      submitCompactionConfig(
+          1000,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newGranularity, null, null),
+          false,
+          CompactionEngine.NATIVE
+      );
 
       LOG.info("Auto compaction test with YEAR segment granularity");
 
@@ -967,7 +987,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.DAY;
       // Set dropExisting to false
-      submitCompactionConfig(1000, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
+      submitCompactionConfig(
+          1000,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newGranularity, null, null),
+          false,
+          CompactionEngine.NATIVE
+      );
 
       LOG.info("Auto compaction test with DAY segment granularity");
 
@@ -1169,7 +1195,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       Granularity newGranularity = Granularities.YEAR;
       // Set dropExisting to false
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newGranularity, null, null),
+          false,
+          CompactionEngine.NATIVE
+      );
 
       List<String> expectedIntervalAfterCompaction = new ArrayList<>();
       // We wil have one segment with interval of 2013-01-01/2014-01-01 (compacted with YEAR)
@@ -1195,7 +1227,13 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       newGranularity = Granularities.MONTH;
       // Set dropExisting to false
-      submitCompactionConfig(MAX_ROWS_PER_SEGMENT_COMPACTED, NO_SKIP_OFFSET, new UserCompactionTaskGranularityConfig(newGranularity, null, null), false);
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newGranularity, null, null),
+          false,
+          CompactionEngine.NATIVE
+      );
       // Since dropExisting is set to true...
       // This will submit a single compaction task for interval of 2013-01-01/2014-01-01 with MONTH granularity
       expectedIntervalAfterCompaction = new ArrayList<>();
@@ -1239,7 +1277,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           MAX_ROWS_PER_SEGMENT_COMPACTED,
           NO_SKIP_OFFSET,
           new UserCompactionTaskGranularityConfig(Granularities.WEEK, null, null),
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       // Before compaction, we have segments with the interval 2013-08-01/2013-09-01 and 2013-09-01/2013-10-01
       // We will compact the latest segment, 2013-09-01/2013-10-01, to WEEK.
@@ -1319,8 +1358,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
-  @Test(dataProvider = "engine")
-  public void testAutoCompactionDutyWithRollup(CompactionEngine engine) throws Exception
+  @Test()
+  public void testAutoCompactionDutyWithRollup() throws Exception
   {
     final ISOChronology chrono = ISOChronology.getInstance(DateTimes.inferTzFromString("America/Los_Angeles"));
     Map<String, Object> specs = ImmutableMap.of("%%GRANULARITYSPEC%%", new UniformGranularitySpec(Granularities.DAY, Granularities.DAY, false, ImmutableList.of(new Interval("2013-08-31/2013-09-02", chrono))));
@@ -1337,7 +1376,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           NO_SKIP_OFFSET,
           new UserCompactionTaskGranularityConfig(null, null, true),
           false,
-          engine
+          CompactionEngine.NATIVE
       );
       forceTriggerAutoCompaction(2);
       queryAndResultFields = ImmutableMap.of(
@@ -1470,7 +1509,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           new UserCompactionTaskTransformConfig(new SelectorDimFilter("page", "Striker Eureka", null)),
           null,
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       forceTriggerAutoCompaction(2);
 
@@ -1517,7 +1557,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           null,
           new AggregatorFactory[] {new DoubleSumAggregatorFactory("double_sum_added", "added"), new LongSumAggregatorFactory("long_sum_added", "added")},
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       forceTriggerAutoCompaction(2);
 
@@ -1577,7 +1618,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           null,
           null,
           null,
-          false
+          false,
+          CompactionEngine.NATIVE
       );
       // Compact the MONTH segment
       forceTriggerAutoCompaction(2);
@@ -1679,16 +1721,10 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     queryHelper.testQueriesFromString(queryResponseTemplate);
   }
 
-  private void submitCompactionConfig(Integer maxRowsPerSegment, Period skipOffsetFromLatest)
-      throws Exception
-  {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, null);
-  }
-
   private void submitCompactionConfig(
       Integer maxRowsPerSegment,
       Period skipOffsetFromLatest,
-      @Nullable CompactionEngine engine
+      CompactionEngine engine
   ) throws Exception
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, null, engine);
@@ -1697,18 +1733,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void submitCompactionConfig(
       Integer maxRowsPerSegment,
       Period skipOffsetFromLatest,
-      UserCompactionTaskGranularityConfig granularitySpec
-  ) throws Exception
-  {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, null);
-  }
-
-
-  private void submitCompactionConfig(
-      Integer maxRowsPerSegment,
-      Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
-      @Nullable CompactionEngine engine
+      CompactionEngine engine
   ) throws Exception
   {
     submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, false, engine);
@@ -1718,18 +1744,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Integer maxRowsPerSegment,
       Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
-      boolean dropExisting
-  ) throws Exception
-  {
-    submitCompactionConfig(maxRowsPerSegment, skipOffsetFromLatest, granularitySpec, dropExisting, null);
-  }
-
-  private void submitCompactionConfig(
-      Integer maxRowsPerSegment,
-      Period skipOffsetFromLatest,
-      UserCompactionTaskGranularityConfig granularitySpec,
       boolean dropExisting,
-      @Nullable CompactionEngine engine
+      CompactionEngine engine
   ) throws Exception
   {
     submitCompactionConfig(
@@ -1751,30 +1767,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       UserCompactionTaskDimensionsConfig dimensionsSpec,
       UserCompactionTaskTransformConfig transformSpec,
       AggregatorFactory[] metricsSpec,
-      boolean dropExisting
-  ) throws Exception
-  {
-    submitCompactionConfig(
-        maxRowsPerSegment,
-        skipOffsetFromLatest,
-        granularitySpec,
-        dimensionsSpec,
-        transformSpec,
-        metricsSpec,
-        dropExisting,
-        null
-    );
-  }
-
-  private void submitCompactionConfig(
-      Integer maxRowsPerSegment,
-      Period skipOffsetFromLatest,
-      UserCompactionTaskGranularityConfig granularitySpec,
-      UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
-      AggregatorFactory[] metricsSpec,
       boolean dropExisting,
-      @Nullable CompactionEngine engine
+      CompactionEngine engine
   ) throws Exception
   {
     submitCompactionConfig(
@@ -1799,7 +1793,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       UserCompactionTaskTransformConfig transformSpec,
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
-      @Nullable CompactionEngine engine
+      CompactionEngine engine
   ) throws Exception
   {
     DataSourceCompactionConfig dataSourceCompactionConfig = new DataSourceCompactionConfig(
