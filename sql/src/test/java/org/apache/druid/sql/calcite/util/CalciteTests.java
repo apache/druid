@@ -155,7 +155,6 @@ public class CalciteTests
             } else {
               return Access.OK;
             }
-          case ResourceType.STATE:
           case ResourceType.QUERY_CONTEXT:
             return Access.OK;
           case ResourceType.EXTERNAL:
