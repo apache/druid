@@ -82,8 +82,7 @@ public class TestMSQSqlModule extends TestDruidModule
 
   @Provides
   @LazySingleton
-  public DruidMeta createMeta(
-      MSQDruidMeta druidMeta)
+  public DruidMeta createMeta(MSQDruidMeta druidMeta)
   {
     return druidMeta;
   }
