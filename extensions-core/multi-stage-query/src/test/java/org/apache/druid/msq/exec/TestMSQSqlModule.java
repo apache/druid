@@ -30,7 +30,6 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.avatica.DruidMeta;
@@ -52,9 +51,7 @@ public class TestMSQSqlModule extends TestDruidModule {
   @Provides
   @LazySingleton
   public MSQTaskSqlEngine createEngine(
-      QueryLifecycleFactory qlf,
       ObjectMapper queryJsonMapper,
-      Injector injector,
       MSQTestOverlordServiceClient indexingServiceClient
   )
   {
