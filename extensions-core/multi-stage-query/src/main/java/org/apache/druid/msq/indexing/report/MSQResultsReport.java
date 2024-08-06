@@ -35,7 +35,7 @@ import java.util.Objects;
 public class MSQResultsReport
 {
   /**
-   * Like {@link org.apache.druid.segment.column.RowSignature}, but allows duplicate column names for compatibility
+   * Like {@link RowSignature}, but allows duplicate column names for compatibility
    * with SQL (which also allows duplicate column names in query results).
    */
   private final List<ColumnAndType> signature;
