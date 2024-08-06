@@ -51,6 +51,7 @@ import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.operator.window.WindowFramedAggregateProcessor;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
+import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -2135,9 +2136,9 @@ public class MSQWindowTest extends MSQTestBase
                                   .columns("d0", "d1", "d2", "w0", "w1")
                                   .orderBy(
                                       ImmutableList.of(
-                                          new ScanQuery.OrderBy("d0", ScanQuery.Order.ASCENDING),
-                                          new ScanQuery.OrderBy("d1", ScanQuery.Order.ASCENDING),
-                                          new ScanQuery.OrderBy("d2", ScanQuery.Order.ASCENDING)
+                                          OrderBy.ascending("d0"),
+                                          OrderBy.ascending("d1"),
+                                          OrderBy.ascending("d2")
                                       )
                                   )
                                   .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)
