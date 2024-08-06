@@ -19,13 +19,54 @@
 
 package org.apache.druid.testsEx.indexer;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testsEx.categories.BatchIndex;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
+import java.io.Closeable;
+import java.util.function.Function;
+
 @RunWith(DruidTestRunner.class)
 @Category(BatchIndex.class)
-public class ITSystemTableBatchIndexTaskTest extends SystemTableBatchIndexTaskTest
+public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
 {
+  private static final Logger LOG = new Logger(ITSystemTableBatchIndexTaskTest.class);
+  private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
+  private static final String SYSTEM_QUERIES_RESOURCE = "/indexer/sys_segment_batch_index_queries.json";
+  private static final String INDEX_DATASOURCE = "wikipedia_index_test";
+
+  @Test
+  public void testIndexData() throws Exception
+  {
+    LOG.info("Starting batch index sys table queries");
+    try (
+        final Closeable ignored = unloader(INDEX_DATASOURCE + config.getExtraDatasourceNameSuffix())
+    ) {
+
+      final Function<String, String> transform = spec -> {
+        try {
+          return StringUtils.replace(
+              spec,
+              "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+              jsonMapper.writeValueAsString("0")
+          );
+        }
+        catch (JsonProcessingException e) {
+          throw new RuntimeException(e);
+        }
+      };
+
+      doIndexTestSqlTest(
+          INDEX_DATASOURCE,
+          INDEX_TASK,
+          SYSTEM_QUERIES_RESOURCE,
+          transform
+      );
+    }
+  }
 }
