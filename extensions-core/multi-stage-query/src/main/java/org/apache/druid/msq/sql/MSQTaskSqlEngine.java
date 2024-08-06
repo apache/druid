@@ -467,7 +467,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       }
     } else if (!rootCollation.getFieldCollations().isEmpty()) {
       int timePosition = -1;
-      for (int i = 0 ; i < rootCollation.getFieldCollations().size(); i++) {
+      for (int i = 0; i < rootCollation.getFieldCollations().size(); i++) {
         final String fieldCollationName =
             fieldMappings.get(rootCollation.getFieldCollations().get(i).getFieldIndex()).getValue();
         if (ColumnHolder.TIME_COLUMN_NAME.equals(fieldCollationName)) {

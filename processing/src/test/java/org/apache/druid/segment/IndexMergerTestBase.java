@@ -900,9 +900,9 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             DimensionsSpec.builder()
                           .setDimensions(
                               ImmutableList.of(
-                                  new StringDimensionSchema("dimA"),
-                                  new StringDimensionSchema("dimB"),
-                                  new StringDimensionSchema("dimC")
+                                  new StringDimensionSchema("dimA", null, useBitmapIndexes),
+                                  new StringDimensionSchema("dimB", null, useBitmapIndexes),
+                                  new StringDimensionSchema("dimC", null, useBitmapIndexes)
                               )
                           )
                           .setUseExplicitSegmentSortOrder(true)

@@ -364,10 +364,10 @@ For more information about partitioning, see [Partitioning](concepts.md#partitio
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
 column names or expressions.
 
-This column list is used for [secondary partitioning](../ingestion/concepts.md#secondary-partitioning) of segments
-within a time chunk, and [sorting](../ingestion/concepts#sorting) of rows within a segment. For sorting purposes, Druid
-implicitly prepends `__time` to the `CLUSTERED BY` column list, unless [`useExplicitSegmentSortOrder`](#context)
-(an experimental feature; see [Sorting](../ingestion/partitioning#sorting) for details) is set to `true`.
+This column list is used for [secondary partitioning](../ingestion/partitioning.md#secondary-partitioning) of segments
+within a time chunk, and [sorting](../ingestion/partitioning.md#sorting) of rows within a segment. For sorting purposes,
+Druid implicitly prepends `__time` to the `CLUSTERED BY` column list, unless [`useExplicitSegmentSortOrder`](#context)
+(an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details) is set to `true`.
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
 

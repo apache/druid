@@ -953,7 +953,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   {
     synchronized (dimensionDescs) {
       if (size() != 0) {
-        throw new ISE("Cannot load dimension order when existing index is not empty.", dimensionDescs.keySet());
+        throw new ISE("Cannot load dimension order[%s] when existing index is not empty.", dimensionDescs.keySet());
       }
       for (String dim : oldDimensionOrder) {
         // Skip __time; its position is solely based on configuration at index creation time.

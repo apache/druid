@@ -25,7 +25,7 @@ import org.apache.druid.segment.Segment;
 
 /**
  * Wrapper around a {@link QueryRunner} that adds a name and allows retrieval of the underlying segment. Used by
- * {@link QueryRunnerTestHelper#makeQueryRunners(QueryRunnerFactory)} and related methods.
+ * {@link QueryRunnerTestHelper#makeQueryRunners(QueryRunnerFactory, boolean)} and related methods.
  */
 public class TestQueryRunner<T> implements QueryRunner<T>
 {
