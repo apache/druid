@@ -19,88 +19,60 @@
 
 package org.apache.druid.frame.field;
 
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.key.KeyOrder;
-import org.apache.druid.frame.write.FrameWriterTestData;
-import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
-import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
-import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.SimpleAscendingOffset;
+import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.io.IOException;
 
-@RunWith(Parameterized.class)
 public class FieldReaderRACTest extends InitializedNullHandlingTest
 {
-  public static final List<FrameWriterTestData.Dataset<?>> DATASETS =
-      ImmutableList.<FrameWriterTestData.Dataset<?>>builder()
-                   .add(FrameWriterTestData.TEST_FLOATS)
-                   .add(FrameWriterTestData.TEST_DOUBLES)
-                   .add(FrameWriterTestData.TEST_LONGS)
-                   .add(FrameWriterTestData.TEST_STRINGS_SINGLE_VALUE)
-                   // .add(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
-                   .add(FrameWriterTestData.TEST_ARRAYS_STRING)
-                   .add(FrameWriterTestData.TEST_ARRAYS_LONG)
-                   .add(FrameWriterTestData.TEST_ARRAYS_FLOAT)
-                   .add(FrameWriterTestData.TEST_ARRAYS_DOUBLE)
-                   .add(FrameWriterTestData.TEST_COMPLEX_HLL)
-                   // .add(FrameWriterTestData.TEST_COMPLEX_NESTED)
-                   .build();
-
-  private final FrameWriterTestData.Dataset<?> dataset;
-
-  @Parameterized.Parameters(name = "dataset = {0}")
-  public static Collection<Object[]> constructorFeeder()
-  {
-    final List<Object[]> constructors = new ArrayList<>();
-
-    for (FrameWriterTestData.Dataset<?> dataset : DATASETS) {
-      constructors.add(new Object[]{dataset});
-    }
-
-    return constructors;
-  }
-
-  public FieldReaderRACTest(FrameWriterTestData.Dataset<?> dataset)
-  {
-    this.dataset = dataset;
-  }
+  final DruidExceptionMatcher noArraysMatcher = DruidExceptionMatcher
+      .defensive()
+      .expectMessageIs("Can only work with single-valued strings, should use a COMPLEX or ARRAY typed Column instead");
 
   @Test
-  public void testDataSet()
+  public void testDataSet() throws IOException
   {
-    final ColumnType colType = dataset.getType();
-    final List<Object> rows = (List) dataset.getData(KeyOrder.ASCENDING);
+    final QueryableIndex index = TestIndex.getMMappedTestIndex();
+    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
+    final Frame frame = FrameTestUtil.adapterToFrame(storageAdapter, FrameType.ROW_BASED);
 
-    final MapOfColumnsRowsAndColumns mapOfColumnsRowsAndColumns = MapOfColumnsRowsAndColumns.builder()
-                                                                                            .add("dim1", rows.toArray(), colType)
-                                                                                            .build();
+    final RowSignature siggy = storageAdapter.getRowSignature();
+    final RowBasedFrameRowsAndColumns rowBasedRAC = new RowBasedFrameRowsAndColumns(frame, siggy);
 
-    if (colType.isArray()) {
-      Assert.assertThrows(
-          DruidException.class,
-          () -> {
-            RowBasedFrameRowsAndColumnsTest.MAKER.apply(mapOfColumnsRowsAndColumns)
-                                                 .findColumn("dim1")
-                                                 .toAccessor();
+    for (String columnName : siggy.getColumnNames()) {
+      final ColumnHolder colHolder = index.getColumnHolder(columnName);
+      final boolean multiValue = colHolder.getCapabilities().hasMultipleValues().isTrue();
+
+      try (BaseColumn col = colHolder.getColumn()) {
+        final ColumnAccessor racCol = rowBasedRAC.findColumn(columnName).toAccessor();
+
+        final SimpleAscendingOffset offset = new SimpleAscendingOffset(racCol.numRows());
+        final ColumnValueSelector<?> selector = col.makeColumnValueSelector(offset);
+        while (offset.withinBounds()) {
+          if (multiValue) {
+            noArraysMatcher.assertThrowsAndMatches(() -> racCol.getObject(offset.getOffset()));
+          } else {
+            final Object racObj = racCol.getObject(offset.getOffset());
+            Assert.assertEquals(selector.getObject(), racObj);
           }
-      );
-    } else {
-      final ColumnAccessor accessor = RowBasedFrameRowsAndColumnsTest.MAKER.apply(mapOfColumnsRowsAndColumns)
-                                                      .findColumn("dim1")
-                                                      .toAccessor();
-
-
-      for (int i = 0; i < rows.size(); i++) {
-        Assert.assertEquals(rows.get(i), accessor.getObject(i));
+          offset.increment();
+        }
       }
     }
   }
