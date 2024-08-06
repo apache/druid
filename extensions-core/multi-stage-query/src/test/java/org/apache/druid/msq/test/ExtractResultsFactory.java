@@ -20,7 +20,6 @@
 package org.apache.druid.msq.test;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport.ColumnAndType;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;

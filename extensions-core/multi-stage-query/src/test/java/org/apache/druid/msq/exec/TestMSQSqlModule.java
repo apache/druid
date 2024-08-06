@@ -35,15 +35,14 @@ import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.avatica.MSQDruidMeta;
 
-public class TestMSQSqlModule extends TestDruidModule {
-
+public class TestMSQSqlModule extends TestDruidModule
+{
   @Provides
   @MultiStageQuery
   @LazySingleton
   public SqlStatementFactory makeMSQSqlStatementFactory(
       final MSQTaskSqlEngine sqlEngine,
-      SqlToolbox toolbox
-  )
+      SqlToolbox toolbox)
   {
     return new SqlStatementFactory(toolbox.withEngine(sqlEngine));
   }
@@ -52,8 +51,7 @@ public class TestMSQSqlModule extends TestDruidModule {
   @LazySingleton
   public MSQTaskSqlEngine createEngine(
       ObjectMapper queryJsonMapper,
-      MSQTestOverlordServiceClient indexingServiceClient
-  )
+      MSQTestOverlordServiceClient indexingServiceClient)
   {
     return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
   }

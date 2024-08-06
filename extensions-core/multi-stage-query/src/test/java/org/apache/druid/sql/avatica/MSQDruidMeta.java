@@ -62,8 +62,7 @@ public class MSQDruidMeta extends DruidMeta
       final AuthenticatorMapper authMapper,
       final MSQTestOverlordServiceClient overlordClient,
       final ObjectMapper objectMapper,
-      final DruidHookDispatcher hookDispatcher
-      )
+      final DruidHookDispatcher hookDispatcher)
   {
     super(sqlStatementFactory, config, errorHandler, authMapper);
     this.overlordClient = overlordClient;
