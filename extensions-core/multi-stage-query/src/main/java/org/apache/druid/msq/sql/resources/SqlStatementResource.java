@@ -113,6 +113,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
@@ -231,7 +232,9 @@ public class SqlStatementResource
   @Path("/{id}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetStatus(
-      @PathParam("id") final String queryId, @Context final HttpServletRequest req
+      @PathParam("id") final String queryId,
+      @QueryParam("detail") boolean detail,
+      @Context final HttpServletRequest req
   )
   {
     try {
@@ -242,7 +245,8 @@ public class SqlStatementResource
           queryId,
           authenticationResult,
           true,
-          Action.READ
+          Action.READ,
+          detail
       );
 
       if (sqlStatementResult.isPresent()) {
@@ -369,7 +373,8 @@ public class SqlStatementResource
           queryId,
           authenticationResult,
           false,
-          Action.WRITE
+          Action.WRITE,
+          false
       );
       if (sqlStatementResult.isPresent()) {
         switch (sqlStatementResult.get().getState()) {
@@ -479,7 +484,7 @@ public class SqlStatementResource
     }
     String taskId = String.valueOf(firstRow[0]);
 
-    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ);
+    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ, false);
 
     if (statementResult.isPresent()) {
       return Response.status(Response.Status.OK).entity(statementResult.get()).build();
@@ -565,7 +570,8 @@ public class SqlStatementResource
       String queryId,
       AuthenticationResult authenticationResult,
       boolean withResults,
-      Action forAction
+      Action forAction,
+      boolean detail
   ) throws DruidException
   {
     TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
@@ -582,14 +588,29 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
+    Supplier<Optional<MSQTaskReportPayload>> msqTaskReportPayloadSupplier = () -> {
+      try {
+        return Optional.ofNullable(SqlStatementResourceHelper.getPayload(
+            contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+        ));
+      }
+      catch (DruidException e) {
+        if (e.getErrorCode().equals("notFound") || e.getMessage().contains("Unable to contact overlord")) {
+          return Optional.empty();
+        }
+        throw e;
+      }
+    };
+
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
           queryId,
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId),
-          jsonMapper
+          msqTaskReportPayloadSupplier.get().orElse(null),
+          jsonMapper,
+          detail
       );
     } else {
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -605,7 +626,10 @@ public class SqlStatementResource
               sqlStatementState,
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
-          null
+          null,
+          detail ? SqlStatementResourceHelper.getQueryStagesReport(msqTaskReportPayloadSupplier.get().orElse(null)) : null,
+          detail ? SqlStatementResourceHelper.getQueryCounters(msqTaskReportPayloadSupplier.get().orElse(null)) : null,
+          detail ? SqlStatementResourceHelper.getQueryWarningDetails(msqTaskReportPayloadSupplier.get().orElse(null)) : null
       ));
     }
   }

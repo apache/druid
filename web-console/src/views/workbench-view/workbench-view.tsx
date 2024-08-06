@@ -30,7 +30,8 @@ import type { SqlQuery } from '@druid-toolkit/query';
 import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React, { ComponentProps } from 'react';
+import type { ComponentProps } from 'react';
+import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
@@ -464,7 +465,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }
 
           this.handleNewTab(
-            WorkbenchQuery.fromEffectiveQueryAndContext(
+            WorkbenchQuery.fromTaskQueryAndContext(
               execution.sqlQuery,
               execution.queryContext,
             ).changeLastExecution({ engine: 'sql-msq-task', id: taskId }),
