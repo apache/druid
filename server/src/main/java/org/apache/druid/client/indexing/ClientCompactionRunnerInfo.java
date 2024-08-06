@@ -151,7 +151,8 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate rollup in granularitySpec is set to true when metricsSpec is specified and false if it's null.
-   * Null is treated as true if metricsSpec exist and false if empty.
+   * If rollup set to null, all existing segments are analyzed, and it's set to true iff all segments have rollup
+   * set to true.
    */
   public static CompactionConfigValidationResult validateRollupForMSQ(
       AggregatorFactory[] metricsSpec,

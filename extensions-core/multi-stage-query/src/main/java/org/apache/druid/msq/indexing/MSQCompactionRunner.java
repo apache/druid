@@ -389,7 +389,12 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static boolean isGroupBy(DataSchema dataSchema)
   {
-    // Treat a query as group-by only if metrics are present.
+    if (dataSchema.getGranularitySpec() != null) {
+      // If rollup is true without any metrics, all columns are treated as dimensions and
+      // duplicate rows are removed in line with native compaction.
+      return dataSchema.getGranularitySpec().isRollup();
+    }
+    // If no rollup specified, decide based on whether metrics are present.
     return dataSchema.getAggregators().length > 0;
   }
 
