@@ -422,3 +422,4 @@ With this, an IN filter being supplied with a lot of values, can be replaced by 
 SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)
 ```
 
+sample java code using dynamic parameters is provided [here](../api-reference/sql-jdbc.md#dynamic-parameters).
