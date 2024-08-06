@@ -32,7 +32,6 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.initialization.CompositeDruidModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;

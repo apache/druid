@@ -17,11 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.initialization;
+package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
 
 import java.util.List;
 
