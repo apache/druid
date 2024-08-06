@@ -597,7 +597,7 @@ need arises.
 
 If you enable this feature, you can query datasources that are only stored in cold storage and are not cached on a Historical.
 
-For, stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#metadata-management). 
+For stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#metadata-management). 
 
 ### Ingestion security configuration
 
