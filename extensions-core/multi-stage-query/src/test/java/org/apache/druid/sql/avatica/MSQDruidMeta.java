@@ -22,9 +22,11 @@ package org.apache.druid.sql.avatica;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.commons.lang3.RegExUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.report.MSQResultsReport.ColumnAndType;
@@ -42,6 +44,9 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.regex.Pattern;
 
 public class MSQDruidMeta extends DruidMeta
 {
@@ -93,10 +98,8 @@ public class MSQDruidMeta extends DruidMeta
       String str = objectMapper
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(payload.getStages());
-      str = str.replaceAll(taskId, "<taskId>")
-          .replaceAll("\"startTime\" : .*", "\"startTime\" : __TIMESTAMP__")
-          .replaceAll("\"duration\" : .*", "\"duration\" : __DURATION__")
-          .replaceAll("\"sqlQueryId\" : .*", "\"sqlQueryId\" : __SQL_QUERY_ID__");
+
+      str = maskMSQPlan(str, taskId);
 
       hookDispatcher.dispatch(DruidHook.MSQ_PLAN, str);
     }
@@ -118,6 +121,22 @@ public class MSQDruidMeta extends DruidMeta
             )
         )
     );
+  }
+
+  private static final Map<Pattern, String> REPLACEMENT_MAP = ImmutableMap.<Pattern, String>builder()
+      .put(Pattern.compile("\"startTime\" : .*"), "\"startTime\" : __TIMESTAMP__")
+      .put(Pattern.compile("\"duration\" : .*"), "\"duration\" : __DURATION__")
+      .put(Pattern.compile("\"sqlQueryId\" : .*"), "\"sqlQueryId\" : __SQL_QUERY_ID__")
+      .build();
+
+  private String maskMSQPlan(String str, String taskId)
+  {
+    Pattern taskIdPattern = Pattern.compile(Pattern.quote(taskId));
+    str = RegExUtils.replaceAll(str, taskIdPattern, "<taskId>");
+    for (Entry<Pattern, String> entry : REPLACEMENT_MAP.entrySet()) {
+      str = RegExUtils.replaceAll(str, entry.getKey(), entry.getValue());
+    }
+    return str;
   }
 
   private Signature makeSignature(AbstractDruidJdbcStatement druidStatement, List<ColumnAndType> cat)
