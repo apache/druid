@@ -58,8 +58,12 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -92,6 +96,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -1597,6 +1602,36 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
             new Object[]{978307200000L, "a", 978307200000L},
             new Object[]{978393600000L, "abc", 978393600000L},
             new Object[]{978480000000L, NullHandling.defaultStringValue(), 978480000000L}
+        )
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testScalarInArrayToUseHavingFilter(String testName, Map<String, Object> queryContext)
+  {
+    DimFilter filter = NullHandling.replaceWithDefault()
+                       ? new InDimFilter("v0", new HashSet<>(Arrays.asList("1", "17")))
+                       : new TypedInFilter("v0", ColumnType.LONG, null, ImmutableList.of(1, 17), null);
+    testQuery(
+        "select countryName from "
+        + "(select countryName, length(countryName) as cname from wikipedia group by countryName) "
+        + "where SCALAR_IN_ARRAY(cname, ARRAY[17, 1])",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(new TableDataSource(CalciteTests.WIKIPEDIA))
+                .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                .setVirtualColumns(expressionVirtualColumn("v0", "strlen(\"countryName\")", ColumnType.LONG))
+                .setDimFilter(filter)
+                .setGranularity(Granularities.ALL)
+                .setDimensions(new DefaultDimensionSpec("countryName", "d0", ColumnType.STRING))
+                .setLimitSpec(NoopLimitSpec.instance())
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"Republic of Korea"}
         )
     );
   }
