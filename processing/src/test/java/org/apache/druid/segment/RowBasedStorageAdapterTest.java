@@ -493,7 +493,7 @@ public class RowBasedStorageAdapterTest
     }
 
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -550,7 +550,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -596,7 +596,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -617,7 +617,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -821,7 +821,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   private static List<List<Object>> walkCursor(
