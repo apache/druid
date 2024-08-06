@@ -119,9 +119,9 @@ public class MSQCompactionRunner implements CompactionRunner
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
-   * <li>queryGranularity set to ALL in granularitySpec.</li>
-   * <li>Each metric has output column name same as the input name.</li>
+   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
+   * Null is treated as true if metricsSpec exist and false if empty.</li>
+   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
    */
   @Override
@@ -389,12 +389,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static boolean isGroupBy(DataSchema dataSchema)
   {
-    if (dataSchema.getGranularitySpec() != null) {
-      // If rollup is true without any metrics, all columns are treated as dimensions and
-      // duplicate rows are removed in line with native compaction.
-      return dataSchema.getGranularitySpec().isRollup();
-    }
-    // If no rollup specified, decide based on whether metrics are present.
+    // Treat a query as group-by only if metrics are present.
     return dataSchema.getAggregators().length > 0;
   }
 

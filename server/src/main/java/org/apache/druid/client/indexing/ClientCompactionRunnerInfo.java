@@ -103,10 +103,8 @@ public class ClientCompactionRunnerInfo
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
-   * Null is treated as true if granularitySpec is not null; else it is based on segment analysis.</li>
-   * <li>queryGranularity set to ALL in granularitySpec.</li>
-   * <li>Each metric is idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A = A.combiningFactory()'.</li>
+   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's empty.</li>
+   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
@@ -153,13 +151,14 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate rollup in granularitySpec is set to true when metricsSpec is specified and false if it's null.
+   * Null is treated as true if metricsSpec exist and false if empty.
    */
   public static CompactionConfigValidationResult validateRollupForMSQ(
       AggregatorFactory[] metricsSpec,
       @Nullable Boolean isRollup
   )
   {
-    if (metricsSpec != null && isRollup != null && !isRollup) {
+    if (metricsSpec != null && metricsSpec.length != 0 && isRollup != null && !isRollup) {
       return CompactionConfigValidationResult.failure(
           "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified"
       );
@@ -181,7 +180,7 @@ public class ClientCompactionRunnerInfo
                                     .getInt(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
       if (maxNumTasks < 2) {
         return CompactionConfigValidationResult.failure(
-            "MSQ: Context 'maxNumTasks'[%,d] must be at least 2 (1 controller + 1 worker)",
+            "MSQ: Context maxNumTasks[%,d] must be at least 2 (1 controller + 1 worker)",
             maxNumTasks
         );
       }
@@ -198,13 +197,13 @@ public class ClientCompactionRunnerInfo
       return CompactionConfigValidationResult.success();
     }
     return Arrays.stream(metricsSpec)
-                 .filter(aggregatorFactory ->
-                             !aggregatorFactory.equals(aggregatorFactory.getCombiningFactory()))
+                 .filter(aggregatorFactory -> !aggregatorFactory.equals(aggregatorFactory.getCombiningFactory()))
                  .findFirst()
                  .map(aggregatorFactory ->
                           CompactionConfigValidationResult.failure(
                               "MSQ: Non-idempotent aggregator[%s] not supported in 'metricsSpec'.",
                               aggregatorFactory.getName()
-                          )).orElse(CompactionConfigValidationResult.success());
+                          )
+                 ).orElse(CompactionConfigValidationResult.success());
   }
 }
