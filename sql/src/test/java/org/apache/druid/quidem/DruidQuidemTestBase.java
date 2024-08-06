@@ -49,7 +49,6 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -108,7 +107,7 @@ public abstract class DruidQuidemTestBase
       }
       filter = new WildcardFileFilter(filterStr);
     }
-    druidQuidemRunner = new DruidQuidemRunner(this::getEnv);
+    druidQuidemRunner = new DruidQuidemRunner();
   }
 
   /** Creates a command handler. */
@@ -129,11 +128,8 @@ public abstract class DruidQuidemTestBase
 
   public static class DruidQuidemRunner
   {
-    private final Function<String, Object> envFunction;
-
-    public DruidQuidemRunner(Function<String, Object> envFunction)
+    public DruidQuidemRunner()
     {
-      this.envFunction = envFunction;
     }
 
     public void run(File inFile) throws Exception
@@ -153,7 +149,7 @@ public abstract class DruidQuidemTestBase
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
             .withPropertyHandler(connectionFactory)
-            .withEnv(envFunction)
+            .withEnv(connectionFactory::getEnv)
             .withCommandHandler(new DruidQuidemCommandHandler());
 
         Config config = configBuilder
@@ -219,10 +215,5 @@ public abstract class DruidQuidemTestBase
   public static void afterAll()
   {
     DruidAvaticaTestDriver.CONFIG_STORE.close();
-  }
-
-  protected Object getEnv(String name)
-  {
-    return null;
   }
 }
