@@ -105,7 +105,7 @@ jobs:
     with:
       build_jdk: 8
       runtime_jdk: 8
-      use_indexer: MiddleManager
+      use_indexer: middleManager
       script: ./it.sh github BackwardCompatibilityMain
       it: BackwardCompatibilityMain
       mysql_driver: com.mysql.jdbc.Driver
@@ -113,3 +113,8 @@ jobs:
       DRUID_PREVIOUS_VERSION: ${{ inputs.DRUID_PREVIOUS_VERSION }}
       DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ inputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
       DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ inputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+      DRUID_CLOUD_BUCKET: druid-qa
+      DRUID_CLOUD_PATH: aws-${{ github.run_id }}-${{ github.run_attempt }}
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: admin
+      AWS_SECRET_ACCESS_KEY: miniopassword
