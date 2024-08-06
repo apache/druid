@@ -69,7 +69,7 @@ public class QTestCase
             isValidTestCaseFile(testInfo.getIQFile());
           }
 
-          DruidQuidemRunner runner = new DruidQuidemTestBase.DruidQuidemRunner();
+          DruidQuidemRunner runner = new DruidQuidemTestBase.DruidQuidemRunner(name -> null);
           runner.run(testInfo.getIQFile());
         }
         catch (Exception e) {
