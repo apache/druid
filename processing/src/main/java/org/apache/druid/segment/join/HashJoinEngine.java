@@ -28,7 +28,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -246,9 +245,9 @@ public class HashJoinEngine
       }
 
       @Override
-      public void mark(DateTime mark)
+      public void mark()
       {
-        leftCursor.mark(mark);
+        leftCursor.mark();
         joinMarkId = joinColumnSelectorFactory.getRowId();
       }
 

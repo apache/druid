@@ -51,7 +51,6 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -455,7 +454,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
     }
 
     @Override
-    public void mark(DateTime mark)
+    public void mark()
     {
       cursorOffset.mark();
     }

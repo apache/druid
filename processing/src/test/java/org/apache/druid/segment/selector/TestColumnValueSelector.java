@@ -115,7 +115,7 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
   }
 
   @Override
-  public void mark(DateTime mark)
+  public void mark()
   {
     markCounter = rowCounter;
   }

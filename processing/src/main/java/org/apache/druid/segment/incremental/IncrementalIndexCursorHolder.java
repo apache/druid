@@ -29,7 +29,6 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -88,8 +87,8 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     private boolean emptyRange;
     private int numAdvanced;
     private boolean done;
-    private DateTime markDate;
-    private int markRowId = 0;
+    private int markRowId = -1;
+    private long markMillis = -1;
 
     IncrementalIndexCursor(
         IncrementalIndexStorageAdapter storageAdapter,
@@ -114,7 +113,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       facts = index.getFacts();
       interval = actualInterval;
       isDescending = descending;
-      markDate = isDescending ? interval.getEnd() : interval.getStart();
       cursorIterable = facts.timeRangeIterable(
           descending,
           actualInterval.getStartMillis(),
@@ -198,20 +196,29 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     }
 
     @Override
-    public void mark(DateTime mark)
+    public void mark()
     {
-      markDate = mark;
-      markRowId = currEntry.get() != null ? currEntry.get().getRowIndex() : -1;
+      if (!done && currEntry.get() != null) {
+        IncrementalIndexRow row = currEntry.get();
+        markRowId = row.getRowIndex();
+        markMillis = row.getTimestamp();
+      } else {
+        markRowId = -1;
+        markMillis = isDescending ? Long.MAX_VALUE : Long.MIN_VALUE;
+      }
     }
 
     @Override
     public void resetToMark()
     {
-      numAdvanced = markRowId;
+      if (markRowId < 0) {
+        reset();
+        return;
+      }
       baseIter = facts.timeRangeIterable(
           isDescending,
-          isDescending ? interval.getStartMillis() : markDate.getMillis(),
-          isDescending ? markDate.getMillis() : interval.getEndMillis()
+          isDescending ? interval.getStartMillis() : markMillis,
+          isDescending ? markMillis : interval.getEndMillis()
       ).iterator();
 
       BaseQuery.checkInterrupted();
@@ -220,16 +227,13 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       while (baseIter.hasNext()) {
         IncrementalIndexRow entry = baseIter.next();
         if (beyondMaxRowIndex(entry.getRowIndex())) {
-          numAdvanced++;
           continue;
         }
         currEntry.set(entry);
-        if (filterMatcher.matches(false) && (markRowId < 0 || entry.getRowIndex() == markRowId)) {
+        if (entry.getRowIndex() == markRowId && filterMatcher.matches(false)) {
           foundMatched = true;
           break;
         }
-
-        numAdvanced++;
       }
 
       done = !foundMatched && (emptyRange || !baseIter.hasNext());
@@ -238,8 +242,8 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     @Override
     public void reset()
     {
-      markRowId = 0;
-      markDate = isDescending ? interval.getEnd() : interval.getStart();
+      markRowId = -1;
+      markMillis = isDescending ? Long.MAX_VALUE : Long.MIN_VALUE;
       baseIter = cursorIterable.iterator();
 
       if (numAdvanced == -1) {

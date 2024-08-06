@@ -24,7 +24,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -243,10 +242,10 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   }
 
   @Override
-  public void mark(DateTime mark)
+  public void mark()
   {
     markIndex = index;
-    baseCursor.mark(mark);
+    baseCursor.mark();
   }
 
   @Override

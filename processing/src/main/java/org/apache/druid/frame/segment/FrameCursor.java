@@ -24,7 +24,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SimpleSettableOffset;
-import org.joda.time.DateTime;
 
 /**
  * An implementation of {@link Cursor} used by {@link org.apache.druid.frame.segment.row.FrameCursorMakerFactory}
@@ -80,7 +79,7 @@ public class FrameCursor implements Cursor
   }
 
   @Override
-  public void mark(DateTime mark)
+  public void mark()
   {
     markOffset = offset.getOffset();
   }

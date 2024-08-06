@@ -117,7 +117,7 @@ public class RowBasedCursor<RowType> implements Cursor
   }
 
   @Override
-  public void mark(DateTime mark)
+  public void mark()
   {
     markId = rowId;
   }

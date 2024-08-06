@@ -96,7 +96,7 @@ public class TopNQueryEngine
         Sequences.simple(granularizer.getBucketIterable())
                  .map(bucketInterval -> {
                    granularizer.advanceToBucket(bucketInterval);
-                   cursor.mark(bucketInterval.getStart());
+                   cursor.mark();
                    return mapFn.apply(cursor, granularizer, queryMetrics);
                  }),
                  Predicates.notNull()

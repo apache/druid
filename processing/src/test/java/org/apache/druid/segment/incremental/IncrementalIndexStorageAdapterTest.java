@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -66,6 +67,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
@@ -315,6 +317,101 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             .getColumnSelectorFactory()
             .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
         Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+      }
+    }
+  }
+
+  @Test
+  public void testMarkResetMarkSanity() throws IOException
+  {
+
+    IncrementalIndex index = indexCreator.createIndex();
+    DateTime t = DateTimes.nowUtc();
+    Interval interval = new Interval(t.minusMinutes(1), t.plusMinutes(1));
+
+    index.add(
+        new MapBasedInputRow(
+            t.minus(1).getMillis(),
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            t.minus(1).getMillis(),
+            Collections.singletonList("sally"),
+            ImmutableMap.of("sally", "bo")
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            t.getMillis(),
+            Collections.singletonList("billy"),
+            ImmutableMap.of("billy", "hi2")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            t.getMillis(),
+            Collections.singletonList("sally"),
+            ImmutableMap.of("sally", "bo2")
+        )
+    );
+
+    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+
+    for (boolean descending : Arrays.asList(false, true)) {
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setFilter(
+                                                           new OrFilter(
+                                                               ImmutableList.of(
+                                                                   new SelectorFilter("sally", "bo"),
+                                                                   new SelectorFilter("sally", "bo2")
+                                                               )
+                                                           )
+                                                       )
+                                                       .setInterval(interval)
+                                                       .setPreferredOrdering(
+                                                           descending ?
+                                                           Collections.singletonList(
+                                                               OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                                           ) :
+                                                           null
+                                                       )
+                                                       .build();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        Cursor cursor = cursorHolder.asCursor();
+        DimensionSelector dimSelector;
+        dimSelector = cursor.getColumnSelectorFactory()
+                            .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+        Assert.assertEquals(descending ? "bo2" : "bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+        cursor.advance();
+        cursor.mark();
+        Assert.assertEquals(descending ? "bo" : "bo2", dimSelector.lookupName(dimSelector.getRow().get(0)));
+        index.add(
+            new MapBasedInputRow(
+                t.minus(1).getMillis(),
+                Collections.singletonList("sally"),
+                ImmutableMap.of("sally", "ah")
+            )
+        );
+
+        // Cursor mark and resetToMark should not be affected by out of order values
+        cursor.resetToMark();
+
+        dimSelector = cursor
+            .getColumnSelectorFactory()
+            .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+        Assert.assertEquals(descending ? "bo" : "bo2", dimSelector.lookupName(dimSelector.getRow().get(0)));
+
+        // Cursor reset should not be affected by mark/reset mark either
+        cursor.reset();
+
+        dimSelector = cursor
+            .getColumnSelectorFactory()
+            .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+        Assert.assertEquals(descending ? "bo2" : "bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
       }
     }
   }

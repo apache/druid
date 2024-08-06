@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
-import org.joda.time.DateTime;
 
 /**
  * Cursor is an interface for iteration over a range of data points, used during query execution. Cursors are available
@@ -86,17 +85,12 @@ public interface Cursor
   boolean isDoneOrInterrupted();
 
   /**
-   * Mark a position on the cursor which can recalled with {@link #resetToMark()}. The {@link DateTime} parameter
-   * supplied to this method corresponds to the start of the bucket interval and acts as a lower/upper bound on the
-   * first possible timestamp, it is to assist to seeking to the actual offset at the time of marking for cursor
-   * implementations which do not have random access offsets or might be mutable. Cursor implementations may use this
-   * parameter if useful, or ignore it and mark the current offset if not. This method is used by
-   * {@link org.apache.druid.query.topn.TopNQueryEngine} when computing results in query granularity buckets.
+   * Mark a position on the cursor at the current row, which can recalled with {@link #resetToMark()}.
    */
-  void mark(DateTime mark);
+  void mark();
 
   /**
-   * Reset to position set by {@link #mark(DateTime)}
+   * Reset to position set by {@link #mark()}
    */
   void resetToMark();
 
