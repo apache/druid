@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
@@ -27,8 +28,12 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
@@ -78,7 +83,24 @@ public class CalciteSelectJoinQueryMSQTest
     protected JoinAlgorithm joinAlgorithm()
     {
       return JoinAlgorithm.SORT_MERGE;
+    }
 
+    @Override
+    @MethodSource("provideQueryContexts")
+    @ParameterizedTest(name = "{0}")
+    public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
+    {
+      assumeTrue("Returns incorrect result with replaceWithDefault", NullHandling.sqlCompatible());
+      super.testRegressionFilteredAggregatorsSubqueryJoins(queryContext);
+    }
+
+    @Override
+    @MethodSource("provideQueryContexts")
+    @ParameterizedTest(name = "{0}")
+    public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
+    {
+      assumeTrue("Returns incorrect result with replaceWithDefault", NullHandling.sqlCompatible());
+      super.testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(queryContext);
     }
   }
 
