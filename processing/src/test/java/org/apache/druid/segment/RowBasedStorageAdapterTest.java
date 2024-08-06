@@ -843,8 +843,9 @@ public class RowBasedStorageAdapterTest
     cursor.reset();
 
     int ctr = 0;
+    int mark = 1;
     while (!cursor.isDone()) {
-      if (ctr == 1) {
+      if (ctr == mark) {
         cursor.mark();
       }
       final List<Object> row = new ArrayList<>();
@@ -858,9 +859,8 @@ public class RowBasedStorageAdapterTest
       cursor.advanceUninterruptibly();
     }
 
-    cursor.resetToMark();
-    int mark = 1;
     if (ctr > 1) {
+      cursor.resetToMark();
       while (!cursor.isDone()) {
 
         final List<Object> row = new ArrayList<>();

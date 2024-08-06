@@ -247,16 +247,19 @@ public class HashJoinEngine
       @Override
       public void mark()
       {
-        leftCursor.mark();
         joinMarkId = joinColumnSelectorFactory.getRowId();
       }
 
       @Override
       public void resetToMark()
       {
-        leftCursor.resetToMark();
+        leftCursor.reset();
         joinMatcher.reset();
-        joinColumnSelectorFactory.rowId = joinMarkId;
+        joinColumnSelectorFactory.resetRowId();
+        initialize();
+        while (!isDone() && joinColumnSelectorFactory.getRowId() < joinMarkId) {
+          advance();
+        }
       }
 
       @Override
@@ -266,6 +269,7 @@ public class HashJoinEngine
         joinMatcher.reset();
         joinColumnSelectorFactory.resetRowId();
         joinMarkId = joinColumnSelectorFactory.getRowId();
+        initialize();
       }
     }
 

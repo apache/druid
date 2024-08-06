@@ -343,7 +343,25 @@ public class JoinTestHelper
       final List<Object[]> rows = new ArrayList<>();
       boolean interruptible = false; // test both advance() and advanceUninterruptibly()
 
+
       while (!cursor.isDone()) {
+        if (interruptible) {
+          cursor.advance();
+        } else {
+          cursor.advanceUninterruptibly();
+        }
+
+        interruptible = !interruptible;
+      }
+
+      cursor.reset();
+
+      int ctr = 0;
+      int mark = 2;
+      while (!cursor.isDone()) {
+        if (ctr == mark) {
+          cursor.mark();
+        }
         final Object[] row = new Object[columns.size()];
 
         for (int i = 0; i < row.length; i++) {
@@ -358,6 +376,27 @@ public class JoinTestHelper
         }
 
         interruptible = !interruptible;
+        ctr++;
+      }
+
+      if (rows.size() > mark) {
+        cursor.resetToMark();
+        while (!cursor.isDone()) {
+          final Object[] row = new Object[columns.size()];
+
+          for (int i = 0; i < row.length; i++) {
+            row[i] = readers.get(i).get();
+          }
+
+          rows.set(mark++, row);
+          if (interruptible) {
+            cursor.advance();
+          } else {
+            cursor.advanceUninterruptibly();
+          }
+
+          interruptible = !interruptible;
+        }
       }
 
       return rows;
