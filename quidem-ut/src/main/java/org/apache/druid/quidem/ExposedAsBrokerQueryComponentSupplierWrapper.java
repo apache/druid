@@ -43,7 +43,6 @@ import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
-import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
@@ -292,7 +291,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
-        new BuiltInTypesModule(),
         new DiscoveryModule(),
         new ServerViewModule(),
         new MetadataConfigModule(),
