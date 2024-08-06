@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.sql.Connection;
+import java.util.Map;
 
 public interface DruidConnectionExtras
 {
@@ -30,15 +31,21 @@ public interface DruidConnectionExtras
 
   DruidHookDispatcher getDruidHookDispatcher();
 
+  Map<String, String> getEngineProperties();
+
   class DruidConnectionExtrasImpl implements DruidConnectionExtras
   {
     private final ObjectMapper objectMapper;
     private final DruidHookDispatcher druidHookDispatcher;
+    private final Map<String, String> engineProperties;
 
-    public DruidConnectionExtrasImpl(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher)
+    public DruidConnectionExtrasImpl(ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        Map<String, String> engineProperties)
     {
       this.objectMapper = objectMapper;
       this.druidHookDispatcher = druidHookDispatcher;
+      this.engineProperties = engineProperties;
     }
 
     @Override
@@ -52,6 +59,12 @@ public interface DruidConnectionExtras
     {
       return druidHookDispatcher;
     }
+
+    @Override
+    public Map<String, String> getEngineProperties()
+    {
+      return engineProperties;
+    }
   }
 
   static DruidConnectionExtras unwrapOrThrow(Connection connection)
@@ -61,4 +74,5 @@ public interface DruidConnectionExtras
     }
     throw new UnsupportedOperationException("Expected DruidConnectionExtras to be implemented by connection!");
   }
+
 }

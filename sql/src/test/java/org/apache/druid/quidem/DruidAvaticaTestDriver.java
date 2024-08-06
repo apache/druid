@@ -120,9 +120,16 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher)
+    public DruidConnectionExtras getConnectionExtras(
+        ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        DruidMeta meta)
     {
-      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher);
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(
+          objectMapper,
+          druidHookDispatcher,
+          meta.getEngineProperties()
+      );
     }
 
     @Provides
@@ -144,7 +151,6 @@ public class DruidAvaticaTestDriver implements Driver
     {
       closer.close();
     }
-
   }
 
   static class AvaticaJettyServer implements Closeable
