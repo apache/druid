@@ -19,15 +19,33 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
+import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.channel.ByteTracker;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -143,4 +161,66 @@ public interface RowsAndColumns
    */
   @Nullable
   <T> T as(Class<T> clazz);
+
+  /**
+   * Serializer for {@link RowsAndColumns} by converting the instance to {@link FrameRowsAndColumns}
+   */
+  class RowsAndColumnsSerializer extends StdSerializer<RowsAndColumns>
+  {
+    public RowsAndColumnsSerializer()
+    {
+      super(RowsAndColumns.class);
+    }
+
+    @Override
+    public void serialize(
+        RowsAndColumns rac,
+        JsonGenerator jsonGenerator,
+        SerializerProvider serializerProvider
+    ) throws IOException
+    {
+      FrameRowsAndColumns frameRAC = rac.as(FrameRowsAndColumns.class);
+      if (frameRAC == null) {
+        throw DruidException.defensive("Unable to serialize RAC");
+      }
+      JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializerProvider, frameRAC.getSignature());
+
+      Frame frame = frameRAC.getFrame();
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      frame.writeTo(
+          Channels.newChannel(baos),
+          false,
+          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
+          ByteTracker.unboundedTracker()
+      );
+
+      jsonGenerator.writeBinary(baos.toByteArray());
+    }
+  }
+
+  /**
+   * Deserializer for {@link RowsAndColumns} returning as an instance of {@link FrameRowsAndColumns}
+   */
+  class RowsAndColumnsDeserializer extends StdDeserializer<RowsAndColumns>
+  {
+    public RowsAndColumnsDeserializer()
+    {
+      super(RowsAndColumns.class);
+    }
+
+    @Override
+    public FrameRowsAndColumns deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+        throws IOException
+    {
+      RowSignature sig = jsonParser.readValueAs(RowSignature.class);
+      jsonParser.nextValue();
+
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      jsonParser.readBinaryValue(baos);
+      Frame frame = Frame.wrap(baos.toByteArray());
+      return (frame.type() == FrameType.COLUMNAR)
+             ? new ColumnBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig)
+             : new RowBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
+    }
+  }
 }

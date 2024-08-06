@@ -37,7 +37,6 @@ import org.apache.druid.query.FrameBasedInlineDataSourceSerializer;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
@@ -189,20 +188,7 @@ public class DruidDefaultSerializersModule extends SimpleModule
     );
     addDeserializer(ResponseContext.class, new ResponseContextDeserializer());
 
-    addSerializer(RowsAndColumns.class, new JsonSerializer<RowsAndColumns>()
-    {
-      @Override
-      public void serialize(
-          RowsAndColumns value,
-          JsonGenerator gen,
-          SerializerProvider serializers
-      ) throws IOException
-      {
-        // It would be really cool if jackson offered an output stream that would allow us to push bytes
-        // through, but it doesn't right now, so we have to build a byte[] instead.  Maybe something to contribute
-        // back to Jackson at some point.
-        gen.writeBinary(WireTransferable.fromRAC(value).bytesToTransfer());
-      }
-    });
+    addSerializer(RowsAndColumns.class, new RowsAndColumns.RowsAndColumnsSerializer());
+    addDeserializer(RowsAndColumns.class, new RowsAndColumns.RowsAndColumnsDeserializer());
   }
 }
