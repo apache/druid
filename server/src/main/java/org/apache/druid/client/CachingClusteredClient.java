@@ -369,6 +369,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       query = scheduler.prioritizeAndLaneQuery(queryPlus, segmentServers);
       queryPlus = queryPlus.withQuery(query);
       queryPlus = queryPlus.withQueryMetrics(toolChest);
+      this.responseContext.put(ResponseContext.Keys.QUERY_SEGMENT_COUNT, segmentServers.size());
       queryPlus.getQueryMetrics().reportQueriedSegmentCount(segmentServers.size()).emit(emitter);
 
       final SortedMap<DruidServer, List<SegmentDescriptor>> segmentsByServer = groupSegmentsByServer(segmentServers);

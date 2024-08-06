@@ -249,6 +249,8 @@ public class QueryResourceTest
         testServletRequest
     );
     Assert.assertNotNull(response);
+    Assert.assertTrue(String.format("Successful query response must have header %s", QueryResource.QUERY_SEGMENT_COUNT_HEADER),
+            response.getMetadata().containsKey(QueryResource.QUERY_SEGMENT_COUNT_HEADER));
   }
 
   @Test
