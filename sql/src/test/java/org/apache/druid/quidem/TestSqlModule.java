@@ -52,24 +52,18 @@ public class TestSqlModule extends TestDruidModule
     binder.bind(String.class)
         .annotatedWith(DruidSchemaName.class)
         .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-
-    boolean false1=true;
-    if(false1) {
-      binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
-      {
-      }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
-    }
+    binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
+    {
+    }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
     binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
     TestRequestLogger testRequestLogger = new TestRequestLogger();
     binder.bind(RequestLogger.class).toInstance(testRequestLogger);
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
     binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
-    if(false1) {
     binder.bind(QueryScheduler.class)
         .toProvider(QuerySchedulerProvider.class)
         .in(LazySingleton.class);
     binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-    }
     binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
     binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
     binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
