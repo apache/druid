@@ -1262,15 +1262,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public boolean markSuperviosrIdleIfInactiveOnStartup()
   {
-    if (!idleConfig.isEnabled()) {
+    if (!idleConfig.isEnabled() || spec.isSuspended()) {
+      return false;
+    }
+
+    Map<PartitionIdType, SequenceOffsetType> comittedOffsets = getOffsetsFromMetadataStorage();
+    if (comittedOffsets.isEmpty()) {
+      // since there is no previous offsets info available we can skip checking for idleness
       return false;
     }
 
     updatePartitionLagFromStream();
-    Map<PartitionIdType, SequenceOffsetType> comittedOffsets = getOffsetsFromMetadataStorage();
     Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
-
-    if (!comittedOffsets.isEmpty() && comittedOffsets.equals(latestSequencesFromStream)) {
+    if (comittedOffsets.equals(latestSequencesFromStream)) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
       previousSequencesFromStream.putAll(comittedOffsets);
       lastActiveTimeMillis = DateTimes.nowUtc().getMillis();
