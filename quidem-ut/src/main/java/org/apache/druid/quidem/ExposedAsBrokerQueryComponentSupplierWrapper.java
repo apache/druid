@@ -157,6 +157,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
     delegate.configureGuice(builder);
 
     installForServerModules(builder);
+    builder.add(new QueryRunnerFactoryModule());
 
     overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
     overrideModules.add(new BrokerTestModule());
@@ -335,7 +336,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
   {
     return ImmutableList.of(
         new BrokerProcessingModule(),
-        new QueryRunnerFactoryModule(),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new BrokerServiceModule(),

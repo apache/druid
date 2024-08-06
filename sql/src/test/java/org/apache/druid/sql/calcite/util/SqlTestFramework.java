@@ -685,7 +685,6 @@ public class SqlTestFramework
     overrideModules.add(new ExpressionModule());
 
     overrideModules.add(testSetupModule());
-
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
     ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
