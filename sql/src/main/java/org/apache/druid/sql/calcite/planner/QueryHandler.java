@@ -47,6 +47,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
 import org.apache.calcite.sql.SqlNode;
@@ -285,7 +286,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       {
         if (node instanceof TableScan) {
           RelOptTable table = node.getTable();
-          if (table.unwrap(ScannableTable.class) != null && table.unwrap(DruidTable.class) == null) {
+          if ((table.unwrap(ScannableTable.class) != null || table.unwrap(ProjectableFilterableTable.class) != null)
+              && table.unwrap(DruidTable.class) == null) {
             found.add(table);
             return;
           }
