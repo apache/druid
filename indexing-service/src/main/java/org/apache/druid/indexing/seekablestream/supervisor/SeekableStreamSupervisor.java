@@ -2489,29 +2489,60 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Map<PartitionIdType, SequenceOffsetType> startingPartitions
   )
   {
-    final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.computeIfAbsent(
+    final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.compute(
         groupId,
-        k -> {
-          CopyOnWriteArrayList<TaskGroup> list = new CopyOnWriteArrayList<>();
-          log.info("Creating new pending completion task group [%s] for discovered task [%s]", groupId, taskId);
+        (k, val) -> {
+          if (val == null) {
+            // Creating new pending completion task groups while compute so that read and writes are locked.
+            // To ensure synchronisatoin across threads, we need to do updates in compute so that we get only one task group for all replica tasks
+            CopyOnWriteArrayList<TaskGroup> list = new CopyOnWriteArrayList<>();
+            log.info("Creating new pending completion task group [%s] for discovered task [%s]", groupId, taskId);
 
-          // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
-          // change to a state where it will read any more events.
-          // This is a discovered task, so it would not have been assigned closed partitions initially.
-          TaskGroup newTaskGroup = new TaskGroup(
-              groupId,
-              ImmutableMap.copyOf(startingPartitions),
-              null,
-              Optional.absent(),
-              Optional.absent(),
-              null
-          );
+            // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
+            // change to a state where it will read any more events.
+            // This is a discovered task, so it would not have been assigned closed partitions initially.
+            TaskGroup newTaskGroup = new TaskGroup(
+                groupId,
+                ImmutableMap.copyOf(startingPartitions),
+                null,
+                Optional.absent(),
+                Optional.absent(),
+                null
+            );
 
-          newTaskGroup.tasks.put(taskId, new TaskData());
-          newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
+            newTaskGroup.tasks.put(taskId, new TaskData());
+            newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
 
-          list.add(newTaskGroup);
-          return list;
+            list.add(newTaskGroup);
+            return list;
+          } else {
+            boolean found = false;
+            for (TaskGroup taskGroup : val) {
+              if (taskGroup.startingSequences.equals(startingPartitions)) {
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              log.info("Creating new pending completion task group [%s] for discovered task [%s].", groupId, taskId);
+
+              // Create a new task group for tasks having different startingPartitions offsets
+              TaskGroup newTaskGroup = new TaskGroup(
+                  groupId,
+                  ImmutableMap.copyOf(startingPartitions),
+                  null,
+                  Optional.absent(),
+                  Optional.absent(),
+                  null
+              );
+
+              newTaskGroup.tasks.put(taskId, new TaskData());
+              newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
+
+              val.add(newTaskGroup);
+            }
+          }
+          return val;
         }
     );
 
