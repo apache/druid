@@ -299,20 +299,20 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     ExecutorService threadExecutor = Execs.multiThreaded(3, "my-thread-pool-%d");
 
     SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-    Map<String, String> startingPartiions = new HashMap<>();
-    startingPartiions.put("partition", "offset");
+    Map<String, String> startingPartitions = new HashMap<>();
+    startingPartitions.put("partition", "offset");
 
     // Test concurrent threads adding to same task group
     Callable<Boolean> task1 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_1", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_1", startingPartitions);
       return true;
     };
     Callable<Boolean> task2 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_2", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_2", startingPartitions);
       return true;
     };
     Callable<Boolean> task3 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_3", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_3", startingPartitions);
       return true;
     };
 
@@ -329,7 +329,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         Assert.assertTrue(result);
       }
       catch (ExecutionException e) {
-        Assert.assertTrue(false);
+        Assert.fail();
       }
     }
     CopyOnWriteArrayList<SeekableStreamSupervisor.TaskGroup> taskGroups = supervisor.getPendingCompletionTaskGroups(0);
@@ -338,29 +338,29 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // Test concurrent threads adding to different task groups
     task1 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartiions);
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartitions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartitions);
       return true;
     };
     task2 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_1", startingPartiions);
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_1", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_1", startingPartitions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_1", startingPartitions);
       return true;
     };
     task3 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_2", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_2", startingPartitions);
       return true;
     };
     Callable<Boolean> task4 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_2", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(2, "task_2", startingPartitions);
       return true;
     };
     Callable<Boolean> task5 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_3", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_3", startingPartitions);
       return true;
     };
     Callable<Boolean> task6 = () -> {
-      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartiions);
+      supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(1, "task_1", startingPartitions);
       return true;
     };
 
@@ -378,7 +378,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         Assert.assertTrue(result);
       }
       catch (ExecutionException e) {
-        Assert.assertTrue(false);
+        Assert.fail();
       }
     }
 
