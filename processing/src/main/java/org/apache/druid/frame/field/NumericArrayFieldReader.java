@@ -29,7 +29,7 @@ import javax.annotation.Nullable;
 /**
  * Reader class for the fields written by {@link NumericArrayFieldWriter}. See the Javadoc for the writer for more
  * information on the format
- *
+ * <p>
  * The numeric array fields are byte comparable
  */
 public abstract class NumericArrayFieldReader implements FieldReader
