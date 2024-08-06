@@ -149,7 +149,6 @@ public abstract class DruidQuidemTestBase
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
             .withPropertyHandler(connectionFactory)
-            .withEnv(connectionFactory::getEnv)
             .withCommandHandler(new DruidQuidemCommandHandler());
 
         Config config = configBuilder
