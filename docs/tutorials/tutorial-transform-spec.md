@@ -1,5 +1,5 @@
 ---
-id: tutorial-transform-spec
+id: tutorial-transform
 title: Transform input data
 sidebar_label: Transform input data
 ---
@@ -95,5 +95,7 @@ Note that the filter applies after the transformations. The only row that isn't 
 
 See the following topics for more information:
 
-* [General functions](../querying/math-expr.md) for a list of functions that can be used to transform data. 
+* [All functions](../querying/sql-functions.md) for a list of functions that can be used to transform data. 
+* [Transform spec reference](../ingestion/ingestion-spec.md/#transformspec) to learn more about transforms in JSON-based batch ingestion.
 * [Query filters](../querying/filters.md) to learn about the types of filters available. 
+* [WHERE clause](../querying/sql.md#where) to learn how to create filters in SQL.

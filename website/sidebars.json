@@ -18,7 +18,7 @@
         "tutorials/tutorial-kafka",
         "tutorials/tutorial-rollup",
         "tutorials/tutorial-ingestion-spec",
-        "tutorials/tutorial-transform-spec",
+        "tutorials/tutorial-transform",
         "tutorials/tutorial-msq-convert-spec"
               ]},
       {"type": "category",
