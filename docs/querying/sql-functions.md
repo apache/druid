@@ -655,19 +655,22 @@ Returns the following:
 
 ## CHAR_LENGTH
 
-`CHAR_LENGTH(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Alias for [`LENGTH`](#length).
+
+* **Syntax:** `CHAR_LENGTH(expr)`
+* **Function type:** Scalar, string 
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## CHARACTER_LENGTH
 
-`CHARACTER_LENGTH(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Alias for [`LENGTH`](#length).
+
+* **Syntax:** `CHARACTER_LENGTH(expr)`
+* **Function type:** Scalar, string 
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## COALESCE
 
@@ -679,19 +682,64 @@ Returns the first non-null value.
 
 ## CONCAT
 
-`CONCAT(expr, expr...)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Concatenates a list of expressions.
+
+* **Syntax:** `CONCAT(expr[, expr,...])`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example concatenates the `OriginCityName` column from `flight-carriers`, the string ` to `, and the `DestCityName` column from `flight-carriers`. 
+
+```sql
+SELECT
+  "OriginCityName" AS "origin_city",
+  "DestCityName" AS "destination_city",
+  CONCAT("OriginCityName", ' to ', "DestCityName") AS "concatenate_flight_details"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_city` | `destination_city` | `concatenate_flight_details` |
+| -- | -- | -- |
+| `San Juan, PR` | `Washington, DC` | `San Juan, PR to Washington, DC` | 
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## CONTAINS_STRING
 
-`CONTAINS_STRING(<CHARACTER>, <CHARACTER>)`
+Returns `true` if `str` is a substring of `expr`, case-sensitive. Otherwise returns `false`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `CONTAINS_STRING(expr, str)`
+* **Function type:** Scalar, string
 
-Finds whether a string is in a given expression, case-sensitive.
+<details><summary>Example</summary>
+
+The following example returns `true` if the `OriginCityName` column from the `flight-carriers` datasource contains the substring `San`. 
+
+```sql
+SELECT
+  "OriginCityName" AS "origin_city",
+  CONTAINS_STRING("OriginCityName", 'San') AS "contains_string"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_city` | `contains_string` | 
+| -- | -- |
+| `San Juan, PR` | `true` |
+| `Boston, MA` | `false` |
+
+</details>
+
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## COS
 
@@ -791,12 +839,30 @@ Decodes a Base64-encoded string into a complex data type, where `dataType` is th
 
 ## DECODE_BASE64_UTF8
 
-`DECODE_BASE64_UTF8(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
-
 Decodes a Base64-encoded string into a UTF-8 encoded string.
+
+* **Syntax:** `DECODE_BASE64_UTF8(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example converts the base64 encoded string `SGVsbG8gV29ybGQhCg==` into an UTF-8 encoded string.
+
+```sql
+SELECT
+  'SGVsbG8gV29ybGQhCg==' AS "base64_encoding",
+  DECODE_BASE64_UTF8('SGVsbG8gV29ybGQhCg==') AS "convert_to_UTF8_encoding"
+```
+
+Returns the following:
+
+| `base64_encoding` | `convert_to_UTF8_encoding` |
+| -- | -- |
+| `SGVsbG8gV29ybGQhCg==` | `Hello World!` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## DEGREES
 
@@ -1188,11 +1254,33 @@ Returns the following:
 
 ## ICONTAINS_STRING
 
-`ICONTAINS_STRING(<expr>, str)`
+Returns `true` if `str` is a substring of `expr`, case-insensitive. Otherwise returns `false`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `ICONTAINS_STRING(expr, str)`
+* **Function type:** Scalar, string
 
-Finds whether a string is in a given expression, case-insensitive.
+<details><summary>Example</summary>
+
+The following example returns `true` if the `OriginCityName` column from the `flight-carriers` datasource contains the case-insensitive substring `san`.  
+
+```sql
+SELECT
+  "OriginCityName" AS "origin_city",
+  ICONTAINS_STRING("OriginCityName", 'san') AS "contains_case_insensitive_string"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_city` | `contains_case_insensitive_string` |
+| -- | -- |
+| `San Juan, PR` | `true` |
+| `Boston, MA` | `false` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## IPV4_MATCH
 
@@ -1331,19 +1419,59 @@ Returns the minimum value from the provided arguments.
 
 ## LEFT
 
-`LEFT(expr, [length])`
+Returns the `N` leftmost characters of an expression, where `N` is an integer value.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LEFT(expr, N)`
+* **Function type:** Scalar, string 
 
-Returns the leftmost number of characters from an expression.
+<details><summary>Example</summary>
+
+The following example returns the `3` leftmost characters of the expression `ABCDEFG`.
+
+```sql
+SELECT
+  'ABCDEFG' AS "expression",
+  LEFT('ABCDEFG', 3) AS "leftmost_characters"
+```
+
+Returns the following:
+
+| `expression` | `leftmost_characters` |
+| -- | -- |
+| `ABCDEFG` | `ABC` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## LENGTH
 
-`LENGTH(expr)`
+Returns the length of the expression in UTF-16 code units.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LENGTH(expr)`
+* **Function type:** Scalar, string
 
-Returns the length of the expression in UTF-16 encoding.
+<details><summary>Example</summary>
+
+The following example returns the character length of the `OriginCityName` column from the `flight-carriers` datasource.
+
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city_name",
+  LENGTH("OriginCityName") AS "city_name_length"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_city_name` | `city_name_length` | 
+| -- | -- |
+| `San Juan, PR` | `12` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## LN
 
@@ -1759,11 +1887,30 @@ Reverses the given expression.
 
 ## RIGHT
 
-`RIGHT(expr, [length])`
+Returns the `N` rightmost characters of an expression, where `N` is an integer value.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `RIGHT(expr, N)`
+* **Function type:** Scalar, string 
 
-Returns the rightmost number of characters from an expression.
+<details><summary>Example</summary>
+
+The following example returns the `3` rightmost characters of the expression `ABCDEFG`.
+
+```sql
+SELECT
+  'ABCDEFG' AS "expression",
+  RIGHT('ABCDEFG', 3) AS "rightmost_characters"
+```
+
+Returns the following:
+
+| `expression` | `rightmost_characters` |
+| -- | -- |
+| `ABCDEFG` | `EFG` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## ROUND
 
@@ -1947,11 +2094,12 @@ Splits `str1` into an multi-value string on the delimiter specified by `str2`, w
 
 ## STRLEN
 
-`STRLEN(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Alias for [`LENGTH`](#length).
+
+* **Syntax:** `STRLEN(expr)`
+* **Function type:** Scalar, string 
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## STRPOS
 
@@ -2026,11 +2174,32 @@ Returns the quantile for the specified fraction from a T-Digest sketch construct
 
 ## TEXTCAT
 
-`TEXTCAT(<CHARACTER>, <CHARACTER>)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Concatenates two string expressions.
+
+* **Syntax:** `TEXTCAT(expr, expr)`
+* **Function type:** Scalar, string
+  
+<details><summary>Example</summary>
+
+The following example concatenates the `OriginState` column from the `flight-carriers` datasource to `, USA`.
+
+```sql
+SELECT
+  "OriginState" AS "origin_state",
+  TEXTCAT("OriginState", ', USA') AS "concatenate_state_with_USA"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_state` | `concatenate_state_with_USA` | 
+| -- | -- | 
+| `PR` | `PR, USA` | 
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## THETA_SKETCH_ESTIMATE
 
