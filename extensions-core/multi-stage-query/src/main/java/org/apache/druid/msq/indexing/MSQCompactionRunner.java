@@ -66,7 +66,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -120,15 +119,14 @@ public class MSQCompactionRunner implements CompactionRunner
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
-   * <li>queryGranularity set to ALL in granularitySpec.</li>
-   * <li>Each metric has output column name same as the input name.</li>
+   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
+   * Null is treated as true if metricsSpec exist and false if empty.</li>
+   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
    */
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
-      CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalToDataSchemaMap
+      CompactionTask compactionTask
   )
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
@@ -144,55 +142,11 @@ public class MSQCompactionRunner implements CompactionRunner
       ));
     }
     validationResults.add(ClientCompactionRunnerInfo.validateMaxNumTasksForMSQ(compactionTask.getContext()));
-    validationResults.add(validateRolledUpSegments(intervalToDataSchemaMap));
+    validationResults.add(ClientCompactionRunnerInfo.validateMetricsSpecForMSQ(compactionTask.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
                             .orElse(CompactionConfigValidationResult.success());
-  }
-
-  /**
-   * Valides that there are no rolled-up segments where either:
-   * <ul>
-   * <li>aggregator factory differs from its combining factory </li>
-   * <li>input col name is different from the output name (non-idempotent)</li>
-   * </ul>
-   */
-  private CompactionConfigValidationResult validateRolledUpSegments(Map<Interval, DataSchema> intervalToDataSchemaMap)
-  {
-    for (Map.Entry<Interval, DataSchema> intervalDataSchema : intervalToDataSchemaMap.entrySet()) {
-      if (intervalDataSchema.getValue() instanceof CombinedDataSchema) {
-        CombinedDataSchema combinedDataSchema = (CombinedDataSchema) intervalDataSchema.getValue();
-        if (combinedDataSchema.hasRolledUpSegments()) {
-          for (AggregatorFactory aggregatorFactory : combinedDataSchema.getAggregators()) {
-            // This is a conservative check as existing rollup may have been idempotent but the aggregator provided in
-            // compaction spec isn't. This would get properly compacted yet fails in the below pre-check.
-            if (
-                !(
-                    aggregatorFactory.getClass().equals(aggregatorFactory.getCombiningFactory().getClass()) &&
-                    (
-                        aggregatorFactory.requiredFields().isEmpty() ||
-                        (aggregatorFactory.requiredFields().size() == 1 &&
-                         aggregatorFactory.requiredFields()
-                                          .get(0)
-                                          .equals(aggregatorFactory.getName()))
-                    )
-                )
-            ) {
-              // MSQ doesn't support rolling up already rolled-up segments when aggregate column name is different from
-              // the aggregated column name. This is because the aggregated values would then get overwritten by new
-              // values and the existing values would be lost. Note that if no rollup is specified in an index spec,
-              // the default value is true.
-              return CompactionConfigValidationResult.failure(
-                  "MSQ: Rolled-up segments in compaction interval[%s].",
-                  intervalDataSchema.getKey()
-              );
-            }
-          }
-        }
-      }
-    }
-    return CompactionConfigValidationResult.success();
   }
 
   @Override

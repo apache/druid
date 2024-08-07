@@ -21,6 +21,7 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -72,5 +73,30 @@ public class CoordinatorResourceTest
     final Response response2 = new CoordinatorResource(mock).isLeader();
     Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
     Assert.assertEquals(404, response2.getStatus());
+  }
+
+  @Test
+  public void testGetLoadStatusSimple()
+  {
+    EasyMock.expect(mock.getLoadManagementPeons())
+            .andReturn(ImmutableMap.of("hist1", new TestLoadQueuePeon()))
+            .once();
+    EasyMock.replay(mock);
+
+    final Response response = new CoordinatorResource(mock).getLoadQueue("true", null);
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "hist1",
+            ImmutableMap.of(
+                "segmentsToDrop", 0,
+                "segmentsToLoad", 0,
+                "segmentsToLoadSize", 0L,
+                "segmentsToDropSize", 0L,
+                "expectedLoadTimeMillis", 0L
+            )
+        ),
+        response.getEntity()
+    );
+    Assert.assertEquals(200, response.getStatus());
   }
 }

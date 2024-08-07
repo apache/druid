@@ -38,7 +38,7 @@ import java.util.Map;
 /**
  *
  */
-public class SimpleQueryableIndex implements QueryableIndex
+public abstract class SimpleQueryableIndex implements QueryableIndex
 {
   private final Interval dataInterval;
   private final List<String> columnNames;
@@ -46,8 +46,6 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final BitmapFactory bitmapFactory;
   private final Map<String, Supplier<ColumnHolder>> columns;
   private final SmooshedFileMapper fileMapper;
-  @Nullable
-  private final Metadata metadata;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
   public SimpleQueryableIndex(
@@ -56,7 +54,6 @@ public class SimpleQueryableIndex implements QueryableIndex
       BitmapFactory bitmapFactory,
       Map<String, Supplier<ColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
-      @Nullable Metadata metadata,
       boolean lazy
   )
   {
@@ -73,7 +70,6 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.bitmapFactory = bitmapFactory;
     this.columns = columns;
     this.fileMapper = fileMapper;
-    this.metadata = metadata;
 
     if (lazy) {
       this.dimensionHandlers = Suppliers.memoize(() -> initDimensionHandlers(availableDimensions));
@@ -141,10 +137,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Metadata getMetadata()
-  {
-    return metadata;
-  }
+  public abstract Metadata getMetadata();
 
   @Override
   public Map<String, DimensionHandler> getDimensionHandlers()
