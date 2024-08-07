@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -33,6 +34,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -78,6 +80,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -545,20 +548,32 @@ public class SqlTestFramework
    * This is an intermediate solution: the ultimate solution is to create things
    * in Guice itself.
    */
-  private class TestSetupModule extends CompositeDruidModule
+  private class TestSetupModule implements DruidModule
   {
     private final Builder builder;
+    private final List<DruidModule> subModules = Arrays.asList(new BuiltInTypesModule(), new TestSqlModule());
 
     public TestSetupModule(Builder builder)
     {
-      super(new BuiltInTypesModule(), new TestSqlModule());
       this.builder = builder;
+    }
+
+    @Override
+    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+    {
+      ImmutableList.Builder<com.fasterxml.jackson.databind.Module> builder = ImmutableList.builder();
+      for (DruidModule druidModule : subModules) {
+        builder.addAll(druidModule.getJacksonModules());
+      }
+      return builder.build();
     }
 
     @Override
     public void configure(Binder binder)
     {
-      super.configure(binder);
+      for (DruidModule module : subModules) {
+        binder.install(module);
+      }
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
