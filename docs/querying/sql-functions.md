@@ -1373,11 +1373,33 @@ Returns the relative rank of the row calculated as a percentage according to the
 
 ## POSITION
 
-`POSITION(<CHARACTER> IN <CHARACTER> [FROM <INTEGER>])`
+Returns the one-based index position of a substring within an expression, optionally starting from a given one-based index. If `substring` is not found, returns 0.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax**: `POSITION(substring IN expr [FROM startingIndex])`
+* **Function type:** Scalar, string
 
-Returns the one-based index position of a substring within an expression, optionally starting from a given one-based index.
+<details><summary>Example</summary>
+
+The following example returns the one-based index of the substring `PR` in the `OriginCityName` column from the `flight-carriers` datasource starting from index 5.
+
+```sql
+SELECT 
+  "OriginCityName" AS "original_expr",
+  POSITION('PR' IN "OriginCityName" FROM 5) AS "index_found"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_expr` | `index_found` |
+| -- | -- |
+| `San Juan, PR` | `11` |
+| `Boston, MA` | `0` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## POWER
 
@@ -1405,9 +1427,10 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 ## REGEXP_EXTRACT
 
-`REGEXP_EXTRACT(<CHARACTER>, <CHARACTER>, [<INTEGER>])`
+Apply regular expression `pattern` to `expr` and extract a capture group. Returns null if there is no matching pattern. If index is unspecified or zero, returns the first substring that matched the pattern, otherwise will return the `index`-th capture group
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_EXTRACT(expr, pattern, [index])`
+* **Function type:** [Scalar, string](sql-scalar.md#string-functions)
 
 Applies a regular expression to the string expression and returns the _n_th match.
 
