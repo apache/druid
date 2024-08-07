@@ -252,6 +252,8 @@ public class QueryResourceTest
     Assert.assertNotNull(response);
     Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.QUERY_SEGMENT_COUNT_HEADER),
             response.getMetadata().containsKey(QueryResource.QUERY_SEGMENT_COUNT_HEADER));
+    Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER),
+            response.getMetadata().containsKey(QueryResource.BROKER_QUERY_TIME_RESPONSE_HEADER));
   }
 
   @Test

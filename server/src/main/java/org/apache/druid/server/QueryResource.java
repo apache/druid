@@ -83,6 +83,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 @LazySingleton
@@ -100,6 +101,7 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
   public static final String QUERY_SEGMENT_COUNT_HEADER = "X-Druid-Query-Segment-Count";
+  public static final String BROKER_QUERY_TIME_RESPONSE_HEADER = "X-Broker-Query-Time";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -185,6 +187,7 @@ public class QueryResource implements QueryCountStatsProvider
     final ResourceIOReaderWriter ioReaderWriter = createResourceIOReaderWriter(req, pretty != null);
 
     final String currThreadName = Thread.currentThread().getName();
+    long startTime = System.nanoTime();
     try {
       final Query<?> query = readQuery(req, in, ioReaderWriter);
       queryLifecycle.initialize(query);
@@ -257,7 +260,9 @@ public class QueryResource implements QueryCountStatsProvider
             .header(QUERY_ID_RESPONSE_HEADER, queryId)
             .header(QUERY_SEGMENT_COUNT_HEADER,
                     responseContext.get(ResponseContext.Keys.QUERY_SEGMENT_COUNT) != null ?
-                            responseContext.get(ResponseContext.Keys.QUERY_SEGMENT_COUNT) : 0);
+                            responseContext.get(ResponseContext.Keys.QUERY_SEGMENT_COUNT) : 0)
+            .header(BROKER_QUERY_TIME_RESPONSE_HEADER,
+                    TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime));
 
         attachResponseContextToHttpResponse(queryId, responseContext, responseBuilder, jsonMapper,
                                             responseContextConfig, selfNode
