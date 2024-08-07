@@ -3631,8 +3631,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       if (comittedOffsets.equals(latestSequencesFromStream)) {
         stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
         previousSequencesFromStream.putAll(comittedOffsets);
-        return;
       }
+      return;
     }
 
     Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
