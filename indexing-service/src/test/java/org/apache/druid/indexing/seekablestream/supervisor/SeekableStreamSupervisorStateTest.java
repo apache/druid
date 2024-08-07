@@ -392,7 +392,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testAddDiscoveredTaskToPendingCompletionTaskGroupsSync() throws Exception
+  public void testAddDiscoveredTaskToPendingCompletionMultipleTaskGroups() throws Exception
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
