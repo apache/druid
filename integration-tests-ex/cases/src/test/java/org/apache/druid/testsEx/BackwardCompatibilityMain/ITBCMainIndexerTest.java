@@ -17,15 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.testsEx.query;
+package org.apache.druid.testsEx.BackwardCompatibilityMain;
 
-import org.apache.druid.testsEx.categories.Query;
+import org.apache.druid.testsEx.categories.BackwardCompatibilityMain;
 import org.apache.druid.testsEx.config.DruidTestRunner;
+import org.apache.druid.testsEx.indexer.IndexerTest;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 @RunWith(DruidTestRunner.class)
-@Category(Query.class)
-public class ITUnionQueryTest extends UnionQueryTest
+@Category(BackwardCompatibilityMain.class)
+public class ITBCMainIndexerTest extends IndexerTest
 {
 }
