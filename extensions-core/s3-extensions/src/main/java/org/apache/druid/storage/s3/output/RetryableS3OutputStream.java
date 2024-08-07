@@ -215,14 +215,16 @@ public class RetryableS3OutputStream extends OutputStream
 
       final long totalBytesUploaded = (currentChunk.id - 1) * chunkSize + currentChunk.length();
       final long totalUploadTimeMillis = pushStopwatch.elapsed(TimeUnit.MILLISECONDS);
-      LOG.debug(
-          "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
-          futures.size(),
-          totalBytesUploaded,
-          totalUploadTimeMillis,
-          s3Key,
-          uploadId
-      );
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+            "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
+            futures.size(),
+            totalBytesUploaded,
+            totalUploadTimeMillis,
+            s3Key,
+            uploadId
+        );
+      }
 
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setDimension("uploadId", uploadId);
       uploadManager.emitMetric(builder.setMetric(METRIC_TOTAL_UPLOAD_TIME, totalUploadTimeMillis));
