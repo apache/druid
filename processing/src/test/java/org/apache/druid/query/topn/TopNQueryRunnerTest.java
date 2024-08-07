@@ -154,7 +154,13 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     return parameters;
   }
 
-  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners()
+  /**
+   * Create test query runners.
+   *
+   * @param includeNonTimeOrdered whether to include runners with non-time-ordered segments. Some test suites are not
+   *                              compatible with non-time-ordered segments.
+   */
+  public static List<QueryRunner<Result<TopNResultValue>>> queryRunners(boolean includeNonTimeOrdered)
   {
     final CloseableStupidPool<ByteBuffer> defaultPool = TestQueryRunners.createDefaultNonBlockingPool();
     final CloseableStupidPool<ByteBuffer> customPool = new CloseableStupidPool<>(
