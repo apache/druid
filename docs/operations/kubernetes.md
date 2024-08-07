@@ -25,10 +25,20 @@ title: "kubernetes"
 
 Apache Druid distribution is also available as [Docker](https://www.docker.com/) image from [Docker Hub](https://hub.docker.com/r/apache/druid) . For example, you can obtain latest release using the command below.
 
-```
+```bash
 $ docker pull apache/druid
 ```
 
-[druid-operator](https://github.com/datainfrahq/druid-operator) can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
+[Apache Druid Helm Chart](https://github.com/asdf2014/druid-helm) can be used to deploy a Druid cluster on Kubernetes with following commands:
+
+```bash
+# Add repository
+$ helm repo add druid-helm https://asdf2014.github.io/druid-helm/
+
+# Install chart
+$ helm install my-druid druid-helm/druid --version 29.0.4
+```
+
+[druid-operator](https://github.com/datainfrahq/druid-operator) also can be used to manage a Druid cluster on [Kubernetes](https://kubernetes.io/) .
 
 Druid clusters deployed on Kubernetes can function without Zookeeper using [druid–kubernetes-extensions](../development/extensions-core/kubernetes.md) .
