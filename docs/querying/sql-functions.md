@@ -1085,19 +1085,63 @@ Looks up the expression in a registered query-time lookup table.
 
 ## LOWER
 
-`LOWER(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Returns the expression in lowercase.
+
+* **Syntax:** `LOWER(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example converts the `OriginCityName` column from the `flight-carriers` datasource to lowercase.
+
+```sql
+SELECT 
+  "OriginCityName" AS "original_string",
+  LOWER("OriginCityName") AS "make_lowercase"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_string` | `make_lowercase` |
+| -- | -- |
+`San Juan, PR` | `san juan, pr` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## LPAD
 
-`LPAD(<CHARACTER>, <INTEGER>, [<CHARACTER>])`
+Returns a string of `length` from `expr` left-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LPAD(expr, length[, chars])`
+* **Function type:** Scalar, string
 
-Returns the leftmost number of characters from an expression, optionally padded with the given characters.
+<details><summary>Example</summary>
+
+The following example inserts `+` characters as padding to the left of the `OriginState` column from the `flight-carriers` datasource, making the return expression a length of 5 characters.
+
+```sql
+SELECT 
+  "OriginState" AS "origin_state",
+  LPAD("OriginState", 5, '+') AS "add_left_padding"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_state` | `add_left_padding` |
+| -- | -- |
+| `PR` | `+++PR` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## LTRIM
 
@@ -1293,11 +1337,31 @@ Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON val
 
 ## PARSE_LONG
 
-`PARSE_LONG(<CHARACTER>, [<INTEGER>])`
+Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base 10) if a radix is not provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:**`PARSE_LONG(string, [radix])`
+* **Function type:** Scalar, string
 
-Converts a string into a BIGINT with the given base or into a DECIMAL data type if the base is not specified.
+<details><summary>Example</summary>
+
+The following example converts the string representation of the binary, base 2, number `1100` into its long (BIGINT) equivalent.
+
+```sql
+SELECT 
+  '1100' AS "binary_number_as_string", 
+  PARSE_LONG('1110', 2) AS "parse_binary_string_into_BIGINT"
+```
+
+Returns the following:
+
+| `binary_number_as_string` | `parse_binary_string_into_BIGINT` |
+| -- | -- |
+| `1100` | `14` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## PERCENT_RANK
 
@@ -1414,11 +1478,32 @@ Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
-`RPAD(<CHARACTER>, <INTEGER>, [<CHARACTER>])`
+Returns a string of `length` from `expr` right-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `RPAD(expr, length[, chars])`
+* **Function type:** Scalar, string
 
-Returns the rightmost number of characters from an expression, optionally padded with the given characters.
+<details><summary>Example</summary>
+
+The following example inserts `+` characters as padding to the right of the `OriginState` column from the `flight-carriers` datasource, making the return expression a length of `5` characters.
+
+```sql
+SELECT 
+  "OriginState" AS "origin_state",
+  RPAD("OriginState", 5, '+') AS "add_right_padding"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_state` | `add_right_padding` |
+| -- | -- |
+| `PR` | `PR+++` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## RTRIM
 
@@ -1753,11 +1838,32 @@ For more information, see [UNNEST](./sql.md#unnest).
 
 ## UPPER
 
-`UPPER(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Returns the expression in uppercase.
+
+* **Syntax:** `UPPER(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example converts the `OriginCityName` column from the `flight-carriers` datasource to uppercase.
+
+```sql
+SELECT 
+  "OriginCityName" AS "original_string",
+  UPPER("OriginCityName") AS "make_uppercase"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_string` | `make_uppercase` |
+| -- | -- |
+`San Juan, PR` | `SAN JUAN, PR` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## VAR_POP
 
