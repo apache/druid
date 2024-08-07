@@ -2532,12 +2532,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     for (TaskGroup taskGroup : taskGroupList) {
       if (taskGroup.startingSequences.equals(startingPartitions)) {
         if (taskGroup.tasks.putIfAbsent(taskId, new TaskData()) == null) {
-          log.info(
-              "Added discovered task [%s] to existing pending completion task group [%s]. PendingCompletionTaskGroup: %s",
-              taskId,
-              groupId,
-              taskGroup.taskIds()
-          );
+          log.info("Added discovered task [%s] to existing pending completion task group [%s]. PendingCompletionTaskGroup: %s", taskId, groupId, taskGroup.taskIds());
         }
         return;
       }
@@ -2545,9 +2540,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @VisibleForTesting
-  protected CopyOnWriteArrayList<TaskGroup> getPendingCompletionTaskGroups(int group_id)
+  protected CopyOnWriteArrayList<TaskGroup> getPendingCompletionTaskGroups(int groupId)
   {
-    return pendingCompletionTaskGroups.get(group_id);
+    return pendingCompletionTaskGroups.get(groupId);
   }
 
   // Sanity check to ensure that tasks have the same sequence name as their task group
