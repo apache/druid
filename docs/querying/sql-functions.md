@@ -1115,7 +1115,7 @@ Returns the following:
 
 ## LPAD
 
-Returns a string of `length` from `expr` left-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
+Returns a string of size `length` from `expr`, left-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
 * **Syntax:** `LPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
@@ -1344,7 +1344,7 @@ Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base
 
 <details><summary>Example</summary>
 
-The following example converts the string representation of the binary, base 2, number `1100` into its long (BIGINT) equivalent.
+The following example converts the string representation of the binary, radix 2, number `1100` into its long (BIGINT) equivalent.
 
 ```sql
 SELECT 
@@ -1427,29 +1427,90 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 ## REGEXP_EXTRACT
 
-Apply regular expression `pattern` to `expr` and extract a capture group. Returns null if there is no matching pattern. If index is unspecified or zero, returns the first substring that matched the pattern, otherwise will return the `index`-th capture group
+Apply regular expression `pattern` to `expr` and extract the `N`-th capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns `null` if there is no matching pattern.
 
-* **Syntax:** `REGEXP_EXTRACT(expr, pattern, [index])`
-* **Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_EXTRACT(expr, pattern[, N])`
+* **Function type:** Scalar, string 
 
-Applies a regular expression to the string expression and returns the _n_th match.
+<details><summary>Example</summary>
+
+The following example uses regular expressions to find city names inside the `OriginCityName` column from the `flight-carriers` datasource by matching what comes before the comma.
+
+```sql
+SELECT 
+  "OriginCityName" AS "original_expr",
+  REGEXP_EXTRACT("OriginCityName", '([^,]+)', 0) AS "pattern_extracted"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_expr` | `pattern_extracted` |
+| -- | -- |
+| `San Juan, PR` | `San Juan`|
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REGEXP_LIKE
 
-`REGEXP_LIKE(<CHARACTER>, <CHARACTER>)`
+Returns `true` if the regular expression `pattern` finds a match in `expr`. Returns `false` otherwise.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_LIKE(expr, pattern)`
+* **Function type:** Scalar, string
 
-Returns true or false signifying whether the regular expression finds a match in the string expression.
+<details><summary>Example</summary>
+
+The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name with two words.
+
+```sql
+SELECT 
+  "OriginCityName" AS "original_expr",
+  REGEXP_LIKE("OriginCityName", '[A-Za-z]+\s[A-Za-z]+') AS "pattern_found"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_expr` | `pattern_found` |
+| -- | -- |
+| `San Juan, PR` | `true` |
+| `Boston, MA` | `false` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REGEXP_REPLACE
 
-`REGEXP_REPLACE(<CHARACTER>, <CHARACTER>, <CHARACTER>)`
+Replaces all occurrences of a regular expression in a string expression with a replacement string. The replacement string may refer to capture groups using `$1`, `$2`, etc.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_REPLACE(expr, pattern, replacement)`
+* **Function type:** Scalar, string
 
-Replaces all occurrences of a regular expression in a string expression with a replacement string. The replacement
-string may refer to capture groups using `$1`, `$2`, etc.
+<details><summary>Example</summary>
+
+The following example matches instances of the word `Fort` and replaces it with it's abbreviation `Ft.`
+
+```sql
+SELECT 
+  'Fort Lauderdale, FL' AS "original_expr",
+  REGEXP_REPLACE('Fort Lauderdale, FL', 'Fort', 'Ft.') AS "replace_fort_with_abbreviation"
+```
+
+Returns the following:
+
+| `original_expr` | `replace_fort_with_abbreviation` |
+| -- | -- |
+| `Fort Lauderdale, FL` | `Ft. Lauderdale, FL` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## REPEAT
 
@@ -1501,7 +1562,7 @@ Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
-Returns a string of `length` from `expr` right-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
+Returns a string of size `length` from `expr`, right-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
 * **Syntax:** `RPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
