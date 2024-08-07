@@ -206,7 +206,7 @@ export class ConsoleApplication extends React.PureComponent<
 
   private readonly openSupervisorSubmit = () => {
     this.openSupervisorDialog = true;
-    location.hash = 'supervisor';
+    location.hash = 'supervisors';
     this.resetInitialsWithDelay();
   };
 

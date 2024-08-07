@@ -120,6 +120,24 @@ public class WorkerTaskCountStatsMonitorTest
             "metrics", 9L
         );
       }
+
+      @Override
+      public Map<String, Long> getWorkerFailedTasks()
+      {
+        return ImmutableMap.of(
+                "movies", 4L,
+                "games", 6L
+        );
+      }
+
+      @Override
+      public Map<String, Long> getWorkerSuccessfulTasks()
+      {
+        return ImmutableMap.of(
+                "games", 23L,
+                "inventory", 89L
+        );
+      }
     };
 
     nullStatsProvider = new WorkerTaskCountStatsProvider()
@@ -239,7 +257,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForIndexer, ImmutableSet.of(NodeRole.INDEXER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(6, emitter.getEvents().size());
+    Assert.assertEquals(10, emitter.getEvents().size());
     emitter.verifyValue(
         "worker/task/running/count",
         ImmutableMap.of("dataSource", "wikipedia"),
@@ -269,6 +287,26 @@ public class WorkerTaskCountStatsMonitorTest
         "worker/task/completed/count",
         ImmutableMap.of("dataSource", "metrics"),
         9L
+    );
+    emitter.verifyValue(
+            "worker/task/failed/count",
+            ImmutableMap.of("dataSource", "movies"),
+            4L
+    );
+    emitter.verifyValue(
+            "worker/task/failed/count",
+            ImmutableMap.of("dataSource", "games"),
+            6L
+    );
+    emitter.verifyValue(
+            "worker/task/success/count",
+            ImmutableMap.of("dataSource", "games"),
+            23L
+    );
+    emitter.verifyValue(
+            "worker/task/success/count",
+            ImmutableMap.of("dataSource", "inventory"),
+            89L
     );
   }
   @Test

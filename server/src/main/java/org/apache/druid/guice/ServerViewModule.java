@@ -41,10 +41,6 @@ public class ServerViewModule implements Module
   public static final String SERVERVIEW_TYPE_HTTP = "http";
   public static final String SERVERVIEW_TYPE_BATCH = "batch";
 
-  // this value should be consistent with the default implementation used in
-  // {@code ServerInventoryViewProvider} & {@code FilteredServerInventoryViewProvider}
-  public static final String DEFAULT_SERVERVIEW_TYPE = "http";
-
   @Override
   public void configure(Binder binder)
   {

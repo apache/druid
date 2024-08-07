@@ -67,7 +67,7 @@ public class DruidCoordinatorRuntimeParams
   private final @Nullable TreeSet<DataSegment> usedSegments;
   private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
-  private final CoordinatorCompactionConfig coordinatorCompactionConfig;
+  private final DruidCompactionConfig compactionConfig;
   private final SegmentLoadingConfig segmentLoadingConfig;
   private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
@@ -81,7 +81,7 @@ public class DruidCoordinatorRuntimeParams
       @Nullable TreeSet<DataSegment> usedSegments,
       @Nullable DataSourcesSnapshot dataSourcesSnapshot,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
-      CoordinatorCompactionConfig coordinatorCompactionConfig,
+      DruidCompactionConfig compactionConfig,
       SegmentLoadingConfig segmentLoadingConfig,
       CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
@@ -95,7 +95,7 @@ public class DruidCoordinatorRuntimeParams
     this.usedSegments = usedSegments;
     this.dataSourcesSnapshot = dataSourcesSnapshot;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
-    this.coordinatorCompactionConfig = coordinatorCompactionConfig;
+    this.compactionConfig = compactionConfig;
     this.segmentLoadingConfig = segmentLoadingConfig;
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
@@ -151,9 +151,9 @@ public class DruidCoordinatorRuntimeParams
     return coordinatorDynamicConfig;
   }
 
-  public CoordinatorCompactionConfig getCoordinatorCompactionConfig()
+  public DruidCompactionConfig getCompactionConfig()
   {
-    return coordinatorCompactionConfig;
+    return compactionConfig;
   }
 
   public SegmentLoadingConfig getSegmentLoadingConfig()
@@ -197,7 +197,7 @@ public class DruidCoordinatorRuntimeParams
         usedSegments,
         dataSourcesSnapshot,
         coordinatorDynamicConfig,
-        coordinatorCompactionConfig,
+        compactionConfig,
         segmentLoadingConfig,
         stats,
         balancerStrategy,
@@ -215,7 +215,7 @@ public class DruidCoordinatorRuntimeParams
     private @Nullable TreeSet<DataSegment> usedSegments;
     private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
-    private CoordinatorCompactionConfig coordinatorCompactionConfig;
+    private DruidCompactionConfig compactionConfig;
     private SegmentLoadingConfig segmentLoadingConfig;
     private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
@@ -225,7 +225,7 @@ public class DruidCoordinatorRuntimeParams
     {
       this.coordinatorStartTime = coordinatorStartTime;
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
-      this.coordinatorCompactionConfig = CoordinatorCompactionConfig.empty();
+      this.compactionConfig = DruidCompactionConfig.empty();
       this.broadcastDatasources = Collections.emptySet();
     }
 
@@ -237,7 +237,7 @@ public class DruidCoordinatorRuntimeParams
         @Nullable TreeSet<DataSegment> usedSegments,
         @Nullable DataSourcesSnapshot dataSourcesSnapshot,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
-        CoordinatorCompactionConfig coordinatorCompactionConfig,
+        DruidCompactionConfig compactionConfig,
         SegmentLoadingConfig segmentLoadingConfig,
         CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
@@ -251,7 +251,7 @@ public class DruidCoordinatorRuntimeParams
       this.usedSegments = usedSegments;
       this.dataSourcesSnapshot = dataSourcesSnapshot;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
-      this.coordinatorCompactionConfig = coordinatorCompactionConfig;
+      this.compactionConfig = compactionConfig;
       this.segmentLoadingConfig = segmentLoadingConfig;
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
@@ -271,7 +271,7 @@ public class DruidCoordinatorRuntimeParams
           usedSegments,
           dataSourcesSnapshot,
           coordinatorDynamicConfig,
-          coordinatorCompactionConfig,
+          compactionConfig,
           segmentLoadingConfig,
           stats,
           balancerStrategy,
@@ -367,9 +367,9 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withCompactionConfig(CoordinatorCompactionConfig config)
+    public Builder withCompactionConfig(DruidCompactionConfig config)
     {
-      this.coordinatorCompactionConfig = config;
+      this.compactionConfig = config;
       return this;
     }
 

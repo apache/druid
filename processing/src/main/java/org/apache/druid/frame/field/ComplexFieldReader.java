@@ -150,12 +150,16 @@ public class ComplexFieldReader implements FieldReader
     private final Memory memory;
     private final ReadableFieldPointer fieldPointer;
     private final ComplexMetricSerde serde;
+    @SuppressWarnings("rawtypes")
+    private final Class clazz;
 
     private Selector(Memory memory, ReadableFieldPointer fieldPointer, ComplexMetricSerde serde)
     {
       this.memory = memory;
       this.fieldPointer = fieldPointer;
       this.serde = serde;
+      //noinspection deprecation
+      this.clazz = serde.getObjectStrategy().getClazz();
     }
 
     @Nullable
@@ -169,7 +173,8 @@ public class ComplexFieldReader implements FieldReader
     @Override
     public Class<T> classOfObject()
     {
-      return serde.getExtractor().extractedClass();
+      //noinspection unchecked
+      return clazz;
     }
 
     @Override
