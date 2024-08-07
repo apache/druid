@@ -1260,30 +1260,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public boolean markSuperviosrIdleIfInactiveOnStartup()
-  {
-    if (!idleConfig.isEnabled() || spec.isSuspended()) {
-      return false;
-    }
-
-    Map<PartitionIdType, SequenceOffsetType> comittedOffsets = getOffsetsFromMetadataStorage();
-    if (comittedOffsets.isEmpty()) {
-      // since there is no previous offsets info available we can skip checking for idleness
-      return false;
-    }
-
-    updatePartitionLagFromStream();
-    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
-    if (comittedOffsets.equals(latestSequencesFromStream)) {
-      stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
-      previousSequencesFromStream.putAll(comittedOffsets);
-      lastActiveTimeMillis = DateTimes.nowUtc().getMillis();
-      return true;
-    }
-
-    return false;
-  }
-
   public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction, ServiceEmitter emitter)
   {
     return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, emitter));
@@ -1662,11 +1638,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CONNECTING_TO_STREAM);
       if (!updatePartitionDataFromStream() && !stateManager.isAtLeastOneSuccessfulRun()) {
         return; // if we can't connect to the stream and this is the first run, stop and wait to retry the connection
-      }
-
-      if (!stateManager.isAtLeastOneSuccessfulRun() && markSuperviosrIdleIfInactiveOnStartup()) {
-        // if it is the first run and there is no lag observed when compared to the offsets from metadata storage stay idle
-        return;
       }
 
       stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.DISCOVERING_INITIAL_TASKS);
@@ -3645,8 +3616,26 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return;
     }
 
-    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final long nowTime = DateTimes.nowUtc().getMillis();
+    // if it is the first run and there is no lag observed when compared to the offsets from metadata storage stay idle
+    if (!stateManager.isAtLeastOneSuccessfulRun()) {
+      lastActiveTimeMillis = nowTime;
+      Map<PartitionIdType, SequenceOffsetType> comittedOffsets = getOffsetsFromMetadataStorage();
+      if (comittedOffsets.isEmpty()) {
+        // since there is no previous offsets info available we can skip checking for idleness
+        return;
+      }
+
+      updatePartitionLagFromStream();
+      Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
+      if (comittedOffsets.equals(latestSequencesFromStream)) {
+        stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+        previousSequencesFromStream.putAll(comittedOffsets);
+        return;
+      }
+    }
+
+    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final boolean idle;
     final long idleTime;
     if (lastActiveTimeMillis > 0
