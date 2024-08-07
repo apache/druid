@@ -33,7 +33,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
@@ -90,7 +90,7 @@ public class CalciteSelectJoinQueryMSQTest
     @ParameterizedTest(name = "{0}")
     public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
     {
-      assumeTrue("Returns incorrect result with replaceWithDefault", NullHandling.sqlCompatible());
+      assumeTrue(NullHandling.sqlCompatible(), "Returns incorrect result with replaceWithDefault");
       super.testRegressionFilteredAggregatorsSubqueryJoins(queryContext);
     }
 
@@ -99,7 +99,7 @@ public class CalciteSelectJoinQueryMSQTest
     @ParameterizedTest(name = "{0}")
     public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
     {
-      assumeTrue("Returns incorrect result with replaceWithDefault", NullHandling.sqlCompatible());
+      assumeTrue(NullHandling.sqlCompatible(), "Returns incorrect result with replaceWithDefault");
       super.testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(queryContext);
     }
   }
