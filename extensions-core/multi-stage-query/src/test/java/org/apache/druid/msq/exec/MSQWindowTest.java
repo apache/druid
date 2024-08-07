@@ -2284,4 +2284,42 @@ public class MSQWindowTest extends MSQTestBase
         )
         .verifyResults();
   }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceWithPartitionedByDayOnWikipedia(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("cityName", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("cc", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(" REPLACE INTO foo1 OVERWRITE ALL\n"
+                             + "select __time, cityName, added, SUM(added) OVER () cc from wikipedia \n"
+                             + "where cityName IN ('Ahmedabad', 'Albuquerque')\n"
+                             + "GROUP BY __time, cityName, added\n"
+                             + "PARTITIONED BY DAY")
+                     .setExpectedDataSource("foo1")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{1442055085114L, "Ahmedabad", 0L, 140L},
+                             new Object[]{1442061929238L, "Ahmedabad", 0L, 140L},
+                             new Object[]{1442069353218L, "Albuquerque", 129L, 140L},
+                             new Object[]{1442069411614L, "Albuquerque", 9L, 140L},
+                             new Object[]{1442097803851L, "Albuquerque", 2L, 140L}
+                         )
+                     )
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "foo1",
+                         Intervals.of("2015-09-12/2015-09-13"),
+                         "test",
+                         0
+                     )))
+                     .verifyResults();
+  }
 }
