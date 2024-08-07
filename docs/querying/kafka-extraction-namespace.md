@@ -1,6 +1,6 @@
 ---
 id: kafka-extraction-namespace
-title: "Apache Kafka Lookups"
+title: "Apache Kafka lookups"
 ---
 
 <!--
