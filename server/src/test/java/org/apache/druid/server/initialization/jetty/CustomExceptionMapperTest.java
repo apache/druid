@@ -53,7 +53,7 @@ public class CustomExceptionMapperTest
   @Test
   public void testResponseWithoutDetail()
   {
-    Mockito.when(serverConfig.isShowDetailedJettyErrors()).thenReturn(false);
+    Mockito.when(serverConfig.isShowDetailedJsonMappingError()).thenReturn(false);
 
     final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
     final Response response = customExceptionMapper.toResponse(exception);
@@ -63,14 +63,14 @@ public class CustomExceptionMapperTest
 
     final ImmutableMap<Object, Object> map = (ImmutableMap) response.getEntity();
     Assert.assertEquals(1, map.size());
-    Assert.assertEquals("unable to process JSON input", map.get("error"));
-    Assert.assertNull(map.get("errorMessage"));
+    Assert.assertEquals(CustomExceptionMapper.UNABLE_TO_PROCESS_ERROR, map.get(CustomExceptionMapper.ERROR_KEY));
+    Assert.assertNull(map.get(CustomExceptionMapper.ERR_MSG_KEY));
   }
 
   @Test
   public void testResponseWithDetail()
   {
-    Mockito.when(serverConfig.isShowDetailedJettyErrors()).thenReturn(true);
+    Mockito.when(serverConfig.isShowDetailedJsonMappingError()).thenReturn(true);
 
     final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
     final Response response = customExceptionMapper.toResponse(exception);
@@ -80,7 +80,7 @@ public class CustomExceptionMapperTest
 
     final ImmutableMap<Object, Object> map = (ImmutableMap) response.getEntity();
     Assert.assertEquals(2, map.size());
-    Assert.assertEquals("unable to process JSON input", map.get("error"));
-    Assert.assertEquals("Test exception", map.get("errorMessage"));
+    Assert.assertEquals(CustomExceptionMapper.UNABLE_TO_PROCESS_ERROR, map.get(CustomExceptionMapper.ERROR_KEY));
+    Assert.assertEquals("Test exception", map.get(CustomExceptionMapper.ERR_MSG_KEY));
   }
 }

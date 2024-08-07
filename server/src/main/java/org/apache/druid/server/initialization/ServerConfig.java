@@ -74,7 +74,8 @@ public class ServerConfig
       boolean showDetailedJettyErrors,
       @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
       @Nullable String contentSecurityPolicy,
-      boolean enableHSTS
+      boolean enableHSTS,
+      boolean showDetailedJsonMappingError
   )
   {
     this.numThreads = numThreads;
@@ -98,6 +99,7 @@ public class ServerConfig
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
+    this.showDetailedJsonMappingError = showDetailedJsonMappingError;
   }
 
   public ServerConfig()
@@ -185,6 +187,9 @@ public class ServerConfig
 
   @JsonProperty
   private boolean enableHSTS = false;
+
+  @JsonProperty
+  private boolean showDetailedJsonMappingError = true;
 
   /**
    * This feature flag enables query requests queuing when admins want to reserve some threads for
@@ -281,6 +286,11 @@ public class ServerConfig
     return showDetailedJettyErrors;
   }
 
+  public boolean isShowDetailedJsonMappingError()
+  {
+    return showDetailedJsonMappingError;
+  }
+
   public ErrorResponseTransformStrategy getErrorResponseTransformStrategy()
   {
     return errorResponseTransformStrategy;
@@ -330,6 +340,7 @@ public class ServerConfig
            compressionLevel == that.compressionLevel &&
            enableForwardedRequestCustomizer == that.enableForwardedRequestCustomizer &&
            showDetailedJettyErrors == that.showDetailedJettyErrors &&
+           showDetailedJsonMappingError == that.showDetailedJsonMappingError &&
            maxIdleTime.equals(that.maxIdleTime) &&
            maxScatterGatherBytes.equals(that.maxScatterGatherBytes) &&
            gracefulShutdownTimeout.equals(that.gracefulShutdownTimeout) &&
@@ -364,6 +375,7 @@ public class ServerConfig
         allowedHttpMethods,
         errorResponseTransformStrategy,
         showDetailedJettyErrors,
+        showDetailedJsonMappingError,
         contentSecurityPolicy,
         enableHSTS,
         enableQueryRequestsQueuing
@@ -393,6 +405,7 @@ public class ServerConfig
            ", allowedHttpMethods=" + allowedHttpMethods +
            ", errorResponseTransformStrategy=" + errorResponseTransformStrategy +
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
+           ", showDetailedJsonMappingError=" + showDetailedJsonMappingError +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +

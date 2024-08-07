@@ -32,6 +32,10 @@ import javax.ws.rs.ext.Provider;
 @Provider
 public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
 {
+  public static final String ERROR_KEY = "error";
+  public static final String ERR_MSG_KEY = "errorMessage";
+  public static final String UNABLE_TO_PROCESS_ERROR = "unable to process json input";
+
   private final ServerConfig config;
 
   @Inject
@@ -44,10 +48,10 @@ public class CustomExceptionMapper implements ExceptionMapper<JsonMappingExcepti
   public Response toResponse(JsonMappingException exception)
   {
     final ImmutableMap.Builder<Object, Object> builder = ImmutableMap.builder()
-        .put("error", "unable to process JSON input");
+                                                                     .put(ERROR_KEY, UNABLE_TO_PROCESS_ERROR);
 
-    if (config.isShowDetailedJettyErrors()) {
-      builder.put("errorMessage", exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
+    if (config.isShowDetailedJsonMappingError()) {
+      builder.put(ERR_MSG_KEY, exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
     }
 
     return Response.status(Response.Status.BAD_REQUEST)

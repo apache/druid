@@ -711,6 +711,7 @@ You can configure Druid API error responses to hide internal information like th
 |--------|-----------|-------|
 |`druid.server.http.showDetailedJettyErrors`|When set to true, any error from the Jetty layer / Jetty filter includes the following fields  in the JSON response: `servlet`, `message`, `url`, `status`, and `cause`, if it exists. When set to false, the JSON response only includes `message`, `url`, and `status`. The field values remain unchanged.|true|
 |`druid.server.http.errorResponseTransform.strategy`|Error response transform strategy. The strategy controls how Druid transforms error responses from Druid services. When unset or set to `none`, Druid leaves error responses unchanged.|`none`|
+|`druid.server.http.showDetailedJsonMappingError`|When set to `true`, similar to `showDetailedJettyErrors`, it will include `errorMessage` with detailed internal information about the model's failure to map from the input/payload. When set to `false`, the JSON response will only contain a generic `error` field with message, `unable to process json input`.|true|
 
 #### Error response transform strategy
 
