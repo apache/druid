@@ -61,6 +61,7 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
@@ -119,6 +120,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -342,6 +344,15 @@ public class SqlResourceTest extends CalciteTestBase
     }
     Assert.assertEquals(0, testRequestLogger.getSqlQueryLogs().size());
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testGoodQuery() throws Exception
+  {
+    final Response response = resource.doPost(createSimpleQueryWithId("id", "SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo"), req);
+    Assert.assertNotNull(response);
+    Assert.assertTrue(String.format(Locale.ENGLISH, "Successful query response must have header %s", QueryResource.QUERY_SEGMENT_COUNT_HEADER),
+            response.getMetadata().containsKey(QueryResource.QUERY_SEGMENT_COUNT_HEADER));
   }
 
   @Test

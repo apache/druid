@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -82,6 +83,7 @@ public class SqlResource
 {
   public static final String SQL_QUERY_ID_RESPONSE_HEADER = "X-Druid-SQL-Query-Id";
   public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
+  public static final String QUERY_SEGMENT_COUNT_HEADER = "X-Druid-Query-Segment-Count";
   public static final String SQL_HEADER_VALUE = "yes";
   private static final Logger log = new Logger(SqlResource.class);
 
@@ -132,6 +134,10 @@ public class SqlResource
       final QueryResponse<Object[]> response = resultSet.run();
       final SqlRowTransformer rowTransformer = resultSet.createRowTransformer();
       final Yielder<Object[]> finalYielder = Yielders.each(response.getResults());
+      int segmentCount = 0;
+      if (response.getResponseContext().get(ResponseContext.Keys.QUERY_SEGMENT_COUNT) != null) {
+        segmentCount = (int) response.getResponseContext().get(ResponseContext.Keys.QUERY_SEGMENT_COUNT);
+      }
 
       final Response.ResponseBuilder responseBuilder = Response
           .ok(
@@ -185,7 +191,8 @@ public class SqlResource
                 }
               }
           )
-          .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId);
+          .header(SQL_QUERY_ID_RESPONSE_HEADER, sqlQueryId)
+          .header(QUERY_SEGMENT_COUNT_HEADER, segmentCount);
 
       if (sqlQuery.includeHeader()) {
         responseBuilder.header(SQL_HEADER_RESPONSE_HEADER, SQL_HEADER_VALUE);

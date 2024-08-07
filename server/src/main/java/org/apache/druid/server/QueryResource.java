@@ -99,6 +99,7 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
+  public static final String QUERY_SEGMENT_COUNT_HEADER = "X-Druid-Query-Segment-Count";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -253,7 +254,10 @@ public class QueryResource implements QueryCountStatsProvider
                 },
                 ioReaderWriter.getResponseWriter().getResponseType()
             )
-            .header(QUERY_ID_RESPONSE_HEADER, queryId);
+            .header(QUERY_ID_RESPONSE_HEADER, queryId)
+            .header(QUERY_SEGMENT_COUNT_HEADER,
+                    responseContext.get(ResponseContext.Keys.QUERY_SEGMENT_COUNT) != null ?
+                            responseContext.get(ResponseContext.Keys.QUERY_SEGMENT_COUNT) : 0);
 
         attachResponseContextToHttpResponse(queryId, responseContext, responseBuilder, jsonMapper,
                                             responseContextConfig, selfNode

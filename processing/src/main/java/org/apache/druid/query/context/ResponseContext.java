@@ -406,6 +406,13 @@ public abstract class ResponseContext
     };
 
     /**
+     * Query Segment Count.
+     */
+    public static final Key QUERY_SEGMENT_COUNT = new LongKey(
+            "querySegmentCount",
+            false);
+
+    /**
      * Query fail time (current time + timeout).
      */
     public static final Key QUERY_FAIL_DEADLINE_MILLIS = new LongKey(
@@ -474,6 +481,7 @@ public abstract class ResponseContext
           NUM_SCANNED_ROWS,
           CPU_CONSUMED_NANOS,
           TRUNCATED,
+          QUERY_SEGMENT_COUNT,
       });
     }
 
