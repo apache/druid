@@ -27,6 +27,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -71,6 +72,9 @@ public class DruidHttpClientConfig
 
   @JsonProperty
   private Boolean eagerInitialization = null;
+
+  @JsonProperty
+  private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
 
   public int getNumConnections()
   {
@@ -127,6 +131,11 @@ public class DruidHttpClientConfig
       return defaultValue;
     }
     return eagerInitialization;
+  }
+
+  public long getClientConnectTimeout()
+  {
+    return clientConnectTimeout;
   }
 
   private static HumanReadableBytes computeDefaultMaxQueuedBytes()

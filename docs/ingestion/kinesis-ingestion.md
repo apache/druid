@@ -139,6 +139,7 @@ The Kinesis indexing service supports both [`inputFormat`](data-formats.md#input
 
 The Kinesis indexing service supports the following values for `inputFormat`:
 
+* `kinesis`
 * `csv`
 * `tvs`
 * `json`
