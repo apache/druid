@@ -301,10 +301,6 @@ public class DumpSegment extends GuiceRunnable
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(Filters.toFilter(filter))
-                                                     .setInterval(
-                                                         index.getDataInterval()
-                                                              .withChronology(ISOChronology.getInstanceUTC())
-                                                     )
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {

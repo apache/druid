@@ -147,7 +147,6 @@ public class ExpressionFilterBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(expressionFilter.toFilter())
-                                                     .setInterval(index.getDataInterval())
                                                      .build();
     try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -166,7 +165,6 @@ public class ExpressionFilterBenchmark
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(nativeFilter.toFilter())
-                                                     .setInterval(index.getDataInterval())
                                                      .build();
     try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();

@@ -152,7 +152,6 @@ public class ExpressionVectorSelectorBenchmark
         )
     );
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
     final CursorHolder cursorHolder = closer.register(

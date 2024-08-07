@@ -50,8 +50,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -272,12 +270,7 @@ public class SegmentAnalyzer
     }
 
     if (analyzingSize()) {
-      final DateTime start = storageAdapter.getMinTime();
-      final DateTime end = storageAdapter.getMaxTime();
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(new Interval(start, end))
-                                                       .build();
-      try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
 
         if (cursor != null) {

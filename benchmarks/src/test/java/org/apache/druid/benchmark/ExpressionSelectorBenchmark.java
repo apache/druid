@@ -147,7 +147,6 @@ public class ExpressionSelectorBenchmark
   public void timeFloorUsingExpression(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -170,10 +169,7 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFloorUsingExtractionFn(Blackhole blackhole)
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
-                                                     .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       final DimensionSelector selector = cursor
@@ -192,11 +188,8 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFloorUsingCursor(Blackhole blackhole)
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
-                                                     .build();
     final StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final CursorGranularizer granularizer = CursorGranularizer.create(
           adapter,
@@ -234,7 +227,6 @@ public class ExpressionSelectorBenchmark
   public void timeFormatUsingExpression(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -259,10 +251,7 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFormatUsingExtractionFn(Blackhole blackhole)
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
-                                                     .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -281,7 +270,6 @@ public class ExpressionSelectorBenchmark
   public void strlenUsingExpressionAsLong(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -305,7 +293,6 @@ public class ExpressionSelectorBenchmark
   public void strlenUsingExpressionAsString(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -331,11 +318,7 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void strlenUsingExtractionFn(Blackhole blackhole)
   {
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
-                                                     .build();
-
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -349,7 +332,6 @@ public class ExpressionSelectorBenchmark
   public void arithmeticOnLong(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -373,7 +355,6 @@ public class ExpressionSelectorBenchmark
   public void stringConcatAndCompareOnLong(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -396,7 +377,6 @@ public class ExpressionSelectorBenchmark
   public void caseSearched1(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -419,7 +399,6 @@ public class ExpressionSelectorBenchmark
   public void caseSearched2(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -454,7 +433,6 @@ public class ExpressionSelectorBenchmark
     }
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -478,7 +456,6 @@ public class ExpressionSelectorBenchmark
   public void caseSearchedWithLookup(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              new ExpressionVirtualColumn(
@@ -508,7 +485,6 @@ public class ExpressionSelectorBenchmark
   public void caseSearchedWithLookup2(Blackhole blackhole)
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
                                                      .setVirtualColumns(
                                                          VirtualColumns.create(
                                                              ImmutableList.of(

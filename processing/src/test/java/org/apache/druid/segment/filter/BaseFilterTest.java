@@ -526,7 +526,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   new IncrementalIndexSchema(
                                       schema.getMinTimestamp(),
                                       schema.getTimestampSpec(),
-                                      schema.getGran(),
+                                      schema.getQueryGranularity(),
                                       schema.getVirtualColumns(),
                                       schema.getDimensionsSpec().withDimensions(
                                           schema.getDimensionsSpec()
@@ -554,7 +554,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   new IncrementalIndexSchema(
                                       schema.getMinTimestamp(),
                                       schema.getTimestampSpec(),
-                                      schema.getGran(),
+                                      schema.getQueryGranularity(),
                                       schema.getVirtualColumns(),
                                       schema.getDimensionsSpec().withDimensions(
                                           schema.getDimensionsSpec()
@@ -583,7 +583,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                           new IncrementalIndexSchema(
                                               schema.getMinTimestamp(),
                                               schema.getTimestampSpec(),
-                                              schema.getGran(),
+                                              schema.getQueryGranularity(),
                                               schema.getVirtualColumns(),
                                               schema.getDimensionsSpec().withDimensions(
                                                   schema.getDimensionsSpec()
@@ -662,7 +662,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               new IncrementalIndexSchema(
                                   schema.getMinTimestamp(),
                                   schema.getTimestampSpec(),
-                                  schema.getGran(),
+                                  schema.getQueryGranularity(),
                                   schema.getVirtualColumns(),
                                   schema.getDimensionsSpec().withDimensions(
                                       schema.getDimensionsSpec()
@@ -685,7 +685,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               new IncrementalIndexSchema(
                                   schema.getMinTimestamp(),
                                   schema.getTimestampSpec(),
-                                  schema.getGran(),
+                                  schema.getQueryGranularity(),
                                   schema.getVirtualColumns(),
                                   schema.getDimensionsSpec().withDimensions(
                                       schema.getDimensionsSpec()

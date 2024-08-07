@@ -138,10 +138,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "string3";
     for (StorageAdapter adapter : ADAPTERS) {
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(adapter.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
 
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -206,10 +203,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "multi-string3";
     for (StorageAdapter adapter : ADAPTERS) {
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(adapter.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
@@ -286,10 +280,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "long3";
     for (StorageAdapter adapter : ADAPTERS) {
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(adapter.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
@@ -334,10 +325,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "double3";
     for (StorageAdapter adapter : ADAPTERS) {
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(adapter.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans

@@ -540,10 +540,7 @@ public class IndexTaskTest extends IngestionTestBase
         new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
         segment.getInterval()
     );
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(segment.getInterval())
-                                                     .build();
-    try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final List<Map<String, Object>> transforms = new ArrayList<>();
 
@@ -773,10 +770,7 @@ public class IndexTaskTest extends IngestionTestBase
           segment.getInterval()
       );
 
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(segment.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         final List<Integer> hashes = new ArrayList<>();
         final DimensionSelector selector = cursor.getColumnSelectorFactory()

@@ -1702,10 +1702,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(segment.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
@@ -1833,10 +1830,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(segment.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
@@ -2061,10 +2055,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                       .setInterval(segment.getInterval())
-                                                       .build();
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();

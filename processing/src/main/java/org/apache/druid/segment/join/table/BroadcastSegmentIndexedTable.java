@@ -43,7 +43,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -113,13 +112,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(
-                                                         queryableIndex.getDataInterval()
-                                                                       .withChronology(ISOChronology.getInstanceUTC())
-                                                     )
-                                                     .build();
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {
         this.keyColumnsIndexes = Collections.emptyList();

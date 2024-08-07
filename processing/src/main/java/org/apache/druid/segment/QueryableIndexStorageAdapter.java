@@ -174,7 +174,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     return new QueryableIndexCursorHolder(
         index,
-        CursorBuildSpec.builder(spec).setInterval(spec.getInterval()).build()
+        CursorBuildSpec.builder(spec).build()
     );
   }
 

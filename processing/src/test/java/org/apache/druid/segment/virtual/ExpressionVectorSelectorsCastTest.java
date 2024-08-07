@@ -119,7 +119,6 @@ public class ExpressionVectorSelectorsCastTest
     final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setVirtualColumns(virtualColumns)
-                                                     .setInterval(index.getDataInterval())
                                                      .build();
     VectorCursor cursor = closer.register(storageAdapter.makeCursorHolder(buildSpec)).asVectorCursor();
 

@@ -163,10 +163,7 @@ public class ExpressionAggregationBenchmark
   {
     final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setInterval(index.getDataInterval())
-                                                     .build();
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       final BufferAggregator bufferAggregator = aggregatorFactory.apply(cursor.getColumnSelectorFactory());
