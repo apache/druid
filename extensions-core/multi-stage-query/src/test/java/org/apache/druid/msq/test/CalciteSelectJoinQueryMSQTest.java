@@ -28,6 +28,7 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -43,7 +44,8 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.
    */
-  public static class BroadcastTest extends Base
+  @Nested
+  public class BroadcastTest extends Base
   {
     @Override
     protected QueryTestBuilder testBuilder()
@@ -62,7 +64,8 @@ public class CalciteSelectJoinQueryMSQTest
   /**
    * Run all tests with {@link JoinAlgorithm#SORT_MERGE}.
    */
-  public static class SortMergeTest extends Base
+  @Nested
+  public class SortMergeTest extends Base
   {
     @Override
     public boolean isSortBasedJoin()
