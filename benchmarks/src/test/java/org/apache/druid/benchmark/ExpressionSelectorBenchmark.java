@@ -195,7 +195,7 @@ public class ExpressionSelectorBenchmark
           adapter,
           cursor,
           Granularities.HOUR,
-          buildSpec.getInterval(),
+          adapter.getInterval(),
           false
       );
       final Sequence<Long> results =
