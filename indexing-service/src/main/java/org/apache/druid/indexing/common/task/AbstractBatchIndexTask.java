@@ -624,7 +624,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (ingestionSpec.getDataSchema().getDimensionsSpec() == null) {
         dimensionsSpec = null;
       } else {
-        // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
+        // We do not need to store spatial dimensions, since by this point they've been converted to regular dimensions.
+        // We also do not need to store dimensionExclusions, only dimensions that exist.
         final DimensionsSpec inputDimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec();
         dimensionsSpec =
             DimensionsSpec.builder()

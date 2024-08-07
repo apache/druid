@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -264,30 +265,39 @@ public class Metadata
            '}';
   }
 
-  @Nullable
-  private static List<String> mergeSortOrders(List<List<String>> sortOrdersToMerge)
+  /**
+   * Merge {@link #getSortOrder()} from different metadatas.
+   *
+   * When an input sort order is null, we assume it is {@link Metadata#SORTED_BY_TIME_ONLY}, as this was the only
+   * sort order possible prior to the introduction of the "sortOrder" field.
+   */
+  public static List<String> mergeSortOrders(List<List<String>> sortOrdersToMerge)
   {
     if (sortOrdersToMerge.isEmpty()) {
-      return null;
-    }
-
-    if (sortOrdersToMerge.stream().anyMatch(Objects::isNull)) {
-      return null;
+      throw new IAE("sortOrdersToMerge is empty");
     }
 
     final List<String> mergedSortOrder = new ArrayList<>();
 
     while (true) {
+      final int position = mergedSortOrder.size();
       String column = null;
 
-      for (final List<String> sortOrder : sortOrdersToMerge) {
-        if (mergedSortOrder.size() >= sortOrder.size()) {
-          return mergedSortOrder;
+      // Iterate through each sort order, check that the columns at "position" are all the same. If not, return
+      // the mergedSortOrder as-is.
+      for (List<String> sortOrder : sortOrdersToMerge) {
+        if (sortOrder == null) {
+          // null sortOrder is treated as [__time].
+          sortOrder = SORTED_BY_TIME_ONLY;
         }
 
-        if (column == null) {
-          column = sortOrder.get(mergedSortOrder.size());
-        } else if (!column.equals(sortOrder.get(mergedSortOrder.size()))) {
+        if (position < sortOrder.size()) {
+          if (column == null) {
+            column = sortOrder.get(position);
+          } else if (!column.equals(sortOrder.get(position))) {
+            return mergedSortOrder;
+          }
+        } else {
           return mergedSortOrder;
         }
       }

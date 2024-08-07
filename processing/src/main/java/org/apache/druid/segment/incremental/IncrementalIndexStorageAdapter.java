@@ -306,6 +306,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     if (index.timePosition == 0) {
       return Metadata.SORTED_BY_TIME_ONLY;
     } else {
+      // In principle we could report a sort order here for certain types of fact holders; for example the
+      // RollupFactsHolder would be sorted by dimensions. However, this is left for future work.
       return Collections.emptyList();
     }
   }

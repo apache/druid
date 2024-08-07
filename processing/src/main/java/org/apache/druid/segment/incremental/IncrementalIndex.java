@@ -25,7 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
@@ -351,14 +350,13 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     }
 
     // Set metadata last, so dimensionOrder is populated
-    final List<String> dimensionOrder = getDimensionOrder();
     this.metadata = new Metadata(
         null,
         getCombiningAggregators(metrics),
         incrementalIndexSchema.getTimestampSpec(),
         this.gran,
         this.rollup,
-        ColumnHolder.TIME_COLUMN_NAME.equals(Iterables.getFirst(dimensionOrder, null)) ? null : dimensionOrder
+        getDimensionOrder()
     );
   }
 

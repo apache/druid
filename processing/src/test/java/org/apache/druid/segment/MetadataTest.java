@@ -31,10 +31,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  */
 public class MetadataTest
 {
@@ -43,7 +45,7 @@ public class MetadataTest
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-    AggregatorFactory[] aggregators = new AggregatorFactory[] {
+    AggregatorFactory[] aggregators = new AggregatorFactory[]{
         new LongSumAggregatorFactory("out", "in")
     };
 
@@ -76,7 +78,7 @@ public class MetadataTest
     Assert.assertNull(Metadata.merge(metadataToBeMerged, null));
 
     //sanity merge check
-    AggregatorFactory[] aggs = new AggregatorFactory[] {
+    AggregatorFactory[] aggs = new AggregatorFactory[]{
         new LongMaxAggregatorFactory("n", "f")
     };
     final Metadata m1 = new Metadata(
@@ -129,7 +131,7 @@ public class MetadataTest
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
     //merge check with client explicitly providing merged aggregators
-    AggregatorFactory[] explicitAggs = new AggregatorFactory[] {
+    AggregatorFactory[] explicitAggs = new AggregatorFactory[]{
         new DoubleMaxAggregatorFactory("x", "y")
     };
 
@@ -151,6 +153,65 @@ public class MetadataTest
     Assert.assertEquals(
         merged4,
         Metadata.merge(ImmutableList.of(m3, m2), explicitAggs)
+    );
+  }
+
+  @Test
+  public void testMergeSortOrders()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> Metadata.mergeSortOrders(Collections.emptyList())
+    );
+
+    Assert.assertEquals(
+        Metadata.SORTED_BY_TIME_ONLY,
+        Metadata.mergeSortOrders(Collections.singletonList(null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeSortOrders(Arrays.asList(null, Arrays.asList("foo", "bar")))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeSortOrders(Arrays.asList(Arrays.asList("foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Metadata.SORTED_BY_TIME_ONLY,
+        Metadata.mergeSortOrders(Arrays.asList(Arrays.asList("__time", "foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeSortOrders(
+            Arrays.asList(
+                Arrays.asList("foo", "bar"),
+                Arrays.asList("bar", "foo")
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList("bar"),
+        Metadata.mergeSortOrders(
+            Arrays.asList(
+                Arrays.asList("bar", "baz"),
+                Arrays.asList("bar", "foo")
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("bar", "foo"),
+        Metadata.mergeSortOrders(
+            Arrays.asList(
+                Arrays.asList("bar", "foo"),
+                Arrays.asList("bar", "foo")
+            )
+        )
     );
   }
 }
