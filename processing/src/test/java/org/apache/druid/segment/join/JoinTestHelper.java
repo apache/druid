@@ -343,7 +343,7 @@ public class JoinTestHelper
       final List<Object[]> rows = new ArrayList<>();
       boolean interruptible = false; // test both advance() and advanceUninterruptibly()
 
-
+      // test cursor reset
       while (!cursor.isDone()) {
         if (interruptible) {
           cursor.advance();
@@ -356,6 +356,7 @@ public class JoinTestHelper
 
       cursor.reset();
 
+      // test cursor mark/resetToMark
       int ctr = 0;
       int mark = 2;
       while (!cursor.isDone()) {

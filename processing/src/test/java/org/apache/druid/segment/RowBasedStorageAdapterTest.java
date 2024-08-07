@@ -836,12 +836,14 @@ public class RowBasedStorageAdapterTest
 
     final List<List<Object>> retVal = new ArrayList<>();
 
+    // test cursor reset
     while (!cursor.isDone()) {
       cursor.advanceUninterruptibly();
     }
 
     cursor.reset();
 
+    // test cursor mark/resetToMark
     int ctr = 0;
     int mark = 1;
     while (!cursor.isDone()) {
@@ -859,7 +861,7 @@ public class RowBasedStorageAdapterTest
       cursor.advanceUninterruptibly();
     }
 
-    if (ctr > 1) {
+    if (ctr > mark) {
       cursor.resetToMark();
       while (!cursor.isDone()) {
 

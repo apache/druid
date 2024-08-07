@@ -241,11 +241,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       int count = 0;
 
       List<Object> rows = new ArrayList<>();
+      // test cursor reset
       while (!cursor.isDone()) {
         cursor.advance();
       }
       cursor.reset();
 
+      // test cursor mark/resetToMark
       int mark = 2;
       while (!cursor.isDone()) {
         if (count == mark) {
@@ -289,11 +291,13 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       int count = 0;
 
       List<Object> rows = new ArrayList<>();
+      // test cursor reset
       while (!cursor.isDone()) {
         cursor.advance();
       }
       cursor.reset();
 
+      // test cursor mark/resetToMark
       int mark = 2;
       while (!cursor.isDone()) {
         if (count == mark) {
