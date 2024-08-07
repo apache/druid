@@ -131,7 +131,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{7}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners();
+    List<QueryRunner<Result<TopNResultValue>>> retVal = queryRunners(true);
     List<Object[]> parameters = new ArrayList<>();
     for (int i = 0; i < 32; i++) {
       for (QueryRunner<Result<TopNResultValue>> firstParameter : retVal) {
@@ -176,7 +176,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             ),
-            true
+            includeNonTimeOrdered
         )
     );
     retVal.addAll(
@@ -186,7 +186,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
                 new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             ),
-            true
+            includeNonTimeOrdered
         )
     );
 
