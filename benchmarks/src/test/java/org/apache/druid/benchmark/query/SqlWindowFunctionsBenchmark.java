@@ -116,16 +116,18 @@ import java.util.stream.Collectors;
  * Benchmark that tests various SQL queries.
  */
 @State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
 @Fork(value = 1)
 @Warmup(iterations = 3)
 @Measurement(iterations = 5)
-public class SqlWindowFnBenchmark
+public class SqlWindowFunctionsBenchmark
 {
   static {
     NullHandling.initializeForTests();
   }
 
-  private static final Logger log = new Logger(SqlWindowFnBenchmark.class);
+  private static final Logger log = new Logger(SqlWindowFunctionsBenchmark.class);
 
   private static final String STORAGE_MMAP = "mmap";
   private static final String STORAGE_FRAME_ROW = "frame-row";
@@ -195,9 +197,6 @@ public class SqlWindowFnBenchmark
 
     plannerFactory = sqlSystem.lhs;
     engine = sqlSystem.rhs;
-
-    String sql = "explain plan for SELECT ROW_NUMBER() OVER (PARTITION BY dimUniform ORDER BY dimSequential) FROM foo";
-    planSql(sql, null);
   }
 
   private StringEncodingStrategy getStringEncodingStrategy()
@@ -334,8 +333,6 @@ public class SqlWindowFnBenchmark
   public void querySql(String sql, Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, false,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, false,
         PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
         QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto"
     );
@@ -347,25 +344,26 @@ public class SqlWindowFnBenchmark
     }
   }
 
-  public void planSql(String sql, @Nullable Blackhole blackhole)
+  @Benchmark
+  public void groupByWithoutWindow(Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, false,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, false,
-        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto"
-    );
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
-      final PlannerResult plannerResult = planner.plan();
-      if (blackhole != null) {
-        blackhole.consume(plannerResult);
-      }
-    }
+    String sql = "SELECT SUM(dimSequentialHalfNull) "
+                 + "FROM foo "
+                 + "GROUP BY dimUniform";
+    querySql(sql, blackhole);
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void groupByWithWindow(Blackhole blackhole)
+  {
+    String sql = "SELECT SUM(SUM(dimSequentialHalfNull)) "
+                 + "OVER (ORDER BY dimUniform) "
+                 + "FROM foo "
+                 + "GROUP BY dimUniform";
+    querySql(sql, blackhole);
+  }
+
+  @Benchmark
   public void simpleWindow(Blackhole blackhole)
   {
     String sql = "SELECT ROW_NUMBER() "
@@ -375,8 +373,6 @@ public class SqlWindowFnBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void simpleWindowUnbounded(Blackhole blackhole)
   {
     String sql = "SELECT COUNT(*) "
@@ -386,8 +382,6 @@ public class SqlWindowFnBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void windowTillCurrentRow(Blackhole blackhole)
   {
     String sql = "SELECT COUNT(*) "
@@ -397,8 +391,6 @@ public class SqlWindowFnBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void windowFromCurrentRow(Blackhole blackhole)
   {
     String sql = "SELECT COUNT(*) "
@@ -408,8 +400,6 @@ public class SqlWindowFnBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void windowWithSorter(Blackhole blackhole)
   {
     String sql = "SELECT COUNT(*) "
@@ -420,8 +410,6 @@ public class SqlWindowFnBenchmark
   }
 
   @Benchmark
-  @BenchmarkMode(Mode.AverageTime)
-  @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void windowWithoutSorter(Blackhole blackhole)
   {
     String sql = "SELECT COUNT(*) "
