@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -34,7 +35,7 @@ import java.util.Objects;
 public class MSQResultsReport
 {
   /**
-   * Like {@link org.apache.druid.segment.column.RowSignature}, but allows duplicate column names for compatibility
+   * Like {@link RowSignature}, but allows duplicate column names for compatibility
    * with SQL (which also allows duplicate column names in query results).
    */
   private final List<ColumnAndType> signature;
@@ -134,6 +135,19 @@ public class MSQResultsReport
     public String toString()
     {
       return name + ":" + type;
+    }
+
+    public static RowSignature toRowSignature(List<ColumnAndType> columnAndTypes)
+    {
+      final RowSignature.Builder builder = RowSignature.builder();
+      for (MSQResultsReport.ColumnAndType columnAndType : columnAndTypes) {
+        builder.add(columnAndType.getName(), columnAndType.getType());
+      }
+      RowSignature rowSignature = builder.build();
+      if (rowSignature.size() != columnAndTypes.size()) {
+        throw new IllegalArgumentException("Duplicate column names are not allowed in RowSignature");
+      }
+      return rowSignature;
     }
   }
 }
