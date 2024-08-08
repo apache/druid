@@ -144,6 +144,7 @@ public abstract class ComplexMetricSerde
   @Deprecated
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
+    // default implementation to match default serializer implementation
     final int position = buffer.position();
     final byte version = buffer.get();
     if (version == CompressedComplexColumnSerializer.IS_COMPRESSED) {
@@ -158,7 +159,6 @@ public abstract class ComplexMetricSerde
       builder.setHasNulls(!supplier.getNullValues().isEmpty());
     } else {
       buffer.position(position);
-      // default implementation to match default serializer implementation
       builder.setComplexColumnSupplier(
           new ComplexColumnPartSupplier(
               getTypeName(),
@@ -176,16 +176,16 @@ public abstract class ComplexMetricSerde
   @Deprecated
   public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
   {
-    // default generic indexed based complex column that uses object strategy
     return null;
   }
 
   /**
    * This method provides the ability for a ComplexMetricSerde to control its own serialization.
-   * For large column (i.e columns greater than {@link Integer#MAX_VALUE}) use
-   * {@link LargeColumnSupportedComplexColumnSerializer}
+   * Default implementation uses {@link CompressedComplexColumnSerializer} if {@link IndexSpec#complexMetricCompression}
+   * is not null or uncompressed/none, or {@link LargeColumnSupportedComplexColumnSerializer} if no compression is
+   * specified.
    *
-   * @return an instance of GenericColumnSerializer used for serialization.
+   * @return an instance of {@link GenericColumnSerializer} used for serialization.
    */
   public GenericColumnSerializer getSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -193,15 +193,15 @@ public abstract class ComplexMetricSerde
       IndexSpec indexSpec
   )
   {
-    // backwards compatibility
+    // backwards compatibility, if defined use it
     final GenericColumnSerializer serializer = getSerializer(segmentWriteOutMedium, column);
     if (serializer != null) {
       return serializer;
     }
 
-    // default implementation
-    CompressionStrategy compressionStrategy = indexSpec.getComplexMetricCompression();
-    if (compressionStrategy == null || CompressionStrategy.NONE == compressionStrategy || CompressionStrategy.UNCOMPRESSED == compressionStrategy) {
+    // otherwise, use compressed or generic indexed based serializer
+    CompressionStrategy strategy = indexSpec.getComplexMetricCompression();
+    if (strategy == null || CompressionStrategy.NONE == strategy || CompressionStrategy.UNCOMPRESSED == strategy) {
       return LargeColumnSupportedComplexColumnSerializer.create(
           segmentWriteOutMedium,
           column,
