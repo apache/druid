@@ -22,32 +22,23 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.List;
+import java.util.Map;
 
 public class CompactionSimulateResult
 {
-  private final List<List<Object>> intervalsToCompact;
-  private final List<List<Object>> skippedIntervals;
+  private final Map<CompactionStatus.State, Table> compactionStates;
 
   @JsonCreator
   public CompactionSimulateResult(
-      @JsonProperty("intervalsToCompact") List<List<Object>> intervalsToCompact,
-      @JsonProperty("skippedIntervals") List<List<Object>> skippedIntervals
+      @JsonProperty("compactionStates") Map<CompactionStatus.State, Table> compactionStates
   )
   {
-    this.intervalsToCompact = intervalsToCompact;
-    this.skippedIntervals = skippedIntervals;
+    this.compactionStates = compactionStates;
   }
 
   @JsonProperty
-  public List<List<Object>> getIntervalsToCompact()
+  public Map<CompactionStatus.State, Table> getCompactionStates()
   {
-    return intervalsToCompact;
-  }
-
-  @JsonProperty
-  public List<List<Object>> getSkippedIntervals()
-  {
-    return skippedIntervals;
+    return compactionStates;
   }
 }

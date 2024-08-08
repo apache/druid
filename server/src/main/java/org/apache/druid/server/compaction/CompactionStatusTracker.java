@@ -20,11 +20,14 @@
 package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.HashMap;
@@ -33,80 +36,51 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Tracks status of both recently submitted compaction tasks and the compaction
- * state of segments. Can be used to check if a set of segments is currently
- * eligible for compaction.
- * <p>
- * TODO: Keep the interval sidelined until
- *  - no other interval to compact for the last 1 hour
- *  - some other intervals have been submitted
- *  - threshold has been crossed - 30% uncompacted bytes or 50% uncompacted segments
- *  - interval is uncompacted and has just 1 uncompacted segment out of 100
- *  - level of uncompaction is important to know
- *  - should this be a part of policy
- *
- *
- *  - A policy that picks up stuff only if it meets some thresholds and then
+ * Tracks status of recently submitted compaction tasks. Can be used by a segment
+ * search policy to skip an interval if it has been recently compacted or if it
+ * keeps failing repeatedly.
  */
 public class CompactionStatusTracker
 {
-  private static final Logger log = new Logger(CompactionStatusTracker.class);
-
-  private static final int MAX_FAILURE_RETRIES = 3;
-  private static final int MAX_SKIPS_AFTER_SUCCESS = 5;
-  private static final int MAX_SKIPS_AFTER_FAILURE = 5;
-
   private final ObjectMapper objectMapper;
   private final Map<String, DatasourceStatus> datasourceStatuses = new HashMap<>();
   private final Map<String, SegmentsToCompact> submittedTaskIdToSegments = new HashMap<>();
 
+  @Inject
   public CompactionStatusTracker(ObjectMapper objectMapper)
   {
     this.objectMapper = objectMapper;
   }
 
-  public CompactionStatus computeCompactionStatus(
-      SegmentsToCompact candidate,
+  public void stop()
+  {
+    datasourceStatuses.clear();
+  }
+
+  public ObjectMapper getObjectMapper()
+  {
+    return objectMapper;
+  }
+
+  public void removeDatasource(String datasource)
+  {
+    datasourceStatuses.remove(datasource);
+  }
+
+  public CompactionTaskStatus getLatestTaskStatus(SegmentsToCompact candidates)
+  {
+    return datasourceStatuses
+        .getOrDefault(candidates.getDataSource(), DatasourceStatus.EMPTY)
+        .intervalToTaskStatus
+        .get(candidates.getUmbrellaInterval());
+  }
+
+  public void onCompactionStatusComputed(
+      SegmentsToCompact candidateSegments,
       DataSourceCompactionConfig config
   )
   {
-    final CompactionStatus compactionStatus = CompactionStatus.compute(candidate, config, objectMapper);
-    if (compactionStatus.isComplete()) {
-      return compactionStatus;
-    }
-
-    final long inputSegmentSize = config.getInputSegmentSizeBytes();
-    if (candidate.getTotalBytes() > inputSegmentSize) {
-      return CompactionStatus.skipped(
-          "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
-          candidate.getTotalBytes(), inputSegmentSize
-      );
-    }
-
-    final Interval compactionInterval = candidate.getUmbrellaInterval();
-
-    final IntervalStatus intervalStatus = datasourceStatuses
-        .getOrDefault(config.getDataSource(), DatasourceStatus.EMPTY)
-        .intervalStatus
-        .get(compactionInterval);
-
-    if (intervalStatus == null) {
-      return compactionStatus;
-    }
-
-    switch (intervalStatus.state) {
-      case TASK_SUBMITTED:
-      case COMPACTED:
-      case FAILED_ALL_RETRIES:
-        return CompactionStatus.skipped(
-            "recently submitted: current compaction state[%s]",
-            intervalStatus.state
-        );
-      default:
-        break;
-    }
-
-    return compactionStatus;
+    // Nothing to do, used by simulator
   }
 
   public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)
@@ -125,19 +99,6 @@ public class CompactionStatusTracker
         datasourceStatuses.remove(datasource);
       }
     });
-  }
-
-  public void onSegmentsCompacted(SegmentsToCompact candidateSegments)
-  {
-    // do nothing
-  }
-
-  public void onSegmentsSkipped(
-      SegmentsToCompact candidateSegments,
-      CompactionStatus status
-  )
-  {
-    // do nothing
   }
 
   public void onTaskSubmitted(
@@ -164,12 +125,7 @@ public class CompactionStatusTracker
 
     final Interval compactionInterval = candidateSegments.getUmbrellaInterval();
     getOrComputeDatasourceStatus(candidateSegments.getDataSource())
-        .handleTaskStatus(compactionInterval, taskStatus);
-  }
-
-  public void reset()
-  {
-    datasourceStatuses.clear();
+        .handleCompletedTask(compactionInterval, taskStatus);
   }
 
   private DatasourceStatus getOrComputeDatasourceStatus(String datasource)
@@ -181,77 +137,43 @@ public class CompactionStatusTracker
   {
     static final DatasourceStatus EMPTY = new DatasourceStatus();
 
-    final Map<Interval, IntervalStatus> intervalStatus = new HashMap<>();
+    final Map<Interval, CompactionTaskStatus> intervalToTaskStatus = new HashMap<>();
 
-    void handleTaskStatus(Interval compactionInterval, TaskStatus taskStatus)
+    void handleCompletedTask(Interval compactionInterval, TaskStatus taskStatus)
     {
-      final IntervalStatus lastKnownStatus = intervalStatus.get(compactionInterval);
+      final CompactionTaskStatus lastKnownStatus = intervalToTaskStatus.get(compactionInterval);
+      final DateTime now = DateTimes.nowUtc();
 
+      final CompactionTaskStatus updatedStatus;
       if (taskStatus.isSuccess()) {
-        intervalStatus.put(
-            compactionInterval,
-            new IntervalStatus(IntervalState.COMPACTED, MAX_SKIPS_AFTER_SUCCESS)
-        );
-      } else if (lastKnownStatus == null || !lastKnownStatus.isFailed()) {
+        updatedStatus = new CompactionTaskStatus(TaskState.SUCCESS, now, 0);
+      } else if (lastKnownStatus == null || lastKnownStatus.getState().isSuccess()) {
         // This is the first failure
-        intervalStatus.put(
-            compactionInterval,
-            new IntervalStatus(IntervalState.FAILED, 0)
-        );
-      } else if (++lastKnownStatus.retryCount >= MAX_FAILURE_RETRIES) {
-        // Failure retries have been exhausted
-        intervalStatus.put(
-            compactionInterval,
-            new IntervalStatus(IntervalState.FAILED_ALL_RETRIES, MAX_SKIPS_AFTER_FAILURE)
+        updatedStatus = new CompactionTaskStatus(TaskState.FAILED, now, 1);
+      } else {
+        updatedStatus = new CompactionTaskStatus(
+            TaskState.FAILED,
+            now,
+            lastKnownStatus.getNumConsecutiveFailures() + 1
         );
       }
+      intervalToTaskStatus.put(compactionInterval, updatedStatus);
     }
 
     void handleSubmittedTask(SegmentsToCompact candidateSegments)
     {
-      intervalStatus.computeIfAbsent(
-          candidateSegments.getUmbrellaInterval(),
-          i -> new IntervalStatus(IntervalState.TASK_SUBMITTED, 0)
-      );
+      final Interval interval = candidateSegments.getUmbrellaInterval();
+      final CompactionTaskStatus lastStatus = intervalToTaskStatus.get(interval);
 
-      final Set<Interval> readyIntervals = new HashSet<>();
-      intervalStatus.forEach((interval, status) -> {
-        status.turnsToSkip--;
-        if (status.isReady()) {
-          readyIntervals.add(interval);
-        }
-      });
-
-      readyIntervals.forEach(intervalStatus::remove);
+      final DateTime now = DateTimes.nowUtc();
+      if (lastStatus == null || !lastStatus.getState().isFailure()) {
+        intervalToTaskStatus.put(interval, new CompactionTaskStatus(TaskState.RUNNING, now, 0));
+      } else {
+        intervalToTaskStatus.put(
+            interval,
+            new CompactionTaskStatus(TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
+        );
+      }
     }
-  }
-
-  private static class IntervalStatus
-  {
-    final IntervalState state;
-    int turnsToSkip;
-    int retryCount;
-
-    IntervalStatus(IntervalState state, int turnsToSkip)
-    {
-      this.state = state;
-      this.turnsToSkip = turnsToSkip;
-    }
-
-    boolean isReady()
-    {
-      return turnsToSkip <= 0
-             && (state == IntervalState.COMPACTED || state == IntervalState.FAILED_ALL_RETRIES);
-    }
-
-    boolean isFailed()
-    {
-      return state == IntervalState.FAILED || state == IntervalState.FAILED_ALL_RETRIES;
-    }
-  }
-
-  private enum IntervalState
-  {
-    TASK_SUBMITTED, COMPACTED, FAILED, FAILED_ALL_RETRIES
   }
 }

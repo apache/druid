@@ -47,7 +47,6 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
@@ -75,6 +74,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
@@ -258,7 +258,7 @@ public class OverlordTest
         EasyMock.createNiceMock(OverlordDutyExecutor.class),
         new TestDruidLeaderSelector(),
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
-        EasyMock.createNiceMock(OverlordCompactionScheduler.class),
+        EasyMock.createNiceMock(CompactionScheduler.class),
         new DefaultObjectMapper(),
         new NoopTaskContextEnricher()
     );

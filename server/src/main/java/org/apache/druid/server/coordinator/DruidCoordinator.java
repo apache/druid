@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
@@ -56,7 +55,6 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
-import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
@@ -115,7 +113,7 @@ import java.util.stream.Collectors;
  *
  */
 @ManageLifecycle
-public class DruidCoordinator implements CompactionScheduler
+public class DruidCoordinator
 {
   /**
    * Orders newest segments (i.e. segments with most recent intervals) first.
@@ -208,8 +206,8 @@ public class DruidCoordinator implements CompactionScheduler
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionSchedulerConfig compactionSchedulerConfig,
-      ObjectMapper objectMapper
+      CompactionStatusTracker compactionStatusTracker,
+      CompactionSchedulerConfig compactionSchedulerConfig
   )
   {
     this.config = config;
@@ -227,7 +225,7 @@ public class DruidCoordinator implements CompactionScheduler
     this.balancerStrategyFactory = config.getBalancerStrategyFactory();
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-    this.compactionStatusTracker = new CompactionStatusTracker(objectMapper);
+    this.compactionStatusTracker = compactionStatusTracker;
     this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
@@ -350,36 +348,31 @@ public class DruidCoordinator implements CompactionScheduler
     return replicaCountsInCluster == null ? null : replicaCountsInCluster.required();
   }
 
-  @Override
   @Nullable
   public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
   {
     return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
-  @Override
   @Nullable
   public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
   {
     return compactSegments.getAutoCompactionSnapshot(dataSource);
   }
 
-  @Override
   public Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots()
   {
     return compactSegments.getAutoCompactionSnapshot();
   }
 
-  @Override
   public CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest)
   {
-    return new CompactionRunSimulator(
-        compactionStatusTracker,
-        metadataManager.configs().getCurrentCompactionConfig(),
+    return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
+        metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
         metadataManager.segments()
                        .getSnapshotOfDataSourcesWithAllUsedSegments()
                        .getUsedSegmentsTimelinesPerDataSource()
-    ).simulateRunWithConfigUpdate(updateRequest);
+    );
   }
 
   public String getCurrentLeader()
@@ -456,7 +449,6 @@ public class DruidCoordinator implements CompactionScheduler
     }
   }
 
-  @Override
   public void becomeLeader()
   {
     synchronized (lock) {
@@ -549,7 +541,6 @@ public class DruidCoordinator implements CompactionScheduler
     }
   }
 
-  @Override
   public void stopBeingLeader()
   {
     synchronized (lock) {
@@ -559,7 +550,7 @@ public class DruidCoordinator implements CompactionScheduler
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStop();
       }
-      compactionStatusTracker.reset();
+      compactionStatusTracker.stop();
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();

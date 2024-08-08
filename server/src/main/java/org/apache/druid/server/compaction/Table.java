@@ -21,29 +21,55 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.guava.Comparators;
 
-import javax.annotation.Nullable;
-import java.util.Comparator;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
- * Implementation of {@link CompactionSegmentSearchPolicy} that prioritizes
- * intervals which have the latest data.
+ * A simple table POJO with any number of rows and specified column names.
  */
-public class NewestSegmentFirstPolicy extends PriorityBasedSegmentSearchPolicy
+public class Table
 {
-  @JsonCreator
-  public NewestSegmentFirstPolicy(
-      @JsonProperty("priorityDatasource") @Nullable String priorityDatasource
-  )
+  private final List<String> columnNames;
+  private final List<List<Object>> rows = new ArrayList<>();
+
+  public static Table withColumnNames(String... columnNames)
   {
-    super(priorityDatasource);
+    return new Table(Arrays.asList(columnNames), null);
   }
 
-  @Override
-  protected Comparator<SegmentsToCompact> getSegmentComparator()
+  @JsonCreator
+  public Table(
+      @JsonProperty("columnNames") List<String> columnNames,
+      @JsonProperty("rows") List<List<Object>> rows
+  )
   {
-    return (o1, o2) -> Comparators.intervalsByStartThenEnd()
-                                  .compare(o2.getUmbrellaInterval(), o1.getUmbrellaInterval());
+    this.columnNames = columnNames;
+    if (rows != null) {
+      this.rows.addAll(rows);
+    }
+  }
+
+  @JsonProperty
+  public List<String> getColumnNames()
+  {
+    return columnNames;
+  }
+
+  @JsonProperty
+  public List<List<Object>> getRows()
+  {
+    return rows;
+  }
+
+  public void addRow(Object... values)
+  {
+    rows.add(Arrays.asList(values));
+  }
+
+  public boolean isEmpty()
+  {
+    return rows.isEmpty();
   }
 }

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -211,8 +212,8 @@ public class CoordinatorSimulationBuilder
         env.leaderSelector,
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        CompactionSchedulerConfig.defaultConfig(),
-        OBJECT_MAPPER
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        CompactionSchedulerConfig.defaultConfig()
     );
 
     return new SimulationImpl(coordinator, env);

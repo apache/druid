@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -76,8 +77,13 @@ public class DruidCompactionConfigTest
   {
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
 
-    final ClusterCompactionConfig clusterConfig
-        = new ClusterCompactionConfig(0.5, 10, false, CompactionEngine.MSQ, null);
+    final ClusterCompactionConfig clusterConfig = new ClusterCompactionConfig(
+        0.5,
+        10,
+        false,
+        CompactionEngine.MSQ,
+        new NewestSegmentFirstPolicy(null)
+    );
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
     Assert.assertEquals(clusterConfig, copy.clusterConfig());

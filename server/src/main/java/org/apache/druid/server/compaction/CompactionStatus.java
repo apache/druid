@@ -53,9 +53,9 @@ public class CompactionStatus
 {
   private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null);
 
-  private enum State
+  public enum State
   {
-    COMPLETE, PENDING, SKIPPED
+    COMPLETE, PENDING, RUNNING, SKIPPED
   }
 
   /**
@@ -98,6 +98,11 @@ public class CompactionStatus
   public String getReason()
   {
     return reason;
+  }
+
+  public State getState()
+  {
+    return state;
   }
 
   private static CompactionStatus incomplete(String reasonFormat, Object... args)
@@ -175,6 +180,11 @@ public class CompactionStatus
   static CompactionStatus skipped(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args));
+  }
+
+  static CompactionStatus running(String reasonForCompaction)
+  {
+    return new CompactionStatus(State.RUNNING, reasonForCompaction);
   }
 
   /**

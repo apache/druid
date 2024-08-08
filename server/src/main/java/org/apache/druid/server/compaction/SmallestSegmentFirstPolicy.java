@@ -27,9 +27,10 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 
 /**
- * This policy searches segments for compaction from smallest to largest.
+ * Implementation of {@link CompactionSegmentSearchPolicy} that prioritizes
+ * intervals which have the smallest average size of segments.
  */
-public class SmallestSegmentFirstPolicy extends BaseSegmentSearchPolicy
+public class SmallestSegmentFirstPolicy extends PriorityBasedSegmentSearchPolicy
 {
   @JsonCreator
   public SmallestSegmentFirstPolicy(

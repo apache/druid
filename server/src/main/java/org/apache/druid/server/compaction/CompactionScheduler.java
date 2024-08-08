@@ -21,14 +21,21 @@ package org.apache.druid.server.compaction;
 
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import java.util.Map;
 
 public interface CompactionScheduler
 {
-  void becomeLeader();
+  void start();
 
-  void stopBeingLeader();
+  void stop();
+
+  boolean isRunning();
+
+  void startCompaction(String dataSourceName, DataSourceCompactionConfig compactionConfig);
+
+  void stopCompaction(String dataSourceName);
 
   Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots();
 

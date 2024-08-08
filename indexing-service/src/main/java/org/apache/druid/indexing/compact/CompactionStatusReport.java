@@ -17,27 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.server.compaction;
-
-import java.util.Iterator;
-import java.util.List;
+package org.apache.druid.indexing.compact;
 
 /**
- * Iterator over compactible segments.
+ * This can contain stats and progress and stuff.
+ * For simulation, we will still have the separate API.
  */
-public interface CompactionSegmentIterator extends Iterator<SegmentsToCompact>
+public class CompactionStatusReport
 {
-  /**
-   * List of candidate segments that are already compacted and do not need to be
-   * compacted again. None of these segments are returned by {@link #next()}.
-   */
-  List<SegmentsToCompact> getCompactedSegments();
-
-  /**
-   * List of candidate segments that have been skipped for compaction as they
-   * cannot be compacted due to some reason. None of these segments are returned
-   * by {@link #next()}.
-   */
-  List<SegmentsToCompact> getSkippedSegments();
-
 }

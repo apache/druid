@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
@@ -60,7 +61,7 @@ public class AutoCompactionSnapshot
 
   public static Builder builder(String dataSource)
   {
-    return new Builder(dataSource, AutoCompactionScheduleStatus.RUNNING);
+    return new Builder(dataSource).withStatus(AutoCompactionScheduleStatus.RUNNING);
   }
 
   @JsonCreator
@@ -192,26 +193,26 @@ public class AutoCompactionSnapshot
   public static class Builder
   {
     private final String dataSource;
-    private final AutoCompactionScheduleStatus scheduleStatus;
+    private AutoCompactionScheduleStatus scheduleStatus;
 
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
     private final CompactionStatistics waitingStats = new CompactionStatistics();
 
     private Builder(
-        @NotNull String dataSource,
-        @NotNull AutoCompactionScheduleStatus scheduleStatus
+        @NotNull String dataSource
     )
     {
       if (dataSource == null || dataSource.isEmpty()) {
         throw new ISE("Invalid dataSource name");
       }
-      if (scheduleStatus == null) {
-        throw new ISE("scheduleStatus cannot be null");
-      }
-
       this.dataSource = dataSource;
-      this.scheduleStatus = scheduleStatus;
+    }
+
+    public Builder withStatus(AutoCompactionScheduleStatus status)
+    {
+      this.scheduleStatus = Preconditions.checkNotNull(status, "scheduleStatus cannot be null");
+      return this;
     }
 
     public void incrementWaitingStats(CompactionStatistics entry)

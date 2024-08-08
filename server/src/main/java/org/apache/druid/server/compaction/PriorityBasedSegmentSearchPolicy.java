@@ -30,11 +30,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public abstract class BaseSegmentSearchPolicy implements CompactionSegmentSearchPolicy
+/**
+ * {@link CompactionSegmentSearchPolicy} that selects segments in order of a
+ * given priority.
+ */
+public abstract class PriorityBasedSegmentSearchPolicy implements CompactionSegmentSearchPolicy
 {
   private final String priorityDatasource;
 
-  protected BaseSegmentSearchPolicy(
+  protected PriorityBasedSegmentSearchPolicy(
       @Nullable String priorityDatasource
   )
   {
@@ -60,12 +64,30 @@ public abstract class BaseSegmentSearchPolicy implements CompactionSegmentSearch
         compactionConfigs,
         dataSources,
         skipIntervals,
-        getPriorityDatasource(),
-        getSegmentComparator(),
+        this,
         statusTracker
     );
   }
 
+  /**
+   * Checks if compaction of the given candidate segments should be skipped in
+   * the current iteration. A concrete policy implementation may override this
+   * method to avoid compacting intervals that do not fulfil some required criteria.
+   *
+   * @return false by default
+   */
+  protected boolean shouldSkipCompaction(
+      SegmentsToCompact candidateSegments,
+      CompactionStatus currentCompactionStatus,
+      CompactionTaskStatus latestTaskStatus
+  )
+  {
+    return false;
+  }
+
+  /**
+   * Comparator used to prioritize between compactible segments.
+   */
   protected abstract Comparator<SegmentsToCompact> getSegmentComparator();
 
   @Override
@@ -77,7 +99,7 @@ public abstract class BaseSegmentSearchPolicy implements CompactionSegmentSearch
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    BaseSegmentSearchPolicy that = (BaseSegmentSearchPolicy) o;
+    PriorityBasedSegmentSearchPolicy that = (PriorityBasedSegmentSearchPolicy) o;
     return Objects.equals(priorityDatasource, that.priorityDatasource);
   }
 

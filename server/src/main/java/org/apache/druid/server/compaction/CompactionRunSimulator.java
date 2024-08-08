@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
@@ -30,7 +31,6 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
-import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -46,8 +46,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,66 +57,65 @@ import java.util.Set;
  */
 public class CompactionRunSimulator
 {
-  private final DruidCompactionConfig compactionConfig;
   private final CompactionStatusTracker statusTracker;
-  private final Map<String, SegmentTimeline> datasourceTimelines;
-  private final OverlordClient emptyOverlordClient = new EmptyOverlordClient();
+  private final OverlordClient readOnlyOverlordClient;
 
   public CompactionRunSimulator(
       CompactionStatusTracker statusTracker,
+      OverlordClient overlordClient
+  )
+  {
+    this.statusTracker = statusTracker;
+    this.readOnlyOverlordClient = new ReadOnlyOverlordClient(overlordClient);
+  }
+
+  /**
+   * Simulates a run of the compact segments duty with the given compaction config
+   * assuming unlimited compaction task slots.
+   */
+  public CompactionSimulateResult simulateRunWithConfig(
       DruidCompactionConfig compactionConfig,
       Map<String, SegmentTimeline> datasourceTimelines
   )
   {
-    this.statusTracker = statusTracker;
-    this.datasourceTimelines = datasourceTimelines;
-    this.compactionConfig = compactionConfig;
-  }
+    final Table compactedIntervals
+        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes");
+    final Table runningIntervals
+        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact");
+    final Table queuedIntervals
+        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact");
+    final Table skippedIntervals
+        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "reasonToSkip");
 
-  /**
-   * Simulates a run of the compact segments duty with the given config update
-   * assuming unlimited compaction task slots.
-   */
-  public CompactionSimulateResult simulateRunWithConfigUpdate(
-      ClusterCompactionConfig updateRequest
-  )
-  {
-    final ClusterCompactionConfig updateWithUnlimitedSlots = new ClusterCompactionConfig(
-        1.0,
-        Integer.MAX_VALUE,
-        updateRequest.getUseAutoScaleSlots(),
-        updateRequest.getEngine(),
-        updateRequest.getCompactionPolicy()
-    );
-    final DruidCompactionConfig configWithUnlimitedTaskSlots
-        = compactionConfig.withClusterConfig(updateWithUnlimitedSlots);
-
-    final List<List<Object>> tableOfCompactibleIntervals = new ArrayList<>();
-    final List<List<Object>> tableOfSkippedIntervals = new ArrayList<>();
+    // Add a wrapper over the status tracker to add intervals to respective tables
     final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(null)
     {
       @Override
-      public CompactionStatus computeCompactionStatus(
+      public CompactionTaskStatus getLatestTaskStatus(SegmentsToCompact candidates)
+      {
+        return statusTracker.getLatestTaskStatus(candidates);
+      }
+
+      @Override
+      public void onCompactionStatusComputed(
           SegmentsToCompact candidateSegments,
           DataSourceCompactionConfig config
       )
       {
-        return statusTracker.computeCompactionStatus(candidateSegments, config);
-      }
-
-      @Override
-      public void onSegmentsSkipped(SegmentsToCompact candidateSegments, CompactionStatus status)
-      {
-        // Add a row for each skipped interval
-        tableOfSkippedIntervals.add(
-            Arrays.asList(
-                candidateSegments.getDataSource(),
-                candidateSegments.getUmbrellaInterval(),
-                candidateSegments.size(),
-                candidateSegments.getTotalBytes(),
-                status.getReason()
-            )
-        );
+        final CompactionStatus status = candidateSegments.getCompactionStatus();
+        if (status.getState() == CompactionStatus.State.COMPLETE) {
+          compactedIntervals.addRow(
+              createRow(candidateSegments, null, null)
+          );
+        } else if (status.getState() == CompactionStatus.State.RUNNING) {
+          runningIntervals.addRow(
+              createRow(candidateSegments, ClientCompactionTaskQueryTuningConfig.from(config), status.getReason())
+          );
+        } else if (status.getState() == CompactionStatus.State.SKIPPED) {
+          skippedIntervals.addRow(
+              createRow(candidateSegments, null, status.getReason())
+          );
+        }
       }
 
       @Override
@@ -125,53 +123,109 @@ public class CompactionRunSimulator
       {
         // Add a row for each task in order of submission
         final CompactionStatus status = candidateSegments.getCompactionStatus();
-        final String reason = status == null ? "" : status.getReason();
-        tableOfCompactibleIntervals.add(
-            Arrays.asList(
-                candidateSegments.getDataSource(),
-                candidateSegments.getUmbrellaInterval(),
-                candidateSegments.size(),
-                candidateSegments.getTotalBytes(),
-                CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(taskPayload.getTuningConfig()),
-                reason
-            )
+        queuedIntervals.addRow(
+            createRow(candidateSegments, taskPayload.getTuningConfig(), status.getReason())
         );
       }
     };
 
+    // Unlimited task slots to ensure that simulator does not skip any interval
+    final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
+        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
+    );
+
     final CoordinatorRunStats stats = new CoordinatorRunStats();
-    new CompactSegments(simulationStatusTracker, emptyOverlordClient).run(
+    new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         configWithUnlimitedTaskSlots,
         datasourceTimelines,
         stats
     );
 
-    // Add header rows
-    if (!tableOfCompactibleIntervals.isEmpty()) {
-      tableOfCompactibleIntervals.add(
-          0,
-          Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact")
-      );
+    final Map<CompactionStatus.State, Table> compactionStates = new HashMap<>();
+    if (!compactedIntervals.isEmpty()) {
+      compactionStates.put(CompactionStatus.State.COMPLETE, compactedIntervals);
     }
-    if (!tableOfSkippedIntervals.isEmpty()) {
-      tableOfSkippedIntervals.add(
-          0,
-          Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToSkip")
-      );
+    if (!runningIntervals.isEmpty()) {
+      compactionStates.put(CompactionStatus.State.RUNNING, runningIntervals);
+    }
+    if (!queuedIntervals.isEmpty()) {
+      compactionStates.put(CompactionStatus.State.PENDING, queuedIntervals);
+    }
+    if (!skippedIntervals.isEmpty()) {
+      compactionStates.put(CompactionStatus.State.SKIPPED, skippedIntervals);
     }
 
-    return new CompactionSimulateResult(tableOfCompactibleIntervals, tableOfSkippedIntervals);
+    return new CompactionSimulateResult(compactionStates);
+  }
+
+  private Object[] createRow(
+      SegmentsToCompact candidate,
+      ClientCompactionTaskQueryTuningConfig tuningConfig,
+      String reason
+  )
+  {
+    final List<Object> row = new ArrayList<>();
+    row.add(candidate.getDataSource());
+    row.add(candidate.getUmbrellaInterval());
+    row.add(candidate.size());
+    row.add(candidate.getTotalBytes());
+    if (tuningConfig != null) {
+      row.add(CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));
+    }
+    if (reason != null) {
+      row.add(reason);
+    }
+
+    return row.toArray(new Object[0]);
   }
 
   /**
    * Dummy overlord client that returns empty results for all APIs.
    */
-  private static class EmptyOverlordClient implements OverlordClient
+  private static class ReadOnlyOverlordClient implements OverlordClient
   {
-    @Override
-    public ListenableFuture<URI> findCurrentLeader()
+    final OverlordClient delegate;
+
+    ReadOnlyOverlordClient(OverlordClient delegate)
     {
-      return null;
+      this.delegate = delegate;
+    }
+
+    @Override
+    public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+        @Nullable String state,
+        @Nullable String dataSource,
+        @Nullable Integer maxCompletedTasks
+    )
+    {
+      return delegate.taskStatuses(state, dataSource, maxCompletedTasks);
+    }
+
+    @Override
+    public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
+    {
+      return delegate.taskStatuses(taskIds);
+    }
+
+    @Override
+    public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
+    {
+      return delegate.taskPayload(taskId);
+    }
+
+    @Override
+    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
+    {
+      return delegate.findLockedIntervals(lockFilterPolicies);
+    }
+
+    @Override
+    public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
+    {
+      // Unlimited worker capacity to ensure that simulator does not skip any interval
+      return Futures.immediateFuture(
+          new IndexingTotalWorkerCapacityInfo(Integer.MAX_VALUE, Integer.MAX_VALUE)
+      );
     }
 
     @Override
@@ -186,70 +240,42 @@ public class CompactionRunSimulator
       return Futures.immediateVoidFuture();
     }
 
-    @Override
-    public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
-        @Nullable String state,
-        @Nullable String dataSource,
-        @Nullable Integer maxCompletedTasks
-    )
-    {
-      return Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator()));
-    }
+    // Unsupported methods as these are not used by the CompactionScheduler / CompactSegments duty
 
     @Override
-    public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
+    public ListenableFuture<URI> findCurrentLeader()
     {
-      return Futures.immediateFuture(Collections.emptyMap());
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
     {
-      return null;
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
     {
-      return null;
-    }
-
-    @Override
-    public ListenableFuture<TaskPayloadResponse> taskPayload(String taskId)
-    {
-      return Futures.immediateFuture(null);
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
     {
-      return null;
-    }
-
-    @Override
-    public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
-    {
-      return Futures.immediateFuture(Collections.emptyMap());
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public ListenableFuture<Integer> killPendingSegments(String dataSource, Interval interval)
     {
-      return null;
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
     {
-      return Futures.immediateFuture(Collections.emptyList());
-    }
-
-    @Override
-    public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
-    {
-      return Futures.immediateFuture(
-          new IndexingTotalWorkerCapacityInfo(Integer.MAX_VALUE, Integer.MAX_VALUE)
-      );
+      throw new UnsupportedOperationException();
     }
 
     @Override

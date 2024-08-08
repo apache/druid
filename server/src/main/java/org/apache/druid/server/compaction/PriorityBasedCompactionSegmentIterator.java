@@ -25,16 +25,15 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link CompactionSegmentIterator} that returns segments in
@@ -51,18 +50,18 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      @Nullable String priorityDatasource,
-      Comparator<SegmentsToCompact> segmentPriority,
+      PriorityBasedSegmentSearchPolicy searchPolicy,
       CompactionStatusTracker statusTracker
   )
   {
     final Comparator<SegmentsToCompact> comparator;
+    final String priorityDatasource = searchPolicy.getPriorityDatasource();
     if (priorityDatasource == null || priorityDatasource.isEmpty()) {
-      comparator = segmentPriority;
+      comparator = searchPolicy.getSegmentComparator();
     } else {
       comparator = Comparators.alwaysFirst(priorityDatasource)
                               .onResultOf(SegmentsToCompact::getDataSource)
-                              .thenComparing(segmentPriority);
+                              .thenComparing(searchPolicy.getSegmentComparator());
     }
     this.queue = new PriorityQueue<>(comparator);
 
@@ -83,7 +82,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
               compactionConfigs.get(datasource),
               timeline,
               skipIntervals.getOrDefault(datasource, Collections.emptyList()),
-              segmentPriority,
+              searchPolicy,
               statusTracker
           )
       );
@@ -92,21 +91,19 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public Map<String, CompactionStatistics> totalCompactedStatistics()
+  public List<SegmentsToCompact> getCompactedSegments()
   {
-    return CollectionUtils.mapValues(
-        datasourceIterators,
-        DataSourceCompactibleSegmentIterator::totalCompactedStatistics
-    );
+    return datasourceIterators.values().stream().flatMap(
+        iterator -> iterator.getCompactedSegments().stream()
+    ).collect(Collectors.toList());
   }
 
   @Override
-  public Map<String, CompactionStatistics> totalSkippedStatistics()
+  public List<SegmentsToCompact> getSkippedSegments()
   {
-    return CollectionUtils.mapValues(
-        datasourceIterators,
-        DataSourceCompactibleSegmentIterator::totalSkippedStatistics
-    );
+    return datasourceIterators.values().stream().flatMap(
+        iterator -> iterator.getSkippedSegments().stream()
+    ).collect(Collectors.toList());
   }
 
   @Override

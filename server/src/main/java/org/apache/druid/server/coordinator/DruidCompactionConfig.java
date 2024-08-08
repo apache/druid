@@ -40,10 +40,10 @@ public class DruidCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
-  private static final DruidCompactionConfig EMPTY_INSTANCE
-      = new DruidCompactionConfig(Collections.emptyList(), null, null, null, null, null);
   private static final CompactionSegmentSearchPolicy DEFAULT_COMPACTION_POLICY
       = new NewestSegmentFirstPolicy(null);
+  private static final DruidCompactionConfig EMPTY_INSTANCE
+      = new DruidCompactionConfig(Collections.emptyList(), null, null, null, null, null);
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;

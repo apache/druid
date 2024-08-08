@@ -97,6 +97,7 @@ import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -258,6 +259,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(CoordinatorConfigManager.class);
             binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
+            binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);

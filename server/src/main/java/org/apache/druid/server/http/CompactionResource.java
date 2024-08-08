@@ -26,6 +26,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -44,13 +45,16 @@ import java.util.Collection;
 public class CompactionResource
 {
   private final DruidCoordinator coordinator;
+  private final CompactionSchedulerConfig schedulerConfig;
 
   @Inject
   public CompactionResource(
-      DruidCoordinator coordinator
+      DruidCoordinator coordinator,
+      CompactionSchedulerConfig schedulerConfig
   )
   {
     this.coordinator = coordinator;
+    this.schedulerConfig = schedulerConfig;
   }
 
   /**
@@ -74,6 +78,10 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
+    if (schedulerConfig.isEnabled()) {
+      buildErrorResponseWhenRunningScheduler();
+    }
+
     final Long notCompactedSegmentSizeBytes = coordinator.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
     if (notCompactedSegmentSizeBytes == null) {
       return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
@@ -90,6 +98,10 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
+    if (schedulerConfig.isEnabled()) {
+      return buildErrorResponseWhenRunningScheduler();
+    }
+
     final Collection<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
       snapshots = coordinator.getAllCompactionSnapshots().values();
@@ -110,8 +122,23 @@ public class CompactionResource
       ClusterCompactionConfig updatePayload
   )
   {
+    if (schedulerConfig.isEnabled()) {
+      return buildErrorResponseWhenRunningScheduler();
+    }
+
     return Response.ok().entity(
         coordinator.simulateRunWithConfigUpdate(updatePayload)
+    ).build();
+  }
+
+  private Response buildErrorResponseWhenRunningScheduler()
+  {
+    return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(
+        ImmutableMap.of(
+            "error",
+            "Compaction has been disabled on the Coordinator."
+            + " Use Overlord APIs to fetch compaction status."
+        )
     ).build();
   }
 }

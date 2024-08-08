@@ -571,18 +571,18 @@ public class CompactSegments implements CoordinatorCustomDuty
     }
 
     // Statistics of all segments considered compacted after this run
-    iterator.totalCompactedStatistics().forEach((dataSource, compactedStats) -> {
-      currentRunAutoCompactionSnapshotBuilders
-          .computeIfAbsent(dataSource, AutoCompactionSnapshot::builder)
-          .incrementCompactedStats(compactedStats);
-    });
+    iterator.getCompactedSegments().forEach(
+        candidateSegments -> currentRunAutoCompactionSnapshotBuilders
+            .computeIfAbsent(candidateSegments.getDataSource(), AutoCompactionSnapshot::builder)
+            .incrementCompactedStats(candidateSegments.getStats())
+    );
 
     // Statistics of all segments considered skipped after this run
-    iterator.totalSkippedStatistics().forEach((dataSource, dataSourceSkippedStatistics) -> {
-      currentRunAutoCompactionSnapshotBuilders
-          .computeIfAbsent(dataSource, AutoCompactionSnapshot::builder)
-          .incrementSkippedStats(dataSourceSkippedStatistics);
-    });
+    iterator.getSkippedSegments().forEach(
+        candidateSegments -> currentRunAutoCompactionSnapshotBuilders
+            .computeIfAbsent(candidateSegments.getDataSource(), AutoCompactionSnapshot::builder)
+            .incrementSkippedStats(candidateSegments.getStats())
+    );
 
     final Map<String, AutoCompactionSnapshot> currentAutoCompactionSnapshotPerDataSource = new HashMap<>();
     currentRunAutoCompactionSnapshotBuilders.forEach((dataSource, builder) -> {

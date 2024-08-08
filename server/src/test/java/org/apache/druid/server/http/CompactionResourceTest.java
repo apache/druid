@@ -22,6 +22,7 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -35,6 +36,7 @@ import java.util.Map;
 public class CompactionResourceTest
 {
   private DruidCoordinator mock;
+  private final CompactionSchedulerConfig schedulerConfig = new CompactionSchedulerConfig(false);
   private String dataSourceName = "datasource_1";
   private AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
       dataSourceName,
@@ -73,7 +75,8 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAllCompactionSnapshots()).andReturn(expected).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource("");
+    final Response response = new CompactionResource(mock, schedulerConfig)
+        .getCompactionSnapshotForDataSource("");
     Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -90,7 +93,8 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAllCompactionSnapshots()).andReturn(expected).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(null);
+    final Response response = new CompactionResource(mock, schedulerConfig)
+        .getCompactionSnapshotForDataSource(null);
     Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -103,7 +107,8 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getCompactionSnapshot(dataSourceName)).andReturn(expectedSnapshot).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
+    final Response response = new CompactionResource(mock, schedulerConfig)
+        .getCompactionSnapshotForDataSource(dataSourceName);
     Assert.assertEquals(ImmutableMap.of("latestStatus", ImmutableList.of(expectedSnapshot)), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -116,7 +121,26 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getCompactionSnapshot(dataSourceName)).andReturn(null).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
+    final Response response = new CompactionResource(mock, schedulerConfig)
+        .getCompactionSnapshotForDataSource(dataSourceName);
     Assert.assertEquals(404, response.getStatus());
+  }
+
+  @Test
+  public void testGetCompactionSnapshotWhenCompactionSchedulerIsEnabled()
+  {
+    EasyMock.replay(mock);
+
+    final Response response = new CompactionResource(mock, new CompactionSchedulerConfig(true))
+        .getCompactionSnapshotForDataSource("dummy");
+    Assert.assertEquals(503, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "error",
+            "Compaction has been disabled on the Coordinator."
+            + " Use Overlord APIs to fetch compaction status."
+        ),
+        response.getEntity()
+    );
   }
 }

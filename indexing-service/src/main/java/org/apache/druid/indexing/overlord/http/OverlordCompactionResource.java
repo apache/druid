@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.http;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
+import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -44,11 +45,11 @@ import java.util.Collections;
 @Path("/druid/indexer/v1/compaction")
 public class OverlordCompactionResource
 {
-  private final OverlordCompactionScheduler scheduler;
+  private final CompactionScheduler scheduler;
 
   @Inject
   public OverlordCompactionResource(
-      OverlordCompactionScheduler scheduler
+      CompactionScheduler scheduler
   )
   {
     this.scheduler = scheduler;

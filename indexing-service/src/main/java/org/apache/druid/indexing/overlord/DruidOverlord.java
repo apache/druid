@@ -29,7 +29,6 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
-import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -88,7 +88,7 @@ public class DruidOverlord
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
-      final OverlordCompactionScheduler compactionScheduler,
+      final CompactionScheduler compactionScheduler,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
@@ -142,7 +142,7 @@ public class DruidOverlord
                 {
                   segmentAllocationQueue.becomeLeader();
                   taskMaster.becomeLeader(taskRunner, taskQueue);
-                  compactionScheduler.becomeLeader();
+                  compactionScheduler.start();
 
                   // Announce the node only after all the services have been initialized
                   initialized = true;
@@ -153,7 +153,7 @@ public class DruidOverlord
                 public void stop()
                 {
                   serviceAnnouncer.unannounce(node);
-                  compactionScheduler.stopBeingLeader();
+                  compactionScheduler.stop();
                   taskMaster.stopBeingLeader();
                   segmentAllocationQueue.stopBeingLeader();
                 }

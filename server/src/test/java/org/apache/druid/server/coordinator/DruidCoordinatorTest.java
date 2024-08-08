@@ -192,8 +192,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionSchedulerConfig(true),
-        OBJECT_MAPPER
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        new CompactionSchedulerConfig(true)
     );
   }
 
@@ -624,8 +624,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        CompactionSchedulerConfig.defaultConfig(),
-        OBJECT_MAPPER
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        CompactionSchedulerConfig.defaultConfig()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -665,8 +665,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        CompactionSchedulerConfig.defaultConfig(),
-        OBJECT_MAPPER
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        CompactionSchedulerConfig.defaultConfig()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -706,8 +706,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        CompactionSchedulerConfig.defaultConfig(),
-        OBJECT_MAPPER
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        CompactionSchedulerConfig.defaultConfig()
     );
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -812,8 +812,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         new TestDruidLeaderSelector(),
         null,
         CentralizedDatasourceSchemaConfig.create(),
-        new CompactionSchedulerConfig(true),
-        OBJECT_MAPPER
+        new CompactionStatusTracker(OBJECT_MAPPER),
+        CompactionSchedulerConfig.defaultConfig()
     );
     coordinator.start();
 

@@ -38,6 +38,8 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -51,6 +53,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
@@ -98,7 +101,6 @@ import org.apache.druid.indexing.overlord.http.OverlordResource;
 import org.apache.druid.indexing.overlord.sampler.SamplerModule;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
@@ -115,8 +117,12 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
+import org.apache.druid.server.compaction.CompactionScheduler;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.http.RedirectFilter;
 import org.apache.druid.server.http.RedirectInfo;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -211,6 +217,7 @@ public class CliOverlord extends ServerRunnable
                   CentralizedDatasourceSchemaConfig.class
               );
 
+              binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
               binder.bind(SegmentsMetadataManager.class)
                     .toProvider(SegmentsMetadataManagerProvider.class)
                     .in(ManageLifecycle.class);
@@ -246,8 +253,8 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
+            binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
-            binder.bind(OverlordCompactionScheduler.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
@@ -406,6 +413,21 @@ public class CliOverlord extends ServerRunnable
                   heartbeatTags.put("leader", overlord.isLeader() ? 1 : 0);
 
                   return heartbeatTags;
+                };
+              }
+
+              @Provides
+              @LazySingleton
+              public Supplier<ClusterCompactionConfig> getClusterCompactionConfig(JacksonConfigManager configManager)
+              {
+                return () -> {
+                  DruidCompactionConfig compactionConfig = configManager.watch(
+                      DruidCompactionConfig.CONFIG_KEY,
+                      DruidCompactionConfig.class,
+                      DruidCompactionConfig.empty()
+                  ).get();
+                  return Configs.valueOrDefault(compactionConfig, DruidCompactionConfig.empty())
+                                .clusterConfig();
                 };
               }
             };
