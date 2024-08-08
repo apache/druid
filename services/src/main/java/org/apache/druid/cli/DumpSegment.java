@@ -97,7 +97,6 @@ import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.joda.time.chrono.ISOChronology;
 import org.roaringbitmap.IntIterator;
 
 import java.io.File;

@@ -216,6 +216,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
                 {
                   final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                                    .setFilter(Filters.toFilter(dimFilter))
+                                                                   .setInterval(adapter.getInterval())
                                                                    .build();
                   final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec);
                   final Cursor cursor = cursorHolder.asCursor();

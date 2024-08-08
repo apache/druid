@@ -126,6 +126,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     );
     final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                            .setFilter(Filters.toFilter(dimFilter))
+                                                           .setInterval(storageAdapter.getInterval())
                                                            .build();
 
     final CursorHolder cursorHolder = storageAdapter.getAdapter().makeCursorHolder(cursorBuildSpec);
