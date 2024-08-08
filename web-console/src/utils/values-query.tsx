@@ -66,6 +66,7 @@ export function queryResultToValuesQuery(sample: QueryResult): SqlQuery {
         rows.map(row =>
           SqlRecord.create(
             row.map((r, i) => {
+              if (r == null) return L.NULL;
               const column = header[i];
               const { nativeType } = column;
               const sqlType = getEffectiveSqlType(column);
