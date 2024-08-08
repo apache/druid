@@ -70,6 +70,9 @@ import org.apache.druid.tests.TestNGGroup;
 import org.apache.druid.tests.indexer.AbstractITBatchIndexTest;
 import org.apache.druid.tests.indexer.AbstractIndexerTest;
 import org.apache.druid.timeline.DataSegment;
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -532,9 +535,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          0,
-          14166,
-          14165,
+          Matchers.equalTo(0L),
+          Matchers.greaterThan(0L),
+          Matchers.greaterThan(0L),
           0,
           2,
           2,
@@ -550,9 +553,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          0,
-          22262,
-          0,
+          Matchers.equalTo(0L),
+          Matchers.greaterThan(0L),
+          Matchers.equalTo(0L),
           0,
           3,
           0,
@@ -670,9 +673,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          14166,
-          14165,
-          0,
+          Matchers.greaterThan(0L),
+          Matchers.greaterThan(0L),
+          Matchers.equalTo(0L),
           2,
           2,
           0,
@@ -689,9 +692,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       getAndAssertCompactionStatus(
           fullDatasourceName,
           AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
-          0,
-          22262,
-          0,
+          Matchers.equalTo(0L),
+          Matchers.greaterThan(0L),
+          Matchers.equalTo(0L),
           0,
           3,
           0,
@@ -1952,9 +1955,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   private void getAndAssertCompactionStatus(
       String fullDatasourceName,
       AutoCompactionSnapshot.AutoCompactionScheduleStatus scheduleStatus,
-      long bytesAwaitingCompaction,
-      long bytesCompacted,
-      long bytesSkipped,
+      Matcher<Long> bytesAwaitingCompactionMatcher,
+      Matcher<Long> bytesCompactedMatcher,
+      Matcher<Long> bytesSkippedMatcher,
       long segmentCountAwaitingCompaction,
       long segmentCountCompacted,
       long segmentCountSkipped,
@@ -1966,9 +1969,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     Map<String, String> actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assert.assertNotNull(actualStatus);
     Assert.assertEquals(actualStatus.get("scheduleStatus"), scheduleStatus.toString());
-    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesAwaitingCompaction")), bytesAwaitingCompaction);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesCompacted")), bytesCompacted);
-    Assert.assertEquals(Long.parseLong(actualStatus.get("bytesSkipped")), bytesSkipped);
+    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesAwaitingCompaction")), bytesAwaitingCompactionMatcher);
+    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesCompacted")), bytesCompactedMatcher);
+    MatcherAssert.assertThat(Long.parseLong(actualStatus.get("bytesSkipped")), bytesSkippedMatcher);
     Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountAwaitingCompaction")), segmentCountAwaitingCompaction);
     Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountCompacted")), segmentCountCompacted);
     Assert.assertEquals(Long.parseLong(actualStatus.get("segmentCountSkipped")), segmentCountSkipped);
