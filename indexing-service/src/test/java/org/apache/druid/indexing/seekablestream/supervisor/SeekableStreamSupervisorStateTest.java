@@ -528,8 +528,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     replayAll();
 
-    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.setStreamOffsets(ImmutableMap.of("0", "10"));
     supervisor.start();
 
     Assert.assertTrue(supervisor.stateManager.isHealthy());

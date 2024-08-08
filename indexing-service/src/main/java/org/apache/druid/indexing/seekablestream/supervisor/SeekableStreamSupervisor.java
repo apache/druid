@@ -3619,27 +3619,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final long nowTime = DateTimes.nowUtc().getMillis();
     // if it is the first run and there is no lag observed when compared to the offsets from metadata storage stay idle
     if (!stateManager.isAtLeastOneSuccessfulRun()) {
-      lastActiveTimeMillis = nowTime;
-      Map<PartitionIdType, SequenceOffsetType> comittedOffsets = getOffsetsFromMetadataStorage();
-      if (comittedOffsets.isEmpty()) {
-        // since there is no previous offsets info available we can skip checking for idleness
-        return;
-      }
+      // Set previous sequences to the current offsets in metadata store
+      previousSequencesFromStream.clear();
+      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorage());
 
+      // Force update partition lag since the reporting thread might not have run yet
       updatePartitionLagFromStream();
-      Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
-      if (comittedOffsets.equals(latestSequencesFromStream)) {
-        stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
-        previousSequencesFromStream.putAll(comittedOffsets);
-      }
-      return;
     }
 
     Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final boolean idle;
     final long idleTime;
-    if (lastActiveTimeMillis > 0
-        && previousSequencesFromStream.equals(latestSequencesFromStream)
+    if (previousSequencesFromStream.equals(latestSequencesFromStream)
         && computeTotalLag() == 0) {
       idleTime = nowTime - lastActiveTimeMillis;
       idle = true;
