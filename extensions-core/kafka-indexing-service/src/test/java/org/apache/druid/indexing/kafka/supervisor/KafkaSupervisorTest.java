@@ -319,7 +319,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             new IdleConfig(true, 1000L),
-            1
+            1,
+            null
     );
 
     final KafkaSupervisorTuningConfig tuningConfigOri = new KafkaSupervisorTuningConfig(
@@ -4844,6 +4845,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         idleConfig,
+        null,
         null
     );
 
@@ -4955,6 +4957,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null,
@@ -5072,6 +5075,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new Period("PT30M"),
         lateMessageRejectionPeriod,
         earlyMessageRejectionPeriod,
+        null,
         null,
         null,
         null,
