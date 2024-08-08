@@ -408,7 +408,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             null,
             Granularities.NONE,
             Boolean.TRUE,
-            null
+            Metadata.SORTED_BY_TIME_ONLY
         ),
         index.getMetadata()
     );
@@ -2164,7 +2164,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(ImmutableList.of("__time", "dim1", "dim2"), Lists.newArrayList(index.getSortOrder()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     Assert.assertEquals(2, rowList.size());
@@ -2197,7 +2197,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(1, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(ImmutableList.of("__time", "dim1", "dim2"), Lists.newArrayList(index.getSortOrder()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     adapter = new QueryableIndexIndexableAdapter(index);
@@ -2229,7 +2229,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(ImmutableList.of("__time", "dim1", "dim2"), Lists.newArrayList(index.getSortOrder()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     adapter = new QueryableIndexIndexableAdapter(index);

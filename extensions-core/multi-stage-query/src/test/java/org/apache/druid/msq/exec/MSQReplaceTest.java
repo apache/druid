@@ -131,10 +131,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, m1 "
@@ -225,10 +222,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, dim1, m1 "
@@ -247,7 +241,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, "", 1.0f},
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
                              new Object[]{978307200000L, "1", 4.0f},
@@ -310,10 +304,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, dim1, m1 "
@@ -332,7 +323,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, "", 1.0f},
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
                              new Object[]{978307200000L, "1", 4.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
@@ -398,10 +389,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, dim1, m1 "
@@ -420,7 +408,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, "", 1.0f},
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
                              new Object[]{978307200000L, "1", 4.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
@@ -527,10 +515,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, dim1, m1 "
@@ -549,7 +534,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(NumberedShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, "", 1.0f},
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
                              new Object[]{978307200000L, "1", 4.0f},
@@ -913,10 +898,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
 
     testIngestQuery().setSql(" REPLACE INTO foo "
@@ -999,10 +981,7 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment0))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.of("2000-01-01/2000-03-01")))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.of("2000-01-01/2000-03-01"))));
 
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-03-01' "
