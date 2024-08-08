@@ -56,6 +56,11 @@ public interface DruidSchemaManager
     return getTables().get(name);
   }
 
+  default DruidTable getTable(String name, BrokerSegmentMetadataCache segmentMetadataCache)
+  {
+    return getTables().get(name);
+  }
+
   default Set<String> getTableNames()
   {
     return getTables().keySet();
