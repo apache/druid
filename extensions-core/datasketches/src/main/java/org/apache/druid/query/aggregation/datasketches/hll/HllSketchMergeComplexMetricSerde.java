@@ -26,8 +26,6 @@ import org.apache.druid.segment.data.SafeWritableMemory;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
-import java.nio.ByteBuffer;
-
 public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
 

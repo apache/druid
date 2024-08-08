@@ -25,7 +25,6 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 
 public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
 {

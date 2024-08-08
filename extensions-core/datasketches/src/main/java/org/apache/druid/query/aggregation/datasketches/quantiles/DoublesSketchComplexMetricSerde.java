@@ -28,8 +28,6 @@ import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
-import java.nio.ByteBuffer;
-
 public class DoublesSketchComplexMetricSerde extends ComplexMetricSerde
 {
 
