@@ -173,7 +173,7 @@ LIMIT 100`,
                     }
 
                     onNewTab(
-                      WorkbenchQuery.fromEffectiveQueryAndContext(
+                      WorkbenchQuery.fromTaskQueryAndContext(
                         execution.sqlQuery,
                         execution.queryContext,
                       ).changeLastExecution({ engine: 'sql-msq-task', id: w.taskId }),

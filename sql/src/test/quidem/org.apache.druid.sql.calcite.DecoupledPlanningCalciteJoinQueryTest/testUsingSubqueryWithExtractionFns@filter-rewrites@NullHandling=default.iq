@@ -68,7 +68,8 @@ DruidAggregate(group=[{0}], EXPR$1=[COUNT()], druid=[logical])
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {

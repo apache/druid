@@ -49,6 +49,7 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -141,7 +142,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of("foo", Intervals.of("2000-01-01T/P1D"), "test", 0),
                              SegmentId.of("foo", Intervals.of("2000-01-02T/P1D"), "test", 0),
@@ -213,7 +214,7 @@ public class MSQReplaceTest extends MSQTestBase
                          "2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-02T/P1D"),
                          "test",
@@ -283,7 +284,7 @@ public class MSQReplaceTest extends MSQTestBase
                              "Cannot use RangeShardSpec, RangedShardSpec only supports string CLUSTER BY keys. Using NumberedShardSpec instead."
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(
+                     .setExpectedSegments(ImmutableSet.of(
                                              SegmentId.of(
                                                  "foo1",
                                                  Intervals.of("2016-06-27T00:00:00.000Z/2016-06-27T01:00:00.000Z"),
@@ -373,7 +374,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of(
                          "2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo1",
                          Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z"),
                          "test",
@@ -452,7 +453,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -468,7 +469,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -541,7 +542,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -557,7 +558,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(
+                     .setExpectedSegments(ImmutableSet.of(
                                              SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0),
                                              SegmentId.of("foo", Intervals.of("2001-01-01T/P1M"), "test", 0)
                                          )
@@ -627,7 +628,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -639,7 +640,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -719,7 +720,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -815,6 +816,11 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{1672531200000L, "day1_1"},
@@ -892,7 +898,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -949,7 +955,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
                      .setExpectedResultRows(expectedRows)
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
@@ -957,6 +963,13 @@ public class MSQReplaceTest extends MSQTestBase
                              "Using RangeShardSpec to generate segments."
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         queryContext,
+                         Collections.singletonList("dim1"),
+                         Collections.singletonList(new StringDimensionSchema("dim1")),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1001,7 +1014,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1063,7 +1076,7 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("%s/%s", "2000-02-01", Intervals.ETERNITY.getEnd())
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1111,7 +1124,7 @@ public class MSQReplaceTest extends MSQTestBase
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedSegments(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
@@ -1150,11 +1163,10 @@ public class MSQReplaceTest extends MSQTestBase
                          + "CLUSTERED BY dim1"
                      )
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{0L, NullHandling.sqlCompatible() ? "" : null, 1.0f, 1L},
@@ -1163,6 +1175,19 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{0L, "2", 3.0f, 1L},
                              new Object[]{0L, "abc", 6.0f, 1L},
                              new Object[]{0L, "def", 5.0f, 1L}
+                         )
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.singletonList("dim1"),
+                             Arrays.asList(
+                                 new StringDimensionSchema("dim1"),
+                                 new FloatDimensionSchema("m1"),
+                                 new LongDimensionSchema("cnt")
+                             ),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1186,7 +1211,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foobar", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foobar", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{946684800000L, 1.0f},
@@ -1228,7 +1253,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of(
                                  "foobar",
@@ -1304,7 +1329,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1328,7 +1353,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, null}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -1379,7 +1404,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1401,7 +1426,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -1571,6 +1596,7 @@ public class MSQReplaceTest extends MSQTestBase
                          + "GROUP BY 1, 2 "
                          + "PARTITIONED by TIME_FLOOR(__time, 'P3M') "
                          + "CLUSTERED by dim1")
+                     .setQueryContext(context)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
@@ -1582,6 +1608,16 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .setExpectedResultRows(expectedResults)
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.singletonList("dim1"),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.QUARTER,
+                         Intervals.of("2000-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -1652,6 +1688,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(existingSegmentInterval))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1688,6 +1734,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.HOUR,
+                         Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00")
+                     ))
                      .verifyResults();
   }
 
@@ -1726,6 +1782,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-30T/2016-07-01T")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.of("2016-06-29T00:00:00.000Z/2016-07-03T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -1764,6 +1830,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-02T/2016-06-03T")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.of("2016-05-25T00:00:00.000Z/2016-06-03T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -1802,6 +1878,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1838,6 +1924,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2016-06-01T/2016-09-01T")))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1874,6 +1970,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1906,6 +2012,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1966,6 +2082,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-02T/2016-06-03T")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.of("2016-06-01T00:00:00.000Z/2016-06-03T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -2049,11 +2175,16 @@ public class MSQReplaceTest extends MSQTestBase
     }
     PartitionsSpec partitionsSpec;
     if (partitionDimensions.isEmpty()) {
-      partitionsSpec = new DynamicPartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, Long.MAX_VALUE);
-
+      partitionsSpec = new DynamicPartitionsSpec(
+          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
+          Long.MAX_VALUE
+      );
     } else {
-      partitionsSpec = new DimensionRangePartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null,
-                                                        partitionDimensions, false
+      partitionsSpec = new DimensionRangePartitionsSpec(
+          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
+          null,
+          partitionDimensions,
+          false
       );
     }
     DimensionsSpec dimensionsSpec = new DimensionsSpec.Builder()

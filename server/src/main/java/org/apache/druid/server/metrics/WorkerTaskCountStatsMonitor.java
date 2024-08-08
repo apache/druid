@@ -72,6 +72,8 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       emit(emitter, "worker/task/running/count", indexerStatsProvider.getWorkerRunningTasks());
       emit(emitter, "worker/task/assigned/count", indexerStatsProvider.getWorkerAssignedTasks());
       emit(emitter, "worker/task/completed/count", indexerStatsProvider.getWorkerCompletedTasks());
+      emit(emitter, "worker/task/failed/count", indexerStatsProvider.getWorkerFailedTasks());
+      emit(emitter, "worker/task/success/count", indexerStatsProvider.getWorkerSuccessfulTasks());
     }
     return true;
   }
