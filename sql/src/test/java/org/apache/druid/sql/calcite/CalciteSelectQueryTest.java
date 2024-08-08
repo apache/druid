@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -2138,5 +2139,22 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testRejectHavingWithWindowExpression()
+  {
+    assertEquals(
+        "1.37.0",
+        RelNode.class.getPackage().getImplementationVersion(),
+        "Calcite version changed; check if CALCITE-6473 is fixed and remove:\n * this assertion\n * DruidSqlValidator#validateHavingClause"
+    );
+
+    testQueryThrows(
+        "SELECT cityName,sum(1) OVER () as w FROM wikipedia group by cityName HAVING w > 10",
+        ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true),
+        DruidException.class,
+        invalidSqlContains("Window functions are not allowed in HAVING")
+    );
   }
 }

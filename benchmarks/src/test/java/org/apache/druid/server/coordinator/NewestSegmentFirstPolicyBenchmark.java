@@ -92,21 +92,12 @@ public class NewestSegmentFirstPolicyBenchmark
       final String dataSource = DATA_SOURCE_PREFIX + i;
       compactionConfigs.put(
           dataSource,
-          new DataSourceCompactionConfig(
-              dataSource,
-              0,
-              inputSegmentSizeBytes,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-          )
+          DataSourceCompactionConfig
+              .builder()
+              .forDataSource(dataSource)
+              .withTaskPriority(0)
+              .withInputSegmentSizeBytes(inputSegmentSizeBytes)
+              .build()
       );
     }
 

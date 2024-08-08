@@ -554,8 +554,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             final Iterator<Long> iterator = dictionary.iterator();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
 
-            int next;
-            int index = 0;
+            int index = -1;
             boolean nextSet = false;
 
             @Override
@@ -578,13 +577,14 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               }
               nextSet = false;
 
-              return getBitmap(next);
+              return getBitmap(index);
             }
 
             private void findNext()
             {
               while (!nextSet && iterator.hasNext()) {
                 Long nextValue = iterator.next();
+                index++;
                 if (nextValue == null) {
                   if (NullHandling.sqlCompatible()) {
                     nextSet = longPredicate.applyNull().matches(includeUnknown);
@@ -594,10 +594,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 } else {
                   nextSet = longPredicate.applyLong(nextValue).matches(includeUnknown);
                 }
-                if (nextSet) {
-                  next = index;
-                }
-                index++;
               }
             }
           };

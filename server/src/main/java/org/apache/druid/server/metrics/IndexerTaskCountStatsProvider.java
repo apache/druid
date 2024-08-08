@@ -41,4 +41,8 @@ public interface IndexerTaskCountStatsProvider
    * Map from datasource name to the number of completed tasks by the Indexer.
    */
   Map<String, Long> getWorkerCompletedTasks();
+
+  Map<String, Long> getWorkerFailedTasks();
+
+  Map<String, Long> getWorkerSuccessfulTasks();
 }
