@@ -102,12 +102,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   protected ByteBuffer computeFilenameBytes()
   {
-    return computeFilenameBytes(getColumnName());
-  }
-
-  public static ByteBuffer computeFilenameBytes(String columnName)
-  {
-    final byte[] bytes = StringUtils.toUtf8(columnName);
+    final byte[] bytes = StringUtils.toUtf8(getColumnName());
     final int length = VByte.computeIntSize(bytes.length);
     final ByteBuffer buffer = ByteBuffer.allocate(length + bytes.length).order(ByteOrder.nativeOrder());
     VByte.writeInt(buffer, bytes.length);
@@ -132,7 +127,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
       smooshChannel.write(buffer);
     }
-}
+  }
 
   /**
    * Nested field columns are stored in separate

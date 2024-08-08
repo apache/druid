@@ -75,7 +75,10 @@ public class CompressedComplexColumn implements ComplexColumn
     }
 
     final ByteBuffer valueBuffer = compressedColumn.get(rowNum);
-    return objectStrategy.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+    final ByteBuffer dataCopyBuffer = ByteBuffer.allocate(valueBuffer.remaining());
+    dataCopyBuffer.put(valueBuffer);
+    dataCopyBuffer.rewind();
+    return objectStrategy.fromByteBuffer(dataCopyBuffer, dataCopyBuffer.remaining());
   }
 
   @Override
@@ -103,7 +106,10 @@ public class CompressedComplexColumn implements ComplexColumn
           return null;
         }
         final ByteBuffer valueBuffer = compressedColumn.get(offset.getOffset());
-        return objectStrategy.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+        final ByteBuffer dataCopyBuffer = ByteBuffer.allocate(valueBuffer.remaining());
+        dataCopyBuffer.put(valueBuffer);
+        dataCopyBuffer.rewind();
+        return objectStrategy.fromByteBuffer(dataCopyBuffer, dataCopyBuffer.remaining());
       }
 
       @Override
@@ -162,11 +168,13 @@ public class CompressedComplexColumn implements ComplexColumn
       private Object getForOffset(int offset)
       {
         if (nullValues.get(offset)) {
-          // maybe someday can use bitmap batch operations for nulls?
           return null;
         }
         final ByteBuffer valueBuffer = compressedColumn.get(offset);
-        return objectStrategy.fromByteBuffer(valueBuffer, valueBuffer.remaining());
+        final ByteBuffer dataCopyBuffer = ByteBuffer.allocate(valueBuffer.remaining());
+        dataCopyBuffer.put(valueBuffer);
+        dataCopyBuffer.rewind();
+        return objectStrategy.fromByteBuffer(dataCopyBuffer, dataCopyBuffer.remaining());
       }
 
       @Override

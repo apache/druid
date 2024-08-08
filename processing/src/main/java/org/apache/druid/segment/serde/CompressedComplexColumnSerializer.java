@@ -62,7 +62,8 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
       SegmentWriteOutMedium segmentWriteOutMedium,
       IndexSpec indexSpec,
       ObjectStrategy<T> strategy
-  ) {
+  )
+  {
     this.name = name;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
@@ -107,12 +108,9 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }
+    rowCount++;
     final byte[] bytes = strategy.toBytes(data);
-    if (bytes == null) {
-      writer.addValue(new byte[0]);
-    } else {
-      writer.addValue(bytes);
-    }
+    writer.addValue(bytes);
   }
 
   @Override
