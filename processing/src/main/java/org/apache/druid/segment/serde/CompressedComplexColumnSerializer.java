@@ -44,7 +44,7 @@ import java.nio.channels.WritableByteChannel;
 public class CompressedComplexColumnSerializer<T> implements GenericColumnSerializer<T>
 {
   public static final byte IS_COMPRESSED = Byte.MAX_VALUE;
-  public static byte V0 = 0x00;
+  public static final byte V0 = 0x00;
   public static final String FILE_NAME = "__complexColumn";
 
   public static GenericColumnSerializer create(
