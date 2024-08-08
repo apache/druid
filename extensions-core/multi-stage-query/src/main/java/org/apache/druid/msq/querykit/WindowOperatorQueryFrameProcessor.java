@@ -203,9 +203,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         final Frame frame = inputChannel.read();
         convertRowFrameToRowsAndColumns(frame);
       } else if (inputChannel.isFinished()) {
-        if (!frameRowsAndCols.isEmpty()) {
-          runAllOpsOnMultipleRac(frameRowsAndCols);
-        }
+        runAllOpsOnMultipleRac(frameRowsAndCols);
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
@@ -328,6 +326,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
    */
   private void runAllOpsOnMultipleRac(ArrayList<RowsAndColumns> listOfRacs)
   {
+    if (listOfRacs.isEmpty()) {
+      return;
+    }
     Operator op = new Operator()
     {
       @Nullable
