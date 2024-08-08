@@ -106,6 +106,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private final SegmentSchemaCache segmentSchemaCache;
   private final SegmentSchemaBackFillQueue segmentSchemaBackfillQueue;
   private final SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private final Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
   private volatile SegmentReplicationStatus segmentReplicationStatus = null;
 
   // Datasource schema built from only cold segments.
@@ -139,8 +140,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     this.segmentSchemaCache = segmentSchemaCache;
     this.segmentSchemaBackfillQueue = segmentSchemaBackfillQueue;
     this.sqlSegmentsMetadataManager = sqlSegmentsMetadataManager;
-    this.coldSchemaExecPeriodMillis =
-        segmentsMetadataManagerConfigSupplier.get().getPollDuration().getMillis() * COLD_SCHEMA_PERIOD_MULTIPLIER;
+    this.segmentsMetadataManagerConfigSupplier = segmentsMetadataManagerConfigSupplier;
+    this.coldSchemaExecPeriodMillis = getColdSchemaExecPeriodMillis();
+
     coldSchemaExec = Executors.newSingleThreadScheduledExecutor(
         new ThreadFactoryBuilder()
             .setNameFormat("DruidColdSchema-ScheduledExecutor-%d")
@@ -149,6 +151,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     );
 
     initServerViewTimelineCallback(serverView);
+  }
+
+  long getColdSchemaExecPeriodMillis()
+  {
+    return segmentsMetadataManagerConfigSupplier.get().getPollDuration().getMillis() * COLD_SCHEMA_PERIOD_MULTIPLIER;
   }
 
   private void initServerViewTimelineCallback(final CoordinatorServerView serverView)
@@ -232,8 +239,9 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     try {
       segmentSchemaBackfillQueue.onLeaderStart();
       cacheExecFuture = cacheExec.submit(this::cacheExecLoop);
-      coldSchemaExecFuture = coldSchemaExec.schedule(
+      coldSchemaExecFuture = coldSchemaExec.scheduleAtFixedRate(
           this::coldDatasourceSchemaExec,
+          0,
           coldSchemaExecPeriodMillis,
           TimeUnit.MILLISECONDS
       );

@@ -2160,6 +2160,45 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals(Collections.singleton("beta"), schema.getDataSourceInformationMap().keySet());
   }
 
+  @Test
+  public void testColdDatasourceSchemaExecRunsPeriodically() throws InterruptedException
+  {
+    // Make sure the thread runs more than once
+    CountDownLatch latch = new CountDownLatch(2);
+
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        segmentSchemaCache,
+        backFillQueue,
+        sqlSegmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    ) {
+      @Override
+      long getColdSchemaExecPeriodMillis()
+      {
+        return 10;
+      }
+
+      @Override
+      protected void coldDatasourceSchemaExec()
+      {
+        latch.countDown();
+        super.coldDatasourceSchemaExec();
+      }
+    };
+
+    schema.onLeaderStart();
+    schema.awaitInitialization();
+
+    latch.await(1, TimeUnit.SECONDS);
+    Assert.assertEquals(0, latch.getCount());
+  }
+
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
   {
     final DataSourceInformation fooDs = schema.getDatasource("foo");
