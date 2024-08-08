@@ -71,6 +71,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("bytesToLoad", "segment/loadQueue/size");
     public static final CoordinatorStat NUM_TO_DROP
         = CoordinatorStat.toDebugAndEmit("numToDrop", "segment/dropQueue/count");
+    public static final CoordinatorStat LOAD_RATE_KBPS
+        = CoordinatorStat.toDebugAndEmit("loadRateKbps", "segment/loading/rateKbps");
 
     public static final CoordinatorStat ASSIGNED_ACTIONS
         = CoordinatorStat.toDebugAndEmit("assignedActions", "segment/loadQueue/assigned");

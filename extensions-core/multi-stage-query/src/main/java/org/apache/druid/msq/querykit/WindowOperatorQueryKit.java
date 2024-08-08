@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
@@ -88,17 +87,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     List<List<OperatorFactory>> operatorList = getOperatorListFromQuery(originalQuery);
     log.info("Created operatorList with operator factories: [%s]", operatorList);
 
-    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
-    // add this shuffle spec to the last stage of the inner query
-
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
-    if (nextShuffleSpec != null) {
-      final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
-      originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
-          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL,
-          windowClusterBy
-      ));
-    }
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
         queryKit,
         queryId,
@@ -112,7 +100,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         false
     );
 
-    dataSourcePlan.getSubQueryDefBuilder().ifPresent(queryDefBuilder::addAll);
+    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
+    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryId, dataSourcePlan, nextShuffleSpec);
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
@@ -309,10 +298,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
     }
 
-    if (partition == null || partition.getPartitionColumns().isEmpty()) {
+    if (partition == null) {
       // If operatorFactories doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
       // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
       return null;
+    }
+
+    if (partition.getPartitionColumns().isEmpty()) {
+      return MixShuffleSpec.instance();
     }
 
     List<KeyColumn> keyColsOfWindow = new ArrayList<>();
@@ -327,5 +320,30 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     }
 
     return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), maxWorkerCount);
+  }
+
+  /**
+   * Override the shuffle spec of the last stage based on the shuffling required by the first window stage.
+   * @param queryId
+   * @param dataSourcePlan
+   * @param shuffleSpec
+   * @return
+   */
+  private QueryDefinitionBuilder makeQueryDefinitionBuilder(String queryId, DataSourcePlan dataSourcePlan, ShuffleSpec shuffleSpec)
+  {
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
+    for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
+      if (stageDef.getStageNumber() == previousStageNumber) {
+        RowSignature rowSignature = QueryKitUtils.sortableSignature(
+            stageDef.getSignature(),
+            shuffleSpec.clusterBy().getColumns()
+        );
+        queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(shuffleSpec).signature(rowSignature));
+      } else {
+        queryDefBuilder.add(StageDefinition.builder(stageDef));
+      }
+    }
+    return queryDefBuilder;
   }
 }

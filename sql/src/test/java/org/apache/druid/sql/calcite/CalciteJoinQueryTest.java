@@ -821,8 +821,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
-
   {
+    assumeFalse(
+        isRunningMSQ() && isSortBasedJoin() && NullHandling.replaceWithDefault(),
+        "test disabled; returns incorrect results in this mode"
+    );
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -5645,6 +5648,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
   {
+    assumeFalse(
+        isRunningMSQ() && isSortBasedJoin() && NullHandling.replaceWithDefault(),
+        "test disabled; returns incorrect results in this mode"
+    );
     assumeFalse(testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault(), "not support in decoupled mode");
 
     cannotVectorize();

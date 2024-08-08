@@ -17,10 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.semantic;
+package org.apache.druid.common.semantic;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.rowsandcols.SemanticCreator;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -80,7 +79,7 @@ public class SemanticCreatorUsageTest
 
   /**
    * {@link SemanticCreator} must return with an interface.
-   *
+   * <p>
    * An exact implementation may indicate that some interface methods might be missing.
    */
   @Test
@@ -95,7 +94,7 @@ public class SemanticCreatorUsageTest
 
   /**
    * {@link SemanticCreator} method names must follow the naming pattern toReturnType().
-   *
+   * <p>
    * For example: a method returning with a type of Ball should be named as "toBall"
    */
   @Test

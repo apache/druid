@@ -104,7 +104,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String PROPERTY_SQL_ENABLE = "druid.router.sql.enable";
   private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
 
-  private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
+  private static final long CANCELLATION_TIMEOUT_MILLIS = TimeUnit.SECONDS.toMillis(5);
 
   private final AtomicLong successfulQueryCount = new AtomicLong();
   private final AtomicLong failedQueryCount = new AtomicLong();

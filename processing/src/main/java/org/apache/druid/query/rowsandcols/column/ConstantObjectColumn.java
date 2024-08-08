@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -55,7 +55,13 @@ public class ConstantObjectColumn implements Column
     if (VectorCopier.class.equals(clazz)) {
       return (T) (VectorCopier) (into, intoStart) -> {
         if (Integer.MAX_VALUE - numRows < intoStart) {
-          throw new ISE("too many rows!!! intoStart[%,d], numRows[%,d] combine to exceed max_int", intoStart, numRows);
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                              .build(
+                                  "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
+                                  intoStart,
+                                  numRows
+                              );
         }
         Arrays.fill(into, intoStart, intoStart + numRows, obj);
       };

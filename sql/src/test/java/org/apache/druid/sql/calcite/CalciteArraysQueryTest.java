@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -70,7 +68,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.apache.druid.sql.calcite.CalciteArraysQueryTest.ArraysComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -86,7 +83,7 @@ import java.util.Map;
 /**
  * Tests for array functions and array types
  */
-@SqlTestFrameworkConfig.ComponentSupplier(ArraysComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(StandardComponentSupplier.class)
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =
@@ -116,21 +113,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
       }
     } else {
       Assert.assertEquals(path, expected, actual);
-    }
-  }
-
-  protected static class ArraysComponentSupplier extends StandardComponentSupplier
-  {
-    public ArraysComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModule(new NestedDataModule());
     }
   }
 

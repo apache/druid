@@ -230,7 +230,7 @@ public class MSQArraysTest extends MSQTestBase
         .setQueryContext(adjustedContext)
         .setExpectedDataSource("foo")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
             NullHandling.sqlCompatible()
             ? ImmutableList.of(
@@ -278,7 +278,7 @@ public class MSQArraysTest extends MSQTestBase
         .setQueryContext(adjustedContext)
         .setExpectedDataSource("foo")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{0L, null},
@@ -325,7 +325,7 @@ public class MSQArraysTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedRows)
                      .verifyResults();
   }
