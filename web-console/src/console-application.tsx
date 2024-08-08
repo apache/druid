@@ -68,7 +68,7 @@ function switchTab(tab: HeaderActiveTab) {
   location.hash = tab;
 }
 
-function switchWorkspeaceTab(tabId: string) {
+function switchToWorkbenchTab(tabId: string) {
   location.hash = `workbench/${tabId}`;
 }
 
@@ -320,7 +320,7 @@ export class ConsoleApplication extends React.PureComponent<
       <WorkbenchView
         capabilities={capabilities}
         tabId={p.match.params.tabId}
-        onTabChange={switchWorkspeaceTab}
+        onTabChange={switchToWorkbenchTab}
         initQueryWithContext={this.queryWithContext}
         defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
