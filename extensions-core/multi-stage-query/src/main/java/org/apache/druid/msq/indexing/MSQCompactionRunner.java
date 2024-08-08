@@ -81,6 +81,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MSQCompactionRunner implements CompactionRunner
@@ -237,7 +238,11 @@ public class MSQCompactionRunner implements CompactionRunner
         dataSchema.getDataSource(),
         dataSchema.getGranularitySpec().getSegmentGranularity(),
         null,
-        ImmutableList.of(replaceInterval)
+        ImmutableList.of(replaceInterval),
+        dataSchema.getDimensionsSpec()
+                  .getDimensions()
+                  .stream()
+                  .collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
     );
   }
 
