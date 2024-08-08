@@ -326,9 +326,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
    */
   private void runAllOpsOnMultipleRac(ArrayList<RowsAndColumns> listOfRacs)
   {
-    if (listOfRacs.isEmpty()) {
-      return;
-    }
     Operator op = new Operator()
     {
       @Nullable

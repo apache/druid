@@ -19,6 +19,9 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.util.ArrayList;
 import java.util.function.Function;
 
@@ -42,4 +45,11 @@ public class ConcatRowsAndColumnsTest extends RowsAndColumnsTestBase
 
     return new ConcatRowsAndColumns(theRac);
   };
+
+  @Test
+  public void testFindColumnWithEmptyRacBuffer()
+  {
+    ConcatRowsAndColumns concatRowsAndColumns = new ConcatRowsAndColumns(new ArrayList<>());
+    Assert.assertNull(concatRowsAndColumns.findColumn("columnName"));
+  }
 }

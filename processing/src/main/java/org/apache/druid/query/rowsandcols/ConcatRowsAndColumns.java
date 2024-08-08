@@ -92,6 +92,9 @@ public class ConcatRowsAndColumns implements RowsAndColumns
     if (columnCache.containsKey(name)) {
       return columnCache.get(name);
     } else {
+      if (racBuffer.isEmpty()) {
+        return null;
+      }
       final Column firstCol = racBuffer.get(0).findColumn(name);
       if (firstCol == null) {
         for (int i = 1; i < racBuffer.size(); ++i) {
