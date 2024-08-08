@@ -28,6 +28,8 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class LongsColumn implements NumericColumn
@@ -73,6 +75,13 @@ public class LongsColumn implements NumericColumn
   public long getLongSingleValueRow(int rowNum)
   {
     return column.get(rowNum);
+  }
+
+  @Override
+  @Nullable
+  public <T> T as(Class<? extends T> clazz)
+  {
+    return column.as(clazz);
   }
 
   @Override

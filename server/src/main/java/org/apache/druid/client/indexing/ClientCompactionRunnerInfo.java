@@ -32,6 +32,7 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -102,9 +103,8 @@ public class ClientCompactionRunnerInfo
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
-   * <li>queryGranularity set to ALL in granularitySpec.</li>
-   * <li>Each metric has output column name same as the input name.</li>
+   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's empty.</li>
+   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
@@ -120,6 +120,7 @@ public class ClientCompactionRunnerInfo
       ));
     }
     validationResults.add(validateMaxNumTasksForMSQ(newConfig.getTaskContext()));
+    validationResults.add(validateMetricsSpecForMSQ(newConfig.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -149,16 +150,22 @@ public class ClientCompactionRunnerInfo
   }
 
   /**
-   * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
+   * Validate rollup in granularitySpec is set to true when metricsSpec is specified and false if it's null.
+   * If rollup set to null, all existing segments are analyzed, and it's set to true iff all segments have rollup
+   * set to true.
    */
   public static CompactionConfigValidationResult validateRollupForMSQ(
       AggregatorFactory[] metricsSpec,
       @Nullable Boolean isRollup
   )
   {
-    if (metricsSpec != null && isRollup != null && !isRollup) {
+    if (metricsSpec != null && metricsSpec.length != 0 && isRollup != null && !isRollup) {
       return CompactionConfigValidationResult.failure(
           "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified"
+      );
+    } else if ((metricsSpec == null || metricsSpec.length == 0) && isRollup != null && isRollup) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null"
       );
     }
     return CompactionConfigValidationResult.success();
@@ -180,5 +187,24 @@ public class ClientCompactionRunnerInfo
       }
     }
     return CompactionConfigValidationResult.success();
+  }
+
+  /**
+   * Validate each metric is idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A = A.combiningFactory()'.
+   */
+  public static CompactionConfigValidationResult validateMetricsSpecForMSQ(AggregatorFactory[] metricsSpec)
+  {
+    if (metricsSpec == null) {
+      return CompactionConfigValidationResult.success();
+    }
+    return Arrays.stream(metricsSpec)
+                 .filter(aggregatorFactory -> !aggregatorFactory.equals(aggregatorFactory.getCombiningFactory()))
+                 .findFirst()
+                 .map(aggregatorFactory ->
+                          CompactionConfigValidationResult.failure(
+                              "MSQ: Non-idempotent aggregator[%s] not supported in 'metricsSpec'.",
+                              aggregatorFactory.getName()
+                          )
+                 ).orElse(CompactionConfigValidationResult.success());
   }
 }

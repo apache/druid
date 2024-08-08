@@ -65,6 +65,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     if (line.startsWith("nativePlan")) {
       return new NativePlanCommand(lines, content);
     }
+    if (line.startsWith("msqPlan")) {
+      return new MSQPlanCommand(lines, content);
+    }
     return null;
   }
 
@@ -115,6 +118,11 @@ public class DruidQuidemCommandHandler implements CommandHandler
       catch (Exception e) {
         throw new RuntimeException(e);
       }
+    }
+
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+    {
+      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
     }
 
     protected abstract void executeExplain(Context x) throws Exception;
@@ -186,10 +194,33 @@ public class DruidQuidemCommandHandler implements CommandHandler
         x.echo(ImmutableList.of(str));
       }
     }
+  }
 
-    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+  /**
+   * Handles plan commands captured via {@link Hook}.
+   */
+  abstract static class AbstractStringCaptureCommand extends AbstractPlanCommand
+  {
+    HookKey<String> hook;
+
+    AbstractStringCaptureCommand(List<String> lines, List<String> content, DruidHook.HookKey<String> hook)
     {
-      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
+      super(lines, content);
+      this.hook = hook;
+    }
+
+    @Override
+    protected final void executeExplain(Context x) throws IOException
+    {
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
+      List<String> logged = new ArrayList<>();
+      try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
+        logged.add(relNode);
+      })) {
+        executeQuery(x);
+      }
+
+      x.echo(logged);
     }
   }
 
@@ -214,6 +245,13 @@ public class DruidQuidemCommandHandler implements CommandHandler
     ConvertedPlanCommand(List<String> lines, List<String> content)
     {
       super(lines, content, DruidHook.CONVERTED_PLAN);
+    }
+  }
+  static class MSQPlanCommand extends AbstractStringCaptureCommand
+  {
+    MSQPlanCommand(List<String> lines, List<String> content)
+    {
+      super(lines, content, DruidHook.MSQ_PLAN);
     }
   }
 }

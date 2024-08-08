@@ -202,7 +202,7 @@ public class CoordinatorCompactionConfigsResourceTest
         .withInputSegmentSizeBytes(1000L)
         .withSkipOffsetFromLatest(Period.hours(3))
         .withGranularitySpec(
-            new UserCompactionTaskGranularityConfig(Granularities.DAY, null, true)
+            new UserCompactionTaskGranularityConfig(Granularities.DAY, null, false)
         )
         .withEngine(CompactionEngine.MSQ)
         .build();

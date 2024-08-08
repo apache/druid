@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.nio.channels.Channels;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -289,6 +290,11 @@ public class CompressedColumnarIntsSupplierTest extends CompressionStrategyTest
       Assert.assertEquals(vals[i], columnarInts.get(i), 0.0);
       indices[i] = i;
     }
+
+    int[] offsetValues = new int[columnarInts.size() + 1];
+    columnarInts.get(offsetValues, 1, 0, columnarInts.size());
+    Assert.assertEquals(0, offsetValues[0]);
+    Assert.assertArrayEquals(vals, Arrays.copyOfRange(offsetValues, 1, offsetValues.length));
 
     // random access, limited to 1000 elements for large lists (every element would take too long)
     IntArrays.shuffle(indices, ThreadLocalRandom.current());
