@@ -1359,6 +1359,73 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
+### Update supervisor task count
+
+Updates the current task count for a single supervisor.
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/updateTaskCount`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="14" label="200 SUCCESS">
+
+
+*Successfully updated supervisor task count*
+
+</TabItem>
+<TabItem value="15" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example shows how to update task count of a supervisor with the name `social_media`.
+
+<Tabs>
+
+<TabItem value="16" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/updateTaskCount"
+--header 'Content-Type: application/json'
+--data-raw '{"taskCount": 3}'
+```
+
+</TabItem>
+<TabItem value="17" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/supervisor/social_media/updateTaskCount HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+  {
+      "id": "social_media"
+  }
+  ```
+</details>
+
 ### Get supervisor ingestion stats
 
 Returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters. See [Row stats](../ingestion/tasks.md#row-stats) for more information.

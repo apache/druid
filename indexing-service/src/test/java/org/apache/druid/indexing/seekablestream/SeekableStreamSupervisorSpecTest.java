@@ -1246,6 +1246,62 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     Assert.assertEquals("value", spec.getContextValue("key"));
   }
 
+  @Test
+  public void testSetTaskCount()
+  {
+    int newCount = 5;
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.replay(ingestionSchema);
+    spec = new SeekableStreamSupervisorSpec(
+        ingestionSchema,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        supervisorStateManagerConfig
+    )
+    {
+      @Override
+      public Supervisor createSupervisor()
+      {
+        return null;
+      }
+
+      @Override
+      protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+      {
+        return null;
+      }
+
+      @Override
+      public String getType()
+      {
+        return null;
+      }
+
+      @Override
+      public String getSource()
+      {
+        return null;
+      }
+    };
+
+
+    seekableStreamSupervisorIOConfig.setTaskCount(newCount);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(seekableStreamSupervisorIOConfig);
+
+    spec.updateTaskCount(newCount);
+    EasyMock.verify(seekableStreamSupervisorIOConfig);
+  }
+
   private void mockIngestionSchema()
   {
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();

@@ -204,4 +204,10 @@ public abstract class SeekableStreamSupervisorSpec implements SupervisorSpec
 
   protected abstract SeekableStreamSupervisorSpec toggleSuspend(boolean suspend);
 
+  @Override
+  public void updateTaskCount(int taskCount)
+  {
+    SeekableStreamSupervisorIOConfig config = this.getIoConfig();
+    config.setTaskCount(taskCount);
+  }
 }
