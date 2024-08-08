@@ -1946,7 +1946,7 @@ public class ControllerImpl implements Controller
     final boolean useExplicitSegmentSortOrder =
         MultiStageQueryContext.isUseExplicitSegmentSortOrder(querySpec.getQuery().context());
 
-    final Pair<List<DimensionSchema>, List<AggregatorFactory>> dimensionsAndAggregators =
+    final Pair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
             querySignature,
             queryClusterBy,
@@ -1960,10 +1960,7 @@ public class ControllerImpl implements Controller
     return new DataSchema(
         destination.getDataSource(),
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
-        DimensionsSpec.builder()
-                      .setDimensions(dimensionsAndAggregators.lhs)
-                      .setUseExplicitSegmentSortOrder(useExplicitSegmentSortOrder)
-                      .build(),
+        dimensionsAndAggregators.lhs,
         dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]),
         makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper),
         new TransformSpec(null, Collections.emptyList())
@@ -2149,7 +2146,7 @@ public class ControllerImpl implements Controller
     return new StringTuple(array);
   }
 
-  private static Pair<List<DimensionSchema>, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
+  private static Pair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
       final List<String> contextSegmentSortOrder,
@@ -2273,12 +2270,17 @@ public class ControllerImpl implements Controller
       }
     }
 
+    final DimensionsSpec.Builder dimensionsSpecBuilder = DimensionsSpec.builder();
+
     if (!dimensions.isEmpty() && dimensions.get(0).getName().equals(ColumnHolder.TIME_COLUMN_NAME)) {
       // Skip __time if it's in the first position, for compatibility with legacy dimensionSpecs.
       dimensions.remove(0);
+      dimensionsSpecBuilder.setUseExplicitSegmentSortOrder(false);
+    } else {
+      dimensionsSpecBuilder.setUseExplicitSegmentSortOrder(useExplicitSegmentSortOrder);
     }
 
-    return Pair.of(dimensions, aggregators);
+    return Pair.of(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
   }
 
   /**

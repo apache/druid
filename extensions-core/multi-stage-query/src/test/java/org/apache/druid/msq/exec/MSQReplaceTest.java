@@ -500,7 +500,7 @@ public class MSQReplaceTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByTimeThenDimExplicitSort(String contextName, Map<String, Object> context)
   {
-    // Tests [CLUSTERED BY dim1] with useExplicitSegmentSortOrder = true.
+    // Tests [CLUSTERED BY __time, dim1] with useExplicitSegmentSortOrder = true.
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -568,14 +568,10 @@ public class MSQReplaceTest extends MSQTestBase
                              Collections.emptyList(),
                              // For backwards-compatibility, compaction state is stored as if
                              // useExplicitSegmentSortOrder = false.
-                             DimensionsSpec.builder()
-                                           .setDimensions(
-                                               ImmutableList.of(
-                                                   new StringDimensionSchema("dim1"),
-                                                   new FloatDimensionSchema("m1")
-                                               )
-                                           )
-                                           .build(),
+                             ImmutableList.of(
+                                 new StringDimensionSchema("dim1"),
+                                 new FloatDimensionSchema("m1")
+                             ),
                              GranularityType.ALL,
                              Intervals.ETERNITY
                          )

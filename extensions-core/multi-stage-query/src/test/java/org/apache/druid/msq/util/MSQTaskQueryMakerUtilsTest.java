@@ -21,6 +21,7 @@ package org.apache.druid.msq.util;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -36,18 +37,14 @@ public class MSQTaskQueryMakerUtilsTest
     MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("__time"), ImmutableSet.of("__time", "a", "b"));
     MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("__time", "b"), ImmutableSet.of("__time", "a", "b"));
     MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("b"), ImmutableSet.of("a", "b"));
+    MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("b", "__time"), ImmutableSet.of("__time", "a", "b"));
 
     // These are not OK.
     Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("c"), ImmutableSet.of("a", "b"))
-    );
-
-    Assert.assertThrows(
-        IllegalArgumentException.class,
+        DruidException.class,
         () -> MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
-            ImmutableList.of("b", "__time"),
-            ImmutableSet.of("__time", "a", "b")
+            ImmutableList.of("c"),
+            ImmutableSet.of("a", "b")
         )
     );
   }
