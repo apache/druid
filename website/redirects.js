@@ -21,6 +21,10 @@
 
 const Redirects=[
   {
+    "from": "/docs/latest/tutorials/tutorial-transform-spec",
+    "to": "/docs/latest/tutorials/tutorial-transform"
+  },
+  {
     "from": "/docs/latest/development/extensions-core/kafka-extraction-namespace/",
     "to": "/docs/latest/querying/kafka-extraction-namespace"
   },
