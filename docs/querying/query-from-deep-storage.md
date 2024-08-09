@@ -28,13 +28,20 @@ Druid can query segments that are only stored in deep storage. Running a query f
 
 Query from deep storage requires the Multi-stage query (MSQ) task engine. Load the extension for it if you don't already have it enabled before you begin. See [enable MSQ](../multi-stage-query/index.md#load-the-extension) for more information.
 
+To be queryable, your datasource must meet one of the following conditions:
+
+- At least one segment from the datasource is loaded onto a Historical service for Druid to plan the query. This segment can be any segment from the datasource. You can verify that a datasource has at least one segment on a Historical service if it's visible in the Druid console.
+- You have the centralized data source schema feature enabled. For more information, see [Centralized datasource schema](../configuration/index.md#centralized-datasource-schema).
+
+If you use centralized data source schemas, there's an additional step for any datasource created prior to enabling it to make the datasource queryable from deep storage. You need to load the cold segments onto a Historical so that the schema can be backfilled in the metadata database by changing your load rules. You can load some or all of the segments that are only in deep storage. Once that process is complete, you can unload all the segments from the Historical and only keep the data in deep storage.
+
 ## Keep segments in deep storage only
 
-Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes.
+Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes. If you use centralized data source schemas, a datasource can be kept only in deep storage but remain queryable.
 
-To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to manage the which segments are only in deep storage and which get loaded onto Historical processes.
+To manage the which segments are kept only in deep storage and which get loaded onto Historical processes., configure [load rules](../operations/rule-configuration.md#load-rules) 
 
-The easiest way to do this is to explicitly configure the segments that don't get loaded onto Historical processes. Set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`. For example, if you configure the following rule for a datasource:
+The easiest way to keep segments only in deep storage is to explicitly configure the segments that don't get loaded onto Historical processes. Set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`. For example, if you configure the following rule for a datasource:
 
 ```json
 [
@@ -64,12 +71,7 @@ Segments with a `replication_factor` of `0` are not assigned to any Historical t
 
 You can also confirm this through the Druid console. On the **Segments** page, see the **Replication factor** column.
 
-Keep the following in mind when working with load rules to control what exists only in deep storage:
-
-- To be queryable, your datasource must meet one of the following conditions:
-  - At least one segment from the datasource is loaded onto a Historical service for Druid to plan the query. This segment can be any segment from the datasource. You can verify that a datasource has at least one segment on a Historical service if it's visible in the Druid console.
-  - You have the centralized data source schema feature enabled. For more information, see [Centralized datasource schema](../configuration/index.md#centralized-datasource-schema).
-- The actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
+Note that the actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
 
 ## Run a query from deep storage
 
