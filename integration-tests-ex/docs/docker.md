@@ -317,6 +317,7 @@ druid-lookups-cached-global
 druid-lookups-cached-single
 druid-orc-extensions
 druid-pac4j
+druid-pac4j-v5
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
