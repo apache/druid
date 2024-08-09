@@ -309,6 +309,7 @@ public class WorkerTaskCountStatsMonitorTest
             89L
     );
   }
+
   @Test
   public void testMonitorWithNulls()
   {
@@ -318,8 +319,9 @@ public class WorkerTaskCountStatsMonitorTest
     monitor.doMonitor(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());
   }
+
   @Test
-  public void testMonitorNotMiddleManager()
+  public void testMonitorWithPeon()
   {
     final WorkerTaskCountStatsMonitor monitor =
             new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
