@@ -290,7 +290,7 @@ public class TopNQueryTest extends InitializedNullHandlingTest
         .threshold(100)
         .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = TopNQueryEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
     Assert.assertEquals(ImmutableList.of("v"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
@@ -316,7 +316,7 @@ public class TopNQueryTest extends InitializedNullHandlingTest
         .threshold(100)
         .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = TopNQueryEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
     Assert.assertEquals(
         ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "v"),

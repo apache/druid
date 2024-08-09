@@ -35,8 +35,8 @@ import javax.annotation.Nullable;
  * @see StorageAdapter
  *
  * @deprecated This interface is deprecated and no longer implemented by any built-in {@link StorageAdapter}. Callers
- * should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead. Implementors should implement
- * {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead.
+ * should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead. Implementors should implement
+ * {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead.
  */
 @Deprecated
 public interface CursorFactory
@@ -47,9 +47,9 @@ public interface CursorFactory
    * Query engines should use this before running in vectorized mode, and be prepared to fall back to non-vectorized
    * mode if this method returns false.
    *
-   * @deprecated Callers should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} and call
+   * @deprecated Callers should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} and call
    * {@link CursorHolder#canVectorize()}.
-   * Implementors should implement {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead.  This method is
+   * Implementors should implement {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead.  This method is
    * no longer implemented by any built-in factories.
    */
   @Deprecated
@@ -60,16 +60,16 @@ public interface CursorFactory
   )
   {
     throw DruidException.defensive(
-        "CursorFactory.canVectorize is no longer supported, use CursorMakerFactory.makeCursorHolder instead"
+        "CursorFactory.canVectorize is no longer supported, use CursorHolderFactory.makeCursorHolder instead"
     );
   }
 
   /**
    * Creates a sequence of Cursors, one for each time-granular bucket (based on the provided Granularity).
    *
-   * @deprecated Callers should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} and call
+   * @deprecated Callers should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} and call
    * {@link CursorHolder#asCursor()}.
-   * Implementors should implement {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead.
+   * Implementors should implement {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead.
    * This method is no longer implemented by any built-in factories.
    */
   @Deprecated
@@ -83,7 +83,7 @@ public interface CursorFactory
   )
   {
     throw DruidException.defensive(
-        "CursorFactory.makeCursors is no longer supported, use CursorMakerFactory.makeCursorHolder instead"
+        "CursorFactory.makeCursors is no longer supported, use CursorHolderFactory.makeCursorHolder instead"
     );
   }
 
@@ -95,9 +95,9 @@ public interface CursorFactory
    * Returns null if there is no data to walk over (for example, if the "interval" does not overlap the data interval
    * of this segment).
    *
-   * @deprecated Callers should use {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} and call
+   * @deprecated Callers should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} and call
    * {@link CursorHolder#asVectorCursor()}. Implementors should implement
-   * {@link CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} instead. This method is no longer implemented by any
+   * {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead. This method is no longer implemented by any
    * built-in factories.
    */
   @Deprecated
@@ -112,7 +112,7 @@ public interface CursorFactory
   )
   {
     throw DruidException.defensive(
-        "CursorFactory.makeVectorCursor is no longer supported, use CursorMakerFactory.makeCursorHolder instead"
+        "CursorFactory.makeVectorCursor is no longer supported, use CursorHolderFactory.makeCursorHolder instead"
     );
   }
 }

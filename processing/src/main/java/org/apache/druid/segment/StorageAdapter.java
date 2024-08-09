@@ -35,7 +35,7 @@ import java.util.Optional;
 /**
  */
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorMakerFactory
+public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHolderFactory
 {
 
   /**

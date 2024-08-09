@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.scan;
+package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

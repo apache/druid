@@ -19,23 +19,17 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.scan.Order;
-import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class CursorBuildSpec
@@ -89,55 +83,100 @@ public class CursorBuildSpec
     this.queryMetrics = queryMetrics;
   }
 
+  /**
+   * {@link Filter} to supply to the {@link CursorHolder}. Only rows which match will be available through the
+   * selectors created from the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor}
+   */
   @Nullable
   public Filter getFilter()
   {
     return filter;
   }
 
+  /**
+   * {@link Interval} filter to supply to the {@link CursorHolder}. Only rows whose timestamps fall within this range
+   * will be available through the selectors created from the {@link Cursor} or
+   * {@link org.apache.druid.segment.vector.VectorCursor}
+   */
   public Interval getInterval()
   {
     return interval;
   }
 
+  /**
+   * Any columns which will be used for grouping by a query engine for the {@link CursorHolder}, useful for
+   * specializing the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated
+   * data is available.
+   */
   @Nullable
   public List<String> getGroupingColumns()
   {
     return groupingColumns;
   }
 
+  /**
+   * Any {@link VirtualColumns} which are used by a query engine to assist in
+   * determining if {@link CursorHolder#canVectorize()}
+   */
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
   }
 
+  /**
+   * Any {@link AggregatorFactory} which will be used by a query engine for the {@link CursorHolder}, useful
+   * to assist in determining if {@link CursorHolder#canVectorize()}, as well as specializing the {@link Cursor} or
+   * {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated data is available.
+   */
   @Nullable
   public List<AggregatorFactory> getAggregators()
   {
     return aggregators;
   }
 
+  /**
+   * List of all {@link OrderBy} columns which a query engine will use to sort its results to supply to the
+   * {@link CursorHolder}, which can allow optimization of the provided {@link Cursor} or
+   * {@link org.apache.druid.segment.vector.VectorCursor} if data matching the preferred ordering is available.
+   * <p>
+   * If not specified, the cursor will advance in the native order of the underlying data.
+   */
   @Nullable
   public List<OrderBy> getPreferredOrdering()
   {
     return orderByColumns;
   }
 
+  /**
+   * {@link QueryContext} for the {@link CursorHolder} to provide a mechanism to push various data into
+   * {@link Cursor} and {@link org.apache.druid.segment.vector.VectorCursor} such as
+   * {@link org.apache.druid.query.QueryContexts#VECTORIZE_KEY} and
+   * {@link org.apache.druid.query.QueryContexts#VECTOR_SIZE_KEY}
+   */
   public QueryContext getQueryContext()
   {
     return queryContext;
   }
 
+  /**
+   * {@link QueryMetrics} to use for measuring things involved with {@link Cursor} and
+   * {@link org.apache.druid.segment.vector.VectorCursor} creation.
+   */
   @Nullable
   public QueryMetrics<?> getQueryMetrics()
   {
     return queryMetrics;
   }
 
+  /**
+   * Check if the first {@link OrderBy} column of {@link CursorBuildSpec#getPreferredOrdering()} is
+   * {@link Order#DESCENDING}, which allow {@link Cursor} on time ordered data to advance in descending order if
+   * possible.
+   */
   public static boolean preferDescendingTimeOrder(@Nullable List<OrderBy> preferredOrdering)
   {
-    if (preferredOrdering != null && preferredOrdering.size() == 1) {
-      final OrderBy orderBy = Iterables.getOnlyElement(preferredOrdering);
+    if (preferredOrdering != null && !preferredOrdering.isEmpty()) {
+      final OrderBy orderBy = preferredOrdering.get(0);
       return ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()) && Order.DESCENDING == orderBy.getOrder();
     }
     return false;
@@ -178,69 +217,74 @@ public class CursorBuildSpec
       this.queryMetrics = buildSpec.queryMetrics;
     }
 
+    /**
+     * @see CursorBuildSpec#getFilter()
+     */
     public CursorBuildSpecBuilder setFilter(@Nullable Filter filter)
     {
       this.filter = filter;
       return this;
     }
 
+    /**
+     * @see CursorBuildSpec#getInterval()
+     */
     public CursorBuildSpecBuilder setInterval(Interval interval)
     {
       this.interval = interval;
       return this;
     }
 
-    public CursorBuildSpecBuilder setGroupingAndVirtualColumns(
-        Granularity granularity,
-        @Nullable List<String> groupingColumns,
-        VirtualColumns virtualColumns
+    /**
+     * @see CursorBuildSpec#getGroupingColumns()
+     */
+    public CursorBuildSpecBuilder setGroupingColumns(
+        @Nullable List<String> groupingColumns
     )
     {
-      final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(granularity);
-      if (granularityVirtual == null) {
-        this.virtualColumns = virtualColumns;
-        this.groupingColumns = groupingColumns;
-      } else {
-        this.virtualColumns = VirtualColumns.fromIterable(
-            Iterables.concat(
-                Collections.singletonList(granularityVirtual),
-                () -> Arrays.stream(virtualColumns.getVirtualColumns()).iterator()
-            )
-        );
-        ImmutableList.Builder<String> bob = ImmutableList.<String>builder()
-                                                         .add(granularityVirtual.getOutputName());
-        if (groupingColumns != null) {
-          bob.addAll(groupingColumns);
-        }
-        this.groupingColumns = bob.build();
-      }
+      this.groupingColumns = groupingColumns;
       return this;
     }
 
+    /**
+     * @see CursorBuildSpec#getVirtualColumns()
+     */
     public CursorBuildSpecBuilder setVirtualColumns(VirtualColumns virtualColumns)
     {
       this.virtualColumns = virtualColumns;
       return this;
     }
 
+    /**
+     * @see CursorBuildSpec#getAggregators()
+     */
     public CursorBuildSpecBuilder setAggregators(@Nullable List<AggregatorFactory> aggregators)
     {
       this.aggregators = aggregators;
       return this;
     }
 
+    /**
+     * @see CursorBuildSpec#getPreferredOrdering()
+     */
     public CursorBuildSpecBuilder setPreferredOrdering(@Nullable List<OrderBy> orderBy)
     {
       this.preferredOrdering = orderBy;
       return this;
     }
 
+    /**
+     * @see CursorBuildSpec#getQueryContext()
+     */
     public CursorBuildSpecBuilder setQueryContext(QueryContext queryContext)
     {
       this.queryContext = queryContext;
       return this;
     }
 
+    /**
+     * @see CursorBuildSpec#getQueryMetrics()
+     */
     public CursorBuildSpecBuilder setQueryMetrics(@Nullable QueryMetrics<?> queryMetrics)
     {
       this.queryMetrics = queryMetrics;

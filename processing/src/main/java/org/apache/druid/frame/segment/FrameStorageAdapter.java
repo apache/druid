@@ -23,7 +23,7 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.CursorMakerFactory;
+import org.apache.druid.segment.CursorHolderFactory;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
@@ -47,14 +47,14 @@ public class FrameStorageAdapter implements StorageAdapter
   private final Frame frame;
   private final FrameReader frameReader;
   private final Interval interval;
-  private final CursorMakerFactory cursorFactory;
+  private final CursorHolderFactory cursorFactory;
 
   public FrameStorageAdapter(Frame frame, FrameReader frameReader, Interval interval)
   {
     this.frame = frame;
     this.frameReader = frameReader;
     this.interval = interval;
-    this.cursorFactory = frameReader.makeCursorMakerFactory(frame);
+    this.cursorFactory = frameReader.makeCursorHolderFactory(frame);
   }
 
   @Override

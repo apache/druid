@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
@@ -35,7 +36,6 @@ import org.apache.druid.query.extraction.UpperExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
@@ -384,9 +384,9 @@ public class FrameStorageAdapterTest
       try (final CursorHolder queryableMaker = call.apply(queryableAdapter);
            final CursorHolder frameMaker = call.apply(frameAdapter)) {
         final Sequence<List<Object>> queryableRows =
-            FrameTestUtil.readRowsFromCursor(queryableMaker.asCursor(), signature);
+            FrameTestUtil.readRowsFromCursor(advanceAndReset(queryableMaker.asCursor()), signature);
         final Sequence<List<Object>> frameRows =
-            FrameTestUtil.readRowsFromCursor(frameMaker.asCursor(), signature);
+            FrameTestUtil.readRowsFromCursor(advanceAndReset(frameMaker.asCursor()), signature);
         FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
       }
     }
@@ -398,7 +398,7 @@ public class FrameStorageAdapterTest
       if (frameCursorHolder.canVectorize()) {
         final RowSignature signature = frameAdapter.getRowSignature();
         final Sequence<List<Object>> queryableRows =
-            FrameTestUtil.readRowsFromVectorCursor(cursorHolder.asVectorCursor(), signature).withBaggage(cursorHolder);
+            FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(cursorHolder.asVectorCursor()), signature).withBaggage(cursorHolder);
         final Sequence<List<Object>> frameRows =
             FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameCursorHolder.asVectorCursor()), signature)
                          .withBaggage(frameCursorHolder);

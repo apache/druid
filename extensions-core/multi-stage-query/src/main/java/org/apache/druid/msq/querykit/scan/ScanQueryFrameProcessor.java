@@ -59,8 +59,9 @@ import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
-import org.apache.druid.query.scan.Order;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -254,7 +255,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       final CursorHolder cursorHolder = closer.register(
-          adapter.makeCursorHolder(query.asCursorBuildSpec(null))
+          adapter.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
       );
       final Cursor nextCursor = cursorHolder.asCursor();
 
@@ -299,7 +300,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         }
 
         final CursorHolder cursorHolder = closer.register(
-            adapter.makeCursorHolder(query.asCursorBuildSpec(null))
+            adapter.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
         );
         final Cursor nextCursor = cursorHolder.asCursor();
 

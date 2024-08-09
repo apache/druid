@@ -29,12 +29,14 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
@@ -42,6 +44,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -114,7 +117,7 @@ public class ScanQueryEngine
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(query.asCursorBuildSpec(queryMetrics));
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
         {
@@ -235,5 +238,17 @@ public class ScanQueryEngine
       return query.getScanRowsLimit() - (Long) responseContext.getRowScanCount();
     }
     return query.getScanRowsLimit();
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(ScanQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    return CursorBuildSpec.builder()
+                          .setInterval(query.getSingleInterval())
+                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                          .setVirtualColumns(query.getVirtualColumns())
+                          .setPreferredOrdering(query.getOrderBys())
+                          .setQueryContext(query.context())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 }

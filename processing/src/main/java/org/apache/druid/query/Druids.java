@@ -39,8 +39,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.query.scan.Order;
-import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.query.search.FragmentSearchQuerySpec;

@@ -33,7 +33,6 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -48,7 +47,6 @@ import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -64,15 +62,12 @@ import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
-import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -808,24 +803,10 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     );
   }
 
-  @Override
-  public CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
+  @JsonIgnore
+  public List<String> getGroupingColumns()
   {
-    final Interval interval = CollectionUtils.getOnlyElement(
-        getIntervals(),
-        (i) -> DruidException.defensive(
-            "This method can only be called after query is reduced to a single segment interval, got [%s]",
-            i
-        )
-    );
-    return CursorBuildSpec.builder()
-                          .setInterval(interval)
-                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setGroupingAndVirtualColumns(getGranularity(), groupingColumns, virtualColumns)
-                          .setAggregators(getAggregatorSpecs())
-                          .setQueryContext(context())
-                          .setQueryMetrics(queryMetrics)
-                          .build();
+    return groupingColumns;
   }
 
   @Override

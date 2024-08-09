@@ -40,10 +40,8 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -276,22 +274,17 @@ public interface Query<T>
     return null;
   }
 
-  default CursorBuildSpec asCursorBuildSpec(@Nullable QueryMetrics<?> queryMetrics)
+  /**
+   * Returns an interval if {@link #getIntervals()} has only a single interval, else explodes
+   */
+  default Interval getSingleInterval()
   {
-    final Interval interval = CollectionUtils.getOnlyElement(
+    return CollectionUtils.getOnlyElement(
         getIntervals(),
         (i) -> DruidException.defensive(
             "This method can only be called after query is reduced to a single segment interval, got [%s]",
             i
         )
     );
-
-    return CursorBuildSpec.builder()
-                          .setInterval(interval)
-                          .setFilter(Filters.convertToCNFFromQueryContext(this, Filters.toFilter(getFilter())))
-                          .setVirtualColumns(getVirtualColumns())
-                          .setQueryContext(context())
-                          .setQueryMetrics(queryMetrics)
-                          .build();
   }
 }

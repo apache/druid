@@ -662,7 +662,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     List<Segment> segments = segmentsGenerator.apply(tempFolder, closer);
     Supplier<List<Result<TimeseriesResultValue>>> runner =
         () -> helper.runQueryOnSegmentsObjs(segments, timeseriesQuery).toList();
-    final CursorBuildSpec spec = timeseriesQuery.asCursorBuildSpec(null);
+    final CursorBuildSpec spec = TimeseriesQueryEngine.makeCursorBuildSpec(timeseriesQuery, null);
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
                                           s -> {

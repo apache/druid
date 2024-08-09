@@ -20,6 +20,7 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.primitives.Longs;
+import org.apache.druid.query.Order;
 
 import java.util.Comparator;
 

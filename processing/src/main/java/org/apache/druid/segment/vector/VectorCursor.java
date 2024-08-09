@@ -20,10 +20,11 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolderFactory;
 
 /**
  * Vectorized cursor used during query execution. VectorCursors are available from
- * {@link org.apache.druid.segment.CursorMakerFactory#makeCursorHolder(CursorBuildSpec)} via
+ * {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} via
  * {@link org.apache.druid.segment.CursorHolder#asVectorCursor()}.
  *
  * See {@link org.apache.druid.query.vector.VectorCursorGranularizer} for a helper that makes it easier for query

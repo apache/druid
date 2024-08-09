@@ -136,7 +136,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .descending(descending)
               .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertEquals(
@@ -179,7 +179,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .descending(descending)
               .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
     Assert.assertEquals(
         Collections.singletonList(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),

@@ -27,11 +27,14 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
@@ -39,15 +42,22 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -95,7 +105,7 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
 
 
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(query.asCursorBuildSpec(timeseriesQueryMetrics));
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize(), cursorHolder::close)) {
@@ -306,5 +316,44 @@ public class TimeseriesQueryEngine
                         }
                     )
                     .filter(Objects::nonNull);
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(TimeseriesQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    // virtual column is currently only used as a decorator to pass to the cursor holder to allow specializing cursor
+    // and vector cursors if any pre-aggregated data at the matching granularity is available
+    // eventually this could probably be reworked to be used by the granularizer instead of the existing method
+    // of creating a selector on the time column
+    final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(query.getGranularity());
+    VirtualColumns virtualColumns;
+    List<String> groupingColumns;
+    if (granularityVirtual == null) {
+      virtualColumns = query.getVirtualColumns();
+      groupingColumns = null;
+    } else {
+      virtualColumns = VirtualColumns.fromIterable(
+          Iterables.concat(
+              Collections.singletonList(granularityVirtual),
+              () -> Arrays.stream(query.getVirtualColumns().getVirtualColumns()).iterator()
+          )
+      );
+      groupingColumns = Collections.singletonList(granularityVirtual.getOutputName());
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(query.getSingleInterval())
+                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                          .setGroupingColumns(groupingColumns)
+                          .setVirtualColumns(virtualColumns)
+                          .setAggregators(query.getAggregatorSpecs())
+                          .setQueryContext(query.context())
+                          .setPreferredOrdering(
+                              Collections.singletonList(
+                                  query.isDescending() ?
+                                  OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME) :
+                                  OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)
+                              )
+                          )
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 }

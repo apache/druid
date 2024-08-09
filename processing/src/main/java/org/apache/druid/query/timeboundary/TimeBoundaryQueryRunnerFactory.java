@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -37,7 +38,6 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -45,6 +45,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -117,7 +118,7 @@ public class TimeBoundaryQueryRunnerFactory
     @Nullable
     private DateTime getTimeBoundary(StorageAdapter adapter, TimeBoundaryQuery legacyQuery, boolean descending)
     {
-      final CursorBuildSpec.CursorBuildSpecBuilder bob = CursorBuildSpec.builder(legacyQuery.asCursorBuildSpec(null));
+      final CursorBuildSpec.CursorBuildSpecBuilder bob = CursorBuildSpec.builder(makeCursorBuildSpec(legacyQuery));
       if (descending) {
         bob.setPreferredOrdering(Collections.singletonList(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)));
       } else {
@@ -231,5 +232,15 @@ public class TimeBoundaryQueryRunnerFactory
 
     // Passed all checks.
     return true;
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(TimeBoundaryQuery query)
+  {
+    return CursorBuildSpec.builder()
+                          .setInterval(query.getSingleInterval())
+                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                          .setVirtualColumns(query.getVirtualColumns())
+                          .setQueryContext(query.context())
+                          .build();
   }
 }

@@ -33,7 +33,7 @@ import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.CursorMakerFactory;
+import org.apache.druid.segment.CursorHolderFactory;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
@@ -51,19 +51,19 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * A {@link CursorMakerFactory} implementation based on a single columnar {@link Frame}.
+ * A {@link CursorHolderFactory} implementation based on a single columnar {@link Frame}.
  *
  * This class is only used for columnar frames. It is not used for row-based frames.
  *
- * @see org.apache.druid.frame.segment.row.FrameCursorMakerFactory the row-based version
+ * @see org.apache.druid.frame.segment.row.FrameCursorHolderFactory the row-based version
  */
-public class FrameCursorMakerFactory implements CursorMakerFactory
+public class FrameCursorHolderFactory implements CursorHolderFactory
 {
   private final Frame frame;
   private final RowSignature signature;
   private final List<FrameColumnReader> columnReaders;
 
-  public FrameCursorMakerFactory(
+  public FrameCursorHolderFactory(
       final Frame frame,
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders

@@ -29,6 +29,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -441,7 +443,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .columns("foo", "bar")
               .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = ScanQueryEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertNull(buildSpec.getAggregators());

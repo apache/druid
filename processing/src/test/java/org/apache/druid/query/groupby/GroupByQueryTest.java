@@ -171,7 +171,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         new ExpressionVirtualColumn("v0", "concat(placement, 'foo')", ColumnType.STRING, ExprMacroTable.nil())
     );
     final LongSumAggregatorFactory longSum = new LongSumAggregatorFactory("idx", "index");
-    Query query = GroupByQuery
+    GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -200,7 +200,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         )
         .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
     Assert.assertEquals(ImmutableList.of("quality", "market", "v0"), buildSpec.getGroupingColumns());
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
@@ -214,7 +214,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         new ExpressionVirtualColumn("v0", "concat(placement, 'foo')", ColumnType.STRING, ExprMacroTable.nil())
     );
     final LongSumAggregatorFactory longSum = new LongSumAggregatorFactory("idx", "index");
-    Query query = GroupByQuery
+    GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -243,7 +243,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         )
         .build();
 
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
     Assert.assertEquals(
         ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "quality", "market", "v0"),

@@ -32,10 +32,11 @@ import javax.annotation.Nullable;
 
 public class FilteredStorageAdapter implements StorageAdapter
 {
+  @Nullable
   private final DimFilter filterOnDataSource;
   private final StorageAdapter baseStorageAdapter;
 
-  public FilteredStorageAdapter(final StorageAdapter adapter, final DimFilter filter)
+  public FilteredStorageAdapter(final StorageAdapter adapter, @Nullable final DimFilter filter)
   {
     this.baseStorageAdapter = adapter;
     this.filterOnDataSource = filter;
@@ -53,7 +54,11 @@ public class FilteredStorageAdapter implements StorageAdapter
         newFilter = null;
       }
     } else {
-      newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filterOnDataSource.toFilter()));
+      if (filterOnDataSource != null) {
+        newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filterOnDataSource.toFilter()));
+      } else {
+        newFilter = spec.getFilter();
+      }
     }
     buildSpecBuilder.setFilter(newFilter);
     return baseStorageAdapter.makeCursorHolder(buildSpecBuilder.build());

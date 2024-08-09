@@ -21,6 +21,7 @@ package org.apache.druid.query.scan;
 
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;

@@ -117,9 +117,9 @@ public class FrameProcessors
     final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                            .setVirtualColumns(virtualColumns)
                                                            .build();
-    // Despite appearances of columnar FrameCursorMakerFactory with its closers, it is currently safe to never close
+    // Despite appearances of columnar FrameCursorHolderFactory with its closers, it is currently safe to never close
     // the CursorHolder that the FrameCursor comes from because it really does nothing. The row based
-    // FrameCursorMakerFactory has no closer stuff at all and is totally safe. If this ever changes, this method will
+    // FrameCursorHolderFactory has no closer stuff at all and is totally safe. If this ever changes, this method will
     // probably need to wrap the cursor in something closeable, or be reworked to just return the CursorHolder so that
     // callers can deal with closing the stuff.
     return (FrameCursor) new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).makeCursorHolder(cursorBuildSpec)

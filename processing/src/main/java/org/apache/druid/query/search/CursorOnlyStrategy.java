@@ -30,6 +30,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.filter.Filters;
 
 import java.util.List;
 
@@ -74,7 +75,17 @@ public class CursorOnlyStrategy extends SearchStrategy
     public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
       final StorageAdapter adapter = segment.asStorageAdapter();
-      final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setInterval(query.getSingleInterval())
+                                                       .setFilter(
+                                                           Filters.convertToCNFFromQueryContext(
+                                                               query,
+                                                               Filters.toFilter(query.getFilter())
+                                                           )
+                                                       )
+                                                       .setVirtualColumns(query.getVirtualColumns())
+                                                       .setQueryContext(query.context())
+                                                       .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
         final Cursor cursor = cursorHolder.asCursor();
 

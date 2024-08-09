@@ -655,7 +655,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     List<Segment> segments = segmentsGenerator.apply(tempFolder, closer);
     Supplier<List<ResultRow>> runner =
         () -> helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
-    final CursorBuildSpec spec = groupQuery.asCursorBuildSpec(null);
+    final CursorBuildSpec spec = GroupingEngine.makeCursorBuildSpec(groupQuery, null);
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
                                           s -> {

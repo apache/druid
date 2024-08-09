@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment;
 
-public interface CursorMakerFactory
+public interface CursorHolderFactory
 {
   CursorHolder makeCursorHolder(CursorBuildSpec spec);
 }

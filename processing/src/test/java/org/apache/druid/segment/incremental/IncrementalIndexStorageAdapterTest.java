@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
@@ -51,9 +52,9 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
-import org.apache.druid.query.scan.OrderBy;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
@@ -144,7 +145,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                                            .addOrderByColumn("billy")
                                            .build();
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
@@ -221,7 +222,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .addOrderByColumn("billy")
                                            .build();
     final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
@@ -488,7 +489,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                                            .build();
     final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    final CursorBuildSpec buildSpec = query.asCursorBuildSpec(null);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
 
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
