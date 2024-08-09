@@ -28,6 +28,7 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.overlord.http.TaskLockResponse;
 import org.apache.druid.indexing.overlord.http.TaskPayloadResponse;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.ISE;
@@ -351,6 +352,31 @@ public class OverlordResourceTestClient
       return jsonMapper.readValue(
           response.getContent(),
           new TypeReference<Map<String, List<Interval>>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public TaskLockResponse getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    try {
+      String jsonBody = jsonMapper.writeValueAsString(lockFilterPolicies);
+
+      StatusResponseHolder response = httpClient.go(
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "activeLocks"))
+              .setContent(
+                  "application/json",
+                  StringUtils.toUtf8(jsonBody)
+              ),
+          StatusResponseHandler.getInstance()
+      ).get();
+      return jsonMapper.readValue(
+          response.getContent(),
+          new TypeReference<TaskLockResponse>()
           {
           }
       );
