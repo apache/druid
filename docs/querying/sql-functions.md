@@ -1097,14 +1097,14 @@ The following example converts the `OriginCityName` column from the `flight-carr
 ```sql
 SELECT 
   "OriginCityName" AS "original_string",
-  LOWER("OriginCityName") AS "make_lowercase"
+  LOWER("OriginCityName") AS "lowercase"
 FROM "flight-carriers"
 LIMIT 1
 ```
 
 Returns the following:
 
-| `original_string` | `make_lowercase` |
+| `original_string` | `lowercase` |
 | -- | -- |
 `San Juan, PR` | `san juan, pr` |
 
@@ -1115,14 +1115,14 @@ Returns the following:
 
 ## LPAD
 
-Returns a string of size `length` from `expr`, left-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
+Returns a string of size `length` from `expr`. When the length of `expr` is less than `chars`, left pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
 * **Syntax:** `LPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example inserts `+` characters as padding to the left of the `OriginState` column from the `flight-carriers` datasource, making the return expression a length of 5 characters.
+The following example left pads the value of `OriginState` from `flight-carriers` to return a total of 5 characters.
 
 ```sql
 SELECT 
