@@ -66,7 +66,7 @@ FROM TABLE(
 
 `EXTERN` consists of the following parts:
 
-1. Any [Druid input source](../ingestion/input-sources.md) as a JSON-encoded string.
+1. Any [Druid input source](../ingestion/input-sources.md) as a JSON-encoded string, except for SQL input sources. SQL-based ingestion doesn't support ingesting from SQL input sources.
 2. Any [Druid input format](../ingestion/data-formats.md) as a JSON-encoded string.
 3. A row signature, as a JSON-encoded array of column descriptors. Each column descriptor must have a
    `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is
