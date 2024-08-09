@@ -119,6 +119,10 @@ const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
   };
 };
 
+export const DEFAULT_SELECT_DESTINATION_FN = (_engine: DruidEngine | undefined) => {
+  return 'taskReport' as const;
+};
+
 export interface RunPanelProps {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
@@ -131,6 +135,10 @@ export interface RunPanelProps {
   maxTaskMenuHeader?: JSX.Element;
   enginesLabelFn?: (engine: DruidEngine | undefined) => { text: string; label?: string };
   maxTaskLabelFn?: ComponentProps<typeof MaxTasksButton>['maxNumLabelFn'];
+  maxTaskFullClusterCapacityLabelFn?: ComponentProps<
+    typeof MaxTasksButton
+  >['fullClusterCapacityLabelFn'];
+  defaultSelectDestinationFn?: (engine: DruidEngine | undefined) => 'taskReport' | 'durableStorage';
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
@@ -145,7 +153,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     clusterCapacity,
     maxTaskMenuHeader,
     maxTaskLabelFn,
+    maxTaskFullClusterCapacityLabelFn,
     enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
+    defaultSelectDestinationFn = DEFAULT_SELECT_DESTINATION_FN,
   } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [editParametersDialogOpen, setEditParametersDialogOpen] = useState(false);
@@ -165,7 +175,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const waitUntilSegmentsLoad = getWaitUntilSegmentsLoad(queryContext);
   const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
   const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
-  const selectDestination = queryContext.selectDestination ?? 'taskReport';
+  const selectDestination =
+    queryContext.selectDestination ?? defaultSelectDestinationFn(query.engine);
   const durableShuffleStorage = getDurableShuffleStorage(queryContext);
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
   const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
@@ -533,6 +544,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               changeQueryContext={changeQueryContext}
               menuHeader={maxTaskMenuHeader}
               maxNumLabelFn={maxTaskLabelFn}
+              fullClusterCapacityLabelFn={maxTaskFullClusterCapacityLabelFn}
             />
           )}
           {ingestMode && (
