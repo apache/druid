@@ -56,6 +56,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.Assume;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -97,7 +98,7 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
   private boolean concurrentAppendAndReplaceLocksExisted;
 
   @DataProvider
-  public static Object[] getParameters()
+  public static Object[] getKafkaTransactionStatesForTest()
   {
     return new Object[]{false, true};
   }
@@ -130,12 +131,10 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
     return "autocompact_lock_contention";
   }
 
-  @Test(dataProvider = "getParameters")
+  @Test(dataProvider = "getKafkaTransactionStatesForTest")
   public void testConcurrentStreamAppendReplace(boolean transactionEnabled) throws Exception
   {
-    if (shouldSkipTest(transactionEnabled)) {
-      return;
-    }
+    Assume.assumeFalse(shouldSkipTest(transactionEnabled));
 
     try (
         final Closeable closer = createResourceCloser(generatedTestConfig);
@@ -167,7 +166,6 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
 
       // 2 segments for each minute, total 6
       ensureSegmentsCount(fullDatasourceName, 6);
-      printTaskStatuses(fullDatasourceName);
 
       // Trigger auto compaction
       submitAndVerifyCompactionConfig(fullDatasourceName, null);
@@ -178,7 +176,6 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
       ensureSegmentsLoaded(fullDatasourceName);
       ensureSegmentsCount(fullDatasourceName, 3);
       verifyCompactedIntervals(fullDatasourceName, minute1, minute2, minute3);
-      printTaskStatuses(fullDatasourceName);
 
       // Concurrent compaction with configured segment granularity
       for (int i = 0; i < 5; i++) {
@@ -186,10 +183,8 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
         rowsForMinute2 += generateData(minute2, streamEventWriter);
         rowsForMinute3 += generateData(minute3, streamEventWriter);
 
-        //ensureNoLockContention();
         compactionResource.forceTriggerAutoCompaction();
         ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
-        printTaskStatuses(fullDatasourceName);
         checkAndSetConcurrentLocks(fullDatasourceName);
       }
 
@@ -208,10 +203,8 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
         rowsForMinute2 += generateData(minute2, streamEventWriter);
         rowsForMinute3 += generateData(minute3, streamEventWriter);
 
-        //ensureNoLockContention();
         compactionResource.forceTriggerAutoCompaction();
         ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
-        printTaskStatuses(fullDatasourceName);
         checkAndSetConcurrentLocks(fullDatasourceName);
       }
 
@@ -220,19 +213,16 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
       ensureSegmentsLoaded(fullDatasourceName);
       ensureRowCount(fullDatasourceName, rowsForMinute1 + rowsForMinute2 + rowsForMinute3, function);
       verifyCompactedIntervals(fullDatasourceName, Intervals.of("2000-01-01/2000-01-02"));
-      printTaskStatuses(fullDatasourceName);
 
       Assert.assertTrue(concurrentAppendAndReplaceLocksExisted);
     }
   }
 
 
-  @Test(dataProvider = "getParameters")
+  @Test(dataProvider = "getKafkaTransactionStatesForTest")
   public void testConcurrentMSQAppendReplace(boolean transactionEnabled) throws Exception
   {
-    if (shouldSkipTest(transactionEnabled)) {
-      return;
-    }
+    Assume.assumeFalse(shouldSkipTest(transactionEnabled));
 
     final String datasource = "dst";
 
@@ -242,33 +232,12 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
             + "SELECT\n"
             + "  TIME_PARSE(\"timestamp\") AS __time,\n"
             + "  isRobot,\n"
-            + "  diffUrl,\n"
-            + "  added,\n"
-            + "  countryIsoCode,\n"
-            + "  regionName,\n"
-            + "  channel,\n"
-            + "  flags,\n"
-            + "  delta,\n"
-            + "  isUnpatrolled,\n"
-            + "  isNew,\n"
-            + "  deltaBucket,\n"
-            + "  isMinor,\n"
-            + "  isAnonymous,\n"
-            + "  deleted,\n"
-            + "  cityName,\n"
-            + "  metroCode,\n"
-            + "  namespace,\n"
-            + "  comment,\n"
-            + "  page,\n"
-            + "  commentLength,\n"
-            + "  countryName,\n"
-            + "  user,\n"
             + "  regionIsoCode\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
             + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
+            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
             + ")\n"
             + "PARTITIONED BY DAY\n",
@@ -283,18 +252,17 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
 
     submitAndVerifyCompactionConfig(datasource, null);
 
-    for (int i = 0; i < 5; i++) {
+    for (int i = 1; i <= 5; i++) {
       // Submit the task and wait for the datasource to get loaded
       msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
 
-      ensureRowCount(datasource, (i + 2) * 3, function);
+      ensureRowCount(datasource, i * 3 + 3, function);
     }
 
     ensureRowCount(datasource, 18, function);
     ensureSegmentsCount(datasource, 1);
     ensureSegmentsLoaded(datasource);
     verifyCompactedIntervals(datasource, Intervals.of("2013-08-31/2013-09-01"));
-    printTaskStatuses(datasource);
 
     Assert.assertTrue(concurrentAppendAndReplaceLocksExisted);
   }
@@ -396,7 +364,6 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
     if (CollectionUtils.isNullOrEmpty(locks)) {
       return;
     }
-    LOG.info(locks.toString());
     Set<Interval> replaceIntervals = new HashSet<>();
     Set<Interval> appendIntervals = new HashSet<>();
     for (TaskLock lock : locks) {
