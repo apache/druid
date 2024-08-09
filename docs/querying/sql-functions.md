@@ -1562,7 +1562,7 @@ Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
-Returns a string of size `length` from `expr`, right-padded with `chars`. The default value for `chars` is a space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
+Returns a string of size `length` from `expr`. When the length of `expr` is less than `chars`, right pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
 * **Syntax:** `RPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
