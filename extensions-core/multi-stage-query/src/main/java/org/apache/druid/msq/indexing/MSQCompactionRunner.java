@@ -237,7 +237,8 @@ public class MSQCompactionRunner implements CompactionRunner
         dataSchema.getDataSource(),
         dataSchema.getGranularitySpec().getSegmentGranularity(),
         null,
-        ImmutableList.of(replaceInterval)
+        ImmutableList.of(replaceInterval),
+        null
     );
   }
 

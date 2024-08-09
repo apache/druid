@@ -20,7 +20,11 @@
 package org.apache.druid.msq.indexing.destination;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class DataSourceMSQDestinationTest
@@ -33,5 +37,18 @@ public class DataSourceMSQDestinationTest
                   .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testBackwardCompatibility() throws JsonProcessingException
+  {
+    DataSourceMSQDestination destination = new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null);
+    Assert.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
+
+    DataSourceMSQDestination dataSourceMSQDestination = new DefaultObjectMapper().readValue(
+        "{\"type\":\"dataSource\",\"dataSource\":\"datasource1\",\"segmentGranularity\":\"DAY\",\"rowsInTaskReport\":0,\"destinationResource\":{\"empty\":false,\"present\":true}}",
+        DataSourceMSQDestination.class
+    );
+    Assert.assertEquals(SegmentGenerationStageSpec.instance(), dataSourceMSQDestination.getTerminalStageSpec());
   }
 }
