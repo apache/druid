@@ -28,7 +28,6 @@ import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
