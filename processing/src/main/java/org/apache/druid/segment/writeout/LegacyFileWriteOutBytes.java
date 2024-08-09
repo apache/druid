@@ -21,10 +21,8 @@ package org.apache.druid.segment.writeout;
 
 import com.google.common.io.ByteStreams;
 import org.apache.druid.io.Channels;
-import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.io.Closer;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -35,26 +33,20 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
 
-public final class FileWriteOutBytes extends WriteOutBytes
+final class LegacyFileWriteOutBytes extends WriteOutBytes
 {
   private final File file;
   private final FileChannel ch;
   private long writeOutBytes;
 
-  /**
-   * Purposely big-endian, for {@link #writeInt(int)} implementation.
-   * Direct because there is a material difference in performance when writing direct buffers
-   */
-  private final ByteBuffer buffer = ByteBuffer.allocateDirect(32768); // 32K page sized buffer
+  /** Purposely big-endian, for {@link #writeInt(int)} implementation */
+  private final ByteBuffer buffer = ByteBuffer.allocate(4096); // 4K page sized buffer
 
-  FileWriteOutBytes(File file, FileChannel ch, Closer closer)
+  LegacyFileWriteOutBytes(File file, FileChannel ch)
   {
     this.file = file;
     this.ch = ch;
     this.writeOutBytes = 0L;
-    closer.register(
-        () -> ByteBufferUtils.free(buffer)
-    );
   }
 
   private void flushIfNeeded(int bytesNeeded) throws IOException
@@ -98,29 +90,22 @@ public final class FileWriteOutBytes extends WriteOutBytes
   {
     int len = src.remaining();
     flushIfNeeded(len);
-    if (len > buffer.remaining()) {
-      // if a flush was required, flushIfNeeded should have forced a flush.  So, if the len is greater than
-      // our buffer size, we should just dump it straight to the file instead of buffering
-      Channels.writeFully(ch, src);
-      writeOutBytes += len;
-    } else {
-      while (src.remaining() > buffer.capacity()) {
-        int srcLimit = src.limit();
-        try {
-          src.limit(src.position() + buffer.capacity());
-          buffer.put(src);
-          writeOutBytes += buffer.capacity();
-          flush();
-        }
-        finally {
-          // IOException may occur in flush(), reset src limit to the original
-          src.limit(srcLimit);
-        }
+    while (src.remaining() > buffer.capacity()) {
+      int srcLimit = src.limit();
+      try {
+        src.limit(src.position() + buffer.capacity());
+        buffer.put(src);
+        writeOutBytes += buffer.capacity();
+        flush();
       }
-      int remaining = src.remaining();
-      buffer.put(src);
-      writeOutBytes += remaining;
+      finally {
+        // IOException may occur in flush(), reset src limit to the original
+        src.limit(srcLimit);
+      }
     }
+    int remaining = src.remaining();
+    buffer.put(src);
+    writeOutBytes += remaining;
     return len;
   }
 

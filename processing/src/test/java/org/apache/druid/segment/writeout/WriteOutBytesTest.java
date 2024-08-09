@@ -119,4 +119,14 @@ public class WriteOutBytesTest
     writeOutBytes.write('1');
     writeOutBytes.readFully(1, ByteBuffer.allocate(0));
   }
+
+  @Test
+  public void testWriteWithOffset() throws IOException
+  {
+    WriteOutBytes writeOutBytes = segmentWriteOutMedium.makeWriteOutBytes();
+    writeOutBytes.write(new byte[] {0x01, 0x02, 0x03, 0x04}, 1, 2);
+    ByteBuffer destination = ByteBuffer.allocate(2);
+    writeOutBytes.readFully(0, destination);
+    Assert.assertArrayEquals(new byte[] {0x02, 0x03}, destination.array());
+  }
 }

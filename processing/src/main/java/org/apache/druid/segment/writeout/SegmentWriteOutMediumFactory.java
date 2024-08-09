@@ -30,6 +30,7 @@ import java.util.Set;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = TmpFileSegmentWriteOutMediumFactory.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "tmpFile", value = TmpFileSegmentWriteOutMediumFactory.class),
+    @JsonSubTypes.Type(name = "legacyTmpFile", value = LegacyTmpFileSegmentWriteOutMediumFactory.class),
     @JsonSubTypes.Type(name = "offHeapMemory", value = OffHeapMemorySegmentWriteOutMediumFactory.class),
     @JsonSubTypes.Type(name = "onHeapMemory", value = OnHeapMemorySegmentWriteOutMediumFactory.class),
 })
@@ -39,6 +40,7 @@ public interface SegmentWriteOutMediumFactory
   {
     return ImmutableSet.of(
         TmpFileSegmentWriteOutMediumFactory.instance(),
+        LegacyTmpFileSegmentWriteOutMediumFactory.instance(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance(),
         OnHeapMemorySegmentWriteOutMediumFactory.instance()
     );
