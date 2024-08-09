@@ -17,18 +17,40 @@
  * under the License.
  */
 
+package org.apache.druid.server.compaction;
 
-package org.apache.druid.indexing.overlord.supervisor;
+import org.apache.druid.indexer.TaskState;
+import org.joda.time.DateTime;
 
-import com.google.inject.Binder;
-import com.google.inject.Module;
-import org.apache.druid.guice.JsonConfigProvider;
-
-public class SupervisorModule implements Module
+public class CompactionTaskStatus
 {
-  @Override
-  public void configure(Binder binder)
+  private final TaskState state;
+  private final DateTime updatedTime;
+  private final int numConsecutiveFailures;
+
+  public CompactionTaskStatus(
+      TaskState state,
+      DateTime updatedTime,
+      int numConsecutiveFailures
+  )
   {
-    JsonConfigProvider.bind(binder, "druid.supervisor", SupervisorStateManagerConfig.class);
+    this.state = state;
+    this.updatedTime = updatedTime;
+    this.numConsecutiveFailures = numConsecutiveFailures;
+  }
+
+  public TaskState getState()
+  {
+    return state;
+  }
+
+  public DateTime getUpdatedTime()
+  {
+    return updatedTime;
+  }
+
+  public int getNumConsecutiveFailures()
+  {
+    return numConsecutiveFailures;
   }
 }

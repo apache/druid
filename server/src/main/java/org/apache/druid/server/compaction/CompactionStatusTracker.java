@@ -1,0 +1,179 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.server.compaction;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
+import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Tracks status of recently submitted compaction tasks. Can be used by a segment
+ * search policy to skip an interval if it has been recently compacted or if it
+ * keeps failing repeatedly.
+ */
+public class CompactionStatusTracker
+{
+  private final ObjectMapper objectMapper;
+  private final Map<String, DatasourceStatus> datasourceStatuses = new HashMap<>();
+  private final Map<String, SegmentsToCompact> submittedTaskIdToSegments = new HashMap<>();
+
+  @Inject
+  public CompactionStatusTracker(ObjectMapper objectMapper)
+  {
+    this.objectMapper = objectMapper;
+  }
+
+  public void stop()
+  {
+    datasourceStatuses.clear();
+  }
+
+  public ObjectMapper getObjectMapper()
+  {
+    return objectMapper;
+  }
+
+  public void removeDatasource(String datasource)
+  {
+    datasourceStatuses.remove(datasource);
+  }
+
+  public CompactionTaskStatus getLatestTaskStatus(SegmentsToCompact candidates)
+  {
+    return datasourceStatuses
+        .getOrDefault(candidates.getDataSource(), DatasourceStatus.EMPTY)
+        .intervalToTaskStatus
+        .get(candidates.getUmbrellaInterval());
+  }
+
+  public void onCompactionStatusComputed(
+      SegmentsToCompact candidateSegments,
+      DataSourceCompactionConfig config
+  )
+  {
+    // Nothing to do, used by simulator
+  }
+
+  public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)
+  {
+    final Set<String> compactionEnabledDatasources = new HashSet<>();
+    if (compactionConfig.getCompactionConfigs() != null) {
+      compactionConfig.getCompactionConfigs().forEach(
+          config -> compactionEnabledDatasources.add(config.getDataSource())
+      );
+    }
+
+    // Clean up state for datasources where compaction has been freshly disabled
+    final Set<String> allDatasources = new HashSet<>(datasourceStatuses.keySet());
+    allDatasources.forEach(datasource -> {
+      if (!compactionEnabledDatasources.contains(datasource)) {
+        datasourceStatuses.remove(datasource);
+      }
+    });
+  }
+
+  public void onTaskSubmitted(
+      ClientCompactionTaskQuery taskPayload,
+      SegmentsToCompact candidateSegments
+  )
+  {
+    submittedTaskIdToSegments.put(taskPayload.getId(), candidateSegments);
+    getOrComputeDatasourceStatus(taskPayload.getDataSource())
+        .handleSubmittedTask(candidateSegments);
+  }
+
+  public void onTaskFinished(String taskId, TaskStatus taskStatus)
+  {
+    if (!taskStatus.isComplete()) {
+      return;
+    }
+
+    final SegmentsToCompact candidateSegments = submittedTaskIdToSegments.remove(taskId);
+    if (candidateSegments == null) {
+      // Nothing to do since we don't know the corresponding datasource or interval
+      return;
+    }
+
+    final Interval compactionInterval = candidateSegments.getUmbrellaInterval();
+    getOrComputeDatasourceStatus(candidateSegments.getDataSource())
+        .handleCompletedTask(compactionInterval, taskStatus);
+  }
+
+  private DatasourceStatus getOrComputeDatasourceStatus(String datasource)
+  {
+    return datasourceStatuses.computeIfAbsent(datasource, ds -> new DatasourceStatus());
+  }
+
+  private static class DatasourceStatus
+  {
+    static final DatasourceStatus EMPTY = new DatasourceStatus();
+
+    final Map<Interval, CompactionTaskStatus> intervalToTaskStatus = new HashMap<>();
+
+    void handleCompletedTask(Interval compactionInterval, TaskStatus taskStatus)
+    {
+      final CompactionTaskStatus lastKnownStatus = intervalToTaskStatus.get(compactionInterval);
+      final DateTime now = DateTimes.nowUtc();
+
+      final CompactionTaskStatus updatedStatus;
+      if (taskStatus.isSuccess()) {
+        updatedStatus = new CompactionTaskStatus(TaskState.SUCCESS, now, 0);
+      } else if (lastKnownStatus == null || lastKnownStatus.getState().isSuccess()) {
+        // This is the first failure
+        updatedStatus = new CompactionTaskStatus(TaskState.FAILED, now, 1);
+      } else {
+        updatedStatus = new CompactionTaskStatus(
+            TaskState.FAILED,
+            now,
+            lastKnownStatus.getNumConsecutiveFailures() + 1
+        );
+      }
+      intervalToTaskStatus.put(compactionInterval, updatedStatus);
+    }
+
+    void handleSubmittedTask(SegmentsToCompact candidateSegments)
+    {
+      final Interval interval = candidateSegments.getUmbrellaInterval();
+      final CompactionTaskStatus lastStatus = intervalToTaskStatus.get(interval);
+
+      final DateTime now = DateTimes.nowUtc();
+      if (lastStatus == null || !lastStatus.getState().isFailure()) {
+        intervalToTaskStatus.put(interval, new CompactionTaskStatus(TaskState.RUNNING, now, 0));
+      } else {
+        intervalToTaskStatus.put(
+            interval,
+            new CompactionTaskStatus(TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
+        );
+      }
+    }
+  }
+}

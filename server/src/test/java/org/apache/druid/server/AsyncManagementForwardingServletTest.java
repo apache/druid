@@ -35,6 +35,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
@@ -76,6 +77,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   private static int coordinatorPort;
   private static int overlordPort;
   private static boolean isValidLeader;
+  private static boolean isCompactionSchedulerEnabled;
 
   private Server coordinator;
   private Server overlord;
@@ -115,6 +117,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     coordinator.start();
     overlord.start();
     isValidLeader = true;
+    isCompactionSchedulerEnabled = false;
   }
 
   @After
@@ -256,6 +259,47 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
     Assert.assertEquals(200, connection.getResponseCode());
     Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
     Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testCoordinatorCompactionStatus() throws Exception
+  {
+    isCompactionSchedulerEnabled = false;
+
+    COORDINATOR_EXPECTED_REQUEST.path = "/druid/coordinator/v1/compaction/status";
+    COORDINATOR_EXPECTED_REQUEST.method = "GET";
+    COORDINATOR_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/druid/coordinator/v1/compaction/status", port))
+            .openConnection());
+    connection.setRequestMethod(COORDINATOR_EXPECTED_REQUEST.method);
+
+    COORDINATOR_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
+
+    Assert.assertEquals(200, connection.getResponseCode());
+    Assert.assertTrue("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testOverlordCompactionStatus() throws Exception
+  {
+    isCompactionSchedulerEnabled = true;
+
+    OVERLORD_EXPECTED_REQUEST.path = "/druid/indexer/v1/compaction/status";
+    OVERLORD_EXPECTED_REQUEST.method = "GET";
+    OVERLORD_EXPECTED_REQUEST.headers = ImmutableMap.of("Authorization", "Basic bXl1c2VyOm15cGFzc3dvcmQ=");
+
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/druid/coordinator/v1/compaction/status", port))
+            .openConnection());
+    connection.setRequestMethod("GET");
+    OVERLORD_EXPECTED_REQUEST.headers.forEach(connection::setRequestProperty);
+
+    Assert.assertEquals(200, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertTrue("overlord called", OVERLORD_EXPECTED_REQUEST.called);
   }
 
   @Test
@@ -496,6 +540,13 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
               overlordLeaderSelector,
+              new CompactionSchedulerConfig(false) {
+                @Override
+                public boolean isEnabled()
+                {
+                  return isCompactionSchedulerEnabled;
+                }
+              },
               new AuthorizerMapper(ImmutableMap.of("allowAll", new AllowAllAuthorizer()))
           )
       );

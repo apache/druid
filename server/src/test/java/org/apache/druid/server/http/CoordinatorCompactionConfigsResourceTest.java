@@ -109,10 +109,10 @@ public class CoordinatorCompactionConfigsResourceTest
   }
 
   @Test
-  public void testUpdateGlobalConfig()
+  public void testUpdateClusterConfig()
   {
     Response response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(0.5, 10, true, CompactionEngine.MSQ),
+        new ClusterCompactionConfig(0.5, 10, true, CompactionEngine.MSQ, null),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.OK, response);
@@ -340,7 +340,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.OK, response);
 
     response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ),
+        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ, null),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.BAD_REQUEST, response);
@@ -460,21 +460,22 @@ public class CoordinatorCompactionConfigsResourceTest
           Suppliers.ofInstance(new TestConfigManagerConfig())
       );
 
-      return new TestCoordinatorConfigManager(configManager, dbConnector, tablesConfig, auditManager);
-    }
-
-    TestCoordinatorConfigManager(
-        ConfigManager configManager,
-        TestDBConnector dbConnector,
-        MetadataStorageTablesConfig tablesConfig,
-        AuditManager auditManager
-    )
-    {
-      super(
+      return new TestCoordinatorConfigManager(
           new JacksonConfigManager(configManager, OBJECT_MAPPER, auditManager),
+          configManager,
           dbConnector,
           tablesConfig
       );
+    }
+
+    TestCoordinatorConfigManager(
+        JacksonConfigManager jackson,
+        ConfigManager configManager,
+        TestDBConnector dbConnector,
+        MetadataStorageTablesConfig tablesConfig
+    )
+    {
+      super(jackson, dbConnector, tablesConfig);
       this.delegate = configManager;
     }
 

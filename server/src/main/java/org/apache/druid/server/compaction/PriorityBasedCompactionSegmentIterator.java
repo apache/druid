@@ -17,16 +17,14 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -35,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of {@link CompactionSegmentIterator} that returns segments in
@@ -51,11 +50,21 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      Comparator<SegmentsToCompact> segmentPriority,
-      ObjectMapper objectMapper
+      PriorityBasedSegmentSearchPolicy searchPolicy,
+      CompactionStatusTracker statusTracker
   )
   {
-    this.queue = new PriorityQueue<>(segmentPriority);
+    final Comparator<SegmentsToCompact> comparator;
+    final String priorityDatasource = searchPolicy.getPriorityDatasource();
+    if (priorityDatasource == null || priorityDatasource.isEmpty()) {
+      comparator = searchPolicy.getSegmentComparator();
+    } else {
+      comparator = Comparators.alwaysFirst(priorityDatasource)
+                              .onResultOf(SegmentsToCompact::getDataSource)
+                              .thenComparing(searchPolicy.getSegmentComparator());
+    }
+    this.queue = new PriorityQueue<>(comparator);
+
     this.datasourceIterators = Maps.newHashMapWithExpectedSize(datasourceToTimeline.size());
     compactionConfigs.forEach((datasource, config) -> {
       if (config == null) {
@@ -73,8 +82,8 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
               compactionConfigs.get(datasource),
               timeline,
               skipIntervals.getOrDefault(datasource, Collections.emptyList()),
-              segmentPriority,
-              objectMapper
+              searchPolicy,
+              statusTracker
           )
       );
       addNextItemForDatasourceToQueue(datasource);
@@ -82,21 +91,19 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public Map<String, CompactionStatistics> totalCompactedStatistics()
+  public List<SegmentsToCompact> getCompactedSegments()
   {
-    return CollectionUtils.mapValues(
-        datasourceIterators,
-        DataSourceCompactibleSegmentIterator::totalCompactedStatistics
-    );
+    return datasourceIterators.values().stream().flatMap(
+        iterator -> iterator.getCompactedSegments().stream()
+    ).collect(Collectors.toList());
   }
 
   @Override
-  public Map<String, CompactionStatistics> totalSkippedStatistics()
+  public List<SegmentsToCompact> getSkippedSegments()
   {
-    return CollectionUtils.mapValues(
-        datasourceIterators,
-        DataSourceCompactibleSegmentIterator::totalSkippedStatistics
-    );
+    return datasourceIterators.values().stream().flatMap(
+        iterator -> iterator.getSkippedSegments().stream()
+    ).collect(Collectors.toList());
   }
 
   @Override
@@ -113,12 +120,11 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
     }
 
     final SegmentsToCompact entry = queue.poll();
-    if (entry == null) {
+    if (entry == null || entry.isEmpty()) {
       throw new NoSuchElementException();
     }
-    Preconditions.checkState(!entry.isEmpty(), "Queue entry must not be empty");
 
-    addNextItemForDatasourceToQueue(entry.getFirst().getDataSource());
+    addNextItemForDatasourceToQueue(entry.getDataSource());
     return entry;
   }
 

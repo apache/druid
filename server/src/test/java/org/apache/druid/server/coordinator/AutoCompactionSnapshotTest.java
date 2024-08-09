@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.apache.druid.server.coordinator.compact.CompactionStatistics;
+import org.apache.druid.server.compaction.CompactionStatistics;
 import org.junit.Assert;
 import org.junit.Test;
 

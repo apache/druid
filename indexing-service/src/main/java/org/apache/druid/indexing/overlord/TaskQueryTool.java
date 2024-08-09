@@ -20,10 +20,11 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -50,6 +51,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -66,7 +68,7 @@ public class TaskQueryTool
   private final TaskStorage storage;
   private final TaskLockbox taskLockbox;
   private final TaskMaster taskMaster;
-  private final JacksonConfigManager configManager;
+  private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier;
   private final ProvisioningStrategy provisioningStrategy;
 
   @Inject
@@ -75,13 +77,13 @@ public class TaskQueryTool
       TaskLockbox taskLockbox,
       TaskMaster taskMaster,
       ProvisioningStrategy provisioningStrategy,
-      JacksonConfigManager configManager
+      Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier
   )
   {
     this.storage = storage;
     this.taskLockbox = taskLockbox;
     this.taskMaster = taskMaster;
-    this.configManager = configManager;
+    this.workerBehaviorConfigSupplier = workerBehaviorConfigSupplier;
     this.provisioningStrategy = provisioningStrategy;
   }
 
@@ -108,12 +110,17 @@ public class TaskQueryTool
     return storage.getTaskInfos(TaskLookup.activeTasksOnly(), dataSource);
   }
 
-  private List<TaskStatusPlus> getTaskStatusPlusList(
-      Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String dataSource
-  )
+  public Map<String, TaskStatus> getMultipleTaskStatuses(Set<String> taskIds)
   {
-    return storage.getTaskStatusPlusList(taskLookups, dataSource);
+    final Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
+    for (String taskId : taskIds) {
+      final Optional<TaskStatus> optional = getTaskStatus(taskId);
+      if (optional.isPresent()) {
+        result.put(taskId, optional.get());
+      }
+    }
+
+    return result;
   }
 
   public Optional<Task> getTask(final String taskId)
@@ -144,6 +151,11 @@ public class TaskQueryTool
     return storage.getTaskInfo(taskId);
   }
 
+  public List<TaskStatusPlus> getAllActiveTasks()
+  {
+    return getTaskStatusPlusList(TaskStateLookup.ALL, null, null, 0, null);
+  }
+
   public List<TaskStatusPlus> getTaskStatusPlusList(
       TaskStateLookup state,
       @Nullable String dataSource,
@@ -172,7 +184,7 @@ public class TaskQueryTool
     // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
     // and use the snapshot from taskRunner as a reference for potential task state updates happened
     // after the first snapshotting.
-    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusList(
+    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusStream(
         state,
         dataSource,
         createdTimeDuration,
@@ -238,7 +250,7 @@ public class TaskQueryTool
     return taskStatuses;
   }
 
-  private Stream<TaskStatusPlus> getTaskStatusPlusList(
+  private Stream<TaskStatusPlus> getTaskStatusPlusStream(
       TaskStateLookup state,
       @Nullable String dataSource,
       Duration createdTimeDuration,
@@ -274,10 +286,8 @@ public class TaskQueryTool
         throw new IAE("Unknown state: [%s]", state);
     }
 
-    final Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusList(
-        taskLookups,
-        dataSource
-    ).stream();
+    final Stream<TaskStatusPlus> taskStatusPlusStream
+        = storage.getTaskStatusPlusList(taskLookups, dataSource).stream();
     if (type != null) {
       return taskStatusPlusStream.filter(
           statusPlus -> type.equals(statusPlus == null ? null : statusPlus.getType())
@@ -369,10 +379,7 @@ public class TaskQueryTool
 
   public WorkerBehaviorConfig getLatestWorkerConfig()
   {
-    return configManager.watch(
-        WorkerBehaviorConfig.CONFIG_KEY,
-        WorkerBehaviorConfig.class
-    ).get();
+    return workerBehaviorConfigSupplier.get();
   }
 
 }

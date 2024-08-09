@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
-import org.apache.druid.java.util.common.guava.Comparators;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
@@ -30,33 +30,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * This policy searches segments for compaction from newest to oldest.
+ * Segment searching policy used by {@link CompactSegments}.
  */
-public class NewestSegmentFirstPolicy implements CompactionSegmentSearchPolicy
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class),
+    @JsonSubTypes.Type(name = "smallestSegmentFirst", value = SmallestSegmentFirstPolicy.class)
+})
+public interface CompactionSegmentSearchPolicy
 {
-  private final ObjectMapper objectMapper;
-
-  @Inject
-  public NewestSegmentFirstPolicy(ObjectMapper objectMapper)
-  {
-    this.objectMapper = objectMapper;
-  }
-
-  @Override
-  public CompactionSegmentIterator createIterator(
+  /**
+   * Creates an iterator that returns compactible segments.
+   */
+  CompactionSegmentIterator createIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals
-  )
-  {
-    return new PriorityBasedCompactionSegmentIterator(
-        compactionConfigs,
-        dataSources,
-        skipIntervals,
-        (o1, o2) -> Comparators.intervalsByStartThenEnd()
-                               .compare(o2.getUmbrellaInterval(), o1.getUmbrellaInterval()),
-        objectMapper
-    );
-  }
-
+      Map<String, List<Interval>> skipIntervals,
+      CompactionStatusTracker statusTracker
+  );
 }
