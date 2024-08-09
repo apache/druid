@@ -140,10 +140,12 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
           return new WindowOperatorQueryFrameProcessor(
+              query,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               readableInput.getChannelFrameReader(),
+              frameContext.jsonMapper(),
               operatorList,
               maxRowsMaterializedInWindow
           );
