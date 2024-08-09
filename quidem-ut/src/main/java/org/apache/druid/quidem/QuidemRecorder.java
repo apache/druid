@@ -30,12 +30,15 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 public class QuidemRecorder implements AutoCloseable, DruidHook<String>
 {
   private PrintStream printStream;
   private File file;
   private DruidHookDispatcher hookDispatcher;
+  private Set<String> queries = new HashSet<>();
 
   public QuidemRecorder(URI quidemURI, DruidHookDispatcher hookDispatcher, File file)
   {
@@ -67,11 +70,16 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
   public synchronized void invoke(HookKey<String> key, String query)
   {
     if (DruidHook.SQL.equals(key)) {
+      if (queries.contains(query)) {
+        // ignore duplicate queries
+        return;
+      }
       printStream.println("# " + new Date());
       printStream.print(query);
       printStream.println(";");
       printStream.println("!ok");
       printStream.flush();
+      queries.add(query);
       return;
     }
   }

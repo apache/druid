@@ -85,8 +85,7 @@ public class NativeCompactionRunner implements CompactionRunner
 
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
-      CompactionTask compactionTask,
-      Map<Interval, DataSchema> intervalToDataSchemaMap
+      CompactionTask compactionTask
   )
   {
     return CompactionConfigValidationResult.success();
