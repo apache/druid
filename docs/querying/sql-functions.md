@@ -1348,13 +1348,13 @@ The following example converts the string representation of the binary, radix 2,
 
 ```sql
 SELECT 
-  '1100' AS "binary_number_as_string", 
-  PARSE_LONG('1110', 2) AS "parse_binary_string_into_BIGINT"
+  '1100' AS "binary_as_string", 
+  PARSE_LONG('1110', 2) AS "bigint_value"
 ```
 
 Returns the following:
 
-| `binary_number_as_string` | `parse_binary_string_into_BIGINT` |
+| `binary_as_string` | `bigint_value` |
 | -- | -- |
 | `1100` | `14` |
 
@@ -1385,14 +1385,14 @@ The following example returns the one-based index of the substring `PR` in the `
 ```sql
 SELECT 
   "OriginCityName" AS "original_expr",
-  POSITION('PR' IN "OriginCityName" FROM 5) AS "index_found"
+  POSITION('PR' IN "OriginCityName" FROM 5) AS "index"
 FROM "flight-carriers"
 LIMIT 2
 ```
 
 Returns the following:
 
-| `original_expr` | `index_found` |
+| `original_state` | `index` |
 | -- | -- |
 | `San Juan, PR` | `11` |
 | `Boston, MA` | `0` |
@@ -1438,15 +1438,15 @@ The following example uses regular expressions to find city names inside the `Or
 
 ```sql
 SELECT 
-  "OriginCityName" AS "original_expr",
-  REGEXP_EXTRACT("OriginCityName", '([^,]+)', 0) AS "pattern_extracted"
+  "OriginCityName" AS "origin_city",
+  REGEXP_EXTRACT("OriginCityName", '([^,]+)', 0) AS "pattern_match"
 FROM "flight-carriers"
 LIMIT 1
 ```
 
 Returns the following:
 
-| `original_expr` | `pattern_extracted` |
+| `origin_city` | `pattern_match` |
 | -- | -- |
 | `San Juan, PR` | `San Juan`|
 
@@ -1463,11 +1463,11 @@ Returns `true` if the regular expression `pattern` finds a match in `expr`. Retu
 
 <details><summary>Example</summary>
 
-The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name with two words.
+The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name with a space in the name.
 
 ```sql
 SELECT 
-  "OriginCityName" AS "original_expr",
+  "OriginCityName" AS "origin_city",
   REGEXP_LIKE("OriginCityName", '[A-Za-z]+\s[A-Za-z]+') AS "pattern_found"
 FROM "flight-carriers"
 LIMIT 2
@@ -1475,7 +1475,7 @@ LIMIT 2
 
 Returns the following:
 
-| `original_expr` | `pattern_found` |
+| `origin_city` | `pattern_found` |
 | -- | -- |
 | `San Juan, PR` | `true` |
 | `Boston, MA` | `false` |
@@ -1497,13 +1497,13 @@ The following example matches instances of the word `Fort` and replaces it with 
 
 ```sql
 SELECT 
-  'Fort Lauderdale, FL' AS "original_expr",
-  REGEXP_REPLACE('Fort Lauderdale, FL', 'Fort', 'Ft.') AS "replace_fort_with_abbreviation"
+  'Fort Lauderdale, FL' AS "original_string",
+  REGEXP_REPLACE('Fort Lauderdale, FL', 'Fort', 'Ft.') AS "modified_string"
 ```
 
 Returns the following:
 
-| `original_expr` | `replace_fort_with_abbreviation` |
+| `original_string` | `modified_string` |
 | -- | -- |
 | `Fort Lauderdale, FL` | `Ft. Lauderdale, FL` |
 
@@ -1933,7 +1933,7 @@ The following example converts the `OriginCityName` column from the `flight-carr
 
 ```sql
 SELECT 
-  "OriginCityName" AS "original_string",
+  "OriginCityName" AS "origin_city",
   UPPER("OriginCityName") AS "make_uppercase"
 FROM "flight-carriers"
 LIMIT 1
@@ -1941,7 +1941,7 @@ LIMIT 1
 
 Returns the following:
 
-| `original_string` | `make_uppercase` |
+| `origin_city` | `uppercase` |
 | -- | -- |
 `San Juan, PR` | `SAN JUAN, PR` |
 
