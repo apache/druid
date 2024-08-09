@@ -87,7 +87,7 @@ public class CompactionSupervisor implements Supervisor
   public SupervisorStateManager.State getState()
   {
     if (!scheduler.isRunning()) {
-      return State.SCHEDULER_DISABLED;
+      return State.SCHEDULER_STOPPED;
     } else if (supervisorSpec.isSuspended()) {
       return State.SUSPENDED;
     } else {
@@ -134,7 +134,7 @@ public class CompactionSupervisor implements Supervisor
 
   public enum State implements SupervisorStateManager.State
   {
-    SCHEDULER_DISABLED(true),
+    SCHEDULER_STOPPED(true),
     RUNNING(true),
     SUSPENDED(true),
     UNHEALTHY(false);

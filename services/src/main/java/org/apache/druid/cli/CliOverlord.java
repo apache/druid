@@ -38,8 +38,6 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.common.config.Configs;
-import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -119,7 +117,6 @@ import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -394,6 +391,12 @@ public class CliOverlord extends ServerRunnable
                 binder.bind(HttpRemoteTaskRunnerFactory.class).in(LazySingleton.class);
 
                 JacksonConfigProvider.bind(binder, WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class, null);
+                JacksonConfigProvider.bind(
+                    binder,
+                    DruidCompactionConfig.CONFIG_KEY,
+                    DruidCompactionConfig.class,
+                    DruidCompactionConfig.empty()
+                );
               }
 
               @Provides
@@ -414,31 +417,6 @@ public class CliOverlord extends ServerRunnable
 
                   return heartbeatTags;
                 };
-              }
-
-              @Provides
-              @LazySingleton
-              public Supplier<ClusterCompactionConfig> getClusterCompactionConfig(JacksonConfigManager configManager)
-              {
-                return () -> {
-                  DruidCompactionConfig compactionConfig = configManager.watch(
-                      DruidCompactionConfig.CONFIG_KEY,
-                      DruidCompactionConfig.class,
-                      DruidCompactionConfig.empty()
-                  ).get();
-                  return Configs.valueOrDefault(compactionConfig, DruidCompactionConfig.empty())
-                                .clusterConfig();
-                };
-              }
-
-              @Provides
-              @LazySingleton
-              public Supplier<WorkerBehaviorConfig> getWorkerBehaviourConfig(JacksonConfigManager configManager)
-              {
-                return () -> configManager.watch(
-                    WorkerBehaviorConfig.CONFIG_KEY,
-                    WorkerBehaviorConfig.class
-                ).get();
               }
             };
           }

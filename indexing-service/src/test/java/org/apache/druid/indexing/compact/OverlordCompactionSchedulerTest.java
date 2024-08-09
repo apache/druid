@@ -41,7 +41,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -67,7 +66,7 @@ import java.util.List;
 public class OverlordCompactionSchedulerTest
 {
   private static final ObjectMapper OBJECT_MAPPER;
-  
+
   static {
     OBJECT_MAPPER = new DefaultObjectMapper();
     OBJECT_MAPPER.registerModules(new IndexingServiceTuningConfigModule().getJacksonModules());
@@ -82,7 +81,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   private CompactionSchedulerConfig schedulerConfig;
-  private ClusterCompactionConfig clusterCompactionConfig;
+  private DruidCompactionConfig compactionConfig;
   private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
 
   private TaskMaster taskMaster;
@@ -112,7 +111,7 @@ public class OverlordCompactionSchedulerTest
     segmentsMetadataManager = new TestSegmentsMetadataManager();
 
     schedulerConfig = new CompactionSchedulerConfig(true);
-    clusterCompactionConfig = DruidCompactionConfig.empty().clusterConfig();
+    compactionConfig = DruidCompactionConfig.empty();
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
 
     initScheduler();
@@ -127,7 +126,7 @@ public class OverlordCompactionSchedulerTest
         taskMaster,
         new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, () -> defaultWorkerConfig),
         segmentsMetadataManager,
-        () -> clusterCompactionConfig,
+        () -> compactionConfig,
         new CompactionStatusTracker(OBJECT_MAPPER),
         schedulerConfig,
         coordinatorOverlordServiceConfig,

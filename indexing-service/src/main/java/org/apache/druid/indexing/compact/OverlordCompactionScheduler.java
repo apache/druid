@@ -87,7 +87,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ServiceEmitter emitter;
 
   private final CompactionSchedulerConfig schedulerConfig;
-  private final Supplier<ClusterCompactionConfig> clusterCompactionConfigSupplier;
+  private final Supplier<DruidCompactionConfig> compactionConfigSupplier;
   private final ConcurrentHashMap<String, DataSourceCompactionConfig> activeDatasourceConfigs;
 
   /**
@@ -114,7 +114,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       TaskMaster taskMaster,
       TaskQueryTool taskQueryTool,
       SegmentsMetadataManager segmentManager,
-      Supplier<ClusterCompactionConfig> clusterCompactionConfigSupplier,
+      Supplier<DruidCompactionConfig> compactionConfigSupplier,
       CompactionStatusTracker statusTracker,
       CompactionSchedulerConfig schedulerConfig,
       CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
@@ -127,7 +127,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.segmentManager = segmentManager;
     this.emitter = emitter;
     this.schedulerConfig = schedulerConfig;
-    this.clusterCompactionConfigSupplier = clusterCompactionConfigSupplier;
+    this.compactionConfigSupplier = compactionConfigSupplier;
 
     this.executor = executorFactory.create(1, "CompactionScheduler-%s");
     this.statusTracker = statusTracker;
@@ -308,7 +308,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     return DruidCompactionConfig
         .empty()
-        .withClusterConfig(clusterCompactionConfigSupplier.get())
+        .withClusterConfig(compactionConfigSupplier.get().clusterConfig())
         .withDatasourceConfigs(new ArrayList<>(activeDatasourceConfigs.values()));
   }
 

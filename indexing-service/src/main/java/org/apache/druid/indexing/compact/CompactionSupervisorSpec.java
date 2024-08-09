@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
@@ -77,7 +76,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public Supervisor createSupervisor()
+  public CompactionSupervisor createSupervisor()
   {
     return new CompactionSupervisor(this, scheduler);
   }
@@ -89,13 +88,13 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public SupervisorSpec createSuspendedSpec()
+  public CompactionSupervisorSpec createSuspendedSpec()
   {
     return new CompactionSupervisorSpec(spec, true, scheduler);
   }
 
   @Override
-  public SupervisorSpec createRunningSpec()
+  public CompactionSupervisorSpec createRunningSpec()
   {
     return new CompactionSupervisorSpec(spec, false, scheduler);
   }
