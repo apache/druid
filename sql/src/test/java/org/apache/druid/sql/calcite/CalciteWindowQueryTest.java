@@ -73,6 +73,13 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       QueryContexts.ENABLE_DEBUG, true
   );
 
+  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_QUERY_CONTEXT)
+                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "0")
+                  .build();
+
   public static Object[] parametersForWindowQueryTest() throws Exception
   {
     final URL windowFolderUrl = ClassLoader.getSystemResource("calcite/tests/window");
@@ -216,6 +223,30 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                   .putAll(DEFAULT_QUERY_CONTEXT)
                   .putAll(testCase.getQueryContext())
                   .build()
+          )
+          .addCustomVerification(QueryVerification.ofResults(testCase))
+          .run();
+    }
+  }
+
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
+  @SuppressWarnings("unchecked")
+  public void windowQueryTestsWithSubqueryBytes(String filename) throws Exception
+  {
+    TestCase testCase = new TestCase(filename);
+
+    assumeTrue(testCase.getType() != TestType.failingTest);
+
+    if (testCase.getType() == TestType.operatorValidation) {
+      testBuilder()
+          .skipVectorize(true)
+          .sql(testCase.getSql())
+          .queryContext(
+              ImmutableMap.<String, Object>builder()
+                          .putAll(DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES)
+                          .putAll(testCase.getQueryContext())
+                          .build()
           )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
