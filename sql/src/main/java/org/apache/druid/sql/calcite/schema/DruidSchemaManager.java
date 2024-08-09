@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.guice.annotations.UnstableApi;
+import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 import java.util.Map;
@@ -29,7 +30,10 @@ import java.util.Set;
 /**
  * This interface provides a map of datasource names to {@link DruidTable}
  * objects, used by the {@link DruidSchema} class as the SQL planner's
- * view of Druid datasource schemas. If a non-default implementation is
+ * view of Druid datasource schemas. If a mapping is found for the
+ * datasource name in {@link CatalogResolver}, then it is preferred during
+ * resolution time, to the entry found in this manager. See
+ * {@link DruidSchema#getTable(String)}. If a non-default implementation is
  * provided, the segment metadata polling-based view of the Druid tables
  * will not be built in DruidSchema.
  */
@@ -52,6 +56,11 @@ public interface DruidSchemaManager
   Map<String, DruidTable> getTables();
 
   default DruidTable getTable(String name)
+  {
+    return getTables().get(name);
+  }
+
+  default DruidTable getTable(String name, BrokerSegmentMetadataCache segmentMetadataCache)
   {
     return getTables().get(name);
   }
