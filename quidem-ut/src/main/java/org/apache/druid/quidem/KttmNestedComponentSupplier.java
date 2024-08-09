@@ -100,8 +100,8 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
         new AutoTypeColumnSchema("event", null),
         new AutoTypeColumnSchema("agent", null),
         new StringDimensionSchema("client_ip"),
-        new StringDimensionSchema("geo_ip"),
-        new StringDimensionSchema("language"),
+        new AutoTypeColumnSchema("geo_ip", null),
+        new AutoTypeColumnSchema("language", null),
         new StringDimensionSchema("adblock_list"),
         new StringDimensionSchema("app_version"),
         new StringDimensionSchema("path"),
@@ -140,7 +140,8 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
             .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
             .inputTmpDir(new File(tmpDir, "tmpKttm"))
             .buildIncrementalIndex();
-      } finally {
+      }
+      finally {
         FileUtils.deleteDirectory(tmpDir);
       }
     }
