@@ -1096,7 +1096,7 @@ The following example converts the `OriginCityName` column from the `flight-carr
 
 ```sql
 SELECT 
-  "OriginCityName" AS "original_string",
+  "OriginCityName" AS "origin_city",
   LOWER("OriginCityName") AS "lowercase"
 FROM "flight-carriers"
 LIMIT 1
@@ -1104,7 +1104,7 @@ LIMIT 1
 
 Returns the following:
 
-| `original_string` | `lowercase` |
+| `origin_city` | `lowercase` |
 | -- | -- |
 `San Juan, PR` | `san juan, pr` |
 
@@ -1115,7 +1115,7 @@ Returns the following:
 
 ## LPAD
 
-Returns a string of size `length` from `expr`. When the length of `expr` is less than `chars`, left pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
+Returns a string of size `length` from `expr`. When the length of `expr` is less than `length`, left pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
 * **Syntax:** `LPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
@@ -1339,7 +1339,7 @@ Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON val
 
 Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base 10) if a radix is not provided.
 
-* **Syntax:**`PARSE_LONG(string, [radix])`
+* **Syntax:**`PARSE_LONG(string[, radix])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
@@ -1384,7 +1384,7 @@ The following example returns the one-based index of the substring `PR` in the `
 
 ```sql
 SELECT 
-  "OriginCityName" AS "original_expr",
+  "OriginCityName" AS "origin_city",
   POSITION('PR' IN "OriginCityName" FROM 5) AS "index"
 FROM "flight-carriers"
 LIMIT 2
@@ -1392,7 +1392,7 @@ LIMIT 2
 
 Returns the following:
 
-| `original_state` | `index` |
+| `origin_city` | `index` |
 | -- | -- |
 | `San Juan, PR` | `11` |
 | `Boston, MA` | `0` |
@@ -1562,7 +1562,7 @@ Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
-Returns a string of size `length` from `expr`. When the length of `expr` is less than `chars`, right pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
+Returns a string of size `length` from `expr`. When the length of `expr` is less than `length`, right pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
 * **Syntax:** `RPAD(expr, length[, chars])`
 * **Function type:** Scalar, string
@@ -1934,7 +1934,7 @@ The following example converts the `OriginCityName` column from the `flight-carr
 ```sql
 SELECT 
   "OriginCityName" AS "origin_city",
-  UPPER("OriginCityName") AS "make_uppercase"
+  UPPER("OriginCityName") AS "uppercase"
 FROM "flight-carriers"
 LIMIT 1
 ```
