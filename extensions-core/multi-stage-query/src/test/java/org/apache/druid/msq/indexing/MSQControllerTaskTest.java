@@ -58,7 +58,8 @@ public class MSQControllerTaskTest
           "target",
           Granularities.DAY,
           null,
-          INTERVALS
+          INTERVALS,
+          null
       ))
       .query(new Druids.ScanQueryBuilder()
                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)

@@ -1950,7 +1950,8 @@ public class ControllerImpl implements Controller
             destination.getSegmentSortOrder(),
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery()
+            querySpec.getQuery(),
+            destination.getDimensionToSchemaMap()
         );
 
     return new DataSchema(
@@ -2122,13 +2123,33 @@ public class ControllerImpl implements Controller
     return new StringTuple(array);
   }
 
+  private static DimensionSchema getDimensionSchema(
+      final String outputColumnName,
+      @Nullable final ColumnType queryType,
+      QueryContext context,
+      @Nullable Map<String, DimensionSchema> dimensionToSchemaMap
+  )
+  {
+    if (dimensionToSchemaMap != null && dimensionToSchemaMap.containsKey(outputColumnName)) {
+      return dimensionToSchemaMap.get(outputColumnName);
+    }
+    // For aggregators moved to dimensions, we won't have an entry in the map. For those cases, use the default config.
+    return DimensionSchemaUtils.createDimensionSchema(
+        outputColumnName,
+        queryType,
+        MultiStageQueryContext.useAutoColumnSchemas(context),
+        MultiStageQueryContext.getArrayIngestMode(context)
+    );
+  }
+
   private static Pair<List<DimensionSchema>, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
       final List<String> segmentSortOrder,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
-      final Query<?> query
+      final Query<?> query,
+      @Nullable final Map<String, DimensionSchema> dimensionToSchemaMap
   )
   {
     // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
@@ -2214,18 +2235,14 @@ public class ControllerImpl implements Controller
               outputColumnAggregatorFactories,
               outputColumnName,
               type,
-              query.context()
+              query.context(),
+              dimensionToSchemaMap
           );
         } else {
           // complex columns only
           if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
             dimensions.add(
-                DimensionSchemaUtils.createDimensionSchema(
-                    outputColumnName,
-                    type,
-                    MultiStageQueryContext.useAutoColumnSchemas(query.context()),
-                    MultiStageQueryContext.getArrayIngestMode(query.context())
-                )
+                getDimensionSchema(outputColumnName, type, query.context(), dimensionToSchemaMap)
             );
           } else if (!isRollupQuery) {
             aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
@@ -2236,7 +2253,8 @@ public class ControllerImpl implements Controller
                 outputColumnAggregatorFactories,
                 outputColumnName,
                 type,
-                query.context()
+                query.context(),
+                dimensionToSchemaMap
             );
           }
         }
@@ -2263,19 +2281,15 @@ public class ControllerImpl implements Controller
       Map<String, AggregatorFactory> outputColumnAggregatorFactories,
       String outputColumn,
       ColumnType type,
-      QueryContext context
+      QueryContext context,
+      Map<String, DimensionSchema> dimensionToSchemaMap
   )
   {
     if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
       aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
     } else {
       dimensions.add(
-          DimensionSchemaUtils.createDimensionSchema(
-              outputColumn,
-              type,
-              MultiStageQueryContext.useAutoColumnSchemas(context),
-              MultiStageQueryContext.getArrayIngestMode(context)
-          )
+          getDimensionSchema(outputColumn, type, context, dimensionToSchemaMap)
       );
     }
   }
