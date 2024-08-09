@@ -1077,11 +1077,42 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-`LOOKUP(<CHARACTER>, <CHARACTER>[, <CHARACTER>])`
+Look up `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. Returns `replaceMissingValueWith`, which defaults to `null`, when the `expr` is null or when the lookup does not contain a value for `expr`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LOOKUP(expr, lookupName[, replaceMissingValueWith])`
+* **Function type:** Scalar, string
 
-Looks up the expression in a registered query-time lookup table.
+<details><summary>Example</summary>
+
+The following example uses a map lookup table, named `acronym_to_name` made with the following key-value pairs:
+
+```json
+{
+	“SJU”: Luis Munoz Marin International Airport”,
+	“IAD”: “Dulles International AirportDulles International Airport”
+}
+```
+
+The example uses the map lookup table `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to its full airport name, returns `NaN` if no matching value exist in the lookup table.
+
+```sql
+SELECT 
+  "Origin" AS "origin_airport",
+  LOOKUP("Origin", 'acronym_to_names','NaN') AS "full_airport_name"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_airport` | `full_airport_name` | 
+| -- | -- |
+| `SJU` | `Luis Munoz Marin International Airport` |
+| `BOS` | `NaN` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## LOWER
 
