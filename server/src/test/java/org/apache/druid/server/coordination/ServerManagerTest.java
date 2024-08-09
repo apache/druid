@@ -599,7 +599,6 @@ public class ServerManagerTest
         new BaseQuery<Object>(
             new TableDataSource("test"),
             new MultipleSpecificSegmentSpec(descriptors),
-            false,
             new HashMap<>()
         )
         {

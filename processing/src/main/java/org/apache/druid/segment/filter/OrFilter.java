@@ -243,6 +243,17 @@ public class OrFilter implements BooleanFilter
             }
             return makeVectorMatcher(matchers);
           }
+
+          @Override
+          public boolean canVectorize()
+          {
+            for (FilterBundle.MatcherBundle bundle : allMatcherBundles) {
+              if (!bundle.canVectorize()) {
+                return false;
+              }
+            }
+            return true;
+          }
         }
     );
   }
@@ -527,6 +538,12 @@ public class OrFilter implements BooleanFilter
             }
         );
       }
+
+      @Override
+      public boolean canVectorize()
+      {
+        return bundle.getMatcherBundle() == null || bundle.getMatcherBundle().canVectorize();
+      }
     };
   }
 
@@ -584,6 +601,12 @@ public class OrFilter implements BooleanFilter
       )
       {
         return convertIndexToVectorValueMatcher(baseOffset, partialIndex);
+      }
+
+      @Override
+      public boolean canVectorize()
+      {
+        return true;
       }
     };
   }

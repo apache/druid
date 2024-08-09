@@ -20,12 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Yielder;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -74,18 +69,8 @@ public class QueryableIndexStorageAdapterTest
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
       final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-
       if (vectorize) {
-        final VectorCursor cursor = closer.register(
-            adapter.makeVectorCursor(
-                null,
-                Intervals.ETERNITY,
-                VirtualColumns.EMPTY,
-                false,
-                QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE,
-                null
-            )
-        );
+        final VectorCursor cursor = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)).asVectorCursor();
 
         final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -96,17 +81,8 @@ public class QueryableIndexStorageAdapterTest
         partialNullSelector =
             columnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("partial_null_column"));
       } else {
-        final Sequence<Cursor> cursors = adapter.makeCursors(
-            null,
-            Intervals.ETERNITY,
-            VirtualColumns.EMPTY,
-            Granularities.ALL,
-            false,
-            null
-        );
-
-        final Yielder<Cursor> yielder = closer.register(Yielders.each(cursors));
-        final Cursor cursor = yielder.get();
+        final CursorHolder cursorHolder = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+        final Cursor cursor = cursorHolder.asCursor();
         final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
         qualitySelector =
@@ -250,18 +226,9 @@ public class QueryableIndexStorageAdapterTest
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
       final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-      final Sequence<Cursor> cursors = adapter.makeCursors(
-          null,
-          Intervals.ETERNITY,
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-      final Yielder<Cursor> cursorYielder = Yielders.each(cursors);
-      cursor = cursorYielder.get();
+      final CursorHolder cursorHolder = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+      cursor = cursorHolder.asCursor();
       columnSelectorFactory = cursor.getColumnSelectorFactory();
-      closer.register(cursorYielder);
     }
 
     @After

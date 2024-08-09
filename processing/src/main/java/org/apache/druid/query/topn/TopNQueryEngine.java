@@ -19,27 +19,35 @@
 
 package org.apache.druid.query.topn;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -57,8 +65,8 @@ public class TopNQueryEngine
   /**
    * Do the thing - process a {@link StorageAdapter} into a {@link Sequence} of {@link TopNResultValue}, with one of the
    * fine {@link TopNAlgorithm} available chosen based on the type of column being aggregated. The algorithm provides a
-   * mapping function to process rows from the adapter {@link org.apache.druid.segment.Cursor} to apply
-   * {@link AggregatorFactory} and create or update {@link TopNResultValue}
+   * mapping function to process rows from the adapter {@link Cursor} to apply {@link AggregatorFactory} and create or
+   * update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
       final TopNQuery query,
@@ -72,36 +80,37 @@ public class TopNQueryEngine
       );
     }
 
-    final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
-    final Granularity granularity = query.getGranularity();
     final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
 
-    Preconditions.checkArgument(
-        queryIntervals.size() == 1,
-        "Can only handle a single interval, got[%s]",
-        queryIntervals
+    final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec);
+    final Cursor cursor = cursorHolder.asCursor();
+    if (cursor == null) {
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+    }
+    final CursorGranularizer granularizer = CursorGranularizer.create(
+        adapter,
+        cursor,
+        query.getGranularity(),
+        buildSpec.getInterval(),
+        false
     );
+    if (granularizer == null) {
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+    }
 
+    if (queryMetrics != null) {
+      queryMetrics.cursor(cursor);
+    }
     return Sequences.filter(
-        Sequences.map(
-            adapter.makeCursors(
-                filter,
-                queryIntervals.get(0),
-                query.getVirtualColumns(),
-                granularity,
-                query.isDescending(),
-                queryMetrics
-            ),
-            input -> {
-              if (queryMetrics != null) {
-                queryMetrics.cursor(input);
-              }
-              return mapFn.apply(input, queryMetrics);
-            }
-        ),
-        Predicates.notNull()
-    );
+        Sequences.simple(granularizer.getBucketIterable())
+                 .map(bucketInterval -> {
+                   granularizer.advanceToBucket(bucketInterval);
+                   cursor.mark();
+                   return mapFn.apply(cursor, granularizer, queryMetrics);
+                 }),
+                 Predicates.notNull()
+    ).withBaggage(cursorHolder);
   }
 
   /**
@@ -200,6 +209,41 @@ public class TopNQueryEngine
       // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
       return false;
     }
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(TopNQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    // virtual column is currently only used as a decorator to pass to the cursor holder to allow specializing cursor
+    // and vector cursors if any pre-aggregated data at the matching granularity is available
+    // eventually this could probably be reworked to be used by the granularizer instead of the existing method
+    // of creating a selector on the time column
+    final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(query.getGranularity());
+    VirtualColumns virtualColumns;
+    List<String> groupingColumns;
+    if (granularityVirtual == null) {
+      virtualColumns = query.getVirtualColumns();
+      groupingColumns = null;
+    } else {
+      virtualColumns = VirtualColumns.fromIterable(
+          Iterables.concat(
+              Collections.singletonList(granularityVirtual),
+              () -> Arrays.stream(query.getVirtualColumns().getVirtualColumns()).iterator()
+          )
+      );
+      groupingColumns = ImmutableList.of(
+          granularityVirtual.getOutputName(),
+          query.getDimensionSpec().getDimension()
+      );
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(query.getSingleInterval())
+                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                          .setGroupingColumns(groupingColumns)
+                          .setVirtualColumns(virtualColumns)
+                          .setAggregators(query.getAggregatorSpecs())
+                          .setQueryContext(query.context())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 
   /**

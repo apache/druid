@@ -27,11 +27,9 @@ import com.google.common.io.Files;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -39,7 +37,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
@@ -332,16 +329,17 @@ public class TestSegmentUtils
         }
 
         @Override
-        public Sequence<Cursor> makeCursors(
-            @Nullable Filter filter,
-            Interval interval,
-            VirtualColumns virtualColumns,
-            Granularity gran,
-            boolean descending,
-            @Nullable QueryMetrics<?> queryMetrics
-        )
+        public CursorHolder makeCursorHolder(CursorBuildSpec spec)
         {
-          return null;
+          return new CursorHolder()
+          {
+            @Nullable
+            @Override
+            public Cursor asCursor()
+            {
+              return null;
+            }
+          };
         }
       };
 

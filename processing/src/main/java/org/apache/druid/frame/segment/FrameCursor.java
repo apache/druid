@@ -19,16 +19,15 @@
 
 package org.apache.druid.frame.segment;
 
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.frame.segment.columnar.FrameCursorHolderFactory;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SimpleSettableOffset;
-import org.joda.time.DateTime;
 
 /**
- * An implementation of {@link Cursor} used by {@link org.apache.druid.frame.segment.row.FrameCursorFactory}
- * and {@link org.apache.druid.frame.segment.columnar.FrameCursorFactory}.
+ * An implementation of {@link Cursor} used by {@link org.apache.druid.frame.segment.row.FrameCursorHolderFactory}
+ * and {@link FrameCursorHolderFactory}.
  *
  * Adds the methods {@link #getCurrentRow()} and {@link #setCurrentRow(int)} so the cursor can be moved to
  * particular rows.
@@ -37,6 +36,7 @@ public class FrameCursor implements Cursor
 {
   private final SimpleSettableOffset offset;
   private final ColumnSelectorFactory columnSelectorFactory;
+  private int markOffset = 0;
 
   public FrameCursor(
       SimpleSettableOffset offset,
@@ -51,12 +51,6 @@ public class FrameCursor implements Cursor
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     return columnSelectorFactory;
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return DateTimes.MIN;
   }
 
   @Override
@@ -85,8 +79,21 @@ public class FrameCursor implements Cursor
   }
 
   @Override
+  public void mark()
+  {
+    markOffset = offset.getOffset();
+  }
+
+  @Override
+  public void resetToMark()
+  {
+    offset.setCurrentOffset(markOffset);
+  }
+
+  @Override
   public void reset()
   {
+    markOffset = 0;
     offset.reset();
   }
 

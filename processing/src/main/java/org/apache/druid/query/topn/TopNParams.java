@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -30,6 +31,7 @@ public class TopNParams
 {
   public static final int CARDINALITY_UNKNOWN = -1;
   private final Cursor cursor;
+  private final CursorGranularizer granularizer;
   private final int cardinality;
   private final int numValuesPerPass;
   private final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus;
@@ -37,11 +39,13 @@ public class TopNParams
   protected TopNParams(
       ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus,
       Cursor cursor,
+      CursorGranularizer granularizer,
       int numValuesPerPass
   )
   {
     this.selectorPlus = selectorPlus;
     this.cursor = cursor;
+    this.granularizer = granularizer;
     this.cardinality = selectorPlus.getColumnSelectorStrategy().getCardinality(selectorPlus.getSelector());
     this.numValuesPerPass = numValuesPerPass;
   }
@@ -61,6 +65,11 @@ public class TopNParams
   public Cursor getCursor()
   {
     return cursor;
+  }
+
+  public CursorGranularizer getGranularizer()
+  {
+    return granularizer;
   }
 
   public int getCardinality()

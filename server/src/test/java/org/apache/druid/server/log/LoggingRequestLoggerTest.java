@@ -87,7 +87,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
   final Query<?> nestedQuery = new FakeQuery(
@@ -105,7 +106,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
   final Query nestedNestedQuery = new FakeQuery(
@@ -123,7 +125,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
   final Query unionQuery = new FakeQuery(
@@ -141,7 +144,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
 
@@ -325,11 +329,10 @@ class FakeQuery extends BaseQuery<Object>
   public FakeQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context);
+    super(dataSource, querySegmentSpec, context);
   }
 
   @Override

@@ -36,13 +36,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
@@ -581,8 +581,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("d", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("b"),
+                        OrderBy.ascending("d")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -643,7 +643,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("b")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -708,7 +708,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("e", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("e")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the

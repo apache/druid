@@ -19,15 +19,18 @@
 
 package org.apache.druid.query.aggregation.datasketches.util;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.ColumnProcessors;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
@@ -54,7 +57,8 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testRead()
   {
-    try (final VectorCursor cursor = makeCursor()) {
+    try (final CursorHolder cursorHolder = makeCursorHolder()) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final Supplier<Object[]> qualitySupplier = ColumnProcessors.makeVectorProcessor(
           "quality",
           ToObjectVectorColumnProcessorFactory.INSTANCE,
@@ -167,21 +171,22 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
     Assert.assertThat(sketch, CoreMatchers.instanceOf(HyperLogLogCollector.class));
   }
 
-  private VectorCursor makeCursor()
+  private CursorHolder makeCursorHolder()
   {
-    return adapter.makeVectorCursor(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        false,
-        3, /* vector size */
-        null
-    );
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setQueryContext(
+                                                         QueryContext.of(
+                                                             ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
+                                                         )
+                                                     )
+                                                     .build();
+    return adapter.makeCursorHolder(buildSpec);
   }
 
   private List<Object> readColumn(final String column, final int limit)
   {
-    try (final VectorCursor cursor = makeCursor()) {
+    try (final CursorHolder cursorHolder = makeCursorHolder()) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final Supplier<Object[]> supplier = ColumnProcessors.makeVectorProcessor(
           column,
           ToObjectVectorColumnProcessorFactory.INSTANCE,

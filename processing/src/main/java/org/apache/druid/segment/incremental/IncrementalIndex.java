@@ -222,7 +222,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   }
 
   private final long minTimestamp;
-  private final Granularity gran;
+  private final Granularity queryGranularity;
   private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
@@ -266,7 +266,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
-    this.gran = incrementalIndexSchema.getGran();
+    this.queryGranularity = incrementalIndexSchema.getQueryGranularity();
     this.rollup = incrementalIndexSchema.isRollup();
     this.virtualColumns = incrementalIndexSchema.getVirtualColumns();
     this.metrics = incrementalIndexSchema.getMetrics();
@@ -284,7 +284,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
         null,
         getCombiningAggregators(metrics),
         incrementalIndexSchema.getTimestampSpec(),
-        this.gran,
+        this.queryGranularity,
         this.rollup
     );
 
@@ -658,7 +658,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
 
     long truncated = 0;
     if (row.getTimestamp() != null) {
-      truncated = gran.bucketStart(row.getTimestampFromEpoch());
+      truncated = queryGranularity.bucketStart(row.getTimestampFromEpoch());
     }
     IncrementalIndexRow incrementalIndexRow = IncrementalIndexRow.createTimeAndDimswithDimsKeySize(
         Math.max(truncated, minTimestamp),
@@ -837,7 +837,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   public Interval getInterval()
   {
     DateTime min = DateTimes.utc(minTimestamp);
-    return new Interval(min, isEmpty() ? min : gran.increment(DateTimes.utc(getMaxTimeMillis())));
+    return new Interval(min, isEmpty() ? min : queryGranularity.increment(DateTimes.utc(getMaxTimeMillis())));
   }
 
   @Nullable

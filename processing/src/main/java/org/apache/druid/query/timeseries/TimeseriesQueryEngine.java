@@ -27,22 +27,28 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryRunnerHelper;
+import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
-import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -50,6 +56,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -94,64 +101,45 @@ public class TimeseriesQueryEngine
       );
     }
 
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
-    final boolean descending = query.isDescending();
 
-    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
 
-    final boolean doVectorize = query.context().getVectorize().shouldVectorize(
-        adapter.canVectorize(filter, query.getVirtualColumns(), descending)
-        && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-        && VectorGroupByEngine.canVectorizeAggregators(inspector, query.getAggregatorSpecs())
-    );
-
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
     final Sequence<Result<TimeseriesResultValue>> result;
 
-    if (doVectorize) {
-      result = processVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
+    if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize(), cursorHolder::close)) {
+      result = processVectorized(query, adapter, cursorHolder, interval, gran);
     } else {
-      result = processNonVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
+      result = processNonVectorized(query, adapter, cursorHolder, interval, gran);
     }
 
     final int limit = query.getLimit();
     if (limit < Integer.MAX_VALUE) {
-      return result.limit(limit);
+      return result.limit(limit).withBaggage(cursorHolder);
     } else {
-      return result;
+      return result.withBaggage(cursorHolder);
     }
   }
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
       final StorageAdapter adapter,
-      @Nullable final Filter filter,
+      final CursorHolder cursorHolder,
       final Interval queryInterval,
-      final Granularity gran,
-      final boolean descending,
-      final TimeseriesQueryMetrics timeseriesQueryMetrics
+      final Granularity gran
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
 
-    final VectorCursor cursor = adapter.makeVectorCursor(
-        filter,
-        queryInterval,
-        query.getVirtualColumns(),
-        descending,
-        query.context().getVectorSize(),
-        timeseriesQueryMetrics
-    );
+    final VectorCursor cursor = cursorHolder.asVectorCursor();
 
     if (cursor == null) {
       return Sequences.empty();
     }
 
     final Closer closer = Closer.create();
-    closer.register(cursor);
-
     try {
       final VectorCursorGranularizer granularizer = VectorCursorGranularizer.create(
           adapter,
@@ -253,60 +241,119 @@ public class TimeseriesQueryEngine
   private Sequence<Result<TimeseriesResultValue>> processNonVectorized(
       final TimeseriesQuery query,
       final StorageAdapter adapter,
-      @Nullable final Filter filter,
+      final CursorHolder cursorHolder,
       final Interval queryInterval,
-      final Granularity gran,
-      final boolean descending,
-      final TimeseriesQueryMetrics timeseriesQueryMetrics
+      final Granularity gran
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-
-    return QueryRunnerHelper.makeCursorBasedQuery(
+    final Cursor cursor = cursorHolder.asCursor();
+    if (cursor == null) {
+      return Sequences.empty();
+    }
+    final CursorGranularizer granularizer = CursorGranularizer.create(
         adapter,
-        Collections.singletonList(queryInterval),
-        filter,
-        query.getVirtualColumns(),
-        descending,
+        cursor,
         gran,
-        cursor -> {
-          if (skipEmptyBuckets && cursor.isDone()) {
-            return null;
-          }
-
-          Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
-          String[] aggregatorNames = new String[aggregatorSpecs.size()];
-
-          for (int i = 0; i < aggregatorSpecs.size(); i++) {
-            aggregators[i] = aggregatorSpecs.get(i).factorize(cursor.getColumnSelectorFactory());
-            aggregatorNames[i] = aggregatorSpecs.get(i).getName();
-          }
-
-          try {
-            while (!cursor.isDone()) {
-              for (Aggregator aggregator : aggregators) {
-                aggregator.aggregate();
-              }
-              cursor.advance();
-            }
-
-            TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
-
-            for (int i = 0; i < aggregatorSpecs.size(); i++) {
-              bob.addMetric(aggregatorNames[i], aggregators[i].get());
-            }
-
-            return bob.build();
-          }
-          finally {
-            // cleanup
-            for (Aggregator agg : aggregators) {
-              agg.close();
-            }
-          }
-        },
-        timeseriesQueryMetrics
+        queryInterval,
+        query.isDescending()
     );
+    if (granularizer == null) {
+      return Sequences.empty();
+    }
+    final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+    return Sequences.simple(granularizer.getBucketIterable())
+                    .map(
+                        bucketInterval -> {
+                          // Whether or not the current bucket is empty
+                          boolean emptyBucket = true;
+                          boolean advancedToBucket = granularizer.advanceToBucket(bucketInterval);
+                          if ((!advancedToBucket || cursor.isDone()) && skipEmptyBuckets) {
+                            return null;
+                          }
+                          final Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
+                          final String[] aggregatorNames = new String[aggregatorSpecs.size()];
+
+                          for (int i = 0; i < aggregatorSpecs.size(); i++) {
+                            aggregators[i] = aggregatorSpecs.get(i).factorize(columnSelectorFactory);
+                            aggregatorNames[i] = aggregatorSpecs.get(i).getName();
+                          }
+                          try {
+                            if (advancedToBucket) {
+                              while (!cursor.isDone()) {
+                                for (Aggregator aggregator : aggregators) {
+                                  aggregator.aggregate();
+                                }
+                                emptyBucket = false;
+
+                                if (!granularizer.advanceCursorWithinBucket()) {
+                                  break;
+                                }
+                              }
+                            }
+
+                            if (emptyBucket && skipEmptyBuckets) {
+                              // Return null, will get filtered out later by the Objects::nonNull filter.
+                              return null;
+                            }
+
+                            final TimeseriesResultBuilder bob = new TimeseriesResultBuilder(
+                                gran.toDateTime(bucketInterval.getStartMillis())
+                            );
+                            for (int i = 0; i < aggregatorSpecs.size(); i++) {
+                              bob.addMetric(aggregatorNames[i], aggregators[i].get());
+                            }
+
+                            return bob.build();
+                          }
+                          finally {
+                            // cleanup
+                            for (Aggregator agg : aggregators) {
+                              agg.close();
+                            }
+                          }
+                        }
+                    )
+                    .filter(Objects::nonNull);
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(TimeseriesQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    // virtual column is currently only used as a decorator to pass to the cursor holder to allow specializing cursor
+    // and vector cursors if any pre-aggregated data at the matching granularity is available
+    // eventually this could probably be reworked to be used by the granularizer instead of the existing method
+    // of creating a selector on the time column
+    final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(query.getGranularity());
+    VirtualColumns virtualColumns;
+    List<String> groupingColumns;
+    if (granularityVirtual == null) {
+      virtualColumns = query.getVirtualColumns();
+      groupingColumns = null;
+    } else {
+      virtualColumns = VirtualColumns.fromIterable(
+          Iterables.concat(
+              Collections.singletonList(granularityVirtual),
+              () -> Arrays.stream(query.getVirtualColumns().getVirtualColumns()).iterator()
+          )
+      );
+      groupingColumns = Collections.singletonList(granularityVirtual.getOutputName());
+    }
+    return CursorBuildSpec.builder()
+                          .setInterval(query.getSingleInterval())
+                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                          .setGroupingColumns(groupingColumns)
+                          .setVirtualColumns(virtualColumns)
+                          .setAggregators(query.getAggregatorSpecs())
+                          .setQueryContext(query.context())
+                          .setPreferredOrdering(
+                              Collections.singletonList(
+                                  query.isDescending() ?
+                                  OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME) :
+                                  OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)
+                              )
+                          )
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 }

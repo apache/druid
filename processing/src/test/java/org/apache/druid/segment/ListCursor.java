@@ -26,7 +26,6 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -43,6 +42,7 @@ public class ListCursor implements Cursor
 {
   private final List<Object> baseList;
   private int index;
+  private int markIndex = 0;
 
   public ListCursor(List<Object> inputList)
   {
@@ -190,12 +190,6 @@ public class ListCursor implements Cursor
   }
 
   @Override
-  public DateTime getTime()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void advance()
   {
     advanceUninterruptibly();
@@ -221,8 +215,21 @@ public class ListCursor implements Cursor
   }
 
   @Override
+  public void resetToMark()
+  {
+    index = markIndex;
+  }
+
+  @Override
+  public void mark()
+  {
+    markIndex = index;
+  }
+
+  @Override
   public void reset()
   {
     index = 0;
+    markIndex = 0;
   }
 }

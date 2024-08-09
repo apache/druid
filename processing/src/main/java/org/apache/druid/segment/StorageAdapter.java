@@ -21,9 +21,11 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -33,8 +35,66 @@ import java.util.Optional;
 /**
  */
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnInspector
+public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHolderFactory
 {
+
+  /**
+   * Build a {@link CursorHolder} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
+   * scanning segments and creating {@link ColumnSelectorFactory} and
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values at the cursor
+   * position.
+   */
+  @Override
+  default CursorHolder makeCursorHolder(CursorBuildSpec spec)
+  {
+    return new CursorHolder()
+    {
+      @Override
+      public boolean canVectorize()
+      {
+        return StorageAdapter.this.canVectorize(
+            spec.getFilter(),
+            spec.getVirtualColumns(),
+            CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering())
+        );
+      }
+
+      @Override
+      public Cursor asCursor()
+      {
+        return Iterables.getOnlyElement(
+            StorageAdapter.this.makeCursors(
+                spec.getFilter(),
+                spec.getInterval(),
+                spec.getVirtualColumns(),
+                Granularities.ALL,
+                CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
+                spec.getQueryMetrics()
+            ).toList()
+        );
+      }
+
+      @Override
+      public VectorCursor asVectorCursor()
+      {
+        return StorageAdapter.this.makeVectorCursor(
+            spec.getFilter(),
+            spec.getInterval(),
+            spec.getVirtualColumns(),
+            CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
+            spec.getQueryContext().getVectorSize(),
+            spec.getQueryMetrics()
+        );
+      }
+
+      @Override
+      public void close()
+      {
+        // consuming sequences of CursorFactory are expected to close themselves.
+      }
+    };
+  }
+
   Interval getInterval();
   Indexed<String> getAvailableDimensions();
   Iterable<String> getAvailableMetrics();

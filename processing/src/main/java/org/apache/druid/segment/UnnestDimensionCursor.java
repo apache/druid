@@ -29,7 +29,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
@@ -77,6 +76,7 @@ public class UnnestDimensionCursor implements Cursor
   private SingleIndexInts indexIntsForRow;
   private final int nullId;
   private final int idOffset;
+  private int markIndex = 0;
 
   public UnnestDimensionCursor(
       Cursor cursor,
@@ -260,12 +260,6 @@ public class UnnestDimensionCursor implements Cursor
   }
 
   @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
-  }
-
-  @Override
   public void advance()
   {
     advanceUninterruptibly();
@@ -297,9 +291,28 @@ public class UnnestDimensionCursor implements Cursor
   }
 
   @Override
+  public void mark()
+  {
+    markIndex = index;
+    baseCursor.mark();
+  }
+
+  @Override
+  public void resetToMark()
+  {
+    index = markIndex;
+    baseCursor.resetToMark();
+    if (!baseCursor.isDone()) {
+      indexIntsForRow = new SingleIndexInts();
+      indexedIntsForCurrentRow = dimSelector.getRow();
+    }
+  }
+
+  @Override
   public void reset()
   {
     index = 0;
+    markIndex = 0;
     needInitialization = true;
     baseCursor.reset();
   }

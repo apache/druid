@@ -30,19 +30,19 @@ import org.apache.druid.frame.segment.columnar.FrameQueryableIndex;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -114,7 +114,8 @@ public class FrameBasedIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    final Sequence<Cursor> cursors = Sequences.concat(
+    final Closer closer = Closer.create();
+    final Sequence<Cursor> cursors = Sequences.simple(
         frameBasedInlineDataSource
             .getFrames()
             .stream()
@@ -123,17 +124,10 @@ public class FrameBasedIndexedTable implements IndexedTable
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
               FrameStorageAdapter frameStorageAdapter =
                   new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
-              return frameStorageAdapter.makeCursors(
-                                            null,
-                                            Intervals.ETERNITY,
-                                            VirtualColumns.EMPTY,
-                                            Granularities.ALL,
-                                            false,
-                                            null
-                                        );
+              return closer.register(frameStorageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)).asCursor();
             })
             .collect(Collectors.toList())
-    );
+    ).withBaggage(closer);
 
     final Sequence<Integer> sequence = Sequences.map(
         cursors,

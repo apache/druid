@@ -36,6 +36,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -50,7 +51,6 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.nested.StructuredData;
@@ -410,7 +410,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                                         .columns("obj")
                                                         .context(defaultScanQueryContext(context, rowSignature))
-                                                        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("obj", ScanQuery.Order.ASCENDING)))
+                                                        .orderBy(Collections.singletonList(OrderBy.ascending("obj")))
                                                         .build()
                                              )
                                              .columnMappings(new ColumnMappings(ImmutableList.of(

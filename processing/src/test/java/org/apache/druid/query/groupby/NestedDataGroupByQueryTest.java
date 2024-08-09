@@ -34,9 +34,10 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -654,18 +655,17 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     List<Segment> segments = segmentsGenerator.apply(tempFolder, closer);
     Supplier<List<ResultRow>> runner =
         () -> helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
-    Filter filter = groupQuery.getFilter() == null ? null : groupQuery.getFilter().toFilter();
+    final CursorBuildSpec spec = GroupingEngine.makeCursorBuildSpec(groupQuery, null);
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
-                                          s -> s.asStorageAdapter()
-                                                .canVectorize(
-                                                    filter,
-                                                    groupQuery.getVirtualColumns(),
-                                                    groupQuery.isDescending()
-                                                )
-                                      );
+                                          s -> {
+                                            final CursorHolder cursorHolder = s.asStorageAdapter()
+                                                                               .makeCursorHolder(spec);
+                                            final boolean canVectorize = cursorHolder.canVectorize();
+                                            cursorHolder.close();
+                                            return canVectorize;
+                                          });
 
-    Assert.assertEquals(NestedDataTestUtils.expectSegmentGeneratorCanVectorize(segmentsName), allCanVectorize);
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
         Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);

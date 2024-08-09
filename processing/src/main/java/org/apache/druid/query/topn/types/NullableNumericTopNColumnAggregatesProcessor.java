@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn.types;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
 import org.apache.druid.query.topn.TopNParams;
@@ -88,6 +89,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
       TopNQuery query,
       Selector selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   )
   {
@@ -106,8 +108,10 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
           aggregator.aggregate();
         }
       }
-      cursor.advance();
       processedRows++;
+      if (!granularizer.advanceCursorWithinBucket()) {
+        break;
+      }
     }
     return processedRows;
   }

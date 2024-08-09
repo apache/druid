@@ -22,7 +22,6 @@ package org.apache.druid.frame.testutil;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.joda.time.DateTime;
 
 /**
  * Used by {@link FrameTestUtil#readRowsFromAdapter} and {@link FrameTestUtil#readRowsFromCursor}.
@@ -31,6 +30,7 @@ public class RowNumberUpdatingCursor implements Cursor
 {
   private final Cursor baseCursor;
   private final SettableLongVirtualColumn rowNumberVirtualColumn;
+  private long markRowNumber = 0;
 
   RowNumberUpdatingCursor(Cursor baseCursor, SettableLongVirtualColumn rowNumberVirtualColumn)
   {
@@ -42,12 +42,6 @@ public class RowNumberUpdatingCursor implements Cursor
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     return baseCursor.getColumnSelectorFactory();
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Override
@@ -77,8 +71,23 @@ public class RowNumberUpdatingCursor implements Cursor
   }
 
   @Override
+  public void mark()
+  {
+    baseCursor.mark();
+    markRowNumber = rowNumberVirtualColumn.getValue();
+  }
+
+  @Override
+  public void resetToMark()
+  {
+    rowNumberVirtualColumn.setValue(markRowNumber);
+    baseCursor.resetToMark();
+  }
+
+  @Override
   public void reset()
   {
+    markRowNumber = 0;
     rowNumberVirtualColumn.setValue(0);
     baseCursor.reset();
   }

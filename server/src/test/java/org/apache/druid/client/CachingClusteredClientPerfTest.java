@@ -155,7 +155,6 @@ public class CachingClusteredClientPerfTest
     return new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(Collections.singletonList(interval)),
-        false,
         ImmutableMap.of(BaseQuery.QUERY_ID, "testQuery")
     );
   }
@@ -202,11 +201,10 @@ public class CachingClusteredClientPerfTest
     public TestQuery(
         DataSource dataSource,
         QuerySegmentSpec querySegmentSpec,
-        boolean descending,
         Map<String, Object> context
     )
     {
-      super(dataSource, querySegmentSpec, descending, context);
+      super(dataSource, querySegmentSpec, context);
     }
 
     @Override

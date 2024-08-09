@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn.types;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
 import org.apache.druid.query.topn.TopNParams;
@@ -112,6 +113,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       TopNQuery query,
       DimensionSelector selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   )
   {
@@ -121,9 +123,9 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     // values (1:* or *:*), results can be entirely incorrect since an aggregator for a different value might be
     // chosen from the array based on the re-used dictionary id
     if (notUnknown && hasDictionary) {
-      return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
+      return scanAndAggregateWithCardinalityKnown(query, cursor, granularizer, selector, rowSelector);
     } else {
-      return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
+      return scanAndAggregateWithCardinalityUnknown(query, cursor, granularizer, selector);
     }
   }
 
@@ -141,6 +143,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   private long scanAndAggregateWithCardinalityKnown(
       TopNQuery query,
       Cursor cursor,
+      CursorGranularizer granularizer,
       DimensionSelector selector,
       Aggregator[][] rowSelector
   )
@@ -164,8 +167,10 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
           aggregator.aggregate();
         }
       }
-      cursor.advance();
       processedRows++;
+      if (!granularizer.advanceCursorWithinBucket()) {
+        break;
+      }
     }
     return processedRows;
   }
@@ -181,6 +186,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   private long scanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,
+      CursorGranularizer granularizer,
       DimensionSelector selector
   )
   {
@@ -198,8 +204,10 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
           aggregator.aggregate();
         }
       }
-      cursor.advance();
       processedRows++;
+      if (!granularizer.advanceCursorWithinBucket()) {
+        break;
+      }
     }
     return processedRows;
   }

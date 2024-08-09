@@ -103,7 +103,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, context);
 
     //TBD: Implement null awareness to respect the contract of this flag.
     Preconditions.checkArgument(
@@ -207,7 +207,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
       Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, context);
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;

@@ -61,7 +61,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -72,12 +71,13 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
@@ -1702,23 +1702,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertTrue(factory.getColumnCapabilities("spatial").hasSpatialIndexes());
         while (!cursor.isDone()) {
           final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
           final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("spatial", "spatial"));
+          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec(
+              "spatial",
+              "spatial"
+          ));
           final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
 
 
@@ -1734,9 +1730,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
     Assert.assertEquals(spatialrows, rowsFromSegment);
   }
@@ -1836,16 +1830,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
@@ -1873,9 +1860,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
     Assert.assertEquals(rows, rowsFromSegment);
   }
@@ -2070,16 +2055,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
           new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         while (!cursor.isDone()) {
           final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
@@ -2107,9 +2085,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
 
     return rowsFromSegment;

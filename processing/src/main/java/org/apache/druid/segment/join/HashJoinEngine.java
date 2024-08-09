@@ -28,7 +28,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -148,6 +147,8 @@ public class HashJoinEngine
 
     class JoinCursor implements Cursor
     {
+      private long joinMarkId = 0;
+
       public void initialize()
       {
         matchCurrentPosition();
@@ -165,13 +166,6 @@ public class HashJoinEngine
       public ColumnSelectorFactory getColumnSelectorFactory()
       {
         return joinColumnSelectorFactory;
-      }
-
-      @Override
-      @Nonnull
-      public DateTime getTime()
-      {
-        return leftCursor.getTime();
       }
 
       @Override
@@ -251,11 +245,31 @@ public class HashJoinEngine
       }
 
       @Override
+      public void mark()
+      {
+        joinMarkId = joinColumnSelectorFactory.getRowId();
+      }
+
+      @Override
+      public void resetToMark()
+      {
+        leftCursor.reset();
+        joinMatcher.reset();
+        joinColumnSelectorFactory.resetRowId();
+        initialize();
+        while (!isDone() && joinColumnSelectorFactory.getRowId() < joinMarkId) {
+          advance();
+        }
+      }
+
+      @Override
       public void reset()
       {
         leftCursor.reset();
         joinMatcher.reset();
         joinColumnSelectorFactory.resetRowId();
+        joinMarkId = joinColumnSelectorFactory.getRowId();
+        initialize();
       }
     }
 

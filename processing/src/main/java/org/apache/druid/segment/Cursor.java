@@ -19,13 +19,32 @@
 
 package org.apache.druid.segment;
 
-import org.joda.time.DateTime;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
 
 /**
- * Cursor is an interface for iteration over a range of data points, used during query execution. {@link
- * QueryableIndexCursorSequenceBuilder.QueryableIndexCursor} is an implementation for historical segments, and {@link
- * org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter.IncrementalIndexCursor} is an implementation for {@link
- * org.apache.druid.segment.incremental.IncrementalIndex}.
+ * Cursor is an interface for iteration over a range of data points, used during query execution. Cursors are available
+ * from {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} via {@link CursorHolder#asCursor()}.
+ *
+ * A typical usage pattern might look something like this:
+ * <pre>
+ *   try (CursorHolder cursorHolder = adapter.makeCursorHolder(...)) {
+ *     Cursor cursor = cursorHolder.asCursor();
+ *     ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+ *     ColumnValueSelector timeSelector = factory.makeColumnValueSelector("__time");
+ *     // ...
+ *     while (!cursor.isDone()) {}
+ *       long time = timeSelector.getLong();
+ *       // do stuff with column values
+ *       // ...
+ *       cursor.advance();
+ *     }
+ *   }
+ * </pre>
+ *
+ * {@link QueryableIndexCursorHolder.QueryableIndexCursor} is an implementation for historical segments, and
+ * {@link IncrementalIndexCursorHolder.IncrementalIndexCursor} is an implementation for
+ * {@link org.apache.druid.segment.incremental.IncrementalIndex}.
  *
  * Cursor is conceptually similar to {@link TimeAndDimsPointer}, but the latter is used for historical segment creation
  * rather than query execution (as Cursor). If those abstractions could be collapsed (and if it is worthwhile) is yet to
@@ -35,11 +54,48 @@ import org.joda.time.DateTime;
  */
 public interface Cursor
 {
+  /**
+   * Get a {@link ColumnSelectorFactory} whose selectors will be backed by the row values at the current position of
+   * the cursor
+   */
   ColumnSelectorFactory getColumnSelectorFactory();
-  DateTime getTime();
+
+  /**
+   * Advance to the next row in the cursor, checking if thread has been interrupted after advancing and possibly
+   * throwing {@link QueryInterruptedException} if so.
+   */
   void advance();
+
+  /**
+   * Advance to the next row in the cursor
+   */
   void advanceUninterruptibly();
+
+  /**
+   * Check if the current cursor position is valid. If true, any selectors created via
+   * {@link #getColumnSelectorFactory()} will no longer produce values.
+   */
   boolean isDone();
+
+  /**
+   * Check if the current cursor position is valid, or if the thread has been interrupted.
+   *
+   * @see #isDone()
+   */
   boolean isDoneOrInterrupted();
+
+  /**
+   * Mark a position on the cursor at the current row, which can recalled with {@link #resetToMark()}.
+   */
+  void mark();
+
+  /**
+   * Reset to position set by {@link #mark()}
+   */
+  void resetToMark();
+
+  /**
+   * Reset to start of cursor and discard mark.
+   */
   void reset();
 }
