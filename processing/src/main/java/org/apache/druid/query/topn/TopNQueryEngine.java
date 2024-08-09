@@ -222,7 +222,7 @@ public class TopNQueryEngine
     List<String> groupingColumns;
     if (granularityVirtual == null) {
       virtualColumns = query.getVirtualColumns();
-      groupingColumns = null;
+      groupingColumns = Collections.singletonList(query.getDimensionSpec().getDimension());
     } else {
       virtualColumns = VirtualColumns.fromIterable(
           Iterables.concat(
