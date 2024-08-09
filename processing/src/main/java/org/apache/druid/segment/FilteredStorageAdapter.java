@@ -32,6 +32,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class FilteredStorageAdapter implements StorageAdapter
 {
@@ -141,6 +142,12 @@ public class FilteredStorageAdapter implements StorageAdapter
   public Metadata getMetadata()
   {
     return baseStorageAdapter.getMetadata();
+  }
+
+  @Override
+  public List<String> getSortOrder()
+  {
+    return baseStorageAdapter.getSortOrder();
   }
 
   @Override

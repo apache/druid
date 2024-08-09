@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -113,6 +114,12 @@ public class ScanQueryEngine
     final SegmentId segmentId = segment.getId();
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
+
+    if (!query.getTimeOrder().equals(ScanQuery.Order.NONE) && !adapter.isTimeOrdered()) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("Cannot use order[%s] on non-time-ordered segment.", query.getTimeOrder());
+    }
 
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);

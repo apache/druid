@@ -31,10 +31,12 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 /**
+ *
  */
 public class MetadataTest
 {
@@ -43,7 +45,7 @@ public class MetadataTest
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-    AggregatorFactory[] aggregators = new AggregatorFactory[] {
+    AggregatorFactory[] aggregators = new AggregatorFactory[]{
         new LongSumAggregatorFactory("out", "in")
     };
 
@@ -52,7 +54,8 @@ public class MetadataTest
         aggregators,
         null,
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     Metadata other = jsonMapper.readValue(
@@ -75,7 +78,7 @@ public class MetadataTest
     Assert.assertNull(Metadata.merge(metadataToBeMerged, null));
 
     //sanity merge check
-    AggregatorFactory[] aggs = new AggregatorFactory[] {
+    AggregatorFactory[] aggs = new AggregatorFactory[]{
         new LongMaxAggregatorFactory("n", "f")
     };
     final Metadata m1 = new Metadata(
@@ -83,7 +86,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     final Metadata m2 = new Metadata(
@@ -91,7 +95,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     final Metadata m3 = new Metadata(
@@ -99,7 +104,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.TRUE
+        Boolean.TRUE,
+        null
     );
 
     final Metadata merged = new Metadata(
@@ -109,7 +115,8 @@ public class MetadataTest
         },
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        Metadata.SORTED_BY_TIME_ONLY
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -119,16 +126,18 @@ public class MetadataTest
     metadataToBeMerged.add(m2);
     metadataToBeMerged.add(null);
 
-    final Metadata merged2 = new Metadata(Collections.singletonMap("k", "v"), null, null, null, null);
+    final Metadata merged2 =
+        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Metadata.SORTED_BY_TIME_ONLY);
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
     //merge check with client explicitly providing merged aggregators
-    AggregatorFactory[] explicitAggs = new AggregatorFactory[] {
+    AggregatorFactory[] explicitAggs = new AggregatorFactory[]{
         new DoubleMaxAggregatorFactory("x", "y")
     };
 
-    final Metadata merged3 = new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null);
+    final Metadata merged3 =
+        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Metadata.SORTED_BY_TIME_ONLY);
 
     Assert.assertEquals(
         merged3,
@@ -140,11 +149,71 @@ public class MetadataTest
         explicitAggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        null
+        null,
+        Metadata.SORTED_BY_TIME_ONLY
     );
     Assert.assertEquals(
         merged4,
         Metadata.merge(ImmutableList.of(m3, m2), explicitAggs)
+    );
+  }
+
+  @Test
+  public void testMergeSortOrders()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> Metadata.mergeSortOrders(Collections.emptyList())
+    );
+
+    Assert.assertEquals(
+        Metadata.SORTED_BY_TIME_ONLY,
+        Metadata.mergeSortOrders(Collections.singletonList(null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeSortOrders(Arrays.asList(null, Arrays.asList("foo", "bar")))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeSortOrders(Arrays.asList(Arrays.asList("foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Metadata.SORTED_BY_TIME_ONLY,
+        Metadata.mergeSortOrders(Arrays.asList(Arrays.asList("__time", "foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeSortOrders(
+            Arrays.asList(
+                Arrays.asList("foo", "bar"),
+                Arrays.asList("bar", "foo")
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList("bar"),
+        Metadata.mergeSortOrders(
+            Arrays.asList(
+                Arrays.asList("bar", "baz"),
+                Arrays.asList("bar", "foo")
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("bar", "foo"),
+        Metadata.mergeSortOrders(
+            Arrays.asList(
+                Arrays.asList("bar", "foo"),
+                Arrays.asList("bar", "foo")
+            )
+        )
     );
   }
 }

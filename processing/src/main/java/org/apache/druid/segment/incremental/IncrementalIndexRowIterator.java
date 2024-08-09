@@ -91,6 +91,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
 
     return new RowPointer(
         rowHolder,
+        incrementalIndex.timePosition,
         dimensionSelectors,
         dimensionHandlers,
         metricSelectors,

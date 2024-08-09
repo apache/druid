@@ -19,6 +19,9 @@
 
 package org.apache.druid.java.util.common.granularity;
 
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.StorageAdapter;
+
 /**
  * This class was created b/c sometimes static initializers of a class that use a subclass can deadlock.
  * See: #2979, #3979
@@ -45,5 +48,19 @@ public class Granularities
   public static Granularity nullToAll(Granularity granularity)
   {
     return granularity == null ? Granularities.ALL : granularity;
+  }
+
+  /**
+   * Validate that the provided granularity can be used with the given storage adapter. Specifically, this method
+   * requires that if {@link StorageAdapter#isTimeOrdered()} is false, the granularity must be {@link #ALL}.
+   */
+  public static void validateGranularity(final StorageAdapter storageAdapter, final Granularity granularity)
+  {
+    if (!ALL.equals(granularity) && !storageAdapter.isTimeOrdered()) {
+      throw DruidException
+          .forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.UNSUPPORTED)
+          .build("Cannot use granularity[%s] on non-time-sorted data.", granularity);
+    }
   }
 }

@@ -104,31 +104,4 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
   {
     return from(mapFn.apply(baseRunner));
   }
-
-  /**
-   * Sets the toString of the QueryRunner.  This is used because QueryRunner objects are often used as parameters for
-   * tests and the toString() value of the QueryRunners are used for the name of the test.
-   *
-   * This method doesn't return a FluentQueryRunner because it breaks the fluency.
-   *
-   * @param toStringValue the value that the resulting QueryRunner should return from its toString method.
-   * @return a QueryRunner that will return toStringValue from its toString method
-   */
-  public QueryRunner<T> setToString(String toStringValue)
-  {
-    return new QueryRunner<T>()
-    {
-      @Override
-      public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-      {
-        return FluentQueryRunner.this.run(queryPlus, responseContext);
-      }
-
-      @Override
-      public String toString()
-      {
-        return toStringValue;
-      }
-    };
-  }
 }

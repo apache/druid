@@ -20,13 +20,17 @@
 package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -70,6 +74,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -92,23 +97,57 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 {
   public final IncrementalIndexCreator indexCreator;
 
+  /**
+   * If true, sort by [billy, __time]. If false, sort by [__time].
+   */
+  public final boolean sortByDim;
+
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
-  public IncrementalIndexStorageAdapterTest(String indexType) throws JsonProcessingException
+  public IncrementalIndexStorageAdapterTest(String indexType, boolean sortByDim) throws JsonProcessingException
   {
     BuiltInTypesModule.registerHandlersAndSerde();
-    indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
-        .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-        .setMaxRowCount(1_000)
-        .build()
-    ));
+
+    this.sortByDim = sortByDim;
+    this.indexCreator = closer.closeLater(
+        new IncrementalIndexCreator(
+            indexType,
+            (builder, args) -> {
+              final DimensionsSpec dimensionsSpec;
+
+              if (sortByDim) {
+                dimensionsSpec =
+                    DimensionsSpec.builder()
+                                  .setDimensions(Collections.singletonList(new StringDimensionSchema("billy")))
+                                  .setUseExplicitSegmentSortOrder(true)
+                                  .setIncludeAllDimensions(true)
+                                  .build();
+              } else {
+                dimensionsSpec = DimensionsSpec.EMPTY;
+              }
+
+              return builder
+                  .setIndexSchema(
+                      IncrementalIndexSchema
+                          .builder()
+                          .withDimensionsSpec(dimensionsSpec)
+                          .withMetrics(new CountAggregatorFactory("cnt"))
+                          .build()
+                  )
+                  .setMaxRowCount(1_000)
+                  .build();
+            }
+        )
+    );
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}")
+  @Parameterized.Parameters(name = "{index}: {0}, sortByDim: {1}")
   public static Collection<?> constructorFeeder()
   {
-    return IncrementalIndexCreator.getAppendableIndexTypes();
+    return IncrementalIndexCreator.indexTypeCartesianProduct(
+        ImmutableList.of(true, false) // sortByDim
+    );
   }
 
   @Test
@@ -255,6 +294,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Test
   public void testResetSanity() throws IOException
   {
+    // Test is only valid when sortByDim = false, due to usage of Granularities.NONE.
+    Assume.assumeFalse(sortByDim);
 
     IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTimes.nowUtc();
@@ -536,14 +577,19 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     final IncrementalIndex index = indexCreator.createIndex();
     final long timestamp = System.currentTimeMillis();
 
+    final List<InputRow> rows = ImmutableList.of(
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v00")),
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v01")),
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v1")),
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2")),
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy2"), ImmutableMap.of("billy2", "v3")),
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v3")),
+        new MapBasedInputRow(timestamp, Collections.singletonList("billy3"), ImmutableMap.of("billy3", ""))
+    );
+
+    // Add first two rows.
     for (int i = 0; i < 2; i++) {
-      index.add(
-          new MapBasedInputRow(
-              timestamp,
-              Collections.singletonList("billy"),
-              ImmutableMap.of("billy", "v0" + i)
-          )
-      );
+      index.add(rows.get(i));
     }
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
@@ -567,7 +613,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v1")));
+            index.add(rows.get(2));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -578,8 +624,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
               .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2")));
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy2"), ImmutableMap.of("billy2", "v3")));
+            index.add(rows.get(3));
+            index.add(rows.get(4));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);
@@ -594,8 +640,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
               .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
           //index gets more rows at this point, while other thread is iterating over the cursor
           try {
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v3")));
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy3"), ImmutableMap.of("billy3", "")));
+            index.add(rows.get(5));
+            index.add(rows.get(6));
           }
           catch (Exception ex) {
             throw new RuntimeException(ex);

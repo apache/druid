@@ -181,8 +181,11 @@ public class FrameCursorFactory implements CursorFactory
         descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
     final SimpleSettableOffset offset;
 
+    // Set timeOrdered = false, because frames are not self-describing as to their sort order, so we can't determine
+    // the sort order by looking at the Frame object. We could populate this with information from the relevant
+    // ClusterBy, but that's not available at this point in the code. It could be plumbed in at some point.
     final QueryableIndexColumnSelectorFactory columnSelectorFactory =
-        new QueryableIndexColumnSelectorFactory(virtualColumns, descending, baseOffset, columnSelector);
+        new QueryableIndexColumnSelectorFactory(virtualColumns, descending, false, baseOffset, columnSelector);
 
     if (filterToUse == null) {
       offset = baseOffset;

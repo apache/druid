@@ -101,6 +101,12 @@ public class FrameQueryableIndex implements QueryableIndex
   }
 
   @Override
+  public List<String> getSortOrder()
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
   public BitmapFactory getBitmapFactoryForDimensions()
   {
     return new RoaringBitmapFactory();

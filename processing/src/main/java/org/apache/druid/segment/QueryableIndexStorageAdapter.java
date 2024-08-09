@@ -43,6 +43,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -231,6 +232,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         actualInterval,
         virtualColumns,
         filter,
+        isTimeOrdered(),
         queryMetrics,
         getMinTime().getMillis(),
         getMaxTime().getMillis(),
@@ -248,6 +250,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
+    Granularities.validateGranularity(this, gran);
+
     if (queryMetrics != null) {
       queryMetrics.vectorized(false);
     }
@@ -264,6 +268,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             actualInterval,
             virtualColumns,
             filter,
+            isTimeOrdered(),
             queryMetrics,
             getMinTime().getMillis(),
             getMaxTime().getMillis(),
@@ -279,13 +284,26 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     return index.getMetadata();
   }
 
+  @Override
+  public List<String> getSortOrder()
+  {
+    return index.getSortOrder();
+  }
+
   private void populateMinMaxTime()
   {
     // Compute and cache minTime, maxTime.
-    final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-    try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
-      this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
-      this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
+    if (isTimeOrdered()) {
+      // StorageAdapter getMinTime, getMaxTime contract requires exact min/max time in the time-ordered case.
+      final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
+      try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
+        this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
+        this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
+      }
+    } else {
+      // Exact min/max time not required.
+      this.minTime = getInterval().getStart();
+      this.maxTime = getInterval().getEnd();
     }
   }
 

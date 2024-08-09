@@ -241,6 +241,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     return new QueryableIndexColumnSelectorFactory(
         VirtualColumns.EMPTY,
         descending,
+        adapter.isTimeOrdered(),
         offset,
         new ColumnCache(queryableIndex, closer)
     );

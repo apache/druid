@@ -75,7 +75,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && adapter.isTimeOrdered()) {
       return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
     }
 

@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.variance;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.QueryRunner;
@@ -38,21 +39,24 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.having.GreaterThanHavingSpec;
 import org.apache.druid.query.groupby.having.OrHavingSpec;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Period;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  *
@@ -60,6 +64,9 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
 {
+  @MonotonicNonNull
+  private static TestGroupByBuffers BUFFER_POOLS = null;
+
   private final GroupByQueryConfig config;
   private final QueryRunner<Row> runner;
   private final GroupByQueryRunnerFactory factory;
@@ -69,17 +76,26 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    return GroupByQueryRunnerTest.constructorFeeder().stream()
-                                 .map(
-                                     constructor ->
-                                         new Object[]{
-                                             constructor[0],
-                                             constructor[1],
-                                             constructor[2],
-                                             constructor[3]
-                                         }
-                                 )
-                                 .collect(Collectors.toList());
+    setUpClass();
+
+    final List<Object[]> constructors = new ArrayList<>();
+    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory, false)) {
+        final String testName = StringUtils.format("config=%s, runner=%s", config, runner);
+        constructors.add(new Object[]{testName, config, factory, runner});
+      }
+    }
+
+    return constructors;
+  }
+
+  @BeforeClass
+  public static void setUpClass()
+  {
+    if (BUFFER_POOLS == null) {
+      BUFFER_POOLS = TestGroupByBuffers.createDefault();
+    }
   }
 
   public VarianceGroupByQueryTest(

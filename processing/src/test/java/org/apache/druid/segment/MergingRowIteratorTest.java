@@ -166,6 +166,7 @@ public class MergingRowIteratorTest extends InitializedNullHandlingTest
       this.timestamps = timestamps.iterator();
       this.rowPointer = new RowPointer(
           currentTimestamp,
+          0,
           ColumnValueSelector.EMPTY_ARRAY,
           Collections.emptyList(),
           ColumnValueSelector.EMPTY_ARRAY,
@@ -174,6 +175,7 @@ public class MergingRowIteratorTest extends InitializedNullHandlingTest
       );
       this.markedRowPointer = new TimeAndDimsPointer(
           markedTimestamp,
+          0,
           ColumnValueSelector.EMPTY_ARRAY,
           Collections.emptyList(),
           ColumnValueSelector.EMPTY_ARRAY,

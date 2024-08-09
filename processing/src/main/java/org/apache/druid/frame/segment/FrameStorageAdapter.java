@@ -41,6 +41,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 
 /**
  * A {@link StorageAdapter} implementation based on a single {@link Frame}.
@@ -144,6 +145,15 @@ public class FrameStorageAdapter implements StorageAdapter
   public Metadata getMetadata()
   {
     return null;
+  }
+
+  @Override
+  public List<String> getSortOrder()
+  {
+    // Frames are not self-describing as to their sort order, so we can't determine the sort order by looking at
+    // the Frame object. We could populate this with information from the relevant ClusterBy, but that's not available
+    // at this point in the code. It could be plumbed in at some point.
+    return Collections.emptyList();
   }
 
   @Override

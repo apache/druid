@@ -231,7 +231,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     IncrementalIndex index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
 
     populateIndex(timestamp, index);
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2"), index.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames(false));
     Assert.assertEquals(2, index.size());
 
     final Iterator<Row> rows = index.iterator();
@@ -286,7 +287,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2", "dim3"), index.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames(false));
     Assert.assertEquals(
         Arrays.asList(
             "count",
@@ -649,7 +651,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             .build()
     );
 
-    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim0", "dim1"), incrementalIndex.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames(false));
   }
 
   @Test

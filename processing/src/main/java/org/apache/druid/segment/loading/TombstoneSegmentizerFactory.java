@@ -36,7 +36,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +97,12 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
 
           @Override
           public Map<String, DimensionHandler> getDimensionHandlers()
+          {
+            throw new UnsupportedOperationException();
+          }
+
+          @Override
+          public List<String> getSortOrder()
           {
             throw new UnsupportedOperationException();
           }

@@ -37,13 +37,16 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.vector.BitmapVectorOffset;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
@@ -58,6 +61,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 public class QueryableIndexCursorSequenceBuilder
@@ -68,6 +72,7 @@ public class QueryableIndexCursorSequenceBuilder
   private final VirtualColumns virtualColumns;
   @Nullable
   private final Filter filter;
+  private final boolean timeOrdered;
   @Nullable
   private final QueryMetrics<? extends Query> metrics;
   private final long minDataTimestamp;
@@ -79,6 +84,7 @@ public class QueryableIndexCursorSequenceBuilder
       Interval interval,
       VirtualColumns virtualColumns,
       @Nullable Filter filter,
+      boolean timeOrdered,
       @Nullable QueryMetrics<? extends Query> metrics,
       long minDataTimestamp,
       long maxDataTimestamp,
@@ -89,6 +95,7 @@ public class QueryableIndexCursorSequenceBuilder
     this.interval = interval;
     this.virtualColumns = virtualColumns;
     this.filter = filter;
+    this.timeOrdered = timeOrdered;
     this.metrics = metrics;
     this.minDataTimestamp = minDataTimestamp;
     this.maxDataTimestamp = maxDataTimestamp;
@@ -111,7 +118,8 @@ public class QueryableIndexCursorSequenceBuilder
     );
 
     final int numRows = index.getNumRows();
-    final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
+    final FilterBundle filterBundle =
+        makeFilterBundle(computeFilterWithIntervalIfNeeded(), bitmapIndexSelector, numRows, metrics);
 
     // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
     // can use an index
@@ -142,39 +150,48 @@ public class QueryableIndexCursorSequenceBuilder
                     gran.increment(inputInterval.getStartMillis())
                 );
 
-                if (descending) {
-                  for (; baseOffset.withinBounds(); baseOffset.increment()) {
-                    if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
-                      break;
+                if (timeOrdered) {
+                  if (descending) {
+                    for (; baseOffset.withinBounds(); baseOffset.increment()) {
+                      if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
+                        break;
+                      }
                     }
-                  }
-                } else {
-                  for (; baseOffset.withinBounds(); baseOffset.increment()) {
-                    if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
-                      break;
+                  } else {
+                    for (; baseOffset.withinBounds(); baseOffset.increment()) {
+                      if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
+                        break;
+                      }
                     }
                   }
                 }
 
-                final Offset offset = descending ?
-                                      new DescendingTimestampCheckingOffset(
-                                          baseOffset,
-                                          timestamps,
-                                          timeStart,
-                                          minDataTimestamp >= timeStart
-                                      ) :
-                                      new AscendingTimestampCheckingOffset(
-                                          baseOffset,
-                                          timestamps,
-                                          timeEnd,
-                                          maxDataTimestamp < timeEnd
-                                      );
+                final Offset offset;
 
+                if (timeOrdered && descending) {
+                  offset = new DescendingTimestampCheckingOffset(
+                      baseOffset,
+                      timestamps,
+                      timeStart,
+                      minDataTimestamp >= timeStart
+                  );
+                } else if (timeOrdered) {
+                  offset = new AscendingTimestampCheckingOffset(
+                      baseOffset,
+                      timestamps,
+                      timeEnd,
+                      maxDataTimestamp < timeEnd
+                  );
+                } else {
+                  // Time filter is moved into filterBundle in the non-time-ordered case.
+                  offset = baseOffset;
+                }
 
                 final Offset baseCursorOffset = offset.clone();
                 final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
                     virtualColumns,
                     descending,
+                    timeOrdered,
                     baseCursorOffset.getBaseReadableOffset(),
                     columnCache
                 );
@@ -218,14 +235,17 @@ public class QueryableIndexCursorSequenceBuilder
       );
 
       final int numRows = index.getNumRows();
-      final FilterBundle filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
+      final FilterBundle filterBundle =
+          makeFilterBundle(computeFilterWithIntervalIfNeeded(), bitmapIndexSelector, numRows, metrics);
 
       NumericColumn timestamps = null;
 
+      // startOffset, endOffset match the "interval" if timeOrdered. Otherwise, the "interval" filtering is embedded
+      // within the filterBundle.
       final int startOffset;
       final int endOffset;
 
-      if (interval.getStartMillis() > minDataTimestamp) {
+      if (timeOrdered && interval.getStartMillis() > minDataTimestamp) {
         timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
 
         startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
@@ -233,7 +253,7 @@ public class QueryableIndexCursorSequenceBuilder
         startOffset = 0;
       }
 
-      if (interval.getEndMillis() <= maxDataTimestamp) {
+      if (timeOrdered && interval.getEndMillis() <= maxDataTimestamp) {
         if (timestamps == null) {
           timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
         }
@@ -281,10 +301,39 @@ public class QueryableIndexCursorSequenceBuilder
     }
   }
 
+  /**
+   * Compute filter to use for cursor creation. For non-time-ordered segments, this includes the query interval
+   * as a filter.
+   */
   @Nullable
-  private FilterBundle makeFilterBundle(
+  private Filter computeFilterWithIntervalIfNeeded()
+  {
+    if (!timeOrdered && minDataTimestamp < interval.getStartMillis() || maxDataTimestamp >= interval.getEndMillis()) {
+      return Filters.and(
+          Arrays.asList(
+              new RangeFilter(
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  ColumnType.LONG,
+                  minDataTimestamp < interval.getStartMillis() ? interval.getStartMillis() : null,
+                  maxDataTimestamp >= interval.getEndMillis() ? interval.getEndMillis() : null,
+                  false,
+                  true,
+                  null
+              ),
+              filter
+          )
+      );
+    } else {
+      return filter;
+    }
+  }
+
+  @Nullable
+  private static FilterBundle makeFilterBundle(
+      @Nullable Filter filter,
       ColumnSelectorColumnIndexSelector bitmapIndexSelector,
-      int numRows
+      int numRows,
+      @Nullable QueryMetrics<?> metrics
   )
   {
     final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();

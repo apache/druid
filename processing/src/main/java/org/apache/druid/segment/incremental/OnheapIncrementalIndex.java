@@ -21,11 +21,13 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -46,6 +48,7 @@ import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -145,8 +148,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     super(incrementalIndexSchema, preserveExistingMetrics, useMaxMemoryEstimates);
     this.maxRowCount = maxRowCount;
     this.maxBytesInMemory = maxBytesInMemory == 0 ? Long.MAX_VALUE : maxBytesInMemory;
-    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(dimsComparator(), getDimensions())
-                                                   : new PlainFactsHolder(dimsComparator());
+    if (incrementalIndexSchema.isRollup()) {
+      this.facts = new RollupFactsHolder(dimsComparator(), getDimensions(), timePosition == 0);
+    } else if (timePosition == 0) {
+      this.facts = new PlainTimeOrderedFactsHolder(dimsComparator());
+    } else {
+      this.facts = new PlainNonTimeOrderedFactsHolder(dimsComparator());
+    }
     maxBytesPerRowForAggregators =
         useMaxMemoryEstimates ? getMaxBytesPerRowForAggregators(incrementalIndexSchema) : 0;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
@@ -734,14 +742,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     // Can't use Set because we need to be able to get from collection
     private final ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow> facts;
     private final List<DimensionDesc> dimensionDescsList;
+    private final boolean timeOrdered;
+    private volatile long minTime = DateTimes.MAX.getMillis();
+    private volatile long maxTime = DateTimes.MIN.getMillis();
 
     RollupFactsHolder(
         Comparator<IncrementalIndexRow> incrementalIndexRowComparator,
-        List<DimensionDesc> dimensionDescsList
+        List<DimensionDesc> dimensionDescsList,
+        boolean timeOrdered
     )
     {
       this.facts = new ConcurrentSkipListMap<>(incrementalIndexRowComparator);
       this.dimensionDescsList = dimensionDescsList;
+      this.timeOrdered = timeOrdered;
     }
 
     @Override
@@ -754,13 +767,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public long getMinTimeMillis()
     {
-      return facts.firstKey().getTimestamp();
+      return minTime;
     }
 
     @Override
     public long getMaxTimeMillis()
     {
-      return facts.lastKey().getTimestamp();
+      return maxTime;
     }
 
     @Override
@@ -777,11 +790,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public Iterable<IncrementalIndexRow> timeRangeIterable(boolean descending, long timeStart, long timeEnd)
     {
-      IncrementalIndexRow start = new IncrementalIndexRow(timeStart, new Object[]{}, dimensionDescsList);
-      IncrementalIndexRow end = new IncrementalIndexRow(timeEnd, new Object[]{}, dimensionDescsList);
-      ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow> subMap = facts.subMap(start, end);
-      ConcurrentMap<IncrementalIndexRow, IncrementalIndexRow> rangeMap = descending ? subMap.descendingMap() : subMap;
-      return rangeMap.keySet();
+      if (timeOrdered) {
+        IncrementalIndexRow start = new IncrementalIndexRow(timeStart, new Object[]{}, dimensionDescsList);
+        IncrementalIndexRow end = new IncrementalIndexRow(timeEnd, new Object[]{}, dimensionDescsList);
+        ConcurrentNavigableMap<IncrementalIndexRow, IncrementalIndexRow> subMap = facts.subMap(start, end);
+        ConcurrentMap<IncrementalIndexRow, IncrementalIndexRow> rangeMap = descending ? subMap.descendingMap() : subMap;
+        return rangeMap.keySet();
+      } else {
+        return Iterables.filter(
+            facts.keySet(),
+            row -> row.timestamp >= timeStart && row.timestamp < timeEnd
+        );
+      }
     }
 
     @Override
@@ -802,6 +822,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     {
       // setRowIndex() must be called before facts.putIfAbsent() for visibility of rowIndex from concurrent readers.
       key.setRowIndex(rowIndex);
+      minTime = Math.min(minTime, key.timestamp);
+      maxTime = Math.max(maxTime, key.timestamp);
       IncrementalIndexRow prev = facts.putIfAbsent(key, key);
       return prev == null ? IncrementalIndexRow.EMPTY_ROW_INDEX : prev.getRowIndex();
     }
@@ -813,13 +835,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
   }
 
-  static final class PlainFactsHolder implements FactsHolder
+  static final class PlainTimeOrderedFactsHolder implements FactsHolder
   {
     private final ConcurrentNavigableMap<Long, Deque<IncrementalIndexRow>> facts;
 
     private final Comparator<IncrementalIndexRow> incrementalIndexRowComparator;
 
-    public PlainFactsHolder(Comparator<IncrementalIndexRow> incrementalIndexRowComparator)
+    public PlainTimeOrderedFactsHolder(Comparator<IncrementalIndexRow> incrementalIndexRowComparator)
     {
       this.facts = new ConcurrentSkipListMap<>();
       this.incrementalIndexRowComparator = incrementalIndexRowComparator;
@@ -908,6 +930,86 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // setRowIndex() must be called before rows.add() for visibility of rowIndex from concurrent readers.
       key.setRowIndex(rowIndex);
       rows.add(key);
+      // always return EMPTY_ROW_INDEX to indicate that we always add new row
+      return IncrementalIndexRow.EMPTY_ROW_INDEX;
+    }
+
+    @Override
+    public void clear()
+    {
+      facts.clear();
+    }
+  }
+
+  static final class PlainNonTimeOrderedFactsHolder implements FactsHolder
+  {
+    private final Deque<IncrementalIndexRow> facts;
+    private final Comparator<IncrementalIndexRow> incrementalIndexRowComparator;
+    private volatile long minTime = DateTimes.MAX.getMillis();
+    private volatile long maxTime = DateTimes.MIN.getMillis();
+
+    public PlainNonTimeOrderedFactsHolder(Comparator<IncrementalIndexRow> incrementalIndexRowComparator)
+    {
+      this.facts = new ArrayDeque<>();
+      this.incrementalIndexRowComparator = incrementalIndexRowComparator;
+    }
+
+    @Override
+    public int getPriorIndex(IncrementalIndexRow key)
+    {
+      // always return EMPTY_ROW_INDEX to indicate that no prior key cause we always add new row
+      return IncrementalIndexRow.EMPTY_ROW_INDEX;
+    }
+
+    @Override
+    public long getMinTimeMillis()
+    {
+      return minTime;
+    }
+
+    @Override
+    public long getMaxTimeMillis()
+    {
+      return maxTime;
+    }
+
+    @Override
+    public Iterator<IncrementalIndexRow> iterator(boolean descending)
+    {
+      return descending ? facts.descendingIterator() : facts.iterator();
+    }
+
+    @Override
+    public Iterable<IncrementalIndexRow> timeRangeIterable(boolean descending, long timeStart, long timeEnd)
+    {
+      return Iterables.filter(
+          () -> iterator(descending),
+          row -> row.timestamp >= timeStart && row.timestamp < timeEnd
+      );
+    }
+
+    @Override
+    public Iterable<IncrementalIndexRow> keySet()
+    {
+      return facts;
+    }
+
+    @Override
+    public Iterable<IncrementalIndexRow> persistIterable()
+    {
+      final List<IncrementalIndexRow> sortedFacts = new ArrayList<>(facts);
+      sortedFacts.sort(incrementalIndexRowComparator);
+      return sortedFacts;
+    }
+
+    @Override
+    public int putIfAbsent(IncrementalIndexRow key, int rowIndex)
+    {
+      // setRowIndex() must be called before rows.add() for visibility of rowIndex from concurrent readers.
+      key.setRowIndex(rowIndex);
+      minTime = Math.min(minTime, key.timestamp);
+      maxTime = Math.max(maxTime, key.timestamp);
+      facts.add(key);
       // always return EMPTY_ROW_INDEX to indicate that we always add new row
       return IncrementalIndexRow.EMPTY_ROW_INDEX;
     }

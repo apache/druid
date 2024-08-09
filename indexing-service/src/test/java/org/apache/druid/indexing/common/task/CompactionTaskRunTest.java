@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
@@ -34,6 +35,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -1878,6 +1880,158 @@ public class CompactionTaskRunTest extends IngestionTestBase
       });
     }
     Assert.assertEquals(rows, rowsFromSegment);
+  }
+
+  @Test
+  public void testRunWithAutoCastDimensionsSortByDimension() throws Exception
+  {
+    // Compaction will produce one segment sorted by [x, __time], even though input rows are sorted by __time.
+    final List<String> rows = ImmutableList.of(
+        "2014-01-01T00:00:10Z,a,10,100,1\n",
+        "2014-01-01T00:00:10Z,b,20,110,2\n",
+        "2014-01-01T00:00:10Z,c,30,120,3\n",
+        "2014-01-01T00:01:20Z,a,10,100,1\n",
+        "2014-01-01T00:01:20Z,b,20,110,2\n",
+        "2014-01-01T00:01:20Z,c,30,120,3\n"
+    );
+    final ParseSpec spec = new CSVParseSpec(
+        new TimestampSpec("ts", "auto", null),
+        DimensionsSpec.builder()
+                      .setDimensions(Arrays.asList(
+                          new AutoTypeColumnSchema("x", ColumnType.LONG),
+                          new LongDimensionSchema("__time"),
+                          new AutoTypeColumnSchema("ts", ColumnType.STRING),
+                          new AutoTypeColumnSchema("dim", null),
+                          new AutoTypeColumnSchema("y", ColumnType.LONG)
+                      ))
+                      .setUseExplicitSegmentSortOrder(true)
+                      .build(),
+        "|",
+        Arrays.asList("ts", "dim", "x", "y", "val"),
+        false,
+        0
+    );
+    Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
+    verifySchema(indexTaskResult.rhs);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .build();
+
+    final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = resultPair.rhs;
+    final List<DataSegment> segments = new ArrayList<>(dataSegmentsWithSchemas.getSegments());
+    Assert.assertEquals(1, segments.size());
+
+    final DataSegment compactSegment = Iterables.getOnlyElement(segments);
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00"),
+        compactSegment.getInterval()
+    );
+    Map<String, String> expectedLongSumMetric = new HashMap<>();
+    expectedLongSumMetric.put("name", "val");
+    expectedLongSumMetric.put("type", "longSum");
+    expectedLongSumMetric.put("fieldName", "val");
+    Assert.assertEquals(
+        getDefaultCompactionState(
+            Granularities.HOUR,
+            Granularities.MINUTE,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
+            DimensionsSpec.builder()
+                          .setDimensions(Arrays.asList(
+                              // check explicitly that time ordering is preserved
+                              new AutoTypeColumnSchema("x", ColumnType.LONG),
+                              new LongDimensionSchema("__time"),
+                              new AutoTypeColumnSchema("ts", ColumnType.STRING),
+                              new AutoTypeColumnSchema("dim", null),
+                              new AutoTypeColumnSchema("y", ColumnType.LONG)
+                          ))
+                          .setUseExplicitSegmentSortOrder(true)
+                          .build(),
+            expectedLongSumMetric
+        ),
+        compactSegment.getLastCompactionState()
+    );
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      Assert.assertEquals(
+          new NumberedOverwriteShardSpec(32768, 0, 3, (short) 1, (short) 1),
+          compactSegment.getShardSpec()
+      );
+    } else {
+      Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
+    }
+
+    final File cacheDir = temporaryFolder.newFolder();
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+
+    List<String> rowsFromSegment = new ArrayList<>();
+    final File segmentFile = segmentCacheManager.getSegmentFiles(compactSegment);
+
+    final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
+        new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+        compactSegment.getInterval()
+    );
+    Assert.assertEquals(ImmutableList.of("x", "__time", "ts", "dim", "y"), adapter.getAdapter().getSortOrder());
+    final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
+        null,
+        compactSegment.getInterval(),
+        VirtualColumns.EMPTY,
+        Granularities.ALL,
+        false,
+        null
+    );
+
+    cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      cursor.reset();
+      final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+      Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
+      Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("dim").toColumnType());
+      Assert.assertEquals(ColumnType.LONG, factory.getColumnCapabilities("x").toColumnType());
+      Assert.assertEquals(ColumnType.LONG, factory.getColumnCapabilities("y").toColumnType());
+      while (!cursor.isDone()) {
+        final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
+        final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+        final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("x", "x"));
+        final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("y", "y"));
+        final DimensionSelector selector5 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
+
+        rowsFromSegment.add(
+            StringUtils.format(
+                "%s,%s,%s,%s,%s",
+                selector1.getObject(),
+                selector2.getObject(),
+                selector3.getObject(),
+                selector4.getObject(),
+                selector5.getObject()
+            )
+        );
+
+        cursor.advance();
+      }
+
+      return accumulated;
+    });
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            "2014-01-01T00:00:10Z,a,10,100,1",
+            "2014-01-01T00:01:20Z,a,10,100,1",
+            "2014-01-01T00:00:10Z,b,20,110,2",
+            "2014-01-01T00:01:20Z,b,20,110,2",
+            "2014-01-01T00:00:10Z,c,30,120,3",
+            "2014-01-01T00:01:20Z,c,30,120,3"
+        ),
+        rowsFromSegment
+    );
   }
 
   private Pair<TaskStatus, DataSegmentsWithSchemas> runIndexTask() throws Exception

@@ -31,6 +31,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 
 public class TombstoneSegmentStorageAdapterTest
@@ -128,6 +130,11 @@ public class TombstoneSegmentStorageAdapterTest
         return null;
       }
 
+      @Override
+      public List<String> getSortOrder()
+      {
+        return Collections.emptyList();
+      }
     };
 
     Assert.assertFalse(sa.isFromTombstone());

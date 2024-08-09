@@ -103,6 +103,18 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
+  public List<String> getSortOrder()
+  {
+    final Metadata metadata = getMetadata();
+    if (metadata != null && metadata.getSortOrder() != null) {
+      return metadata.getSortOrder();
+    } else {
+      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
+      return Metadata.SORTED_BY_TIME_ONLY;
+    }
+  }
+
+  @Override
   public BitmapFactory getBitmapFactoryForDimensions()
   {
     return bitmapFactory;

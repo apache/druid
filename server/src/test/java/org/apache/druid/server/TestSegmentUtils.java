@@ -178,6 +178,12 @@ public class TestSegmentUtils
       }
 
       @Override
+      public List<String> getSortOrder()
+      {
+        return Metadata.SORTED_BY_TIME_ONLY;
+      }
+
+      @Override
       public void close()
       {
 
@@ -323,6 +329,12 @@ public class TestSegmentUtils
         public DateTime getMaxIngestedEventTime()
         {
           return null;
+        }
+
+        @Override
+        public List<String> getSortOrder()
+        {
+          return Metadata.SORTED_BY_TIME_ONLY;
         }
 
         @Override

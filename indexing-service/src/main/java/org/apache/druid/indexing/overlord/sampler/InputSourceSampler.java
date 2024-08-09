@@ -196,7 +196,9 @@ public class InputSourceSampler
           Map<String, Object> parsed = new LinkedHashMap<>();
 
           parsed.put(ColumnHolder.TIME_COLUMN_NAME, row.getTimestampFromEpoch());
-          columnNames.forEach(k -> parsed.put(k, row.getRaw(k)));
+          columnNames.stream()
+                     .filter(k -> !ColumnHolder.TIME_COLUMN_NAME.equals(k))
+                     .forEach(k -> parsed.put(k, row.getRaw(k)));
 
           Number sortKey = row.getMetric(SamplerInputRow.SAMPLER_ORDERING_COLUMN);
           if (sortKey != null) {

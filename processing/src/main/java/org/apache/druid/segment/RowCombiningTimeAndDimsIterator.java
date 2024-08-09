@@ -128,6 +128,7 @@ final class RowCombiningTimeAndDimsIterator implements TimeAndDimsIterator
           if (markedRowPointer != null) {
             return new TimeAndDimsPointer(
                 markedRowPointer.timestampSelector,
+                markedRowPointer.timePosition,
                 markedRowPointer.dimensionSelectors,
                 markedRowPointer.getDimensionHandlers(),
                 combinedMetricSelectors,

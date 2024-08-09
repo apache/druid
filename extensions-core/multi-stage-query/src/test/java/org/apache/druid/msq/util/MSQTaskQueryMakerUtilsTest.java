@@ -20,6 +20,8 @@
 package org.apache.druid.msq.util;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,25 +30,21 @@ import java.util.Collections;
 public class MSQTaskQueryMakerUtilsTest
 {
   @Test
-  public void testValidateSegmentSortOrder()
+  public void testValidateContextSortOrderColumnsExist()
   {
     // These are all OK, so validateSegmentSortOrder does nothing.
-    MSQTaskQueryMakerUtils.validateSegmentSortOrder(Collections.emptyList(), ImmutableList.of("__time", "a", "b"));
-    MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("__time"), ImmutableList.of("__time", "a", "b"));
-    MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("__time", "b"), ImmutableList.of("__time", "a", "b"));
-    MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("b"), ImmutableList.of("a", "b"));
+    MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(Collections.emptyList(), ImmutableSet.of("__time", "a", "b"));
+    MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("__time"), ImmutableSet.of("__time", "a", "b"));
+    MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("__time", "b"), ImmutableSet.of("__time", "a", "b"));
+    MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("b"), ImmutableSet.of("a", "b"));
+    MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("b", "__time"), ImmutableSet.of("__time", "a", "b"));
 
     // These are not OK.
     Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> MSQTaskQueryMakerUtils.validateSegmentSortOrder(ImmutableList.of("c"), ImmutableList.of("a", "b"))
-    );
-
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> MSQTaskQueryMakerUtils.validateSegmentSortOrder(
-            ImmutableList.of("b", "__time"),
-            ImmutableList.of("__time", "a", "b")
+        DruidException.class,
+        () -> MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
+            ImmutableList.of("c"),
+            ImmutableSet.of("a", "b")
         )
     );
   }

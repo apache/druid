@@ -173,7 +173,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY, true)) {
       args.add(new Object[]{runner});
     }
     return args;
