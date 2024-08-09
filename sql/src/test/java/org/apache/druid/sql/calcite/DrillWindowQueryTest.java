@@ -7622,6 +7622,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_3")
+  @Test
+  public void test_empty_over_single_empty_over_3()
+  {
+    windowQueryTest();
+  }
+
   @DrillTest("druid_queries/empty_over_clause/multiple_empty_over_1")
   @Test
   public void test_empty_over_multiple_empty_over_1()
