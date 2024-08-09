@@ -23,17 +23,9 @@ import com.google.common.primitives.Doubles;
 import org.apache.datasketches.kll.KllDoublesSketch;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import java.nio.ByteBuffer;
 
 public class KllDoublesSketchComplexMetricSerde extends ComplexMetricSerde
 {
@@ -94,19 +86,5 @@ public class KllDoublesSketchComplexMetricSerde extends ComplexMetricSerde
         return KllDoublesSketchOperations.deserializeSafe(object);
       }
     };
-  }
-
-  @Override
-  public void deserializeColumn(final ByteBuffer buffer, final ColumnBuilder builder)
-  {
-    final GenericIndexed<KllDoublesSketch> column = GenericIndexed.read(buffer, STRATEGY, builder.getFileMapper());
-    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
-  }
-
-  // support large columns
-  @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
   }
 }

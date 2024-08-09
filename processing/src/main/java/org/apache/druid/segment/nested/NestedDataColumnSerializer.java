@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
@@ -51,7 +50,6 @@ import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -394,18 +392,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   {
     if (!closedForWrite) {
       closedForWrite = true;
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      IndexMerger.SERIALIZER_UTILS.writeString(
-          baos,
-          NestedDataComplexTypeSerde.OBJECT_MAPPER.writeValueAsString(
-              new NestedDataColumnMetadata(
-                  ByteOrder.nativeOrder(),
-                  indexSpec.getBitmapSerdeFactory(),
-                  name,
-                  !nullRowsBitmap.isEmpty()
-              )
-          )
-      );
       nullBitmapWriter.write(nullRowsBitmap);
       columnNameBytes = computeFilenameBytes();
     }

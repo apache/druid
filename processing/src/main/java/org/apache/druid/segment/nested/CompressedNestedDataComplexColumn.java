@@ -310,8 +310,8 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
     return nullValues;
   }
 
-  @Nullable
   @Override
+  @Nullable
   public Object getRowValue(int rowNum)
   {
     if (nullValues.get(rowNum)) {

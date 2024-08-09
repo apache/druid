@@ -86,18 +86,12 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   protected void writeInternal(FileSmoosher smoosher, Serializer serializer, String fileName) throws IOException
   {
-    final String internalName = getInternalFileName(getColumnName(), fileName);
-    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
-      serializer.writeTo(smooshChannel, smoosher);
-    }
+    writeInternal(smoosher, serializer, getColumnName(), fileName);
   }
 
   protected void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String fileName) throws IOException
   {
-    final String internalName = getInternalFileName(getColumnName(), fileName);
-    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
-      smooshChannel.write(buffer);
-    }
+    writeInternal(smoosher, buffer, getColumnName(), fileName);
   }
 
   protected void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
@@ -108,14 +102,31 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   protected ByteBuffer computeFilenameBytes()
   {
-    final String columnName = getColumnName();
-    final byte[] bytes = StringUtils.toUtf8(columnName);
+    final byte[] bytes = StringUtils.toUtf8(getColumnName());
     final int length = VByte.computeIntSize(bytes.length);
     final ByteBuffer buffer = ByteBuffer.allocate(length + bytes.length).order(ByteOrder.nativeOrder());
     VByte.writeInt(buffer, bytes.length);
     buffer.put(bytes);
     buffer.flip();
     return buffer;
+  }
+
+  public static void writeInternal(FileSmoosher smoosher, Serializer serializer, String columnName, String fileName)
+      throws IOException
+  {
+    final String internalName = getInternalFileName(columnName, fileName);
+    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
+      serializer.writeTo(smooshChannel, smoosher);
+    }
+  }
+
+  public static void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String columnName, String fileName)
+      throws IOException
+  {
+    final String internalName = getInternalFileName(columnName, fileName);
+    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
+      smooshChannel.write(buffer);
+    }
   }
 
   /**

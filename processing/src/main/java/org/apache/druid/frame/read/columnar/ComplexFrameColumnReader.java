@@ -185,6 +185,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     }
 
     @Override
+    @Nullable
     public Object getRowValue(int rowNum)
     {
       // Need bounds checking, since getObjectForPhysicalRow doesn't do it.
