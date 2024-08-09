@@ -412,9 +412,9 @@ SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 
 ## Reserved keywords
 
-There are reserved keywords in Apache Druid which cannot be used unless in queries unless they are quoted.
+There are reserved keywords in Apache Druid. To use reserved keywords in queries, enclose them in quote marks.
 
-Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/) which are [documented here](https://calcite.apache.org/docs/reference.html#keywords). In addition to these the following are reserved keywords unique to Apache Druid:
+Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these the following keywords are unique to Apache Druid:
 
 * **CLUSTERED**
 * **PARTITIONED**
