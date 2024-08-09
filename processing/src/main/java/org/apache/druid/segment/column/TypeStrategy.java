@@ -225,6 +225,6 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
    */
   default Class<?> getClazz()
   {
-    throw DruidException.defensive("Not implemented. It is only implemented for complex dimensions which are groupable()");
+    throw DruidException.defensive("Not implemented. Check groupable() first");
   }
 }

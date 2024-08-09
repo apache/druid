@@ -28,9 +28,13 @@ public class CompactionStatistics
   private long numSegments;
   private long numIntervals;
 
-  public static CompactionStatistics create()
+  public static CompactionStatistics create(long bytes, long numSegments, long numIntervals)
   {
-    return new CompactionStatistics();
+    final CompactionStatistics stats = new CompactionStatistics();
+    stats.totalBytes = bytes;
+    stats.numIntervals = numIntervals;
+    stats.numSegments = numSegments;
+    return stats;
   }
 
   public long getTotalBytes()
@@ -48,10 +52,10 @@ public class CompactionStatistics
     return numIntervals;
   }
 
-  public void addFrom(SegmentsToCompact segments)
+  public void increment(CompactionStatistics other)
   {
-    totalBytes += segments.getTotalBytes();
-    numIntervals += segments.getNumIntervals();
-    numSegments += segments.size();
+    totalBytes += other.getTotalBytes();
+    numIntervals += other.getNumIntervals();
+    numSegments += other.getNumSegments();
   }
 }

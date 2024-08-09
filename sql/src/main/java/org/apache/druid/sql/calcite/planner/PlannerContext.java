@@ -55,6 +55,7 @@ import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.hook.DruidHook.HookKey;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -667,5 +668,10 @@ public class PlannerContext
     }
 
     return lookupCache.getLookup(lookupName);
+  }
+
+  public <T> void dispatchHook(HookKey<T> key, T object)
+  {
+    plannerToolbox.getHookDispatcher().dispatch(key, object);
   }
 }

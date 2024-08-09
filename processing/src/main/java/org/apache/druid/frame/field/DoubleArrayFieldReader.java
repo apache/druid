@@ -68,6 +68,6 @@ public class DoubleArrayFieldReader extends NumericArrayFieldReader
   @Override
   public Column makeRACColumn(Frame frame, RowSignature signature, String columnName)
   {
-    throw NotYetImplemented.ex("Class cannot create an RAC column.");
+    throw NotYetImplemented.ex(null, "Class cannot create an RAC column.");
   }
 }

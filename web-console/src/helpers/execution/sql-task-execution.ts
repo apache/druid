@@ -23,10 +23,6 @@ import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet, DruidError, IntermediateQueryState, QueryManager } from '../../utils';
-import { maybeGetClusterCapacity } from '../capacity';
-
-const USE_TASK_PAYLOAD = true;
-const USE_TASK_REPORTS = true;
 
 // some executionMode has to be set on the /druid/v2/sql/statements API
 function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
@@ -161,7 +157,7 @@ export async function getTaskExecution(
 
   let execution: Execution | undefined;
 
-  if (USE_TASK_REPORTS) {
+  if (Execution.USE_TASK_REPORTS) {
     let taskReport: any;
     try {
       taskReport = (
@@ -188,7 +184,7 @@ export async function getTaskExecution(
 
   if (!execution) {
     const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
+      `/druid/v2/sql/statements/${encodedId}?detail=true`,
       {
         cancelToken,
       },
@@ -198,7 +194,7 @@ export async function getTaskExecution(
   }
 
   let taskPayload = taskPayloadOverride;
-  if (USE_TASK_PAYLOAD && !taskPayload) {
+  if (Execution.USE_TASK_PAYLOAD && !taskPayload) {
     try {
       taskPayload = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
@@ -229,8 +225,8 @@ export async function getTaskExecution(
     }
   }
 
-  if (execution.hasPotentiallyStuckStage()) {
-    const capacityInfo = await maybeGetClusterCapacity();
+  if (Execution.getClusterCapacity && execution.hasPotentiallyStuckStage()) {
+    const capacityInfo = await Execution.getClusterCapacity();
     if (capacityInfo) {
       execution = execution.changeCapacityInfo(capacityInfo);
     }

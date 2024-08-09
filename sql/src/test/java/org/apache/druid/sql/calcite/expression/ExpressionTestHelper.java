@@ -62,6 +62,7 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -97,7 +98,8 @@ public class ExpressionTestHelper
       "druid",
       new CalciteRulesManager(ImmutableSet.of()),
       CalciteTests.TEST_AUTHORIZER_MAPPER,
-      AuthConfig.newBuilder().build()
+      AuthConfig.newBuilder().build(),
+      new DruidHookDispatcher()
   );
   public static final PlannerContext PLANNER_CONTEXT = PlannerContext.create(
       PLANNER_TOOLBOX,
@@ -336,7 +338,7 @@ public class ExpressionTestHelper
     }
 
     ExprEval<?> result = PLANNER_CONTEXT.parseExpression(expression.getExpression())
-                                        
+
                                         .eval(expressionBindings);
 
     Assert.assertEquals("Result for: " + rexNode, expectedResult, result.value());

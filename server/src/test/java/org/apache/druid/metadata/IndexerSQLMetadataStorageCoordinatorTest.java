@@ -138,8 +138,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final String v1 = "2023-01-01";
     final String v2 = "2023-01-02";
     final String v3 = "2023-01-03";
+    final String alreadyUpgradedVersion = "2023-02-01";
     final String lockVersion = "2024-01-01";
 
+    final String taskAllocatorId = "appendTask";
     final String replaceTaskId = "replaceTask1";
     final ReplaceTaskLock replaceLock = new ReplaceTaskLock(
         replaceTaskId,
@@ -148,6 +150,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     final Set<DataSegment> appendSegments = new HashSet<>();
+    final List<PendingSegmentRecord> pendingSegmentsForTask = new ArrayList<>();
     final Set<DataSegment> expectedSegmentsToUpgrade = new HashSet<>();
     for (int i = 0; i < 10; i++) {
       final DataSegment segment = createSegment(
@@ -157,6 +160,31 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
       appendSegments.add(segment);
       expectedSegmentsToUpgrade.add(segment);
+      // Add the same segment
+      pendingSegmentsForTask.add(
+          new PendingSegmentRecord(
+              SegmentIdWithShardSpec.fromDataSegment(segment),
+              v1,
+              segment.getId().toString(),
+              null,
+              taskAllocatorId
+          )
+      );
+      // Add upgraded pending segment
+      pendingSegmentsForTask.add(
+          new PendingSegmentRecord(
+              new SegmentIdWithShardSpec(
+                  DS.WIKI,
+                  Intervals.of("2023-01-01/2023-02-01"),
+                  alreadyUpgradedVersion,
+                  new NumberedShardSpec(i, 0)
+              ),
+              alreadyUpgradedVersion,
+              segment.getId().toString(),
+              segment.getId().toString(),
+              taskAllocatorId
+          )
+      );
     }
 
     for (int i = 0; i < 10; i++) {
@@ -167,6 +195,31 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
       appendSegments.add(segment);
       expectedSegmentsToUpgrade.add(segment);
+      // Add the same segment
+      pendingSegmentsForTask.add(
+          new PendingSegmentRecord(
+              SegmentIdWithShardSpec.fromDataSegment(segment),
+              v2,
+              segment.getId().toString(),
+              null,
+              taskAllocatorId
+          )
+      );
+      // Add upgraded pending segment
+      pendingSegmentsForTask.add(
+          new PendingSegmentRecord(
+              new SegmentIdWithShardSpec(
+                  DS.WIKI,
+                  Intervals.of("2023-01-01/2023-02-01"),
+                  alreadyUpgradedVersion,
+                  new NumberedShardSpec(10 + i, 0)
+              ),
+              alreadyUpgradedVersion,
+              segment.getId().toString(),
+              segment.getId().toString(),
+              taskAllocatorId
+          )
+      );
     }
 
     for (int i = 0; i < 10; i++) {
@@ -176,7 +229,36 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
           new LinearShardSpec(i)
       );
       appendSegments.add(segment);
+      // Add the same segment
+      pendingSegmentsForTask.add(
+          new PendingSegmentRecord(
+              SegmentIdWithShardSpec.fromDataSegment(segment),
+              v3,
+              segment.getId().toString(),
+              null,
+              taskAllocatorId
+          )
+      );
+      // Add upgraded pending segment
+      pendingSegmentsForTask.add(
+          new PendingSegmentRecord(
+              new SegmentIdWithShardSpec(
+                  DS.WIKI,
+                  Intervals.of("2023-01-01/2023-02-01"),
+                  alreadyUpgradedVersion,
+                  new NumberedShardSpec(20 + i, 0)
+              ),
+              alreadyUpgradedVersion,
+              segment.getId().toString(),
+              segment.getId().toString(),
+              taskAllocatorId
+          )
+      );
     }
+
+    derbyConnector.retryWithHandle(
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(handle, pendingSegmentsForTask, DS.WIKI, false)
+    );
 
     final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
         = expectedSegmentsToUpgrade.stream()
@@ -184,15 +266,41 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // Commit the segment and verify the results
     SegmentPublishResult commitResult
-        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, "append", null);
+        = coordinator.commitAppendSegments(appendSegments, segmentToReplaceLock, taskAllocatorId, null);
     Assert.assertTrue(commitResult.isSuccess());
-    Assert.assertEquals(appendSegments, commitResult.getSegments());
 
-    // Verify the segments present in the metadata store
-    Assert.assertEquals(
-        appendSegments,
-        ImmutableSet.copyOf(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()))
+    Set<DataSegment> allCommittedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
+        DS.WIKI,
+        allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
     );
+    // Verify the segments present in the metadata store
+    Assert.assertTrue(allCommittedSegments.containsAll(appendSegments));
+    for (DataSegment segment : appendSegments) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(segment.getId().toString()));
+    }
+    allCommittedSegments.removeAll(appendSegments);
+
+    // Verify the commit of upgraded pending segments
+    Assert.assertEquals(appendSegments.size(), allCommittedSegments.size());
+    Map<String, DataSegment> segmentMap = new HashMap<>();
+    for (DataSegment segment : appendSegments) {
+      segmentMap.put(segment.getId().toString(), segment);
+    }
+    for (DataSegment segment : allCommittedSegments) {
+      for (PendingSegmentRecord pendingSegmentRecord : pendingSegmentsForTask) {
+        if (pendingSegmentRecord.getId().asSegmentId().toString().equals(segment.getId().toString())) {
+          DataSegment upgradedFromSegment = segmentMap.get(pendingSegmentRecord.getUpgradedFromSegmentId());
+          Assert.assertNotNull(upgradedFromSegment);
+          Assert.assertEquals(segment.getLoadSpec(), upgradedFromSegment.getLoadSpec());
+          Assert.assertEquals(
+              pendingSegmentRecord.getUpgradedFromSegmentId(),
+              upgradedFromSegmentIdMap.get(segment.getId().toString())
+          );
+        }
+      }
+    }
 
     // Verify entries in the segment task lock table
     final Set<String> expectedUpgradeSegmentIds
@@ -290,12 +398,24 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()).size()
     );
 
-    final Set<DataSegment> usedSegments = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+    final Set<DataSegment> usedSegments
+        = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+
+    final Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
+        "foo",
+        usedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
 
     Assert.assertTrue(usedSegments.containsAll(segmentsAppendedWithReplaceLock));
+    for (DataSegment appendSegment : segmentsAppendedWithReplaceLock) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(appendSegment.getId().toString()));
+    }
     usedSegments.removeAll(segmentsAppendedWithReplaceLock);
 
     Assert.assertTrue(usedSegments.containsAll(replacingSegments));
+    for (DataSegment replaceSegment : replacingSegments) {
+      Assert.assertNull(upgradedFromSegmentIdMap.get(replaceSegment.getId().toString()));
+    }
     usedSegments.removeAll(replacingSegments);
 
     Assert.assertEquals(segmentsAppendedWithReplaceLock.size(), usedSegments.size());
@@ -303,6 +423,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       boolean hasBeenCarriedForward = false;
       for (DataSegment appendedSegment : segmentsAppendedWithReplaceLock) {
         if (appendedSegment.getLoadSpec().equals(segmentReplicaWithNewVersion.getLoadSpec())) {
+          Assert.assertEquals(
+              appendedSegment.getId().toString(),
+              upgradedFromSegmentIdMap.get(segmentReplicaWithNewVersion.getId().toString())
+          );
           hasBeenCarriedForward = true;
           break;
         }
@@ -3299,5 +3423,157 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         unusedSegmentForExactIntervalAndVersion.getId().toString(),
         unusedSegmentIdsForIntervalAndVersion.get(0)
     );
+  }
+
+  @Test
+  public void testRetrieveUpgradedFromSegmentIds()
+  {
+    final String datasource = defaultSegment.getDataSource();
+    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
+    upgradedFromSegmentIdMap.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
+    upgradedFromSegmentIdMap.clear();
+    upgradedFromSegmentIdMap.put(defaultSegment3.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+
+    Map<String, String> expected = new HashMap<>();
+    expected.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
+    expected.put(defaultSegment3.getId().toString(), defaultSegment.getId().toString());
+
+    Set<String> segmentIds = new HashSet<>();
+    segmentIds.add(defaultSegment.getId().toString());
+    segmentIds.add(defaultSegment2.getId().toString());
+    segmentIds.add(defaultSegment3.getId().toString());
+    segmentIds.add(defaultSegment4.getId().toString());
+    Assert.assertEquals(
+        expected,
+        coordinator.retrieveUpgradedFromSegmentIds(datasource, segmentIds)
+    );
+  }
+
+  @Test
+  public void testRetrieveUpgradedFromSegmentIdsInBatches()
+  {
+    final int size = 500;
+    final int batchSize = 100;
+
+    List<DataSegment> segments = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      segments.add(
+          new DataSegment(
+              "DS",
+              Intervals.ETERNITY,
+              "v " + (i % 5),
+              ImmutableMap.of("num", i / 5),
+              ImmutableList.of("dim"),
+              ImmutableList.of("agg"),
+              new NumberedShardSpec(i / 5, 0),
+              0,
+              100L
+          )
+      );
+    }
+    Map<String, String> expected = new HashMap<>();
+    for (int i = 0; i < batchSize; i++) {
+      for (int j = 1; j < 5; j++) {
+        expected.put(
+            segments.get(5 * i + j).getId().toString(),
+            segments.get(5 * i).getId().toString()
+        );
+      }
+    }
+    insertUsedSegments(ImmutableSet.copyOf(segments), expected);
+
+    Map<String, String> actual = coordinator.retrieveUpgradedFromSegmentIds(
+        "DS",
+        segments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    Assert.assertEquals(400, actual.size());
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testRetrieveUpgradedToSegmentIds()
+  {
+    final String datasource = defaultSegment.getDataSource();
+    final Map<String, String> upgradedFromSegmentIdMap = new HashMap<>();
+    upgradedFromSegmentIdMap.put(defaultSegment2.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment, defaultSegment2), upgradedFromSegmentIdMap);
+    coordinator.markSegmentsAsUnusedWithinInterval(datasource, Intervals.ETERNITY);
+    upgradedFromSegmentIdMap.clear();
+    upgradedFromSegmentIdMap.put(defaultSegment3.getId().toString(), defaultSegment.getId().toString());
+    insertUsedSegments(ImmutableSet.of(defaultSegment3, defaultSegment4), upgradedFromSegmentIdMap);
+
+    Map<String, Set<String>> expected = new HashMap<>();
+    expected.put(defaultSegment.getId().toString(), new HashSet<>());
+    expected.get(defaultSegment.getId().toString()).add(defaultSegment.getId().toString());
+    expected.get(defaultSegment.getId().toString()).add(defaultSegment2.getId().toString());
+    expected.get(defaultSegment.getId().toString()).add(defaultSegment3.getId().toString());
+
+    Set<String> upgradedIds = new HashSet<>();
+    upgradedIds.add(defaultSegment.getId().toString());
+    Assert.assertEquals(
+        expected,
+        coordinator.retrieveUpgradedToSegmentIds(datasource, upgradedIds)
+    );
+  }
+
+  @Test
+  public void testRetrieveUpgradedToSegmentIdsInBatches()
+  {
+    final int size = 500;
+    final int batchSize = 100;
+
+    List<DataSegment> segments = new ArrayList<>();
+    for (int i = 0; i < size; i++) {
+      segments.add(
+          new DataSegment(
+              "DS",
+              Intervals.ETERNITY,
+              "v " + (i % 5),
+              ImmutableMap.of("num", i / 5),
+              ImmutableList.of("dim"),
+              ImmutableList.of("agg"),
+              new NumberedShardSpec(i / 5, 0),
+              0,
+              100L
+          )
+      );
+    }
+
+    Map<String, Set<String>> expected = new HashMap<>();
+    for (DataSegment segment : segments) {
+      final String id = segment.getId().toString();
+      expected.put(id, new HashSet<>());
+      expected.get(id).add(id);
+    }
+    Map<String, String> upgradeMap = new HashMap<>();
+    for (int i = 0; i < batchSize; i++) {
+      for (int j = 1; j < 5; j++) {
+        upgradeMap.put(
+            segments.get(5 * i + j).getId().toString(),
+            segments.get(5 * i).getId().toString()
+        );
+        expected.get(segments.get(5 * i).getId().toString())
+                .add(segments.get(5 * i + j).getId().toString());
+      }
+    }
+    insertUsedSegments(ImmutableSet.copyOf(segments), upgradeMap);
+
+    Map<String, Set<String>> actual = coordinator.retrieveUpgradedToSegmentIds(
+        "DS",
+        segments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
+    );
+
+    Assert.assertEquals(500, actual.size());
+    Assert.assertEquals(expected, actual);
+  }
+
+  private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+    insertUsedSegments(segments, upgradedFromSegmentIdMap, derbyConnector, table, mapper);
   }
 }

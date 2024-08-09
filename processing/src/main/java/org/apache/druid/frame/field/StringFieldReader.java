@@ -489,6 +489,7 @@ public class StringFieldReader implements FieldReader
         public int compareRows(int lhsRowNum, int rhsRowNum)
         {
           throw NotYetImplemented.ex(
+              null,
               "Should implement this by comparing the actual bytes in the frame, they should be comparable"
           );
         }

@@ -99,6 +99,7 @@ public class GlobalSortTargetSizeShuffleSpec implements GlobalSortShuffleSpec
     if (expectedPartitions > maxNumPartitions) {
       return Either.error(expectedPartitions);
     } else {
+      collector.logSketches();
       final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithTargetWeight(targetSize);
       if (generatedPartitions.size() <= maxNumPartitions) {
         return Either.value(generatedPartitions);

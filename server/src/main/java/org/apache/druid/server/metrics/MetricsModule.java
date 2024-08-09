@@ -91,7 +91,6 @@ public class MetricsModule implements Module
 
     binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
 
-    binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle

@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.scan;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
@@ -26,8 +28,10 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -45,6 +49,7 @@ import java.util.Set;
 
 public class ScanQueryTest
 {
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private static QuerySegmentSpec intervalSpec;
   private static ScanResultValue s1;
   private static ScanResultValue s2;
@@ -92,6 +97,20 @@ public class ScanQueryTest
         Collections.singletonList("yah"),
         events3
     );
+  }
+
+  @Test
+  public void testSerdeAndLegacyBackwardsCompat() throws JsonProcessingException
+  {
+    ScanQuery query = Druids.newScanQueryBuilder()
+                            .columns(ImmutableList.of("__time", "quality"))
+                            .dataSource("source")
+                            .intervals(intervalSpec)
+                            .build();
+    Assert.assertFalse(query.isLegacy());
+    String json = JSON_MAPPER.writeValueAsString(query);
+    Assert.assertTrue(json.contains("\"legacy\":false"));
+    Assert.assertEquals(query, JSON_MAPPER.readValue(json, Query.class));
   }
 
   @Test(expected = IllegalArgumentException.class)

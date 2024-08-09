@@ -21,7 +21,7 @@ package org.apache.druid.indexing.overlord.http.security;
 
 import com.google.common.base.Optional;
 import com.sun.jersey.spi.container.ContainerRequest;
-import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
@@ -42,7 +42,7 @@ import static org.easymock.EasyMock.expect;
 public class TaskResourceFilterTest
 {
   private AuthorizerMapper authorizerMapper;
-  private TaskStorageQueryAdapter taskStorageQueryAdapter;
+  private TaskQueryTool taskQueryTool;
   private ContainerRequest containerRequest;
   private TaskResourceFilter resourceFilter;
 
@@ -50,9 +50,9 @@ public class TaskResourceFilterTest
   public void setup()
   {
     authorizerMapper = EasyMock.createMock(AuthorizerMapper.class);
-    taskStorageQueryAdapter = EasyMock.createMock(TaskStorageQueryAdapter.class);
+    taskQueryTool = EasyMock.createMock(TaskQueryTool.class);
     containerRequest = EasyMock.createMock(ContainerRequest.class);
-    resourceFilter = new TaskResourceFilter(taskStorageQueryAdapter, authorizerMapper);
+    resourceFilter = new TaskResourceFilter(taskQueryTool, authorizerMapper);
   }
 
   @Test
@@ -68,11 +68,11 @@ public class TaskResourceFilterTest
     expect(supervisorSpec.getDataSources())
         .andReturn(Collections.singletonList(taskId))
         .anyTimes();
-    expect(taskStorageQueryAdapter.getTask(taskId))
+    expect(taskQueryTool.getTask(taskId))
         .andReturn(Optional.absent())
         .atLeastOnce();
     EasyMock.replay(containerRequest);
-    EasyMock.replay(taskStorageQueryAdapter);
+    EasyMock.replay(taskQueryTool);
 
     WebApplicationException expected = null;
     try {
@@ -84,7 +84,7 @@ public class TaskResourceFilterTest
     Assert.assertNotNull(expected);
     Assert.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
     EasyMock.verify(containerRequest);
-    EasyMock.verify(taskStorageQueryAdapter);
+    EasyMock.verify(taskQueryTool);
   }
 
   private List<PathSegment> getPathSegments(String path)
