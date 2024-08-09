@@ -688,7 +688,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     Assert.assertTrue(indexer.hasNulls);
     Assert.assertFalse(indexer.hasNestedData);
     Assert.assertTrue(indexer.isConstant());
-    Assert.assertEquals(ColumnType.STRING, indexer.getLogicalType());
+    Assert.assertEquals(ColumnType.LONG, indexer.getLogicalType());
   }
 
   @Test
