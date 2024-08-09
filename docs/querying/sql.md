@@ -409,3 +409,14 @@ To solve this issue, explicitly provide the type of the dynamic parameter using 
 ```
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
+
+## Reserved keywords
+
+There are reserved keywords in Apache Druid which cannot be used unless in queries unless they are quoted.
+
+Apache Druid inherits all of the keywords and reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/) which are [documented here](https://calcite.apache.org/docs/reference.html#keywords). In addition to these the following are keywords unique to Apache Druid, reserved keywords are in bold:
+
+* **CLUSTERED**
+* OVERWRITE
+* **PARTITIONED**
+* EXTERN
