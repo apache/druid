@@ -382,6 +382,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`metadatacache/finalizedSchemaPayload/count`|Number of finalized segment schema cached.||Depends on the number of distinct schema in the cluster.|
 |`metadatacache/temporaryMetadataQueryResults/count`|Number of segments for which schema was fetched by executing segment metadata query.||Eventually it should be 0.|
 |`metadatacache/temporaryPublishedMetadataQueryResults/count`|Number of segments for which schema is cached after back filling in the database.||This value gets reset after each database poll. Eventually it should be 0.|
+|`metadatacache/cold/segment/count`|Number of cold segments.|`dataSource`||
+|`metadatacache/cold/refresh/count`|Number of cold segments with cached schema.|`dataSource`||
+|`metadatacache/cold/process/time`|Time taken in milliseconds to process cold segments.||Under a minute|
 
 ## General Health
 
