@@ -156,8 +156,10 @@ payload = json.dumps({
 headers = {
   'Content-Type': 'application/json'
 }
+username = 'USER'
+password = 'PASSWORD'
 
-response = requests.post(url, headers=headers, data=payload, auth=('USER', 'PASSWORD'))
+response = requests.post(url, headers=headers, data=payload, auth=(username, password))
 
 print(response.text)
 
@@ -253,9 +255,12 @@ url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-3dc0c45d-34d7-4b
 
 payload={}
 headers = {}
+username = 'USER'
+password = 'PASSWORD'
 
-response = requests.get(url, headers=headers, data=payload, auth=('USER', 'PASSWORD'))
+response = requests.post(url, headers=headers, data=payload, auth=(username, password))
 
+print(response.text)
 print(response.text)
 ```
 
@@ -363,7 +368,12 @@ import requests
 url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-3dc0c45d-34d7-4b15-86c9-cdb2d3ebfc4e/reports"
 
 headers = {}
-response = requests.get(url, headers=headers, auth=('USER', 'PASSWORD'))
+username = 'USER'
+password = 'PASSWORD'
+
+response = requests.post(url, headers=headers, data=payload, auth=(username, password))
+
+print(response.text)
 print(response.text)
 ```
 
@@ -828,9 +838,12 @@ url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-655efe33-781a-4c
 
 payload={}
 headers = {}
+username = 'USER'
+password = 'PASSWORD'
 
-response = requests.post(url, headers=headers, data=payload, auth=('USER', 'PASSWORD'))
+response = requests.post(url, headers=headers, data=payload, auth=(username, password))
 
+print(response.text)
 print(response.text)
 ```
 
