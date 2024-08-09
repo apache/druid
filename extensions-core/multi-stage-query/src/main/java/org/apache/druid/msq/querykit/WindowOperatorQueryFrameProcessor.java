@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -38,7 +37,6 @@ import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -58,10 +56,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 {
   private static final Logger log = new Logger(WindowOperatorQueryFrameProcessor.class);
-  private final WindowOperatorQuery query;
 
   private final List<OperatorFactory> operatorFactoryList;
-  private final ObjectMapper jsonMapper;
   private final ArrayList<RowsAndColumns> frameRowsAndCols;
   private final ArrayList<RowsAndColumns> resultRowAndCols;
   private final ReadableFrameChannel inputChannel;
@@ -73,12 +69,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private FrameWriter frameWriter = null;
 
   public WindowOperatorQueryFrameProcessor(
-      WindowOperatorQuery query,
       ReadableFrameChannel inputChannel,
       WritableFrameChannel outputChannel,
       FrameWriterFactory frameWriterFactory,
       FrameReader frameReader,
-      ObjectMapper jsonMapper,
       final List<OperatorFactory> operatorFactoryList,
       final int maxRowsMaterializedInWindow
   )
@@ -87,8 +81,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.outputChannel = outputChannel;
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
-    this.jsonMapper = jsonMapper;
-    this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
