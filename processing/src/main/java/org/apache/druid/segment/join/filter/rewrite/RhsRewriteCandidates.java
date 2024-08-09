@@ -23,6 +23,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
+import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.filter.Equiconditions;
 import org.apache.druid.segment.join.filter.JoinableClauses;
@@ -106,7 +107,7 @@ public class RhsRewriteCandidates
     if (equiconditions.doesFilterSupportDirectJoinFilterRewrite(orClause)) {
       String reqColumn = orClause.getRequiredColumns().iterator().next();
       JoinableClause joinableClause = joinableClauses.getColumnFromJoinIfExists(reqColumn);
-      if (joinableClause != null) {
+      if (joinableClause != null && joinableClause.getJoinType() == JoinType.INNER) {
         return Optional.of(
             new RhsRewriteCandidate(
                 joinableClause,
@@ -121,7 +122,7 @@ public class RhsRewriteCandidates
       String reqColumn = ((SelectorFilter) orClause).getDimension();
       String reqValue = ((SelectorFilter) orClause).getValue();
       JoinableClause joinableClause = joinableClauses.getColumnFromJoinIfExists(reqColumn);
-      if (joinableClause != null) {
+      if (joinableClause != null && joinableClause.getJoinType() == JoinType.INNER) {
         return Optional.of(
             new RhsRewriteCandidate(
                 joinableClause,
