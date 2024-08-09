@@ -42,7 +42,6 @@ import net.spy.memcached.metrics.MetricCollector;
 import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.LinkedOperationQueueFactory;
 import net.spy.memcached.ops.OperationQueueFactory;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.collections.StupidResourceHolder;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,6 +50,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.encoders.Hex;
 
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLContext;
@@ -62,7 +63,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -80,7 +84,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MemcachedCache implements Cache
 {
   private static final Logger log = new Logger(MemcachedCache.class);
-
+  private static final String TIGER_HASH_ALGORITHM = "Tiger";
+  private static final String HASH_LIBRARY = "BC";
+  private static MessageDigest MESSAGE_DIGEST = null;
   /**
    * Default hash algorithm for cache distribution.
    *
@@ -155,6 +161,11 @@ public class MemcachedCache implements Cache
           }
         };
     try {
+      if (MESSAGE_DIGEST == null) {
+        Security.addProvider(new BouncyCastleProvider());
+        MESSAGE_DIGEST = MessageDigest.getInstance(TIGER_HASH_ALGORITHM, HASH_LIBRARY);
+      }
+
       LZ4Transcoder transcoder = new LZ4Transcoder(config.getMaxObjectSize());
 
       // always use compression
@@ -379,7 +390,7 @@ public class MemcachedCache implements Cache
 
       return new MemcachedCache(clientSupplier, config, monitor);
     }
-    catch (IOException | NoSuchAlgorithmException e) {
+    catch (IOException | NoSuchAlgorithmException | NoSuchProviderException e) {
       throw new RuntimeException(e);
     }
     catch (KeyStoreException e) {
@@ -432,16 +443,15 @@ public class MemcachedCache implements Cache
 
   private final int timeout;
   private final int expiration;
+
   private final String memcachedPrefix;
 
   private final Supplier<ResourceHolder<MemcachedClientIF>> client;
-
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
   private final AtomicLong errorCount = new AtomicLong(0);
   private final AbstractMonitor monitor;
-
 
   MemcachedCache(
       Supplier<ResourceHolder<MemcachedClientIF>> client,
@@ -641,14 +651,18 @@ public class MemcachedCache implements Cache
 
   public static final int MAX_PREFIX_LENGTH =
       MemcachedClientIF.MAX_KEY_LENGTH
-      - 40 // length of namespace hash
-      - 40 // length of key hash
+      - 48 // length of namespace hash
+      - 48 // length of key hash
       - 2; // length of separators
 
   private static String computeKeyHash(String memcachedPrefix, NamedKey key)
   {
     // hash keys to keep things under 250 characters for memcached
-    return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
+    return memcachedPrefix
+           + ":"
+           + Hex.toHexString(MESSAGE_DIGEST.digest(key.namespace.getBytes(StandardCharsets.UTF_8)))
+           + ":"
+           + Hex.toHexString(MESSAGE_DIGEST.digest(key.key));
   }
 
   @Override
