@@ -423,3 +423,12 @@ SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)
 ```
 
 sample java code using dynamic parameters is provided [here](../api-reference/sql-jdbc.md#dynamic-parameters).
+
+## Reserved keywords
+
+There are reserved keywords in Apache Druid. To use reserved keywords in queries, enclose them in quote marks.
+
+Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these the following keywords are unique to Apache Druid:
+
+* **CLUSTERED**
+* **PARTITIONED**
