@@ -25,7 +25,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -62,7 +62,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setup()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Test

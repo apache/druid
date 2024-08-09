@@ -25,6 +25,7 @@ import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -42,6 +43,7 @@ public class WindowCumeDistProcessorTest
     MapOfColumnsRowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(map);
 
     Processor processor = new WindowCumeDistProcessor(Collections.singletonList("vals"), "CumeDist");
+    Assert.assertEquals(Collections.singletonList("CumeDist"), processor.getOutputColumnNames());
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()
         .expectColumn("vals", new int[]{7, 18, 18, 30, 120, 121, 122, 122, 8290, 8290})

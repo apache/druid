@@ -52,7 +52,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -116,7 +116,6 @@ public class WorkerTaskManagerTest
         .setBaseDir(FileUtils.createTempDir().toString())
         .setDefaultRowFlushBoundary(0)
         .setRestoreTasksOnRestart(restoreTasksOnRestart)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
@@ -456,6 +455,19 @@ public class WorkerTaskManagerTest
     return new NoopTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0));
   }
 
+  private NoopTask createNoopFailingTask(String id, String dataSource)
+  {
+    return new NoopTask(id, null, dataSource, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
+    {
+      @Override
+      public TaskStatus runTask(TaskToolbox toolbox) throws Exception
+      {
+        Thread.sleep(getRunTime());
+        return TaskStatus.failure(getId(), "Failed to complete the task");
+      }
+    };
+  }
+
   /**
    * Start the {@link #workerTaskManager}, submit a {@link NoopTask}, wait for it to be complete. Common preamble
    * for various tests of {@link WorkerTaskManager#doCompletedTasksCleanup()}.
@@ -495,7 +507,7 @@ public class WorkerTaskManagerTest
 
     Task task1 = createNoopTask("task1", "wikipedia");
     Task task2 = createNoopTask("task2", "wikipedia");
-    Task task3 = createNoopTask("task3", "animals");
+    Task task3 = createNoopFailingTask("task3", "animals");
 
     workerTaskManager.start();
     // befor assigning tasks we should get no running tasks
@@ -518,10 +530,18 @@ public class WorkerTaskManagerTest
       Thread.sleep(10);
     } while (!runningTasks.isEmpty());
 
-    // When running tasks are empty all task should be reported as completed
+    // When running tasks are empty all task should be reported as completed and
+    // one of the task for animals datasource should fail and other 2 tasks in
+    // the wikipedia datasource should succeed
     Assert.assertEquals(workerTaskManager.getWorkerCompletedTasks(), ImmutableMap.of(
         "wikipedia", 2L,
         "animals", 1L
+    ));
+    Assert.assertEquals(workerTaskManager.getWorkerFailedTasks(), ImmutableMap.of(
+            "animals", 1L
+    ));
+    Assert.assertEquals(workerTaskManager.getWorkerSuccessfulTasks(), ImmutableMap.of(
+            "wikipedia", 2L
     ));
     Assert.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
   }

@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
@@ -107,13 +107,13 @@ public class KillCompactionConfigTest
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("name"),
         ArgumentMatchers.eq("payload"),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY))
     ).thenReturn(null);
     Mockito.when(mockJacksonConfigManager.convertByteToConfig(
         ArgumentMatchers.eq(null),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
-    ).thenReturn(CoordinatorCompactionConfig.empty());
+        ArgumentMatchers.eq(DruidCompactionConfig.class),
+        ArgumentMatchers.eq(DruidCompactionConfig.empty()))
+    ).thenReturn(DruidCompactionConfig.empty());
 
     final MetadataCleanupConfig config
         = new MetadataCleanupConfig(true, new Duration("PT6S"), null);
@@ -129,14 +129,14 @@ public class KillCompactionConfigTest
 
     Mockito.verify(mockJacksonConfigManager).convertByteToConfig(
         ArgumentMatchers.eq(null),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
+        ArgumentMatchers.eq(DruidCompactionConfig.class),
+        ArgumentMatchers.eq(DruidCompactionConfig.empty())
     );
     Mockito.verify(mockConnector).lookup(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("name"),
         ArgumentMatchers.eq("payload"),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY)
     );
     Mockito.verifyNoMoreInteractions(mockJacksonConfigManager);
   }
@@ -158,6 +158,7 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
 
@@ -173,26 +174,29 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
-    CoordinatorCompactionConfig originalCurrentConfig = CoordinatorCompactionConfig.from(ImmutableList.of(inactiveDatasourceConfig, activeDatasourceConfig));
+    DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
+            ImmutableList.of(inactiveDatasourceConfig, activeDatasourceConfig)
+    );
     byte[] originalCurrentConfigBytes = {1, 2, 3};
     Mockito.when(mockConnector.lookup(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("name"),
         ArgumentMatchers.eq("payload"),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY))
     ).thenReturn(originalCurrentConfigBytes);
     Mockito.when(mockJacksonConfigManager.convertByteToConfig(
         ArgumentMatchers.eq(originalCurrentConfigBytes),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
+        ArgumentMatchers.eq(DruidCompactionConfig.class),
+        ArgumentMatchers.eq(DruidCompactionConfig.empty()))
     ).thenReturn(originalCurrentConfig);
     Mockito.when(mockSqlSegmentsMetadataManager.retrieveAllDataSourceNames()).thenReturn(ImmutableSet.of(activeDatasourceName));
     final ArgumentCaptor<byte[]> oldConfigCaptor = ArgumentCaptor.forClass(byte[].class);
-    final ArgumentCaptor<CoordinatorCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(CoordinatorCompactionConfig.class);
+    final ArgumentCaptor<DruidCompactionConfig> newConfigCaptor = ArgumentCaptor.forClass(DruidCompactionConfig.class);
     Mockito.when(mockJacksonConfigManager.set(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY),
         oldConfigCaptor.capture(),
         newConfigCaptor.capture(),
         ArgumentMatchers.any())
@@ -219,19 +223,19 @@ public class KillCompactionConfigTest
 
     Mockito.verify(mockJacksonConfigManager).convertByteToConfig(
         ArgumentMatchers.eq(originalCurrentConfigBytes),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
+        ArgumentMatchers.eq(DruidCompactionConfig.class),
+        ArgumentMatchers.eq(DruidCompactionConfig.empty())
     );
     Mockito.verify(mockConnector).lookup(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("name"),
         ArgumentMatchers.eq("payload"),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY)
     );
     Mockito.verify(mockJacksonConfigManager).set(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY),
         ArgumentMatchers.any(byte[].class),
-        ArgumentMatchers.any(CoordinatorCompactionConfig.class),
+        ArgumentMatchers.any(DruidCompactionConfig.class),
         ArgumentMatchers.any()
     );
     Mockito.verifyNoMoreInteractions(mockJacksonConfigManager);
@@ -255,27 +259,30 @@ public class KillCompactionConfigTest
         null,
         null,
         null,
+        null,
         ImmutableMap.of("key", "val")
     );
 
-    CoordinatorCompactionConfig originalCurrentConfig = CoordinatorCompactionConfig.from(ImmutableList.of(inactiveDatasourceConfig));
+    DruidCompactionConfig originalCurrentConfig = DruidCompactionConfig.empty().withDatasourceConfigs(
+        ImmutableList.of(inactiveDatasourceConfig)
+    );
     byte[] originalCurrentConfigBytes = {1, 2, 3};
     Mockito.when(mockConnector.lookup(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("name"),
         ArgumentMatchers.eq("payload"),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY))
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY))
     ).thenReturn(originalCurrentConfigBytes);
     Mockito.when(mockJacksonConfigManager.convertByteToConfig(
         ArgumentMatchers.eq(originalCurrentConfigBytes),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.empty()))
+        ArgumentMatchers.eq(DruidCompactionConfig.class),
+        ArgumentMatchers.eq(DruidCompactionConfig.empty()))
     ).thenReturn(originalCurrentConfig);
     Mockito.when(mockSqlSegmentsMetadataManager.retrieveAllDataSourceNames()).thenReturn(ImmutableSet.of());
     Mockito.when(mockJacksonConfigManager.set(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY),
         ArgumentMatchers.any(byte[].class),
-        ArgumentMatchers.any(CoordinatorCompactionConfig.class),
+        ArgumentMatchers.any(DruidCompactionConfig.class),
         ArgumentMatchers.any())
     ).thenReturn(
         // Return fail result with RetryableException the first three calls to updated set
@@ -301,21 +308,21 @@ public class KillCompactionConfigTest
     // Should call convertByteToConfig and lookup (to refresh current compaction config) four times due to RetryableException when failed
     Mockito.verify(mockJacksonConfigManager, Mockito.times(4)).convertByteToConfig(
         ArgumentMatchers.eq(originalCurrentConfigBytes),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.class),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.empty())
+        ArgumentMatchers.eq(DruidCompactionConfig.class),
+        ArgumentMatchers.eq(DruidCompactionConfig.empty())
     );
     Mockito.verify(mockConnector, Mockito.times(4)).lookup(
         ArgumentMatchers.anyString(),
         ArgumentMatchers.eq("name"),
         ArgumentMatchers.eq("payload"),
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY)
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY)
     );
 
     // Should call set (to try set new updated compaction config) four times due to RetryableException when failed
     Mockito.verify(mockJacksonConfigManager, Mockito.times(4)).set(
-        ArgumentMatchers.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+        ArgumentMatchers.eq(DruidCompactionConfig.CONFIG_KEY),
         ArgumentMatchers.any(byte[].class),
-        ArgumentMatchers.any(CoordinatorCompactionConfig.class),
+        ArgumentMatchers.any(DruidCompactionConfig.class),
         ArgumentMatchers.any()
     );
     Mockito.verifyNoMoreInteractions(mockJacksonConfigManager);

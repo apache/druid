@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.Period;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import java.net.URI;
@@ -63,17 +64,25 @@ public class CatalogUtils
    * For the odd interval, the interval name is also accepted (for the other
    * intervals, the interval name is the descriptive string).
    */
-  public static Granularity asDruidGranularity(String value)
+  public static Granularity asDruidGranularity(@Nonnull String value)
   {
-    if (Strings.isNullOrEmpty(value) || value.equalsIgnoreCase(DatasourceDefn.ALL_GRANULARITY)) {
+    if (value.equalsIgnoreCase(DatasourceDefn.ALL_GRANULARITY)) {
       return Granularities.ALL;
     }
+    Granularity granularity;
     try {
-      return new PeriodGranularity(new Period(value), null, null);
+      granularity = Granularity.fromString(value);
     }
     catch (IllegalArgumentException e) {
-      throw new IAE(StringUtils.format("'%s' is an invalid period string", value));
+      try {
+        granularity = new PeriodGranularity(new Period(value), null, null);
+      }
+      catch (IllegalArgumentException e2) {
+        throw new IAE("[%s] is an invalid granularity string.", value);
+      }
     }
+
+    return granularity;
   }
 
   /**
@@ -275,18 +284,12 @@ public class CatalogUtils
     return merged;
   }
 
-  public static void validateGranularity(String value)
+  public static void validateGranularity(final String value)
   {
     if (value == null) {
       return;
     }
-    Granularity granularity;
-    try {
-      granularity = new PeriodGranularity(new Period(value), null, null);
-    }
-    catch (IllegalArgumentException e) {
-      throw new IAE(StringUtils.format("[%s] is an invalid granularity string", value));
-    }
+    final Granularity granularity = asDruidGranularity(value);
     if (!GranularityType.isStandard(granularity)) {
       throw new IAE(
           "Unsupported segment graularity. "

@@ -167,11 +167,15 @@ public class IndexMergerLongestSharedDimOrderTest
             mockBitmapFactory,
             ImmutableMap.of(ColumnHolder.TIME_COLUMN_NAME, mockSupplier),
             mockSmooshedFileMapper,
-            null,
             true
         )
+        {
+          @Override
+          public Metadata getMetadata()
+          {
+            return null;
+          }
+        }
     );
   }
 }
-
-

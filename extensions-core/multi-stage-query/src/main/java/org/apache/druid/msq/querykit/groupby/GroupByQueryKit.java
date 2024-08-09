@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
@@ -39,7 +38,6 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -168,100 +166,38 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         partitionBoost
     );
 
-    final ShuffleSpec nextShuffleWindowSpec = getShuffleSpecForNextWindow(originalQuery, maxWorkerCount);
+    queryDefBuilder.add(
+        StageDefinition.builder(firstStageNumber + 1)
+                       .inputs(new StageInputSpec(firstStageNumber))
+                       .signature(resultSignature)
+                       .maxWorkerCount(maxWorkerCount)
+                       .shuffleSpec(
+                           shuffleSpecFactoryPostAggregation != null
+                           ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
+                           : null
+                       )
+                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+    );
 
-    if (nextShuffleWindowSpec == null) {
+    if (doLimitOrOffset) {
+      final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(resultClusterBy, false);
+      final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
       queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber + 1)
-                         .inputs(new StageInputSpec(firstStageNumber))
+          StageDefinition.builder(firstStageNumber + 2)
+                         .inputs(new StageInputSpec(firstStageNumber + 1))
                          .signature(resultSignature)
-                         .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(
-                             shuffleSpecFactoryPostAggregation != null
-                             ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
-                             : null
+                         .maxWorkerCount(1)
+                         .shuffleSpec(finalShuffleSpec)
+                         .processorFactory(
+                             new OffsetLimitFrameProcessorFactory(
+                                 limitSpec.getOffset(),
+                                 limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
+                             )
                          )
-                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
-
-      if (doLimitOrOffset) {
-        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-        queryDefBuilder.add(
-            StageDefinition.builder(firstStageNumber + 2)
-                           .inputs(new StageInputSpec(firstStageNumber + 1))
-                           .signature(resultSignature)
-                           .maxWorkerCount(1)
-                           .shuffleSpec(null) // no shuffling should be required after a limit processor.
-                           .processorFactory(
-                               new OffsetLimitFrameProcessorFactory(
-                                   limitSpec.getOffset(),
-                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
-                               )
-                           )
-        );
-      }
-    } else {
-      final RowSignature stageSignature;
-      // sort the signature to make sure the prefix is aligned
-      stageSignature = QueryKitUtils.sortableSignature(
-          resultSignature,
-          nextShuffleWindowSpec.clusterBy().getColumns()
-      );
-
-
-      queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber + 1)
-                         .inputs(new StageInputSpec(firstStageNumber))
-                         .signature(stageSignature)
-                         .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(doLimitOrOffset ? (shuffleSpecFactoryPostAggregation != null
-                                                         ? shuffleSpecFactoryPostAggregation.build(
-                             resultClusterBy,
-                             false
-                         )
-                                                         : null) : nextShuffleWindowSpec)
-                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
-      );
-      if (doLimitOrOffset) {
-        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-        queryDefBuilder.add(
-            StageDefinition.builder(firstStageNumber + 2)
-                           .inputs(new StageInputSpec(firstStageNumber + 1))
-                           .signature(resultSignature)
-                           .maxWorkerCount(1)
-                           .shuffleSpec(null)
-                           .processorFactory(
-                               new OffsetLimitFrameProcessorFactory(
-                                   limitSpec.getOffset(),
-                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
-                               )
-                           )
-        );
-      }
     }
 
     return queryDefBuilder.build();
-  }
-
-  /**
-   * @param originalQuery  which has the context for the next shuffle if that's present in the next window
-   * @param maxWorkerCount max worker count
-   * @return shuffle spec without partition boosting for next stage, null if there is no partition by for next window
-   */
-  private ShuffleSpec getShuffleSpecForNextWindow(GroupByQuery originalQuery, int maxWorkerCount)
-  {
-    final ShuffleSpec nextShuffleWindowSpec;
-    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
-                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
-      nextShuffleWindowSpec = new HashShuffleSpec(
-          windowClusterBy,
-          maxWorkerCount
-      );
-    } else {
-      nextShuffleWindowSpec = null;
-    }
-    return nextShuffleWindowSpec;
   }
 
   /**

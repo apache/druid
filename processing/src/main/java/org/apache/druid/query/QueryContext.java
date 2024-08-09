@@ -613,14 +613,6 @@ public class QueryContext
     );
   }
 
-  public boolean isWindowingStrictValidation()
-  {
-    return getBoolean(
-        QueryContexts.WINDOWING_STRICT_VALIDATION,
-        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION
-    );
-  }
-
   public boolean isCatalogValidationEnabled()
   {
     return getBoolean(

@@ -28,6 +28,10 @@ import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
 public class WindowRowNumberProcessor implements Processor
 {
   private final String outputColumn;
@@ -127,5 +131,30 @@ public class WindowRowNumberProcessor implements Processor
     return "WindowRowNumberProcessor{" +
            "outputColumn='" + outputColumn + '\'' +
            '}';
+  }
+
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    return Collections.singletonList(outputColumn);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    WindowRowNumberProcessor that = (WindowRowNumberProcessor) o;
+    return Objects.equals(outputColumn, that.outputColumn);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(outputColumn);
   }
 }

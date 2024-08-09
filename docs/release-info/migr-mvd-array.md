@@ -242,5 +242,5 @@ For an example, see [Ingesting arrays: Native batch and streaming ingestion](../
 * For SQL-based batch ingestion, include the [query context parameter](../multi-stage-query/reference.md#context-parameters) `"arrayIngestMode": "array"` and reference the relevant array type (`VARCHAR ARRAY`, `BIGINT ARRAY`, or `DOUBLE ARRAY`) in the [EXTEND clause](../multi-stage-query/reference.md#extern-function) that lists the column names and data types.
 For examples, see [Ingesting arrays: SQL-based ingestion](../querying/arrays.md#sql-based-ingestion).
 
-   As a best practice, always use the ARRAY data type in your input schema. If you want to ingest MVDs, explicitly wrap the string array in [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv). For an example, see [Multi-value dimensions: SQL-based ingestion](/querying/multi-value-dimensions.md#sql-based-ingestion).
+   As a best practice, always use the ARRAY data type in your input schema. If you want to ingest MVDs, explicitly wrap the string array in [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv). For an example, see [Multi-value dimensions: SQL-based ingestion](../querying/multi-value-dimensions.md#sql-based-ingestion).
 

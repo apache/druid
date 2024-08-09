@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -130,6 +131,8 @@ import java.util.Map;
 @NotThreadSafe
 public class DruidException extends RuntimeException
 {
+  public static final String CLASS_NAME_STR = DruidException.class.getName();
+
   /**
    * Starts building a "general" DruidException targeting the specified persona.
    *
@@ -478,7 +481,7 @@ public class DruidException extends RuntimeException
 
     public DruidException build(Throwable cause, String formatMe, Object... vals)
     {
-      return new DruidException(
+      final DruidException retVal = new DruidException(
           cause,
           errorCode,
           targetPersona,
@@ -486,6 +489,19 @@ public class DruidException extends RuntimeException
           StringUtils.nonStrictFormat(formatMe, vals),
           deserialized
       );
+
+      StackTraceElement[] stackTrace = retVal.getStackTrace();
+      int firstNonDruidExceptionIndex = 0;
+      while (
+          firstNonDruidExceptionIndex < stackTrace.length
+          && stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
+        ++firstNonDruidExceptionIndex;
+      }
+      if (firstNonDruidExceptionIndex > 0) {
+        retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
+      }
+
+      return retVal;
     }
   }
 

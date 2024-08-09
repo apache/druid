@@ -304,9 +304,7 @@ public class BaseColumnarLongsBenchmark
     }
 
     serializer.open();
-    for (long val : vals) {
-      serializer.add(val);
-    }
+    serializer.addAll(vals, 0, vals.length);
     serializer.writeTo(output, null);
     return (int) serializer.getSerializedSize();
   }
