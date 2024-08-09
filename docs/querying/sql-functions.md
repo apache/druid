@@ -1093,7 +1093,7 @@ The following example uses a map lookup table, named `acronym_to_name` made with
 }
 ```
 
-The example uses the map lookup table `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to its full airport name, returns `NaN` if no matching value exist in the lookup table.
+The example uses `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to its full airport name. Returns `NaN` if no matching value exist in the lookup table.
 
 ```sql
 SELECT 
