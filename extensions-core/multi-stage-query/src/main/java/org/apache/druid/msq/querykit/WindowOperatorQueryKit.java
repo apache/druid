@@ -24,6 +24,8 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
@@ -49,6 +51,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
@@ -105,8 +108,20 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
-    final int maxRowsMaterialized;
 
+    // Get segment granularity from query context, and create ShuffleSpec and RowSignature to be used for the final window stage.
+    final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
+    final ClusterBy finalWindowClusterBy = QueryKitUtils.clusterByWithSegmentGranularity(ClusterBy.none(), segmentGranularity);
+    ShuffleSpec finalWindowStageShuffleSpec = resultShuffleSpecFactory.build(finalWindowClusterBy, false);
+    if (Objects.equals(segmentGranularity, Granularities.ALL)) {
+      finalWindowStageShuffleSpec = MixShuffleSpec.instance();
+    }
+    final RowSignature finalWindowStageRowSignature = QueryKitUtils.sortableSignature(
+        QueryKitUtils.signatureWithSegmentGranularity(rowSignature, segmentGranularity),
+        finalWindowClusterBy.getColumns()
+    );
+
+    final int maxRowsMaterialized;
     if (originalQuery.context() != null && originalQuery.context().containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
       maxRowsMaterialized = (int) originalQuery.context().get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
     } else {
@@ -122,13 +137,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber)
                          .inputs(new StageInputSpec(firstStageNumber - 1))
-                         .signature(rowSignature)
+                         .signature(finalWindowStageRowSignature)
                          .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(null)
+                         .shuffleSpec(finalWindowStageShuffleSpec)
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                              queryToRun,
                              queryToRun.getOperators(),
-                             rowSignature,
+                             finalWindowStageRowSignature,
                              maxRowsMaterialized,
                              Collections.emptyList()
                          ))
@@ -178,23 +193,22 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           }
         }
 
-        // find the shuffle spec of the next stage
-        // if it is the last stage set the next shuffle spec to single partition
-        if (i + 1 == operatorList.size()) {
-          nextShuffleSpec = MixShuffleSpec.instance();
-        } else {
-          nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
-        }
-
         final RowSignature intermediateSignature = bob.build();
         final RowSignature stageRowSignature;
-        if (nextShuffleSpec == null) {
-          stageRowSignature = intermediateSignature;
+
+        if (i + 1 == operatorList.size()) {
+          stageRowSignature = finalWindowStageRowSignature;
+          nextShuffleSpec = finalWindowStageShuffleSpec;
         } else {
-          stageRowSignature = QueryKitUtils.sortableSignature(
-              intermediateSignature,
-              nextShuffleSpec.clusterBy().getColumns()
-          );
+          nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
+          if (nextShuffleSpec == null) {
+            stageRowSignature = intermediateSignature;
+          } else {
+            stageRowSignature = QueryKitUtils.sortableSignature(
+                intermediateSignature,
+                nextShuffleSpec.clusterBy().getColumns()
+            );
+          }
         }
 
         log.info("Using row signature [%s] for window stage.", stageRowSignature);
