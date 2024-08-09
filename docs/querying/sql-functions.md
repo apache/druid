@@ -416,7 +416,7 @@ Returns true if the expression is contained in a Base64-serialized Bloom filter.
 
 ## BTRIM
 
-Trims characters from both the leading and trailing ends of an expression. The default for `chars` is the `''` (a space) character.
+Trims characters from both the leading and trailing ends of an expression. Defaults `chars` to a space if none is provided.
 
 * **Syntax:** `BTRIM(expr[, chars])`
 * **Function type:** Scalar, string
@@ -427,13 +427,13 @@ The following example trims the `_` characters from both ends of the string expr
 
 ```sql
 SELECT 
-  '___abc___' AS "original_expression",
-  BTRIM('___abc___', '_') AS "trim_both_ends_of_expression"
+  '___abc___' AS "original_string",
+  BTRIM('___abc___', '_') AS "trim_both_ends"
 ```
 
 Returns the following:
 
-| `original_expression` | `trim_both_ends_of_expression` |
+| `original_string` | `trim_both_ends` |
 | -- | -- | 
 | `___abc___` | `abc` |
 
@@ -1120,7 +1120,7 @@ Returns the leftmost number of characters from an expression, optionally padded 
 
 ## LTRIM
 
-Trims characters from the leading end of an expression. The default for `chars` is the `''` (a space) character.
+Trims characters from the leading end of an expression. Defaults `chars` to a space if none is provided.
 
 * **Syntax:** `LTRIM(expr[, chars])`
 * **Function type:** Scalar, string
@@ -1131,13 +1131,13 @@ The following example trims the `_` characters from the leading end of the strin
 
 ```sql
 SELECT 
-  '___abc___' AS "original_expression",
+  '___abc___' AS "original_string",
   LTRIM('___abc___', '_') AS "trim_leading_end_of_expression"
 ```
 
 Returns the following:
 
-| `original_expression` | `trim_leading_end_of_expression` |
+| `original_string` | `trim_leading_end_of_expression` |
 | -- | -- | 
 | `___abc___` | `abc___` |
 
@@ -1411,17 +1411,17 @@ Repeats the string expression `N` times, where `N` is an integer.
 
 <details><summary>Example</summary>
 
-The following example returns the string expression `foo` repeated `3` times.
+The following example returns the string expression `abc` repeated `3` times.
 
 ```sql
 SELECT 
-  'abc' AS "original_expression",
-  REPEAT('abc', 3) AS "expression_after_repetition"
+  'abc' AS "original_string",
+  REPEAT('abc', 3) AS "with_repetition"
 ```
 
 Returns the following: 
 
-| `original_expression` | `expression_after_repetition` |
+| `original_string` | `with_repetition` |
 | -- | -- |
 | `abc` | `abcabcabc` |
 
@@ -1442,13 +1442,13 @@ The following example replaces instances of the substring `abc` with `XYZ`.
 
 ```sql
 SELECT 
-  'abc 123 abc 123' AS "original_expression",
-   REPLACE('abc 123 abc 123', 'abc', 'XYZ') AS "expression_after_replacement"
+  'abc 123 abc 123' AS "original_string",
+   REPLACE('abc 123 abc 123', 'abc', 'XYZ') AS "modified_string"
 ```
 
 Returns the following:
 
-| `original_expression` | `expression_after_replacement` | 
+| `original_string` | `modified_string` | 
 | -- | -- |
 | `abc 123 abc 123` | `XYZ 123 XYZ 123` |
 
@@ -1469,13 +1469,13 @@ The following example reverses the string expression `abc`.
 
 ```sql
 SELECT 
-  'abc' AS "original_expression",
-  REVERSE('abc') AS "expr_after_reversal"
+  'abc' AS "original_string",
+  REVERSE('abc') AS "reversal"
 ```
 
 Returns the following:
 
-| `original_expression` | `expr_after_reversal` |
+| `original_string` | `reversal` |
 | -- | -- |
 | `abc` | `cba` |
 
@@ -1517,7 +1517,7 @@ Returns the rightmost number of characters from an expression, optionally padded
 
 ## RTRIM
 
-Trims characters from the trailing end of an expression. The default for `chars` is the `''` (a space) character.
+Trims characters from the trailing end of an expression. Defaults `chars` to a space if none is provided.
 
 * **Syntax:** `RTRIM(expr[, chars])`
 * **Function type:** Scalar, string
@@ -1528,13 +1528,13 @@ The following example trims the `_` characters from the trailing end of the stri
 
 ```sql
 SELECT 
-  '___abc___' AS "original_expression",
-  RTRIM('___abc___', '_') AS "trim_trailing_end_of_expression"
+  '___abc___' AS "original_string",
+  RTRIM('___abc___', '_') AS "trim_end"
 ```
 
 Returns the following:
 
-| `original_expression` | `trim_trailing_end_of_expression` |
+| `original_string` | `trim_end` |
 | -- | -- | 
 | `___abc___` | `___abc` |
 
@@ -1666,13 +1666,13 @@ The following example returns the one-based index position of `World`.
 
 ```sql
 SELECT 
-  'Hello World!' AS "original_expression",
-  STRPOS('Hello World!', 'World') AS "index_found"
+  'Hello World!' AS "original_string",
+  STRPOS('Hello World!', 'World') AS "index"
 ```
 
 Returns the following:
 
-| `original_expression` | `index_found` |
+| `original_string` | `index` |
 | -- | -- |
 | `Hello World!` | `7` |
 
@@ -1703,13 +1703,13 @@ The following example extracts a substring from the string expression `abcdefghi
 
 ```sql
 SELECT 
-  'abcdefghi' AS "original_expression",
-  SUBSTRING('abcdefghi', 4, 3) AS "substring_extracted"
+  'abcdefghi' AS "original_string",
+  SUBSTRING('abcdefghi', 4, 3) AS "substring"
 ```
 
 Returns the following:
 
-| `original_expression` | `substring_extracted` |
+| `original_string` | `substring` |
 | -- | -- |
 | `abcdefghi` | `def` |
 
@@ -1890,7 +1890,7 @@ Serializes `expr` into a JSON string.
 
 ## TRIM
 
-Trims the leading and/or trailing characters of an expression. If `chars` is not provided, it defaults to `''` (a space). If the directional argument is not provided, it defaults to `BOTH`.
+Trims the leading and/or trailing characters of an expression. Defaults `chars` to a space if none is provided. Defaults to `BOTH` if no directional argument is provided.
 
 * **Syntax:** `TRIM([BOTH|LEADING|TRAILING] [chars FROM] expr)`
 * **Function type:** Scalar, string
@@ -1901,13 +1901,13 @@ The following example trims `_` characters from both ends of the string expressi
 
 ```sql
 SELECT 
-  '___abc___' AS "original_expression",
+  '___abc___' AS "original_string",
   TRIM( BOTH '_' FROM '___abc___') AS "trim_expression"
 ```
 
 Returns the following:
 
-| `original_expression` | `trim_expression` |
+| `original_string` | `trim_expression` |
 | -- | -- |
 | `___abc___` | `abc` |
 
