@@ -25,8 +25,10 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -140,6 +142,12 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
+  public int markSegmentAsLoaded(SegmentId segmentId)
+  {
+    return 0;
+  }
+
+  @Override
   public boolean markSegmentAsUnused(SegmentId segmentId)
   {
     boolean updated = usedSegments.remove(segmentId.toString()) != null;
@@ -241,5 +249,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public void stopAsyncUsedFlagLastUpdatedUpdate()
   {
+  }
+
+  @Override
+  public ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory()
+  {
+    return null;
   }
 }

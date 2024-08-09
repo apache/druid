@@ -383,6 +383,21 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
+  public int markSegmentAsLoaded(final SegmentId segmentId)
+  {
+    final String dataSource = segmentId.getDataSource();
+
+    return handle
+        .createStatement(
+            StringUtils.format(
+                "UPDATE %s SET has_loaded = true WHERE dataSource = :dataSource AND id = :id",
+                dbTables.getSegmentsTable()
+            ))
+        .bind("dataSource", dataSource)
+        .bind("id", segmentId.toString())
+        .execute();
+  }
+
   /**
    * Marks all used segments that are <b>fully contained by</b> a particular interval as unused.
    *

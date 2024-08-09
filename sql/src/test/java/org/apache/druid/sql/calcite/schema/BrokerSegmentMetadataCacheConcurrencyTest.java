@@ -32,6 +32,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.FilteringSegmentCallback;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.MetadataSegmentView;
 import org.apache.druid.client.ServerView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -389,7 +391,8 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),
-        new BrokerSegmentWatcherConfig()
+        new BrokerSegmentWatcherConfig(),
+        EasyMock.createMock(MetadataSegmentView.class)
     );
   }
 
