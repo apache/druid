@@ -69,6 +69,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.common.task.batch.parallel.ShuffleClient;
 import org.apache.druid.indexing.common.tasklogs.SwitchingTaskLogStreamer;
 import org.apache.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
+import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
@@ -117,7 +118,6 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.DummyForInjectionAppenderatorsManager;
-import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
@@ -429,6 +429,16 @@ public class CliOverlord extends ServerRunnable
                   return Configs.valueOrDefault(compactionConfig, DruidCompactionConfig.empty())
                                 .clusterConfig();
                 };
+              }
+
+              @Provides
+              @LazySingleton
+              public Supplier<WorkerBehaviorConfig> getWorkerBehaviourConfig(JacksonConfigManager configManager)
+              {
+                return () -> configManager.watch(
+                    WorkerBehaviorConfig.CONFIG_KEY,
+                    WorkerBehaviorConfig.class
+                ).get();
               }
             };
           }

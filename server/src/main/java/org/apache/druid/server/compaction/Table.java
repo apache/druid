@@ -72,4 +72,13 @@ public class Table
   {
     return rows.isEmpty();
   }
+
+  @Override
+  public String toString()
+  {
+    return "Table{" +
+           "columnNames=" + columnNames +
+           ", rows=" + rows +
+           '}';
+  }
 }

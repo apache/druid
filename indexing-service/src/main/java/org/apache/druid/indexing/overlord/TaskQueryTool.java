@@ -20,11 +20,11 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -68,7 +68,7 @@ public class TaskQueryTool
   private final TaskStorage storage;
   private final TaskLockbox taskLockbox;
   private final TaskMaster taskMaster;
-  private final JacksonConfigManager configManager;
+  private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier;
   private final ProvisioningStrategy provisioningStrategy;
 
   @Inject
@@ -77,13 +77,13 @@ public class TaskQueryTool
       TaskLockbox taskLockbox,
       TaskMaster taskMaster,
       ProvisioningStrategy provisioningStrategy,
-      JacksonConfigManager configManager
+      Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier
   )
   {
     this.storage = storage;
     this.taskLockbox = taskLockbox;
     this.taskMaster = taskMaster;
-    this.configManager = configManager;
+    this.workerBehaviorConfigSupplier = workerBehaviorConfigSupplier;
     this.provisioningStrategy = provisioningStrategy;
   }
 
@@ -379,10 +379,7 @@ public class TaskQueryTool
 
   public WorkerBehaviorConfig getLatestWorkerConfig()
   {
-    return configManager.watch(
-        WorkerBehaviorConfig.CONFIG_KEY,
-        WorkerBehaviorConfig.class
-    ).get();
+    return workerBehaviorConfigSupplier.get();
   }
 
 }

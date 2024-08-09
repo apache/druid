@@ -28,7 +28,8 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -39,13 +40,20 @@ import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.Collections;
 
 public class CompactionStatusTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final String DS_WIKI = "wiki";
+
+  private static final DataSegment WIKI_SEGMENT
+      = DataSegment.builder()
+                   .dataSource(DS_WIKI)
+                   .interval(Intervals.of("2013-01-01/PT1H"))
+                   .size(100_000_000L)
+                   .version("v1")
+                   .build();
 
   @Test
   public void testFindPartitionsSpecWhenGivenIsNull()
@@ -167,73 +175,178 @@ public class CompactionStatusTest
   }
 
   @Test
+  public void testStatusWhenLastCompactionStateIsNull()
+  {
+    verifyCompactionStatusIsPendingBecause(
+        null,
+        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        "not compacted yet"
+    );
+  }
+
+  @Test
+  public void testStatusWhenLastCompactionStateIsEmpty()
+  {
+    verifyCompactionStatusIsPendingBecause(
+        new CompactionState(null, null, null, null, null, null),
+        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows], current[null]"
+    );
+  }
+
+  @Test
+  public void testStatusOnPartitionsSpecMismatch()
+  {
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+
+    final CompactionState lastCompactionState
+        = new CompactionState(currentPartitionsSpec, null, null, null, null, null);
+    final DataSourceCompactionConfig compactionConfig
+        = DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build();
+
+    verifyCompactionStatusIsPendingBecause(
+        lastCompactionState,
+        compactionConfig,
+        "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows],"
+        + " current['dynamic' with 100 rows]"
+    );
+  }
+
+  @Test
+  public void testStatusOnIndexSpecMismatch()
+  {
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec.asMap(OBJECT_MAPPER),
+        null
+    );
+    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(DS_WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, null))
+        .build();
+
+    verifyCompactionStatusIsPendingBecause(
+        lastCompactionState,
+        compactionConfig,
+        "'indexSpec' mismatch: "
+        + "required[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
+        + " dimensionCompression=lz4, stringDictionaryEncoding=Utf8{},"
+        + " metricCompression=lz4, longEncoding=longs, jsonCompression=null, segmentLoader=null}], "
+        + "current[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
+        + " dimensionCompression=zstd, stringDictionaryEncoding=Utf8{},"
+        + " metricCompression=lz4, longEncoding=longs, jsonCompression=null, segmentLoader=null}]"
+    );
+  }
+
+  @Test
   public void testStatusOnSegmentGranularityMismatch()
   {
-    final GranularitySpec segmentGranularitySpec
-        = new UniformGranularitySpec(Granularities.HOUR, null, null, null);
-    final CompactionState segmentLastCompactionState = new CompactionState(
-        null,
-        null,
-        null,
-        null,
-        null,
-        segmentGranularitySpec.asMap(OBJECT_MAPPER)
-    );
-    final DataSegment segment
-        = DataSegment.builder()
-                     .dataSource(DS_WIKI)
-                     .interval(Intervals.of("2013-01-01/PT1H"))
-                     .size(100_000_000L)
-                     .version("v1")
-                     .lastCompactionState(segmentLastCompactionState)
-                     .build();
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
 
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec.asMap(OBJECT_MAPPER),
+        currentGranularitySpec.asMap(OBJECT_MAPPER)
+    );
+    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(DS_WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    verifyCompactionStatusIsPendingBecause(
+        lastCompactionState,
+        compactionConfig,
+        "'segmentGranularity' mismatch: required[DAY], current[HOUR]"
+    );
+  }
+
+  @Test
+  public void testStatusWhenLastCompactionStateSameAsRequired()
+  {
+    final GranularitySpec currentGranularitySpec
+        = new UniformGranularitySpec(Granularities.HOUR, null, null);
+    final PartitionsSpec currentPartitionsSpec = new DynamicPartitionsSpec(100, 0L);
+    final IndexSpec currentIndexSpec
+        = IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build();
+    final CompactionState lastCompactionState = new CompactionState(
+        currentPartitionsSpec,
+        null,
+        null,
+        null,
+        currentIndexSpec.asMap(OBJECT_MAPPER),
+        currentGranularitySpec.asMap(OBJECT_MAPPER)
+    );
+    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(DS_WIKI)
+        .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
+        .build();
+
+    final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
         SegmentsToCompact.from(Collections.singletonList(segment)),
-        createCompactionConfig(Granularities.DAY),
+        compactionConfig,
+        OBJECT_MAPPER
+    );
+    Assert.assertTrue(status.isComplete());
+  }
+
+  private void verifyCompactionStatusIsPendingBecause(
+      CompactionState lastCompactionState,
+      DataSourceCompactionConfig compactionConfig,
+      String expectedReason
+  )
+  {
+    final DataSegment segment
+        = DataSegment.builder(WIKI_SEGMENT)
+                     .lastCompactionState(lastCompactionState)
+                     .build();
+    final CompactionStatus status = CompactionStatus.compute(
+        SegmentsToCompact.from(Collections.singletonList(segment)),
+        compactionConfig,
         OBJECT_MAPPER
     );
 
     Assert.assertFalse(status.isComplete());
-    Assert.assertEquals(
-        "segmentGranularity",
-        status.getReason()
-    );
-  }
-
-  private static DataSourceCompactionConfig createCompactionConfig(
-      Granularity segmentGranularity
-  )
-  {
-    return new DataSourceCompactionConfig(
-        DS_WIKI,
-        null, null, null, null,
-        createTuningConfig(
-            new DimensionRangePartitionsSpec(1_000_000, null, Arrays.asList("countryName", "cityName"), false)
-        ),
-        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null),
-        null, null, null, null, null, null
-    );
+    Assert.assertEquals(expectedReason, status.getReason());
   }
 
   private static DataSourceCompactionConfig createCompactionConfig(
       PartitionsSpec partitionsSpec
   )
   {
-    return new DataSourceCompactionConfig(
-        DS_WIKI,
-        null, null, null, null, createTuningConfig(partitionsSpec),
-        null, null, null, null, null, null, null
-    );
+    return DataSourceCompactionConfig.builder()
+                                     .forDataSource(DS_WIKI)
+                                     .withTuningConfig(createTuningConfig(partitionsSpec, null))
+                                     .build();
   }
 
   private static UserCompactionTaskQueryTuningConfig createTuningConfig(
-      PartitionsSpec partitionsSpec
+      PartitionsSpec partitionsSpec,
+      IndexSpec indexSpec
   )
   {
     return new UserCompactionTaskQueryTuningConfig(
         null,
-        null, null, null, null, partitionsSpec, null, null, null,
+        null, null, null, null, partitionsSpec, indexSpec, null, null,
         null, null, null, null, null, null, null, null, null, null
     );
   }

@@ -21,8 +21,7 @@ package org.apache.druid.indexing.overlord.http;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
-import org.apache.druid.indexing.compact.OverlordCompactionScheduler;
-import org.apache.druid.server.compaction.CompactionScheduler;
+import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -40,7 +39,7 @@ import java.util.Collections;
 
 /**
  * Contains the same logic as {@code CompactionResource} but the APIs are served
- * by {@link OverlordCompactionScheduler} instead of {@code DruidCoordinator}.
+ * by {@link CompactionScheduler} instead of {@code DruidCoordinator}.
  */
 @Path("/druid/indexer/v1/compaction")
 public class OverlordCompactionResource
@@ -63,7 +62,7 @@ public class OverlordCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    final Long notCompactedSegmentSizeBytes = scheduler.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
+    final Long notCompactedSegmentSizeBytes = scheduler.getSegmentBytesAwaitingCompaction(dataSource);
     if (notCompactedSegmentSizeBytes == null) {
       return Response.status(Response.Status.NOT_FOUND)
                      .entity(Collections.singletonMap("error", "Unknown DataSource"))

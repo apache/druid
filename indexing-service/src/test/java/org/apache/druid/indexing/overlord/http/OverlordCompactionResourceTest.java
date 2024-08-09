@@ -17,32 +17,9 @@
  * under the License.
  */
 
-package org.apache.druid.server.compaction;
+package org.apache.druid.indexing.overlord.http;
 
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.ClusterCompactionConfig;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-
-import java.util.Map;
-
-public interface CompactionScheduler
+public class OverlordCompactionResourceTest
 {
-  void start();
-
-  void stop();
-
-  boolean isRunning();
-
-  void startCompaction(String dataSourceName, DataSourceCompactionConfig compactionConfig);
-
-  void stopCompaction(String dataSourceName);
-
-  Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots();
-
-  AutoCompactionSnapshot getCompactionSnapshot(String dataSource);
-
-  Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource);
-
-  CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);
 
 }

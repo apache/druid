@@ -190,6 +190,24 @@ public class AutoCompactionSnapshot
     );
   }
 
+  @Override
+  public String toString()
+  {
+    return "AutoCompactionSnapshot{" +
+           "dataSource='" + dataSource + '\'' +
+           ", scheduleStatus=" + scheduleStatus +
+           ", bytesAwaitingCompaction=" + bytesAwaitingCompaction +
+           ", bytesCompacted=" + bytesCompacted +
+           ", bytesSkipped=" + bytesSkipped +
+           ", segmentCountAwaitingCompaction=" + segmentCountAwaitingCompaction +
+           ", segmentCountCompacted=" + segmentCountCompacted +
+           ", segmentCountSkipped=" + segmentCountSkipped +
+           ", intervalCountAwaitingCompaction=" + intervalCountAwaitingCompaction +
+           ", intervalCountCompacted=" + intervalCountCompacted +
+           ", intervalCountSkipped=" + intervalCountSkipped +
+           '}';
+  }
+
   public static class Builder
   {
     private final String dataSource;

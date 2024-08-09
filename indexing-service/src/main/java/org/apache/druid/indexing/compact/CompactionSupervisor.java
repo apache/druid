@@ -26,7 +26,6 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 
 /**

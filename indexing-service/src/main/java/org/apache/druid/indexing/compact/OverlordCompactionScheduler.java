@@ -37,7 +37,6 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
-import org.apache.druid.server.compaction.CompactionScheduler;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
@@ -108,7 +107,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private final boolean shouldPollSegments;
 
-  private final Stopwatch sinceStatsEmitted = Stopwatch.createStarted();
+  private final Stopwatch sinceStatsEmitted = Stopwatch.createUnstarted();
 
   @Inject
   public OverlordCompactionScheduler(
@@ -165,13 +164,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     if (isEnabled() && started.compareAndSet(false, true)) {
       log.info("Starting compaction scheduler.");
-      scheduleOnExecutor(
-          () -> {
-            initState();
-            checkSchedulingStatus();
-          },
-          SCHEDULE_PERIOD_SECONDS
-      );
+      initState();
+      scheduleOnExecutor(this::checkSchedulingStatus, SCHEDULE_PERIOD_SECONDS);
     }
   }
 
@@ -180,7 +174,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     if (isEnabled() && started.compareAndSet(true, false)) {
       log.info("Stopping compaction scheduler.");
-      runOnExecutor(this::cleanupState);
+      cleanupState();
     }
   }
 
@@ -258,7 +252,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     duty.run(getLatestConfig(), getCurrentDatasourceTimelines(), stats);
 
     // Emit stats only if emission period has elapsed
-    if (sinceStatsEmitted.hasElapsed(METRIC_EMISSION_PERIOD)) {
+    if (!sinceStatsEmitted.isRunning() || sinceStatsEmitted.hasElapsed(METRIC_EMISSION_PERIOD)) {
       stats.forEachStat(
           (stat, dimensions, value) -> {
             if (stat.shouldEmit()) {
@@ -277,7 +271,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   }
 
   @Override
-  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
+  public Long getSegmentBytesAwaitingCompaction(String dataSource)
   {
     return duty.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
