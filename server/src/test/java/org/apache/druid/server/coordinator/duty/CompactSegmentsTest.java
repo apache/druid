@@ -1138,6 +1138,8 @@ public class CompactSegmentsTest
            .thenReturn(
                Futures.immediateFuture(
                    CloseableIterators.withEmptyBaggage(ImmutableList.of(runningConflictCompactionTask).iterator())));
+    Mockito.when(mockClient.taskStatuses(ArgumentMatchers.any()))
+           .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.cancelTask(conflictTaskId))
@@ -2309,6 +2311,8 @@ public class CompactSegmentsTest
     final ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
     Mockito.when(mockClient.taskStatuses(null, null, 0))
            .thenReturn(Futures.immediateFuture(CloseableIterators.withEmptyBaggage(Collections.emptyIterator())));
+    Mockito.when(mockClient.taskStatuses(ArgumentMatchers.any()))
+           .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.findLockedIntervals(ArgumentMatchers.any()))
            .thenReturn(Futures.immediateFuture(Collections.emptyMap()));
     Mockito.when(mockClient.getTotalWorkerCapacity())
