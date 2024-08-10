@@ -47,6 +47,7 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -57,6 +58,7 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -85,14 +87,12 @@ import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.utils.Streams;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -112,6 +112,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -1206,6 +1207,52 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testIntervalIsCompactedAgainWhenSegmentIsAdded()
+  {
+    final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
+    final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
+
+    final String dataSource = DATA_SOURCE_PREFIX + 0;
+    final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(dataSource)
+        .withSkipOffsetFromLatest(Period.seconds(0))
+        .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+        .build();
+
+    CoordinatorRunStats stats = doCompactSegments(
+        compactSegments,
+        ImmutableList.of(compactionConfig)
+    );
+    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+    Assert.assertEquals(1, overlordClient.submittedCompactionTasks.size());
+
+    ClientCompactionTaskQuery submittedTask = overlordClient.submittedCompactionTasks.get(0);
+    Assert.assertEquals(submittedTask.getDataSource(), dataSource);
+    Assert.assertEquals(
+        Intervals.of("2017-01-09/P1D"),
+        submittedTask.getIoConfig().getInputSpec().getInterval()
+    );
+
+    // Add more data to the latest interval
+    addMoreData(dataSource, 8);
+    stats = doCompactSegments(
+        compactSegments,
+        ImmutableList.of(compactionConfig)
+    );
+    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+    Assert.assertEquals(2, overlordClient.submittedCompactionTasks.size());
+
+    // Verify that the latest interval is compacted again
+    submittedTask = overlordClient.submittedCompactionTasks.get(1);
+    Assert.assertEquals(submittedTask.getDataSource(), dataSource);
+    Assert.assertEquals(
+        Intervals.of("2017-01-09/P1D"),
+        submittedTask.getIoConfig().getInputSpec().getInterval()
+    );
+  }
+
+  @Test
   public void testRunParallelCompactionMultipleCompactionTaskSlots()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
@@ -1806,12 +1853,12 @@ public class CompactSegmentsTest
     return doCompactSegments(compactSegments, createCompactionConfigs(), numCompactionTaskSlots);
   }
 
-  private void doCompactSegments(
+  private CoordinatorRunStats doCompactSegments(
       CompactSegments compactSegments,
       List<DataSourceCompactionConfig> compactionConfigs
   )
   {
-    doCompactSegments(compactSegments, compactionConfigs, null);
+    return doCompactSegments(compactSegments, compactionConfigs, null);
   }
 
   private CoordinatorRunStats doCompactSegments(
@@ -2088,28 +2135,27 @@ public class CompactSegmentsTest
     }
 
     @Override
+    public ListenableFuture<Map<String, TaskStatus>> taskStatuses(Set<String> taskIds)
+    {
+      return Futures.immediateFuture(Collections.emptyMap());
+    }
+
+    @Override
     public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
     {
       return Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(5, 10));
     }
 
     private void compactSegments(
-        VersionedIntervalTimeline<String, DataSegment> timeline,
+        SegmentTimeline timeline,
         List<DataSegment> segments,
         ClientCompactionTaskQuery clientCompactionTaskQuery
     )
     {
       Preconditions.checkArgument(segments.size() > 1);
-      DateTime minStart = DateTimes.MAX, maxEnd = DateTimes.MIN;
-      for (DataSegment segment : segments) {
-        if (segment.getInterval().getStart().compareTo(minStart) < 0) {
-          minStart = segment.getInterval().getStart();
-        }
-        if (segment.getInterval().getEnd().compareTo(maxEnd) > 0) {
-          maxEnd = segment.getInterval().getEnd();
-        }
-      }
-      Interval compactInterval = new Interval(minStart, maxEnd);
+      final Interval compactInterval = JodaUtils.umbrellaInterval(
+          segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+      );
       segments.forEach(
           segment -> timeline.remove(
               segment.getInterval(),

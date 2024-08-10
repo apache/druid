@@ -35,7 +35,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
@@ -540,7 +540,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
               overlordLeaderSelector,
-              new CompactionSchedulerConfig(false) {
+              new CompactionSupervisorsConfig(false) {
                 @Override
                 public boolean isEnabled()
                 {

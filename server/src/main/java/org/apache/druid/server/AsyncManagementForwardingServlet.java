@@ -30,7 +30,7 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -82,7 +82,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private final DruidLeaderSelector coordLeaderSelector;
   private final DruidLeaderSelector overlordLeaderSelector;
   private final AuthorizerMapper authorizerMapper;
-  private final CompactionSchedulerConfig compactionSchedulerConfig;
+  private final CompactionSupervisorsConfig compactionSupervisorsConfig;
 
   @Inject
   public AsyncManagementForwardingServlet(
@@ -91,7 +91,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       @Global DruidHttpClientConfig httpClientConfig,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       @IndexingService DruidLeaderSelector overlordLeaderSelector,
-      CompactionSchedulerConfig compactionSchedulerConfig,
+      CompactionSupervisorsConfig compactionSupervisorsConfig,
       AuthorizerMapper authorizerMapper
   )
   {
@@ -100,7 +100,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     this.httpClientConfig = httpClientConfig;
     this.coordLeaderSelector = coordLeaderSelector;
     this.overlordLeaderSelector = overlordLeaderSelector;
-    this.compactionSchedulerConfig = compactionSchedulerConfig;
+    this.compactionSupervisorsConfig = compactionSupervisorsConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -109,7 +109,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   {
     String currentLeader;
     String requestURI = StringUtils.toLowerCase(request.getRequestURI());
-    if (compactionSchedulerConfig.isEnabled()
+    if (compactionSupervisorsConfig.isEnabled()
         && requestURI.startsWith(COMPACTION_COORDINATOR_PATH)) {
       // If Compaction Scheduler is enabled, compaction APIs must be forwarded to the Overlord
       currentLeader = overlordLeaderSelector.getCurrentLeader();

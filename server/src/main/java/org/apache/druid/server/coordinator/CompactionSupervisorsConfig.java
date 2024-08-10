@@ -29,25 +29,25 @@ import java.util.Objects;
 /**
  * This config must be bound on the following services:
  * <ul>
- * <li>CliOverlord - to run the compaction scheduler on the Overlord</li>
+ * <li>CliOverlord - to run the compaction supervisors on the Overlord</li>
  * <li>CliOverlord - to prevent the Coordinator from running auto-compaction duty</li>
  * <li>CliRouter - to allow the Router to forward compaction stats requests to the Overlord</li>
  * </ul>
  */
-public class CompactionSchedulerConfig
+public class CompactionSupervisorsConfig
 {
-  private static final CompactionSchedulerConfig DEFAULT = new CompactionSchedulerConfig(null);
+  private static final CompactionSupervisorsConfig DEFAULT = new CompactionSupervisorsConfig(null);
 
   @JsonProperty
   private final boolean enabled;
 
-  public static CompactionSchedulerConfig defaultConfig()
+  public static CompactionSupervisorsConfig defaultConfig()
   {
     return DEFAULT;
   }
 
   @JsonCreator
-  public CompactionSchedulerConfig(
+  public CompactionSupervisorsConfig(
       @JsonProperty("enabled") @Nullable Boolean enabled
   )
   {
@@ -68,7 +68,7 @@ public class CompactionSchedulerConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompactionSchedulerConfig that = (CompactionSchedulerConfig) o;
+    CompactionSupervisorsConfig that = (CompactionSupervisorsConfig) o;
     return enabled == that.enabled;
   }
 

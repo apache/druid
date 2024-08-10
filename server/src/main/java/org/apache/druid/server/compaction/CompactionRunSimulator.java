@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.compaction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -87,13 +88,20 @@ public class CompactionRunSimulator
     final Table skippedIntervals
         = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "reasonToSkip");
 
-    // Add a wrapper over the status tracker to add intervals to respective tables
+    // Add a read-only wrapper over the actual status tracker so that we can
+    // account for the active tasks
     final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(null)
     {
       @Override
       public CompactionTaskStatus getLatestTaskStatus(SegmentsToCompact candidates)
       {
         return statusTracker.getLatestTaskStatus(candidates);
+      }
+
+      @Override
+      public ObjectMapper getObjectMapper()
+      {
+        return statusTracker.getObjectMapper();
       }
 
       @Override

@@ -193,7 +193,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(OBJECT_MAPPER),
-        new CompactionSchedulerConfig(true)
+        new CompactionSupervisorsConfig(true)
     );
   }
 
@@ -625,7 +625,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(OBJECT_MAPPER),
-        CompactionSchedulerConfig.defaultConfig()
+        CompactionSupervisorsConfig.defaultConfig()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -666,7 +666,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(OBJECT_MAPPER),
-        CompactionSchedulerConfig.defaultConfig()
+        CompactionSupervisorsConfig.defaultConfig()
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -707,7 +707,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(OBJECT_MAPPER),
-        CompactionSchedulerConfig.defaultConfig()
+        CompactionSupervisorsConfig.defaultConfig()
     );
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -813,7 +813,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create(),
         new CompactionStatusTracker(OBJECT_MAPPER),
-        CompactionSchedulerConfig.defaultConfig()
+        CompactionSupervisorsConfig.defaultConfig()
     );
     coordinator.start();
 

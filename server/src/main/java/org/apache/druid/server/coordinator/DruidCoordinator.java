@@ -160,7 +160,7 @@ public class DruidCoordinator
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-  private final CompactionSchedulerConfig compactionSchedulerConfig;
+  private final CompactionSupervisorsConfig compactionSupervisorsConfig;
 
 
   private volatile boolean started = false;
@@ -207,7 +207,7 @@ public class DruidCoordinator
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
       CompactionStatusTracker compactionStatusTracker,
-      CompactionSchedulerConfig compactionSchedulerConfig
+      CompactionSupervisorsConfig compactionSupervisorsConfig
   )
   {
     this.config = config;
@@ -230,7 +230,7 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.compactionSchedulerConfig = compactionSchedulerConfig;
+    this.compactionSupervisorsConfig = compactionSupervisorsConfig;
   }
 
   public boolean isLeader()
@@ -355,12 +355,12 @@ public class DruidCoordinator
   }
 
   @Nullable
-  public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
+  public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
   {
     return compactSegments.getAutoCompactionSnapshot(dataSource);
   }
 
-  public Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots()
+  public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
   {
     return compactSegments.getAutoCompactionSnapshot();
   }
@@ -809,7 +809,7 @@ public class DruidCoordinator
      */
     private boolean shouldSkipAutoCompactDuty(CoordinatorDuty duty)
     {
-      final boolean shouldSkipDuty = compactionSchedulerConfig.isEnabled()
+      final boolean shouldSkipDuty = compactionSupervisorsConfig.isEnabled()
                                      && duty instanceof CompactSegments
                                      && !COMPACT_SEGMENTS_DUTIES_DUTY_GROUP.equals(dutyGroupName);
       if (shouldSkipDuty) {

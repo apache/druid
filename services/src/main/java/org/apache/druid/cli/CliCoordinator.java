@@ -98,7 +98,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
-import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
@@ -229,7 +229,7 @@ public class CliCoordinator extends ServerRunnable
                 CachingCostBalancerStrategyConfig.class
             );
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
-            JsonConfigProvider.bind(binder, "druid.compaction.scheduler", CompactionSchedulerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.compaction.supervisors", CompactionSupervisorsConfig.class);
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);

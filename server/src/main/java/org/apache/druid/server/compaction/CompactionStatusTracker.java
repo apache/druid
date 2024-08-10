@@ -75,12 +75,23 @@ public class CompactionStatusTracker
         .get(candidates.getUmbrellaInterval());
   }
 
+  public Set<String> getSubmittedTaskIds()
+  {
+    return submittedTaskIdToSegments.keySet();
+  }
+
   public void onCompactionStatusComputed(
       SegmentsToCompact candidateSegments,
       DataSourceCompactionConfig config
   )
   {
     // Nothing to do, used by simulator
+    System.out.printf(
+        "Computed status of datasource[%s], interval[%s] = [%s, %s]%n",
+        candidateSegments.getDataSource(), candidateSegments.getUmbrellaInterval(),
+        candidateSegments.getCompactionStatus().getState(),
+        candidateSegments.getCompactionStatus().getReason()
+    );
   }
 
   public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)

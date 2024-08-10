@@ -41,7 +41,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
-import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -80,7 +80,7 @@ public class OverlordCompactionSchedulerTest
     );
   }
 
-  private CompactionSchedulerConfig schedulerConfig;
+  private CompactionSupervisorsConfig schedulerConfig;
   private DruidCompactionConfig compactionConfig;
   private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
 
@@ -110,7 +110,7 @@ public class OverlordCompactionSchedulerTest
     serviceEmitter = new StubServiceEmitter();
     segmentsMetadataManager = new TestSegmentsMetadataManager();
 
-    schedulerConfig = new CompactionSchedulerConfig(true);
+    schedulerConfig = new CompactionSupervisorsConfig(true);
     compactionConfig = DruidCompactionConfig.empty();
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
 
@@ -145,7 +145,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testStartStopWhenSchedulerIsEnabled()
   {
-    schedulerConfig = new CompactionSchedulerConfig(true);
+    schedulerConfig = new CompactionSupervisorsConfig(true);
     Assert.assertFalse(scheduler.isRunning());
 
     scheduler.start();
@@ -164,7 +164,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testStartStopWhenScheduledIsDisabled()
   {
-    schedulerConfig = new CompactionSchedulerConfig(false);
+    schedulerConfig = new CompactionSupervisorsConfig(false);
     initScheduler();
 
     Assert.assertFalse(scheduler.isRunning());
@@ -179,7 +179,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testSegmentsAreNotPolledWhenSchedulerIsDisabled()
   {
-    schedulerConfig = new CompactionSchedulerConfig(false);
+    schedulerConfig = new CompactionSupervisorsConfig(false);
     initScheduler();
 
     verifySegmentPolling(false);

@@ -20,15 +20,10 @@
 package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import org.apache.druid.indexer.TaskLocation;
-import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
-import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -41,7 +36,7 @@ import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
-import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -61,7 +56,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Compaction scheduler that runs on the Overlord if {@link CompactionSchedulerConfig}
+ * Compaction scheduler that runs on the Overlord if {@link CompactionSupervisorsConfig}
  * is enabled.
  * <p>
  * Usage:
@@ -81,12 +76,11 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private static final long SCHEDULE_PERIOD_SECONDS = 5;
   private static final Duration METRIC_EMISSION_PERIOD = Duration.standardMinutes(5);
 
-  private final TaskMaster taskMaster;
   private final SegmentsMetadataManager segmentManager;
   private final OverlordClient overlordClient;
   private final ServiceEmitter emitter;
 
-  private final CompactionSchedulerConfig schedulerConfig;
+  private final CompactionSupervisorsConfig schedulerConfig;
   private final Supplier<DruidCompactionConfig> compactionConfigSupplier;
   private final ConcurrentHashMap<String, DataSourceCompactionConfig> activeDatasourceConfigs;
 
@@ -95,7 +89,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
    */
   private final ScheduledExecutorService executor;
 
-  private final TaskRunnerListener taskStateListener;
   private final CompactionStatusTracker statusTracker;
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final CompactSegments duty;
@@ -116,14 +109,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       SegmentsMetadataManager segmentManager,
       Supplier<DruidCompactionConfig> compactionConfigSupplier,
       CompactionStatusTracker statusTracker,
-      CompactionSchedulerConfig schedulerConfig,
+      CompactionSupervisorsConfig schedulerConfig,
       CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter,
       ObjectMapper objectMapper
   )
   {
-    this.taskMaster = taskMaster;
     this.segmentManager = segmentManager;
     this.emitter = emitter;
     this.schedulerConfig = schedulerConfig;
@@ -136,27 +128,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
     this.duty = new CompactSegments(this.statusTracker, overlordClient);
     this.activeDatasourceConfigs = new ConcurrentHashMap<>();
-
-    this.taskStateListener = new TaskRunnerListener()
-    {
-      @Override
-      public String getListenerId()
-      {
-        return "CompactionSupervisorManager";
-      }
-
-      @Override
-      public void locationChanged(String taskId, TaskLocation newLocation)
-      {
-        // Do nothing
-      }
-
-      @Override
-      public void statusChanged(String taskId, TaskStatus status)
-      {
-        runOnExecutor(() -> OverlordCompactionScheduler.this.statusTracker.onTaskFinished(taskId, status));
-      }
-    };
   }
 
   @Override
@@ -199,13 +170,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private synchronized void initState()
   {
-    Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
-    if (taskRunner.isPresent()) {
-      taskRunner.get().registerListener(taskStateListener, executor);
-    } else {
-      log.warn("No TaskRunner. Unable to register callbacks.");
-    }
-
     if (shouldPollSegments) {
       segmentManager.startPollingDatabasePeriodically();
     }
@@ -215,11 +179,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     statusTracker.stop();
     activeDatasourceConfigs.clear();
-
-    Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
-    if (taskRunner.isPresent()) {
-      taskRunner.get().unregisterListener(taskStateListener.getListenerId());
-    }
 
     if (shouldPollSegments) {
       segmentManager.stopPollingDatabasePeriodically();
@@ -332,17 +291,5 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         delaySeconds,
         TimeUnit.SECONDS
     );
-  }
-
-  private void runOnExecutor(Runnable runnable)
-  {
-    executor.submit(() -> {
-      try {
-        runnable.run();
-      }
-      catch (Throwable t) {
-        log.error(t, "Error while executing runnable");
-      }
-    });
   }
 }

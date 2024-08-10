@@ -26,7 +26,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
-import org.apache.druid.server.coordinator.CompactionSchedulerConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -45,16 +45,16 @@ import java.util.Collection;
 public class CompactionResource
 {
   private final DruidCoordinator coordinator;
-  private final CompactionSchedulerConfig schedulerConfig;
+  private final CompactionSupervisorsConfig compactionSupervisorsConfig;
 
   @Inject
   public CompactionResource(
       DruidCoordinator coordinator,
-      CompactionSchedulerConfig schedulerConfig
+      CompactionSupervisorsConfig compactionSupervisorsConfig
   )
   {
     this.coordinator = coordinator;
-    this.schedulerConfig = schedulerConfig;
+    this.compactionSupervisorsConfig = compactionSupervisorsConfig;
   }
 
   /**
@@ -78,8 +78,8 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (schedulerConfig.isEnabled()) {
-      buildErrorResponseWhenRunningScheduler();
+    if (compactionSupervisorsConfig.isEnabled()) {
+      buildErrorResponseWhenRunningAsSupervisor();
     }
 
     final Long notCompactedSegmentSizeBytes = coordinator.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
@@ -98,15 +98,15 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (schedulerConfig.isEnabled()) {
-      return buildErrorResponseWhenRunningScheduler();
+    if (compactionSupervisorsConfig.isEnabled()) {
+      return buildErrorResponseWhenRunningAsSupervisor();
     }
 
     final Collection<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
-      snapshots = coordinator.getAllCompactionSnapshots().values();
+      snapshots = coordinator.getAutoCompactionSnapshot().values();
     } else {
-      AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getCompactionSnapshot(dataSource);
+      AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
       if (autoCompactionSnapshot == null) {
         return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
       }
@@ -122,8 +122,8 @@ public class CompactionResource
       ClusterCompactionConfig updatePayload
   )
   {
-    if (schedulerConfig.isEnabled()) {
-      return buildErrorResponseWhenRunningScheduler();
+    if (compactionSupervisorsConfig.isEnabled()) {
+      return buildErrorResponseWhenRunningAsSupervisor();
     }
 
     return Response.ok().entity(
@@ -131,7 +131,7 @@ public class CompactionResource
     ).build();
   }
 
-  private Response buildErrorResponseWhenRunningScheduler()
+  private Response buildErrorResponseWhenRunningAsSupervisor()
   {
     return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(
         ImmutableMap.of(

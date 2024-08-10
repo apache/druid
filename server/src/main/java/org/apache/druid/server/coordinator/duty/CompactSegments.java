@@ -37,6 +37,7 @@ import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.java.util.common.ISE;
@@ -66,8 +67,10 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -116,7 +119,6 @@ public class CompactSegments implements CoordinatorCustomDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    // statusTracker.reset();
     run(
         params.getCompactionConfig(),
         params.getUsedSegmentsTimelinesPerDataSource(),
@@ -157,10 +159,13 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     // Fetch currently running compaction tasks
     int busyCompactionTaskSlots = 0;
-    final List<TaskStatusPlus> compactionTasks = CoordinatorDutyUtils.getNumActiveTaskSlots(
+    final List<TaskStatusPlus> compactionTasks = CoordinatorDutyUtils.getStatusOfActiveTasks(
         overlordClient,
         IS_COMPACTION_TASK
     );
+
+    final Set<String> activeTaskIds
+        = compactionTasks.stream().map(TaskStatusPlus::getId).collect(Collectors.toSet());
     for (TaskStatusPlus status : compactionTasks) {
       final TaskPayloadResponse response =
           FutureUtils.getUnchecked(overlordClient.taskPayload(status.getId()), true);
@@ -205,6 +210,18 @@ public class CompactSegments implements CoordinatorCustomDuty
                 .computeIfAbsent(dataSource, ds -> new ArrayList<>())
                 .addAll(intervals)
     );
+
+    // Get status of all tasks that were submitted recently but are not active anymore
+    final Set<String> finishedTaskIds = new HashSet<>(statusTracker.getSubmittedTaskIds());
+    finishedTaskIds.removeAll(activeTaskIds);
+
+    final Map<String, TaskStatus> taskStatusMap
+        = FutureUtils.getUnchecked(overlordClient.taskStatuses(finishedTaskIds), true);
+    for (String taskId : finishedTaskIds) {
+      // Assume unknown task to have finished successfully
+      final TaskStatus taskStatus = taskStatusMap.getOrDefault(taskId, TaskStatus.success(taskId));
+      statusTracker.onTaskFinished(taskId, taskStatus);
+    }
 
     // Get iterator over segments to compact and submit compaction tasks
     final CompactionSegmentSearchPolicy policy = dynamicConfig.getCompactionPolicy();
