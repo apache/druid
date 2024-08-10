@@ -24,6 +24,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -61,6 +62,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private final String outputName;
   private int index;
   private Object currentVal;
+  @MonotonicNonNull
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
   private int markIndex = 0;
@@ -258,7 +260,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       moveToNextNonEmptyRow();
     }
     // if base cursor reset to mark was not able to return to the exact row, the marked index might no longer be valid
-    if (index >= unnestListForCurrentRow.size()) {
+    if (unnestListForCurrentRow == null || index >= unnestListForCurrentRow.size()) {
       index = 0;
     }
   }

@@ -393,7 +393,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       Assert.assertEquals(
           // marked at position 4, however first row has the same timestamp so we effectively restart cursor after
           // position 4
-          Arrays.asList(1, 2, 3, 4, 1, 2, 3, 4, 5, 6, null, 7, 8, 9, 10),
+          Arrays.asList(1L, 2L, 3L, 4L, 1L, 2L, 3L, 4L, 5L, 6L, null, 7L, 8L, 9L, 10L),
           rows
       );
     }

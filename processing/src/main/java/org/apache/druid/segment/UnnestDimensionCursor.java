@@ -73,6 +73,7 @@ public class UnnestDimensionCursor implements Cursor
   @MonotonicNonNull
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
+  @MonotonicNonNull
   private SingleIndexInts indexIntsForRow;
   private final int nullId;
   private final int idOffset;
@@ -307,7 +308,7 @@ public class UnnestDimensionCursor implements Cursor
       indexedIntsForCurrentRow = dimSelector.getRow();
     }
     // if base cursor reset to mark was not able to return to the exact row, the marked index might no longer be valid
-    if (index >= indexIntsForRow.size()) {
+    if (indexedIntsForCurrentRow == null || index >= indexedIntsForCurrentRow.size()) {
       index = 0;
     }
   }
