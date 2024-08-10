@@ -257,6 +257,10 @@ public class UnnestColumnValueSelectorCursor implements Cursor
     if (unnestListForCurrentRow.isEmpty()) {
       moveToNextNonEmptyRow();
     }
+    // if base cursor reset to mark was not able to return to the exact row, the marked index might no longer be valid
+    if (index >= unnestListForCurrentRow.size()) {
+      index = 0;
+    }
   }
 
   @Override

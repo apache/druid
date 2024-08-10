@@ -25,6 +25,7 @@ import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.NestedDataTestUtils;
@@ -35,6 +36,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
@@ -65,6 +67,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.ToLongFunction;
 
 import static org.apache.druid.segment.filter.FilterTestUtils.not;
 import static org.apache.druid.segment.filter.FilterTestUtils.selector;
@@ -311,6 +315,85 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       Assert.assertEquals(count, 12);
       Assert.assertEquals(
           Arrays.asList(2L, 3L, 1L, null, 3L, 1L, null, 2L, 9L, 1L, 2L, 3L),
+          rows
+      );
+    }
+  }
+
+  @Test
+  public void test_unnest_adapters_basic_row_based_array_column()
+  {
+    StorageAdapter adapter = new UnnestStorageAdapter(
+        new RowBasedStorageAdapter<>(
+            Sequences.simple(
+                Arrays.asList(
+                    new Object[]{1L, new Object[]{1L, 2L}},
+                    new Object[]{1L, new Object[]{3L, 4L, 5L}},
+                    new Object[]{2L, new Object[]{6L, null, 7L}},
+                    new Object[]{2L, null},
+                    new Object[]{3L, new Object[]{8L, 9L, 10L}}
+                )
+            ),
+            new RowAdapter<Object[]>()
+            {
+              @Override
+              public ToLongFunction<Object[]> timestampFunction()
+              {
+                return value -> (long) value[0];
+              }
+
+              @Override
+              public Function<Object[], Object> columnFunction(String columnName)
+              {
+                if (columnName.equals("a")) {
+                  return objects -> objects[1];
+                }
+                return null;
+              }
+            },
+            RowSignature.builder().add("arrayLongNulls", ColumnType.LONG_ARRAY).build()
+        ),
+        new ExpressionVirtualColumn("u", "\"a\"", ColumnType.LONG, ExprMacroTable.nil()),
+        null
+    );
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+
+      ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+      ColumnValueSelector dimSelector = factory.makeColumnValueSelector("u");
+      int count = 0;
+
+      List<Object> rows = new ArrayList<>();
+      // test cursor reset
+      while (!cursor.isDone()) {
+        cursor.advance();
+      }
+      cursor.reset();
+
+      // test cursor mark/resetToMark
+      int mark = 4;
+      while (!cursor.isDone()) {
+        if (count == mark) {
+          cursor.mark();
+        }
+        Object dimSelectorVal = dimSelector.getObject();
+        rows.add(dimSelectorVal);
+        cursor.advance();
+        count++;
+      }
+      cursor.resetToMark();
+      rows.removeAll(rows.subList(mark, rows.size()));
+      while (!cursor.isDone()) {
+        Object dimSelectorVal = dimSelector.getObject();
+        rows.add(dimSelectorVal);
+        cursor.advance();
+      }
+      Assert.assertEquals(count, 11);
+      Assert.assertEquals(
+          // marked at position 4, however first row has the same timestamp so we effectively restart cursor after
+          // position 4
+          Arrays.asList(1, 2, 3, 4, 1, 2, 3, 4, 5, 6, null, 7, 8, 9, 10),
           rows
       );
     }

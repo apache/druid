@@ -305,10 +305,10 @@ public class UnnestDimensionCursor implements Cursor
     if (!baseCursor.isDone()) {
       indexIntsForRow = new SingleIndexInts();
       indexedIntsForCurrentRow = dimSelector.getRow();
-      // if base cursor reset to mark was not able to return to the exact row, the marked index might no longer be valid
-      if (index > indexIntsForRow.size()) {
-        index = 0;
-      }
+    }
+    // if base cursor reset to mark was not able to return to the exact row, the marked index might no longer be valid
+    if (index >= indexIntsForRow.size()) {
+      index = 0;
     }
   }
 
