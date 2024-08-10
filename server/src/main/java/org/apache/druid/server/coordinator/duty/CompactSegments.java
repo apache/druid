@@ -166,6 +166,8 @@ public class CompactSegments implements CoordinatorCustomDuty
 
     final Set<String> activeTaskIds
         = compactionTasks.stream().map(TaskStatusPlus::getId).collect(Collectors.toSet());
+    trackStatusOfCompletedTasks(activeTaskIds);
+
     for (TaskStatusPlus status : compactionTasks) {
       final TaskPayloadResponse response =
           FutureUtils.getUnchecked(overlordClient.taskPayload(status.getId()), true);
@@ -211,18 +213,6 @@ public class CompactSegments implements CoordinatorCustomDuty
                 .addAll(intervals)
     );
 
-    // Get status of all tasks that were submitted recently but are not active anymore
-    final Set<String> finishedTaskIds = new HashSet<>(statusTracker.getSubmittedTaskIds());
-    finishedTaskIds.removeAll(activeTaskIds);
-
-    final Map<String, TaskStatus> taskStatusMap
-        = FutureUtils.getUnchecked(overlordClient.taskStatuses(finishedTaskIds), true);
-    for (String taskId : finishedTaskIds) {
-      // Assume unknown task to have finished successfully
-      final TaskStatus taskStatus = taskStatusMap.getOrDefault(taskId, TaskStatus.success(taskId));
-      statusTracker.onTaskFinished(taskId, taskStatus);
-    }
-
     // Get iterator over segments to compact and submit compaction tasks
     final CompactionSegmentSearchPolicy policy = dynamicConfig.getCompactionPolicy();
     final CompactionSegmentIterator iterator =
@@ -250,6 +240,29 @@ public class CompactSegments implements CoordinatorCustomDuty
   private void resetCompactionSnapshot()
   {
     autoCompactionSnapshotPerDataSource.set(Collections.emptyMap());
+  }
+
+  /**
+   * Queries the Overlord for the status of all tasks that were submitted
+   * recently but are not active anymore. The statuses are then updated in the
+   * {@link #statusTracker}.
+   */
+  private void trackStatusOfCompletedTasks(Set<String> activeTaskIds)
+  {
+    final Set<String> finishedTaskIds = new HashSet<>(statusTracker.getSubmittedTaskIds());
+    finishedTaskIds.removeAll(activeTaskIds);
+
+    if (finishedTaskIds.isEmpty()) {
+      return;
+    }
+
+    final Map<String, TaskStatus> taskStatusMap
+        = FutureUtils.getUnchecked(overlordClient.taskStatuses(finishedTaskIds), true);
+    for (String taskId : finishedTaskIds) {
+      // Assume unknown task to have finished successfully
+      final TaskStatus taskStatus = taskStatusMap.getOrDefault(taskId, TaskStatus.success(taskId));
+      statusTracker.onTaskFinished(taskId, taskStatus);
+    }
   }
 
   /**
