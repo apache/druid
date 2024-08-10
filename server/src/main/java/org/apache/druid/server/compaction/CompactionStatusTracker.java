@@ -86,12 +86,6 @@ public class CompactionStatusTracker
   )
   {
     // Nothing to do, used by simulator
-    System.out.printf(
-        "Computed status of datasource[%s], interval[%s] = [%s, %s]%n",
-        candidateSegments.getDataSource(), candidateSegments.getUmbrellaInterval(),
-        candidateSegments.getCompactionStatus().getState(),
-        candidateSegments.getCompactionStatus().getReason()
-    );
   }
 
   public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)
