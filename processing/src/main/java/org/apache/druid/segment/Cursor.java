@@ -25,7 +25,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
 /**
  * Cursor is an interface for iteration over a range of data points, used during query execution. Cursors are available
  * from {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} via {@link CursorHolder#asCursor()}.
- *
+ * <p>
  * A typical usage pattern might look something like this:
  * <pre>
  *   try (CursorHolder cursorHolder = adapter.makeCursorHolder(...)) {
@@ -45,7 +45,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
  * {@link QueryableIndexCursorHolder.QueryableIndexCursor} is an implementation for historical segments, and
  * {@link IncrementalIndexCursorHolder.IncrementalIndexCursor} is an implementation for
  * {@link org.apache.druid.segment.incremental.IncrementalIndex}.
- *
+ * <p>
  * Cursor is conceptually similar to {@link TimeAndDimsPointer}, but the latter is used for historical segment creation
  * rather than query execution (as Cursor). If those abstractions could be collapsed (and if it is worthwhile) is yet to
  * be determined.
@@ -61,19 +61,21 @@ public interface Cursor
   ColumnSelectorFactory getColumnSelectorFactory();
 
   /**
-   * Advance to the next row in the cursor, checking if thread has been interrupted after advancing and possibly
-   * throwing {@link QueryInterruptedException} if so.
+   * Advance the cursor to the next position, checking if thread has been interrupted after advancing and possibly
+   * throwing {@link QueryInterruptedException} if so. Callers should check {@link #isDone()} or
+   * {@link #isDoneOrInterrupted()} before getting the next value from a selector.
    */
   void advance();
 
   /**
-   * Advance to the next row in the cursor
+   * Advance to the cursor to the next position. Callers should check {@link #isDone()} or
+   * {@link #isDoneOrInterrupted()} before getting the next value from a selector.
    */
   void advanceUninterruptibly();
 
   /**
-   * Check if the current cursor position is valid. If true, any selectors created via
-   * {@link #getColumnSelectorFactory()} will no longer produce values.
+   * Check if the current cursor position is valid, returning false if there are values to read from selectors created
+   * by {@link #getColumnSelectorFactory()}. If true, any such selectors will no longer produce values.
    */
   boolean isDone();
 
@@ -85,17 +87,51 @@ public interface Cursor
   boolean isDoneOrInterrupted();
 
   /**
-   * Mark a position on the cursor at the current row, which can recalled with {@link #resetToMark()}.
+   * Mark a position on the cursor at the current row, which can recalled with {@link #resetToMark()}. This position is
+   * only guaranteed to have the same timestamp as the current row when this method is called.
+   * <p>
+   * In most cursors, this is able to mark and return to an exact row, but currently the only caller of this method does
+   * not require this contract ({@link org.apache.druid.query.topn.TopNQueryEngine}) rather it only requires that the
+   * first timestamp of the marked position can be returned to, since TopN uses this to make multiple passes over a
+   * cursor within a granularity bucket interval (and so this method only really needs to work correctly if the data is
+   * time ordered).
+   * <p>
+   * Additionally, not all built-in implementations can be guaranteed to be able to mark an exact row due to potential
+   * underlying data mutability:
+   * - {@link RowBasedCursor} being potentially backed by mutable data, such as lookups when queried as segments
+   * - the cursor provided by {@link org.apache.druid.segment.join.HashJoinEngine} due to
+   *   {@link org.apache.druid.segment.join.JoinMatcher} being backed by potentially mutable iterables, such as lookups.
+   * If this ever changes so that we always have completely immutable data backing cursor, then we could potentially
+   * strengthen this contract to be able to mark and reset to exact cursor positions, but until that point do not count
+   * on this behavior without examining the specific type of cursors being used.
    */
   void mark();
 
   /**
-   * Reset to position set by {@link #mark()}
+   * Reset to position set by {@link #mark()}. This is only guaranteed to be the first ocurring row with the same
+   * timestamp as the row when {@link #mark()} was called.
+   * <p>
+   * In most cursors, this is able to mark and return to an exact row, but currently the only caller of this method does
+   * not require this contract ({@link org.apache.druid.query.topn.TopNQueryEngine}) rather it only requires that the
+   * first timestamp of the marked position can be returned to, since TopN uses this to make multiple passes over a
+   * cursor within a granularity bucket interval (and so this method only really needs to work correctly if the data is
+   * time ordered).
+   * <p>
+   * Additionally, not all built-in implementations can be guaranteed to be able to mark an exact row due to potential
+   * underlying data mutability:
+   * - {@link RowBasedCursor} being potentially backed by mutable data, such as lookups when queried as segments
+   * - the cursor provided by {@link org.apache.druid.segment.join.HashJoinEngine} due to
+   *   {@link org.apache.druid.segment.join.JoinMatcher} being backed by potentially mutable iterables, such as lookups.
+   * If this ever changes so that we always have completely immutable data backing cursor, then we could potentially
+   * strengthen this contract to be able to mark and reset to exact cursor positions, but until that point do not count
+   * on this behavior without examining the specific type of cursors being used.
    */
   void resetToMark();
 
   /**
-   * Reset to start of cursor and discard mark.
+   * Reset to start of cursor and discard mark. Most cursor implementations are backed by immutable data, but there is
+   * generically no guarantee that advancing through a cursor again will read exactly the same data or even number of
+   * rows, since the underlying data might be mutable in some cases.
    */
   void reset();
 }

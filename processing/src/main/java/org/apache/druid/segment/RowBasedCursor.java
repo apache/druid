@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -46,7 +47,7 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ValueMatcher valueMatcher;
 
   private long rowId = 0;
-  private long markId = 0;
+  private DateTime markTime;
 
   public RowBasedCursor(
       final RowWalker<RowType> rowWalker,
@@ -63,6 +64,7 @@ public class RowBasedCursor<RowType> implements Cursor
     this.interval = interval;
     this.descending = descending;
     this.startTime = descending ? interval.getEnd().minus(1) : interval.getStart();
+    this.markTime = startTime;
     this.columnSelectorFactory = virtualColumns.wrap(
         new RowBasedColumnSelectorFactory<>(
             rowWalker::currentRow,
@@ -119,7 +121,7 @@ public class RowBasedCursor<RowType> implements Cursor
   @Override
   public void mark()
   {
-    markId = rowId;
+    markTime = DateTimes.utc(timestampFunction.applyAsLong(rowWalker.currentRow()));
   }
 
   @Override
@@ -127,15 +129,15 @@ public class RowBasedCursor<RowType> implements Cursor
   {
     rowId = 0;
     rowWalker.reset();
-    rowWalker.skipToDateTime(startTime, descending);
-    advanceToMatchingMarkRow();
+    rowWalker.skipToDateTime(markTime, descending);
+    advanceToMatchingRow();
   }
 
   @Override
   public void reset()
   {
     rowId = 0;
-    markId = 0;
+    markTime = startTime;
     rowWalker.reset();
     rowWalker.skipToDateTime(startTime, descending);
     advanceToMatchingRow();
@@ -144,14 +146,6 @@ public class RowBasedCursor<RowType> implements Cursor
   private void advanceToMatchingRow()
   {
     while (!isDone() && !valueMatcher.matches(false)) {
-      rowWalker.advance();
-      rowId++;
-    }
-  }
-
-  private void advanceToMatchingMarkRow()
-  {
-    while (!isDone() && rowId < markId) {
       rowWalker.advance();
       rowId++;
     }

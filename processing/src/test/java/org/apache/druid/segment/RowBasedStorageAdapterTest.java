@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.math.LongMath;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
@@ -36,17 +37,20 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -209,14 +213,52 @@ public class RowBasedStorageAdapterTest
         }
       };
 
+  private static final RowAdapter<Integer> SAME_TIME_ROW_ADAPTER =
+      new RowAdapter<Integer>()
+      {
+        private DateTime startTime = DateTimes.nowUtc();
+        @Override
+        public ToLongFunction<Integer> timestampFunction()
+        {
+          return i -> {
+            long div = LongMath.divide(i, 3, RoundingMode.FLOOR);
+            return startTime.plus(div).getMillis();
+          };
+        }
+
+        @Override
+        public Function<Integer, Object> columnFunction(String columnName)
+        {
+          if (UNKNOWN_TYPE_NAME.equals(columnName)) {
+            return i -> i;
+          } else {
+            final ValueType valueType = GuavaUtils.getEnumIfPresent(ValueType.class, columnName);
+
+            if (valueType == null || valueType == ValueType.COMPLEX) {
+              return i -> null;
+            } else {
+              return i -> DimensionHandlerUtils.convertObjectToType(
+                  i,
+                  ROW_SIGNATURE.getColumnType(columnName).orElse(null)
+              );
+            }
+          }
+        }
+      };
+
   public final AtomicLong numCloses = new AtomicLong();
 
   private RowBasedStorageAdapter<Integer> createIntAdapter(final int... ints)
   {
+    return createIntAdapter(ROW_ADAPTER, ints);
+  }
+
+  private RowBasedStorageAdapter<Integer> createIntAdapter(RowAdapter<Integer> adapter, final int... ints)
+  {
     return new RowBasedStorageAdapter<>(
         Sequences.simple(Arrays.stream(ints).boxed().collect(Collectors.toList()))
                  .withBaggage(numCloses::incrementAndGet),
-        ROW_ADAPTER,
+        adapter,
         ROW_SIGNATURE
     );
   }
@@ -516,7 +558,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -552,6 +594,7 @@ public class RowBasedStorageAdapterTest
 
     Assert.assertEquals(2, numCloses.get());
   }
+
 
   @Test
   public void test_makeCursor_descending()
@@ -801,7 +844,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -822,6 +865,104 @@ public class RowBasedStorageAdapterTest
     }
 
     Assert.assertEquals(2, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_mark_resets_to_different_row()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 0, 1, 2, 3, 4, 5, 6, 7);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("0"),
+              ImmutableList.of("1"),
+              ImmutableList.of("2"),
+              ImmutableList.of("3"),
+              // duplicate row since mark at 4 but resets to 3 since same timestamp
+              ImmutableList.of("3"),
+              ImmutableList.of("4"),
+              ImmutableList.of("5"),
+              ImmutableList.of("6"),
+              ImmutableList.of("7")
+          ),
+          walkCursorMarkResetDifferentRow(cursor, READ_STRING, 4)
+      );
+    }
+
+    Assert.assertEquals(3, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_mark_resets_to_different_row_descending()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 0, 1, 2, 3, 4, 5, 6, 7);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setPreferredOrdering(
+                                                         Collections.singletonList(
+                                                             OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
+                                                         )
+                                                     )
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("7"),
+              ImmutableList.of("6"),
+              ImmutableList.of("5"),
+              ImmutableList.of("4"),
+              // duplicate rows since mark at 4 but resets to 5 since same timestamp
+              ImmutableList.of("5"),
+              ImmutableList.of("4"),
+              ImmutableList.of("3"),
+              ImmutableList.of("2"),
+              ImmutableList.of("1"),
+              ImmutableList.of("0")
+          ),
+          walkCursorMarkResetDifferentRow(cursor, READ_STRING, 4)
+      );
+    }
+
+    Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_filterOnLong_resets_to_different_row()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 1, 2, 3, 4, 5, 6, 7);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(
+                                                         new TypedInFilter(
+                                                             ValueType.LONG.name(),
+                                                             ColumnType.LONG,
+                                                             null,
+                                                             Arrays.asList(3L, 4L),
+                                                             null
+                                                         )
+                                                     )
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("3"),
+              // duplicate rows since cursor is marked at 1, but resets to 0 since same timestamp
+              ImmutableList.of("3"),
+              ImmutableList.of("4")
+          ),
+          walkCursorMarkResetDifferentRow(cursor, READ_STRING, 1)
+      );
+    }
+
+
+    Assert.assertEquals(3, numCloses.get());
   }
 
   private static List<List<Object>> walkCursor(
@@ -845,7 +986,7 @@ public class RowBasedStorageAdapterTest
 
     // test cursor mark/resetToMark
     int ctr = 0;
-    int mark = 1;
+    int mark = 2;
     while (!cursor.isDone()) {
       if (ctr == mark) {
         cursor.mark();
@@ -872,6 +1013,62 @@ public class RowBasedStorageAdapterTest
         }
 
         retVal.set(mark++, row);
+        cursor.advanceUninterruptibly();
+      }
+    }
+
+    return retVal;
+  }
+
+  private static List<List<Object>> walkCursorMarkResetDifferentRow(
+      final Cursor cursor,
+      final List<Function<Cursor, Supplier<Object>>> processors,
+      int mark
+  )
+  {
+    final List<Supplier<Object>> suppliers = new ArrayList<>();
+    for (Function<Cursor, Supplier<Object>> processor : processors) {
+      suppliers.add(processor.apply(cursor));
+    }
+
+    final List<List<Object>> retVal = new ArrayList<>();
+
+    // test cursor reset
+    while (!cursor.isDone()) {
+      cursor.advanceUninterruptibly();
+    }
+
+    cursor.reset();
+
+    // test cursor mark/resetToMark
+    int ctr = 0;
+    while (!cursor.isDone()) {
+      if (ctr == mark) {
+        cursor.mark();
+      }
+      final List<Object> row = new ArrayList<>();
+
+      for (Supplier<Object> supplier : suppliers) {
+        row.add(supplier.get());
+      }
+
+      retVal.add(row);
+      ctr++;
+      cursor.advanceUninterruptibly();
+    }
+
+    if (ctr > mark) {
+      cursor.resetToMark();
+      retVal.removeAll(retVal.subList(mark, retVal.size()));
+      while (!cursor.isDone()) {
+
+        final List<Object> row = new ArrayList<>();
+
+        for (Supplier<Object> supplier : suppliers) {
+          row.add(supplier.get());
+        }
+
+        retVal.add(row);
         cursor.advanceUninterruptibly();
       }
     }

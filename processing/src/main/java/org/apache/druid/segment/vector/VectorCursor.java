@@ -26,10 +26,10 @@ import org.apache.druid.segment.CursorHolderFactory;
  * Vectorized cursor used during query execution. VectorCursors are available from
  * {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} via
  * {@link org.apache.druid.segment.CursorHolder#asVectorCursor()}.
- *
+ * <p>
  * See {@link org.apache.druid.query.vector.VectorCursorGranularizer} for a helper that makes it easier for query
  * engines to do time granularization.
- *
+ * <p>
  * An example of how to use the methods in this class:
  *
  * <pre>
