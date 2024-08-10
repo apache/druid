@@ -345,7 +345,7 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
               @Override
               public Function<Object[], Object> columnFunction(String columnName)
               {
-                if (columnName.equals("a")) {
+                if ("a".equals(columnName)) {
                   return objects -> objects[1];
                 }
                 return null;
