@@ -20,7 +20,7 @@
 # Quidem UT
 
 Enables to write sql level tests easily.
-Can be used to write tests against existing test backends (ComponentSupplier) - by doing so the testcases can be moved closer to the excercised codes.
+Can be used to write tests against existing test backends (ComponentSupplier) - by doing so the testcases can be moved closer to the exercised codes.
 
 ## Usage
 
@@ -39,8 +39,8 @@ sdk install maven
 # run mvn to see if it works
 mvn --version
 
-# download druid sourcces (FIXME: change this to the main repo/branch before merging)
-git clone --branch quidem-record https://github.com/kgyrtkirk/druid
+# download druid sources
+git clone https://github.com/apache/druid
 ```
 
 
