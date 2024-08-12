@@ -69,6 +69,7 @@ public class FieldReaderRACTest extends InitializedNullHandlingTest
             noArraysMatcher.assertThrowsAndMatches(() -> racCol.getObject(offset.getOffset()));
           } else {
             final Object racObj = racCol.getObject(offset.getOffset());
+            Assert.assertEquals(racCol.isNull(offset.getOffset()), racCol.getObject(offset.getOffset()) == null);
             Assert.assertEquals(selector.getObject(), racObj);
           }
           offset.increment();
