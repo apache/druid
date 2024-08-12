@@ -254,7 +254,7 @@ public class BrokerServerView implements TimelineServerView
           VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
           if (timeline == null) {
             // broker needs to skip tombstones
-            timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
+            timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false);
             timelines.put(segment.getDataSource(), timeline);
           }
 
