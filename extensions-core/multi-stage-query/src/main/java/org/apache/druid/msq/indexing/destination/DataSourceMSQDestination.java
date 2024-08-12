@@ -176,13 +176,14 @@ public class DataSourceMSQDestination implements MSQDestination
     return Objects.equals(dataSource, that.dataSource)
            && Objects.equals(segmentGranularity, that.segmentGranularity)
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
-           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
+           && Objects.equals(dimensionToSchemaMap, that.dimensionToSchemaMap);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionToSchemaMap);
   }
 
   @Override
@@ -193,6 +194,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentGranularity=" + segmentGranularity +
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
+           ", dimensionToSchemaMap=" + dimensionToSchemaMap +
            '}';
   }
 

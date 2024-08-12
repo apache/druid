@@ -22,10 +22,13 @@ package org.apache.druid.tests.coordinator.duty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -512,6 +515,45 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       forceTriggerAutoCompaction(1);
       List<TaskResponseObject> compactTasksAfter = indexer.getCompleteTasksForDataSource(fullDatasourceName);
       Assert.assertEquals(compactTasksAfter.size(), compactTasksBefore.size());
+    }
+  }
+
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionPreservesCreateBitmapIndexInDimensionSchema(CompactionEngine engine) throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)...
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      LOG.info("Auto compaction test with YEAR segment granularity, dropExisting is true");
+      Granularity newSegmentGranularity = Granularities.YEAR;
+
+      List<DimensionSchema> dimensionSchemas = ImmutableList.of(
+          new StringDimensionSchema(
+              "language",
+              DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+              false
+          )
+      );
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newSegmentGranularity, null, true),
+          new UserCompactionTaskDimensionsConfig(dimensionSchemas),
+          null,
+          new AggregatorFactory[] {new LongSumAggregatorFactory("added", "added")},
+          true,
+          engine
+      );
+      //...compacted into 1 segment for the entire year.
+      forceTriggerAutoCompaction(1);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifySegmentsCompactedDimensionSchema(dimensionSchemas);
     }
   }
 
@@ -1940,6 +1982,24 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
       Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec(), partitionsSpec);
+    }
+
+  }
+
+  private void verifySegmentsCompactedDimensionSchema(List<DimensionSchema> dimensionSchemas)
+  {
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+    List<DataSegment> foundCompactedSegments = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      if (segment.getLastCompactionState() != null) {
+        foundCompactedSegments.add(segment);
+      }
+    }
+    for (DataSegment compactedSegment : foundCompactedSegments) {
+      Assert.assertTrue(CollectionUtils.isEqualCollection(
+          dimensionSchemas,
+          compactedSegment.getLastCompactionState().getDimensionsSpec().getDimensions()
+      ));
     }
   }
 

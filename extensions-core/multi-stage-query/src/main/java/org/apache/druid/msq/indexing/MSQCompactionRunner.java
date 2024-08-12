@@ -503,7 +503,7 @@ public class MSQCompactionRunner implements CompactionRunner
     context.put(QueryContexts.FINALIZE_KEY, false);
     // Only scalar or array-type dimensions are allowed as grouping keys.
     context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
-    context.putIfAbsent(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, ArrayIngestMode.ARRAY);
+    context.putIfAbsent(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
     return context;
   }
 
