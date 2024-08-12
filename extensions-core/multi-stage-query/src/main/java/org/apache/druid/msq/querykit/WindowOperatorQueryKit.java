@@ -145,7 +145,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                              queryToRun.getOperators(),
                              finalWindowStageRowSignature,
                              maxRowsMaterialized,
-                             Collections.emptyList()
+                             Collections.emptyList(),
+                             true
                          ))
       );
     } else {
@@ -195,10 +196,12 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
         final RowSignature intermediateSignature = bob.build();
         final RowSignature stageRowSignature;
+        boolean addVirtualColumns = false;
 
         if (i + 1 == operatorList.size()) {
           stageRowSignature = finalWindowStageRowSignature;
           nextShuffleSpec = finalWindowStageShuffleSpec;
+          addVirtualColumns = true;
         } else {
           nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
           if (nextShuffleSpec == null) {
@@ -244,7 +247,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                operatorList.get(i),
                                stageRowSignature,
                                maxRowsMaterialized,
-                               partitionColumnNames
+                               partitionColumnNames,
+                               addVirtualColumns
                            ))
         );
       }

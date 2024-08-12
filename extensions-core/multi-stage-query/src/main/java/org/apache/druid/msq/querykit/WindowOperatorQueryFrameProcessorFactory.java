@@ -62,6 +62,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final RowSignature stageRowSignature;
   private final int maxRowsMaterializedInWindow;
   private final List<String> partitionColumnNames;
+  private final boolean addVirtualColumns;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
@@ -69,13 +70,15 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
       @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow,
-      @JsonProperty("partitionColumnNames") List<String> partitionColumnNames
+      @JsonProperty("partitionColumnNames") List<String> partitionColumnNames,
+      @JsonProperty("addVirtualColumns") boolean addVirtualColumns
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
     this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
+    this.addVirtualColumns = addVirtualColumns;
 
     if (partitionColumnNames == null) {
       throw DruidException.defensive("List of partition column names encountered as null.");
@@ -111,6 +114,12 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   public int getMaxRowsMaterializedInWindow()
   {
     return maxRowsMaterializedInWindow;
+  }
+
+  @JsonProperty("addVirtualColumns")
+  public boolean getAddVirtualColumns()
+  {
+    return addVirtualColumns;
   }
 
   @Override
@@ -163,7 +172,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               operatorList,
               stageRowSignature,
               maxRowsMaterializedInWindow,
-              partitionColumnNames
+              partitionColumnNames,
+              addVirtualColumns
           );
         }
     );
@@ -189,12 +199,13 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
            && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
            && Objects.equals(partitionColumnNames, that.partitionColumnNames)
-           && Objects.equals(stageRowSignature, that.stageRowSignature);
+           && Objects.equals(stageRowSignature, that.stageRowSignature)
+           && addVirtualColumns == that.addVirtualColumns;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, partitionColumnNames, stageRowSignature, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, partitionColumnNames, stageRowSignature, maxRowsMaterializedInWindow, addVirtualColumns);
   }
 }

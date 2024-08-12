@@ -105,7 +105,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       final List<OperatorFactory> operatorFactoryList,
       final RowSignature rowSignature,
       final int maxRowsMaterializedInWindow,
-      final List<String> partitionColumnNames
+      final List<String> partitionColumnNames,
+      final boolean addVirtualColumns
   )
   {
     this.inputChannel = inputChannel;
@@ -129,15 +130,16 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     // Get virtual columns to be added to the frame writer.
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
-    frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
+    if (addVirtualColumns) {
+      frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
 
-    final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
+      final VirtualColumn segmentGranularityVirtualColumn =
+          QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
 
-    if (segmentGranularityVirtualColumn != null) {
-      frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
+      if (segmentGranularityVirtualColumn != null) {
+        frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
+      }
     }
-
     this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
   }
 
