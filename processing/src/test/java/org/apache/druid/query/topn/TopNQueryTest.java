@@ -325,7 +325,7 @@ public class TopNQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(
         VirtualColumns.create(
-            Granularities.toVirtualColumn(Granularities.DAY),
+            Granularities.toVirtualColumn(query),
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()

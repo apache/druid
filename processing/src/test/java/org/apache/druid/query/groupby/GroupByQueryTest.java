@@ -252,7 +252,60 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
     Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
     Assert.assertEquals(
         VirtualColumns.create(
-            Granularities.toVirtualColumn(Granularities.DAY),
+            Granularities.toVirtualColumn(query),
+            virtualColumns.getVirtualColumns()[0]
+        ),
+        buildSpec.getVirtualColumns()
+    );
+  }
+
+  @Test
+  public void testAsCursorBuildSpecDayGranularityNameConflict()
+  {
+    // make conflicting column name to force artificial granularity column to have a different name
+    final VirtualColumns virtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "concat(placement, 'foo')", ColumnType.STRING, ExprMacroTable.nil())
+    );
+    final LongSumAggregatorFactory longSum = new LongSumAggregatorFactory("idx", "index");
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.QUALITY_DIMENSION, "alias"),
+            new DefaultDimensionSpec(
+                QueryRunnerTestHelper.MARKET_DIMENSION,
+                "market",
+                ColumnType.STRING_ARRAY
+            ),
+            new DefaultDimensionSpec("v0", "v0", ColumnType.STRING)
+        )
+        .setVirtualColumns(virtualColumns)
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, longSum)
+        .setGranularity(Granularities.DAY)
+        .setPostAggregatorSpecs(ImmutableList.of(new FieldAccessPostAggregator("x", "idx")))
+        .setLimitSpec(
+            new DefaultLimitSpec(
+                ImmutableList.of(new OrderByColumnSpec(
+                    "alias",
+                    OrderByColumnSpec.Direction.ASCENDING,
+                    StringComparators.LEXICOGRAPHIC
+                )),
+                100
+            )
+        )
+        .build();
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    Assert.assertEquals(
+        ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME + "0", "quality", "market", "v0"),
+        buildSpec.getGroupingColumns()
+    );
+    Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
+    Assert.assertEquals(
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(query.getGranularity(), Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME + "0"),
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()

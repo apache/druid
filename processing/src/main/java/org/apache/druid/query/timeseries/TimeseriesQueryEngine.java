@@ -324,7 +324,7 @@ public class TimeseriesQueryEngine
     // and vector cursors if any pre-aggregated data at the matching granularity is available
     // eventually this could probably be reworked to be used by the granularizer instead of the existing method
     // of creating a selector on the time column
-    final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(query.getGranularity());
+    final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(query);
     VirtualColumns virtualColumns;
     List<String> groupingColumns;
     if (granularityVirtual == null) {

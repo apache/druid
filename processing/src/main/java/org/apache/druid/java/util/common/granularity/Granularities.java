@@ -19,7 +19,9 @@
 
 package org.apache.druid.java.util.common.granularity;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -27,6 +29,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  * This class was created b/c sometimes static initializers of a class that use a subclass can deadlock.
@@ -58,6 +61,24 @@ public class Granularities
     return granularity == null ? Granularities.ALL : granularity;
   }
 
+  @Nullable
+  public static ExpressionVirtualColumn toVirtualColumn(Query<?> query)
+  {
+    ImmutableSet.Builder<String> builder = ImmutableSet.builder();
+    final Set<String> requiredColumns = query.getRequiredColumns();
+    if (requiredColumns != null) {
+      builder.addAll(requiredColumns);
+    }
+    builder.addAll(query.getVirtualColumns().getColumnNames());
+    final Set<String> columnNamesForConflictResolution = builder.build();
+    String virtualColumnName = GRANULARITY_VIRTUAL_COLUMN_NAME;
+    int ctr = 0;
+    while (columnNamesForConflictResolution.contains(virtualColumnName)) {
+      virtualColumnName = virtualColumnName + ctr++;
+    }
+    return toVirtualColumn(query.getGranularity(), virtualColumnName);
+  }
+
   /**
    * Translates a {@link Granularity} to a {@link ExpressionVirtualColumn} on {@link ColumnHolder#TIME_COLUMN_NAME} of
    * the equivalent grouping column. If granularity is {@link #ALL}, this method returns null since we are not grouping
@@ -68,7 +89,7 @@ public class Granularities
    * {@link ColumnHolder#TIME_COLUMN_NAME} directly.
    */
   @Nullable
-  public static ExpressionVirtualColumn toVirtualColumn(Granularity granularity)
+  public static ExpressionVirtualColumn toVirtualColumn(Granularity granularity, String virtualColumnName)
   {
     if (ALL.equals(granularity)) {
       return null;
@@ -84,8 +105,9 @@ public class Granularities
         expression = TimestampFloorExprMacro.forQueryGranularity(period.getPeriod());
       }
     }
+
     return new ExpressionVirtualColumn(
-        GRANULARITY_VIRTUAL_COLUMN_NAME,
+        virtualColumnName,
         expression,
         ColumnType.LONG,
         ExprMacroTable.granularity()
