@@ -277,9 +277,9 @@ Set the following property:
 
 ## Broadcast rules
 
-Druid extensions use broadcast rules to load segment data onto all brokers in the cluster. Apply broadcast rules in a test environment, not in production.
-To use broadcast rules, ensure that `druid.segmentCache.locations` is configured on both brokers and historicals so that segments
-can be loaded on the servers. For more information, see [Segment cache size](../operations/basic-cluster-tuning.md#segment-cache-size).
+Druid extensions use broadcast rules to load segment data onto all Brokers in the cluster. Apply broadcast rules in a test environment, not in production.
+To use broadcast rules, ensure that `druid.segmentCache.locations` is configured on both Brokers and Historicals.
+This ensures that Druid can load the segments onto those servers. For more information, see [Segment cache size](../operations/basic-cluster-tuning.md#segment-cache-size).
 
 ### Forever broadcast rule
 
