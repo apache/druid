@@ -1899,11 +1899,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.coldDatasourceSchemaExec();
 
-    emitter.verifyEmitted("metadatacache/cold/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/cold/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/cold/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/cold/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/cold/process/time", 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/process/time", 1);
 
     Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
 
@@ -1980,11 +1980,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.coldDatasourceSchemaExec();
 
-    emitter.verifyEmitted("metadatacache/cold/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/cold/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
-    emitter.verifyEmitted("metadatacache/cold/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/cold/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
-    emitter.verifyEmitted("metadatacache/cold/process/time", 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/process/time", 1);
 
     // cold datasource should be present now
     Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());

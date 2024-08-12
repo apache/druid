@@ -101,6 +101,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   private static final EmittingLogger log = new EmittingLogger(CoordinatorSegmentMetadataCache.class);
   private static final Long COLD_SCHEMA_PERIOD_MULTIPLIER = 3L;
   private static final Long COLD_SCHEMA_SLOWNESS_THRESHOLD_MILLIS = TimeUnit.SECONDS.toMillis(50);
+  private static final String DEEP_STORAGE_ONLY_METRIC_PREFIX = "metadatacache/deepStorageOnly/";
 
   private final SegmentMetadataCacheConfig config;
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
@@ -602,7 +603,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       ServiceMetricEvent.Builder metricBuilder =
           new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSourceName);
 
-      emitter.emit(metricBuilder.setMetric("metadatacache/cold/segment/count", coldSegments));
+      emitter.emit(metricBuilder.setMetric(DEEP_STORAGE_ONLY_METRIC_PREFIX + "segment/count", coldSegments));
 
       if (columnTypes.isEmpty()) {
         // this datasource doesn't have schema for cold segments
@@ -626,7 +627,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         log.debug("[%s] signature is unchanged.", dataSource);
       }
 
-      emitter.emit(metricBuilder.setMetric("metadatacache/cold/refresh/count", coldSegmentWithSchema));
+      emitter.emit(metricBuilder.setMetric(DEEP_STORAGE_ONLY_METRIC_PREFIX + "refresh/count", coldSegmentWithSchema));
 
       log.debug("[%s] signature from cold segments is [%s]", dataSourceName, coldSignature);
     }
@@ -634,7 +635,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     // remove any stale datasource from the map
     coldSchemaTable.keySet().retainAll(dataSourceWithColdSegmentSet);
 
-    emitter.emit(new ServiceMetricEvent.Builder().setMetric("metadatacache/cold/process/time", stopwatch.millisElapsed()));
+    emitter.emit(
+        new ServiceMetricEvent.Builder().setMetric(
+            DEEP_STORAGE_ONLY_METRIC_PREFIX + "process/time",
+            stopwatch.millisElapsed()
+        )
+    );
 
     String executionStatsLog = StringUtils.format(
         "Cold schema processing took [%d] millis. "
