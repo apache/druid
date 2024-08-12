@@ -63,13 +63,19 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.AndDimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.LikeDimFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
+import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -80,6 +86,7 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.security.Access;
@@ -6565,6 +6572,106 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{0L},
             new Object[]{0L},
             new Object[]{0L}
+        )
+    );
+  }
+
+  @Test
+  public void testLeftJoinsWithFilterMatchingNullRewrite()
+  {
+    cannotVectorize();
+    Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
+    testQuery(
+        "SELECT t1.dim4, t2.dim4, LOOKUP(t1.dim4, 'lookyloo'), LOOKUP(t2.dim4, 'lookyloo'), COUNT(*)\n"
+        + "FROM numfoo t1 LEFT JOIN numfoo t2\n"
+        + "ON t1.dim4 = t2.dim4 AND LOOKUP(t1.dim4, 'lookyloo') = LOOKUP(t2.dim4, 'lookyloo')\n"
+        + "WHERE\n"
+        + "t1.dim4 IN ('a', 'b') "
+        + "AND (LOOKUP(t1.dim4, 'lookyloo') IN ('xa', 'xb') OR LOOKUP(t1.dim4, 'lookyloo') IS NULL) "
+        + "AND t2.dim4 IN ('a', 'b') "
+        + "AND (LOOKUP(t2.dim4, 'lookyloo') IN ('xa', 'xb') OR LOOKUP(t2.dim4, 'lookyloo') IS NULL)\n"
+        + "GROUP BY t1.dim4, t2.dim4, LOOKUP(t1.dim4, 'lookyloo'), LOOKUP(t2.dim4, 'lookyloo')",
+        context,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(
+                            JoinDataSource.create(
+                                new TableDataSource("numfoo"),
+                                new QueryDataSource(
+                                    newScanQueryBuilder()
+                                        .dataSource("numfoo")
+                                        .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                        .virtualColumns(
+                                            new ExpressionVirtualColumn(
+                                                "v0",
+                                                "lookup(\"dim4\",'lookyloo')",
+                                                ColumnType.STRING,
+                                                CalciteTests.createExprMacroTable()
+                                            )
+                                        )
+                                        .columns("dim4", "v0")
+                                        .build()
+                                ),
+                                "j0.",
+                                "((\"dim4\" == \"j0.dim4\") && (lookup(\"dim4\",'lookyloo') == \"j0.v0\"))",
+                                JoinType.LEFT,
+                                null,
+                                CalciteTests.createExprMacroTable(),
+                                CalciteTests.createJoinableFactoryWrapper()
+                            )
+                        )
+                        .setVirtualColumns(
+                            new ExpressionVirtualColumn(
+                                "v0",
+                                "lookup(\"dim4\",'lookyloo')",
+                                ColumnType.STRING,
+                                CalciteTests.createExprMacroTable()
+                            ),
+                            new ExpressionVirtualColumn(
+                                "v1",
+                                "lookup(\"j0.dim4\",'lookyloo')",
+                                ColumnType.STRING,
+                                CalciteTests.createExprMacroTable()
+                            )
+                        )
+                        .setDimFilter(
+                            new AndDimFilter(
+                                new TypedInFilter("dim4", ColumnType.STRING, ImmutableList.of("a", "b"), null, null),
+                                new OrDimFilter(
+                                    new EqualityFilter("dim4", ColumnType.STRING, "a", null),
+                                    new NullFilter("v0", null)
+                                ),
+                                new TypedInFilter("j0.dim4", ColumnType.STRING, ImmutableList.of("a", "b"), null, null),
+                                new OrDimFilter(
+                                    new EqualityFilter("j0.dim4", ColumnType.STRING, "a", null),
+                                    new NullFilter("v1", null)
+                                )
+                            )
+                        )
+                        .setGranularity(Granularities.ALL)
+                        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
+                        .setDimensions(
+                            new DefaultDimensionSpec("dim4", "_d0", ColumnType.STRING),
+                            new DefaultDimensionSpec("j0.dim4", "_d1", ColumnType.STRING),
+                            new ExtractionDimensionSpec(
+                                "dim4",
+                                "_d2",
+                                ColumnType.STRING,
+                                new RegisteredLookupExtractionFn(null, "lookyloo", false, null, null, false)
+                            ),
+
+                            new ExtractionDimensionSpec(
+                                "j0.dim4",
+                                "_d3",
+                                ColumnType.STRING,
+                                new RegisteredLookupExtractionFn(null, "lookyloo", false, null, null, false)
+                            )
+                        )
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"a", "a", "xa", "xa", 9L}
         )
     );
   }
