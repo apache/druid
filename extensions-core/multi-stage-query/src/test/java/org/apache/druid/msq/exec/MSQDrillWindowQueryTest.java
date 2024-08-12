@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -28,9 +27,7 @@ import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComp
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper;
 import org.apache.druid.msq.test.ExtractResultsFactory;
-import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
-import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -55,6 +52,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
     {
       super.configureGuice(builder);
       builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
+      builder.addModule(new TestMSQSqlModule());
     }
 
     @Override
@@ -64,15 +62,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
         Injector injector
     )
     {
-      final WorkerMemoryParameters workerMemoryParameters = MSQTestBase.makeTestWorkerMemoryParameters();
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-          queryJsonMapper,
-          injector,
-          new MSQTestTaskActionClient(queryJsonMapper, injector),
-          workerMemoryParameters,
-          ImmutableList.of()
-      );
-      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+      return injector.getInstance(MSQTaskSqlEngine.class);
     }
   }
 
