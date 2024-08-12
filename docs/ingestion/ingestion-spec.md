@@ -324,7 +324,7 @@ An example `granularitySpec` is:
 }
 ```
 
-A `granularitySpec` can have the following components:
+A `granularitySpec` uses the same format as [query granularity](../querying/granularities.md) can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
