@@ -426,7 +426,7 @@ sample java code using dynamic parameters is provided [here](../api-reference/sq
 
 ## Reserved keywords
 
-There are reserved keywords in Apache Druid. To use reserved keywords in queries, enclose them in quote marks.
+There are reserved keywords in Apache Druid. To use reserved keywords in queries, enclose them in quotation marks.
 
 Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these the following keywords are unique to Apache Druid:
 
