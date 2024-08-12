@@ -426,7 +426,7 @@ sample java code using dynamic parameters is provided [here](../api-reference/sq
 
 ## Reserved keywords
 
-Druid SQL reserves certain keywords which are used in its query language. Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords), in addition to these the following keywords unique to Apache Druid and are also reserved:
+Druid SQL reserves certain keywords which are used in its query language. Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these, the following reserved keywords are unique to Apache Druid: ```
 
 * **CLUSTERED**
 * **PARTITIONED**
