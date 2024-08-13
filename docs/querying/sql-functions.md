@@ -1655,7 +1655,7 @@ Alias for [`LENGTH`](#length).
 
 ## STRPOS
 
-Returns the one-based index position of a substring within an expression.
+Returns the one-based index position of a substring within an expression. If `substring` is not found, returns 0.
 
 * **Syntax:** `STRPOS(expr, substring)`
 * **Function type:** Scalar, string
@@ -1884,7 +1884,6 @@ Takes the difference between two timestamps, returning the results in the given 
 **Function type:** [JSON](sql-json-functions.md)
 
 `TO_JSON_STRING(expr)`
-ƒ()
 Serializes `expr` into a JSON string.
 
 
