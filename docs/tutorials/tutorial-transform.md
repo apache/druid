@@ -37,10 +37,10 @@ It's helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and 
 
 For this tutorial, you use the following sample data:
 ```json
-{"timestamp":"2018-01-01T07:01:35Z","animal":"octopus",  "location":1, "number":100}
-{"timestamp":"2018-01-01T05:01:35Z","animal":"mongoose", "location":2,"number":200}
-{"timestamp":"2018-01-01T06:01:35Z","animal":"snake", "location":3, "number":300}
-{"timestamp":"2018-01-01T01:01:35Z","animal":"lion", "location":4, "number":300}
+{"timestamp":"2018-01-01T07:01:35Z", "animal":"octopus", "location":1, "number":100}
+{"timestamp":"2018-01-01T05:01:35Z", "animal":"mongoose", "location":2,"number":200}
+{"timestamp":"2018-01-01T06:01:35Z", "animal":"snake", "location":3, "number":300}
+{"timestamp":"2018-01-01T01:01:35Z", "animal":"lion", "location":4, "number":300}
 ```
 
 ## Transform data during ingestion
@@ -64,9 +64,9 @@ WHERE (TEXTCAT('super-', "animal") = 'super-mongoose' OR "location" = 3 OR "numb
 PARTITIONED BY DAY
 ```
 
-The following columns have transformations applied on ingestion:
+In the SELECT clause, you specify the following transformations:
 * `animal`: prepends "super-" to the values in the `animal` column using the [`TEXTCAT`](../querying/sql-functions.md/#textcat) function. This will override the `animal` column with the transformed version.
-* `triple-number`: multiplies the `number` column by 3. This stores the results in a new column called `triple-number`. Note that it ingestions both the original and the transformed column.
+* `triple-number`: multiplies the `number` column by three and stores the results in a column named `triple-number`. Note that the query ingests both the original and the transformed data.
 
 Additionally, a filter with the following three OR clauses are applied:
 * `animal` values that match "super-mongoose"
@@ -98,4 +98,4 @@ See the following topics for more information:
 * [All functions](../querying/sql-functions.md) for a list of functions that can be used to transform data. 
 * [Transform spec reference](../ingestion/ingestion-spec.md/#transformspec) to learn more about transforms in JSON-based batch ingestion.
 * [Query filters](../querying/filters.md) to learn about the types of filters available. 
-* [WHERE clause](../querying/sql.md#where) to learn how to create filters in SQL.
+* [WHERE clause](../querying/sql.md#where) to learn how to specify filters in Druid SQL.
