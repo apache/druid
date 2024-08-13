@@ -51,7 +51,7 @@ public class FrameColumnReaders
         return new DoubleFrameColumnReader(columnNumber);
 
       case STRING:
-        return new StringFrameColumnReader(columnNumber, false);
+        return new StringFrameColumnReader(columnNumber);
 
       case COMPLEX:
         return new ComplexFrameColumnReader(columnNumber);

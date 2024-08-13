@@ -72,18 +72,15 @@ import java.util.List;
 public class StringFrameColumnReader implements FrameColumnReader
 {
   final int columnNumber;
-  private final boolean asArray;
 
   /**
    * Create a new reader.
    *
    * @param columnNumber column number
-   * @param asArray      true for {@link ColumnType#STRING_ARRAY}, false for {@link ColumnType#STRING}
    */
-  StringFrameColumnReader(int columnNumber, boolean asArray)
+  StringFrameColumnReader(int columnNumber)
   {
     this.columnNumber = columnNumber;
-    this.asArray = asArray;
   }
 
   @Override
@@ -139,7 +136,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     );
   }
 
-  void validate(final Memory region)
+  private void validate(final Memory region)
   {
     // Check if column is big enough for a header
     if (region.getCapacity() < StringFrameColumnWriter.DATA_OFFSET) {
@@ -147,7 +144,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     }
 
     final byte typeCode = region.getByte(0);
-    final byte expectedTypeCode = asArray ? FrameColumnWriters.TYPE_STRING_ARRAY : FrameColumnWriters.TYPE_STRING;
+    final byte expectedTypeCode = FrameColumnWriters.TYPE_STRING;
     if (typeCode != expectedTypeCode) {
       throw DruidException.defensive(
           "Column[%s] does not have the correct type code; expected[%s], got[%s]",
@@ -705,7 +702,7 @@ class StringArrayFrameColumnReader extends StringFrameColumnReader
 {
   StringArrayFrameColumnReader(int columnNumber)
   {
-    super(columnNumber, true);
+    super(columnNumber);
   }
 
   @Override
@@ -760,5 +757,24 @@ class StringArrayFrameColumnReader extends StringFrameColumnReader
                                     .setHasNulls(ColumnCapabilities.Capable.UNKNOWN),
         frame.numRows()
     );
+  }
+
+  private void validate(final Memory region)
+  {
+    // Check if column is big enough for a header
+    if (region.getCapacity() < StringFrameColumnWriter.DATA_OFFSET) {
+      throw DruidException.defensive("Column[%s] is not big enough for a header", columnNumber);
+    }
+
+    final byte typeCode = region.getByte(0);
+    final byte expectedTypeCode = FrameColumnWriters.TYPE_STRING_ARRAY;
+    if (typeCode != expectedTypeCode) {
+      throw DruidException.defensive(
+          "Column[%s] does not have the correct type code; expected[%s], got[%s]",
+          columnNumber,
+          expectedTypeCode,
+          typeCode
+      );
+    }
   }
 }
