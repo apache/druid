@@ -458,6 +458,13 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    // Skip adding tombstone segment to the cache, as they do not have any data or column
+    // If they are added, the cache tries to refresh these segments indefinitely
+    // since segment metadata queries doesn't reflect metadata in tombstones.
+    // Refer: https://github.com/apache/druid/pull/12137
+    if (segment.isTombstone()) {
+      return;
+    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
@@ -530,6 +537,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void removeSegment(final DataSegment segment)
   {
+    // tombstone segments are not present in the cache
+    if (segment.isTombstone()) {
+      return;
+    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       log.debug("Segment [%s] is gone.", segment.getId());
