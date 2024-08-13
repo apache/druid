@@ -59,7 +59,7 @@ public class FrameColumnReaders
       case ARRAY:
         switch (columnType.getElementType().getType()) {
           case STRING:
-            return new StringFrameColumnReader(columnNumber, true);
+            return new StringArrayFrameColumnReader(columnNumber);
           case LONG:
             return new LongArrayFrameColumnReader(columnNumber);
           case FLOAT:

@@ -71,7 +71,7 @@ import java.util.List;
  */
 public class StringFrameColumnReader implements FrameColumnReader
 {
-  private final int columnNumber;
+  final int columnNumber;
   private final boolean asArray;
 
   /**
@@ -103,7 +103,7 @@ public class StringFrameColumnReader implements FrameColumnReader
             memory,
             positionOfLengths,
             positionOfPayloads,
-            asArray || multiValue // Read MVDs as String arrays
+            multiValue // Read MVDs as String arrays
         );
 
     return new ColumnAccessorBasedColumn(frameCol);
@@ -121,10 +121,10 @@ public class StringFrameColumnReader implements FrameColumnReader
 
     final BaseColumn baseColumn;
 
-    if (asArray) {
+    if (multiValue) {
       baseColumn = new StringArrayFrameColumn(
           frame,
-          multiValue,
+          true,
           memory,
           startOfStringLengthSection,
           startOfStringDataSection
@@ -132,7 +132,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     } else {
       baseColumn = new StringFrameColumn(
           frame,
-          multiValue,
+          false,
           memory,
           startOfStringLengthSection,
           startOfStringDataSection,
@@ -143,7 +143,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     return new ColumnPlus(
         baseColumn,
         new ColumnCapabilitiesImpl().setType(asArray ? ColumnType.STRING_ARRAY : ColumnType.STRING)
-                                    .setHasMultipleValues(!asArray && multiValue)
+                                    .setHasMultipleValues(multiValue)
                                     .setDictionaryEncoded(false)
                                     .setHasBitmapIndexes(false)
                                     .setHasSpatialIndexes(false)
@@ -152,7 +152,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     );
   }
 
-  private void validate(final Memory region)
+  void validate(final Memory region)
   {
     // Check if column is big enough for a header
     if (region.getCapacity() < StringFrameColumnWriter.DATA_OFFSET) {
@@ -171,7 +171,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     }
   }
 
-  private static boolean isMultiValue(final Memory memory)
+  static boolean isMultiValue(final Memory memory)
   {
     return memory.getByte(1) == 1;
   }
@@ -181,7 +181,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     return StringFrameColumnWriter.DATA_OFFSET;
   }
 
-  private static long getStartOfStringLengthSection(
+  static long getStartOfStringLengthSection(
       final int numRows,
       final boolean multiValue
   )
@@ -193,7 +193,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     }
   }
 
-  private static long getStartOfStringDataSection(
+  static long getStartOfStringDataSection(
       final Memory memory,
       final int numRows,
       final boolean multiValue
@@ -232,7 +232,7 @@ public class StringFrameColumnReader implements FrameColumnReader
      */
     private final boolean asArray;
 
-    private StringFrameColumn(
+    StringFrameColumn(
         Frame frame,
         boolean multiValue,
         Memory memory,
@@ -678,7 +678,7 @@ public class StringFrameColumnReader implements FrameColumnReader
   {
     private final StringFrameColumn delegate;
 
-    private StringArrayFrameColumn(
+    StringArrayFrameColumn(
         Frame frame,
         boolean multiValue,
         Memory memory,
@@ -708,5 +708,68 @@ public class StringFrameColumnReader implements FrameColumnReader
     {
       delegate.close();
     }
+  }
+}
+
+class StringArrayFrameColumnReader extends StringFrameColumnReader
+{
+  StringArrayFrameColumnReader(int columnNumber)
+  {
+    super(columnNumber, true);
+  }
+
+  @Override
+  public Column readRACColumn(Frame frame)
+  {
+    final Memory memory = frame.region(columnNumber);
+    validate(memory);
+
+    // we expect the memory to be stored as if there are multi values
+    assert isMultiValue(memory);
+    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), true);
+    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), true);
+
+    StringFrameColumn frameCol =
+        new StringFrameColumn(
+            frame,
+            true,
+            memory,
+            positionOfLengths,
+            positionOfPayloads,
+            true
+        );
+
+    return new ColumnAccessorBasedColumn(frameCol);
+  }
+
+  @Override
+  public ColumnPlus readColumn(final Frame frame)
+  {
+    final Memory memory = frame.region(columnNumber);
+    validate(memory);
+
+    // we expect the memory to be stored as if there are multi values
+    assert isMultiValue(memory);
+    final long startOfStringLengthSection = getStartOfStringLengthSection(frame.numRows(), true);
+    final long startOfStringDataSection = getStartOfStringDataSection(memory, frame.numRows(), true);
+
+    final BaseColumn baseColumn = new StringArrayFrameColumn(
+        frame,
+        true,
+        memory,
+        startOfStringLengthSection,
+        startOfStringDataSection
+    );
+
+    return new ColumnPlus(
+        baseColumn,
+        new ColumnCapabilitiesImpl().setType(ColumnType.STRING_ARRAY)
+                                    .setHasMultipleValues(false)
+                                    .setDictionaryEncoded(false)
+                                    .setHasBitmapIndexes(false)
+                                    .setHasSpatialIndexes(false)
+                                    .setHasNulls(ColumnCapabilities.Capable.UNKNOWN),
+        frame.numRows()
+    );
   }
 }
