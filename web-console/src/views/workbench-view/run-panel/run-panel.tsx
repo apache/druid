@@ -24,12 +24,12 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Position,
   Tag,
   useHotkeys,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
@@ -41,35 +41,14 @@ import type {
   DruidEngine,
   IndexSpec,
   QueryContext,
+  SelectDestination,
+  SqlJoinAlgorithm,
   WorkbenchQuery,
 } from '../../../druid-models';
-import {
-  changeArrayIngestMode,
-  changeDurableShuffleStorage,
-  changeFailOnEmptyInsert,
-  changeFinalizeAggregations,
-  changeGroupByEnableMultiValueUnnesting,
-  changeMaxParseExceptions,
-  changeTimezone,
-  changeUseApproximateCountDistinct,
-  changeUseApproximateTopN,
-  changeUseCache,
-  changeWaitUntilSegmentsLoad,
-  getArrayIngestMode,
-  getDurableShuffleStorage,
-  getFailOnEmptyInsert,
-  getFinalizeAggregations,
-  getGroupByEnableMultiValueUnnesting,
-  getMaxParseExceptions,
-  getTimezone,
-  getUseApproximateCountDistinct,
-  getUseApproximateTopN,
-  getUseCache,
-  getWaitUntilSegmentsLoad,
-  summarizeIndexSpec,
-} from '../../../druid-models';
+import { getQueryContextKey, summarizeIndexSpec } from '../../../druid-models';
 import { getLink } from '../../../links';
-import { deepGet, deepSet, pluralIfNeeded, tickIcon } from '../../../utils';
+import { deepGet, pluralIfNeeded, removeUndefinedValues, tickIcon } from '../../../utils';
+import type { MaxTasksButtonProps } from '../max-tasks-button/max-tasks-button';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
 
@@ -111,7 +90,16 @@ const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
   ),
 };
 
-export interface RunPanelProps {
+const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
+  if (!engine) return { text: 'auto' };
+  return {
+    text: engine,
+    label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
+  };
+};
+
+export interface RunPanelProps
+  extends Pick<MaxTasksButtonProps, 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'> {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
   running: boolean;
@@ -119,12 +107,28 @@ export interface RunPanelProps {
   onRun(preview: boolean): void | Promise<void>;
   queryEngines: DruidEngine[];
   clusterCapacity: number | undefined;
+  defaultQueryContext: QueryContext;
   moreMenu?: JSX.Element;
+  maxTasksMenuHeader?: JSX.Element;
+  enginesLabelFn?: (engine: DruidEngine | undefined) => { text: string; label?: string };
 }
 
 export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
-  const { query, onQueryChange, onRun, moreMenu, running, small, queryEngines, clusterCapacity } =
-    props;
+  const {
+    query,
+    onQueryChange,
+    onRun,
+    moreMenu,
+    running,
+    small,
+    queryEngines,
+    clusterCapacity,
+    defaultQueryContext,
+    maxTasksMenuHeader,
+    enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
+    maxTasksLabelFn,
+    fullClusterCapacityLabelFn,
+  } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
   const [editParametersDialogOpen, setEditParametersDialogOpen] = useState(false);
   const [customTimezoneDialogOpen, setCustomTimezoneDialogOpen] = useState(false);
@@ -136,20 +140,52 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const numContextKeys = Object.keys(queryContext).length;
   const queryParameters = query.queryParameters;
 
-  const arrayIngestMode = getArrayIngestMode(queryContext);
-  const maxParseExceptions = getMaxParseExceptions(queryContext);
-  const failOnEmptyInsert = getFailOnEmptyInsert(queryContext);
-  const finalizeAggregations = getFinalizeAggregations(queryContext);
-  const waitUntilSegmentsLoad = getWaitUntilSegmentsLoad(queryContext);
-  const groupByEnableMultiValueUnnesting = getGroupByEnableMultiValueUnnesting(queryContext);
-  const sqlJoinAlgorithm = queryContext.sqlJoinAlgorithm ?? 'broadcast';
-  const selectDestination = queryContext.selectDestination ?? 'taskReport';
-  const durableShuffleStorage = getDurableShuffleStorage(queryContext);
+  // Extract the context parts that have UI
+  const sqlTimeZone = queryContext.sqlTimeZone;
+
+  const useCache = getQueryContextKey('useCache', queryContext, defaultQueryContext);
+  const useApproximateTopN = getQueryContextKey(
+    'useApproximateTopN',
+    queryContext,
+    defaultQueryContext,
+  );
+  const useApproximateCountDistinct = getQueryContextKey(
+    'useApproximateCountDistinct',
+    queryContext,
+    defaultQueryContext,
+  );
+
+  const arrayIngestMode = queryContext.arrayIngestMode;
+  const maxParseExceptions = getQueryContextKey(
+    'maxParseExceptions',
+    queryContext,
+    defaultQueryContext,
+  );
+  const failOnEmptyInsert = getQueryContextKey(
+    'failOnEmptyInsert',
+    queryContext,
+    defaultQueryContext,
+  );
+  const finalizeAggregations = queryContext.finalizeAggregations;
+  const waitUntilSegmentsLoad = queryContext.waitUntilSegmentsLoad;
+  const groupByEnableMultiValueUnnesting = queryContext.groupByEnableMultiValueUnnesting;
+  const sqlJoinAlgorithm = getQueryContextKey(
+    'sqlJoinAlgorithm',
+    queryContext,
+    defaultQueryContext,
+  );
+  const selectDestination = getQueryContextKey(
+    'selectDestination',
+    queryContext,
+    defaultQueryContext,
+  );
+  const durableShuffleStorage = getQueryContextKey(
+    'durableShuffleStorage',
+    queryContext,
+    defaultQueryContext,
+  );
+
   const indexSpec: IndexSpec | undefined = deepGet(queryContext, 'indexSpec');
-  const useApproximateCountDistinct = getUseApproximateCountDistinct(queryContext);
-  const useApproximateTopN = getUseApproximateTopN(queryContext);
-  const useCache = getUseCache(queryContext);
-  const timezone = getTimezone(queryContext);
 
   const handleRun = useCallback(() => {
     if (!onRun) return;
@@ -186,24 +222,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   useHotkeys(hotkeys);
 
   const queryEngine = query.engine;
-  function renderQueryEngineMenuItem(e: DruidEngine | undefined) {
-    return (
-      <MenuItem
-        key={String(e)}
-        icon={tickIcon(e === queryEngine)}
-        text={typeof e === 'undefined' ? 'auto' : e}
-        label={e === 'sql-msq-task' ? 'multi-stage-query' : undefined}
-        onClick={() => onQueryChange(query.changeEngine(e))}
-        shouldDismissPopover={false}
-      />
-    );
-  }
 
   function changeQueryContext(queryContext: QueryContext) {
-    onQueryChange(query.changeQueryContext(queryContext));
+    onQueryChange(query.changeQueryContext(removeUndefinedValues(queryContext)));
   }
-
-  const availableEngines = ([undefined] as (DruidEngine | undefined)[]).concat(queryEngines);
 
   function offsetOptions(): JSX.Element[] {
     const items: JSX.Element[] = [];
@@ -213,10 +235,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       items.push(
         <MenuItem
           key={offset}
-          icon={tickIcon(offset === timezone)}
+          icon={tickIcon(offset === sqlTimeZone)}
           text={offset}
           shouldDismissPopover={false}
-          onClick={() => changeQueryContext(changeTimezone(queryContext, offset))}
+          onClick={() => changeQueryContext({ ...queryContext, sqlTimeZone: offset })}
         />,
       );
     }
@@ -231,6 +253,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const intent = overloadWarning ? Intent.WARNING : undefined;
 
   const effectiveEngine = query.getEffectiveEngine();
+
+  const autoEngineLabel = enginesLabelFn(undefined);
+
   return (
     <div className="run-panel">
       <Button
@@ -255,14 +280,36 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {!small && onQueryChange && (
         <ButtonGroup>
-          <Popover2
+          <Popover
             position={Position.BOTTOM_LEFT}
             content={
               <Menu>
                 {queryEngines.length > 1 && (
                   <>
                     <MenuDivider title="Select engine" />
-                    {availableEngines.map(renderQueryEngineMenuItem)}
+                    <MenuItem
+                      key="auto"
+                      icon={tickIcon(queryEngine === undefined)}
+                      text={autoEngineLabel.text}
+                      label={autoEngineLabel.label}
+                      onClick={() => onQueryChange(query.changeEngine(undefined))}
+                      shouldDismissPopover={false}
+                    />
+                    {queryEngines.map(engine => {
+                      const { text, label } = enginesLabelFn(engine);
+
+                      return (
+                        <MenuItem
+                          key={String(engine)}
+                          icon={tickIcon(engine === queryEngine)}
+                          text={text}
+                          label={label}
+                          onClick={() => onQueryChange(query.changeEngine(engine))}
+                          shouldDismissPopover={false}
+                        />
+                      );
+                    })}
+
                     <MenuDivider />
                   </>
                 )}
@@ -282,29 +329,32 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   <MenuItem
                     icon={IconNames.GLOBE_NETWORK}
                     text="Timezone"
-                    label={timezone || 'default'}
+                    label={sqlTimeZone ?? defaultQueryContext.sqlTimeZone}
                   >
                     <MenuDivider title="Timezone type" />
                     <MenuItem
-                      icon={tickIcon(!timezone)}
+                      icon={tickIcon(!sqlTimeZone)}
                       text="Default"
+                      label={defaultQueryContext.sqlTimeZone}
                       shouldDismissPopover={false}
-                      onClick={() => changeQueryContext(changeTimezone(queryContext, undefined))}
+                      onClick={() =>
+                        changeQueryContext({ ...queryContext, sqlTimeZone: undefined })
+                      }
                     />
-                    <MenuItem icon={tickIcon(String(timezone).includes('/'))} text="Named">
+                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes('/'))} text="Named">
                       {NAMED_TIMEZONES.map(namedTimezone => (
                         <MenuItem
                           key={namedTimezone}
-                          icon={tickIcon(namedTimezone === timezone)}
+                          icon={tickIcon(namedTimezone === sqlTimeZone)}
                           text={namedTimezone}
                           shouldDismissPopover={false}
                           onClick={() =>
-                            changeQueryContext(changeTimezone(queryContext, namedTimezone))
+                            changeQueryContext({ ...queryContext, sqlTimeZone: namedTimezone })
                           }
                         />
                       ))}
                     </MenuItem>
-                    <MenuItem icon={tickIcon(String(timezone).includes(':'))} text="Offset">
+                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes(':'))} text="Offset">
                       {offsetOptions()}
                     </MenuItem>
                     <MenuItem
@@ -327,7 +377,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           icon={tickIcon(v === maxParseExceptions)}
                           text={v === -1 ? '∞ (-1)' : String(v)}
                           onClick={() =>
-                            changeQueryContext(changeMaxParseExceptions(queryContext, v))
+                            changeQueryContext({ ...queryContext, maxParseExceptions: v })
                           }
                           shouldDismissPopover={false}
                         />
@@ -338,8 +388,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="Fail on empty insert"
                       value={failOnEmptyInsert}
                       undefinedEffectiveValue={false}
-                      onValueChange={v =>
-                        changeQueryContext(changeFailOnEmptyInsert(queryContext, v))
+                      onValueChange={failOnEmptyInsert =>
+                        changeQueryContext({ ...queryContext, failOnEmptyInsert })
                       }
                     />
                     <MenuTristate
@@ -347,8 +397,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="Finalize aggregations"
                       value={finalizeAggregations}
                       undefinedEffectiveValue={!ingestMode}
-                      onValueChange={v =>
-                        changeQueryContext(changeFinalizeAggregations(queryContext, v))
+                      onValueChange={finalizeAggregations =>
+                        changeQueryContext({ ...queryContext, finalizeAggregations })
                       }
                     />
                     <MenuTristate
@@ -356,8 +406,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="Wait until segments have loaded"
                       value={waitUntilSegmentsLoad}
                       undefinedEffectiveValue={ingestMode}
-                      onValueChange={v =>
-                        changeQueryContext(changeWaitUntilSegmentsLoad(queryContext, v))
+                      onValueChange={waitUntilSegmentsLoad =>
+                        changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
                       }
                     />
                     <MenuTristate
@@ -365,8 +415,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="Enable GroupBy multi-value unnesting"
                       value={groupByEnableMultiValueUnnesting}
                       undefinedEffectiveValue={!ingestMode}
-                      onValueChange={v =>
-                        changeQueryContext(changeGroupByEnableMultiValueUnnesting(queryContext, v))
+                      onValueChange={groupByEnableMultiValueUnnesting =>
+                        changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })
                       }
                     />
                     <MenuItem
@@ -374,14 +424,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       text="Join algorithm"
                       label={sqlJoinAlgorithm}
                     >
-                      {['broadcast', 'sortMerge'].map(o => (
+                      {(['broadcast', 'sortMerge'] as SqlJoinAlgorithm[]).map(o => (
                         <MenuItem
                           key={o}
                           icon={tickIcon(sqlJoinAlgorithm === o)}
                           text={o}
                           shouldDismissPopover={false}
                           onClick={() =>
-                            changeQueryContext(deepSet(queryContext, 'sqlJoinAlgorithm', o))
+                            changeQueryContext({ ...queryContext, sqlJoinAlgorithm: o })
                           }
                         />
                       ))}
@@ -392,14 +442,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       label={selectDestination}
                       intent={intent}
                     >
-                      {['taskReport', 'durableStorage'].map(o => (
+                      {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
                         <MenuItem
                           key={o}
                           icon={tickIcon(selectDestination === o)}
                           text={o}
                           shouldDismissPopover={false}
                           onClick={() =>
-                            changeQueryContext(deepSet(queryContext, 'selectDestination', o))
+                            changeQueryContext({ ...queryContext, selectDestination: o })
                           }
                         />
                       ))}
@@ -421,9 +471,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       checked={durableShuffleStorage}
                       text="Durable shuffle storage"
                       onChange={() =>
-                        changeQueryContext(
-                          changeDurableShuffleStorage(queryContext, !durableShuffleStorage),
-                        )
+                        changeQueryContext({
+                          ...queryContext,
+                          durableShuffleStorage: !durableShuffleStorage,
+                        })
                       }
                     />
                     <MenuItem
@@ -441,15 +492,22 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuCheckbox
                       checked={useCache}
                       text="Use cache"
-                      onChange={() => changeQueryContext(changeUseCache(queryContext, !useCache))}
+                      onChange={() =>
+                        changeQueryContext({
+                          ...queryContext,
+                          useCache: !useCache,
+                          populateCache: !useCache,
+                        })
+                      }
                     />
                     <MenuCheckbox
                       checked={useApproximateTopN}
                       text="Use approximate TopN"
                       onChange={() =>
-                        changeQueryContext(
-                          changeUseApproximateTopN(queryContext, !useApproximateTopN),
-                        )
+                        changeQueryContext({
+                          ...queryContext,
+                          useApproximateTopN: !useApproximateTopN,
+                        })
                       }
                     />
                   </>
@@ -459,12 +517,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     checked={useApproximateCountDistinct}
                     text="Use approximate COUNT(DISTINCT)"
                     onChange={() =>
-                      changeQueryContext(
-                        changeUseApproximateCountDistinct(
-                          queryContext,
-                          !useApproximateCountDistinct,
-                        ),
-                      )
+                      changeQueryContext({
+                        ...queryContext,
+                        useApproximateCountDistinct: !useApproximateCountDistinct,
+                      })
                     }
                   />
                 )}
@@ -485,20 +541,28 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
             }
           >
             <Button
-              text={`Engine: ${queryEngine || `auto (${effectiveEngine})`}`}
+              text={`Engine: ${
+                queryEngine
+                  ? enginesLabelFn(queryEngine).text
+                  : `${autoEngineLabel.text} (${enginesLabelFn(effectiveEngine).text})`
+              }`}
               rightIcon={IconNames.CARET_DOWN}
               intent={intent}
             />
-          </Popover2>
+          </Popover>
           {effectiveEngine === 'sql-msq-task' && (
             <MaxTasksButton
               clusterCapacity={clusterCapacity}
               queryContext={queryContext}
               changeQueryContext={changeQueryContext}
+              defaultQueryContext={defaultQueryContext}
+              menuHeader={maxTasksMenuHeader}
+              maxTasksLabelFn={maxTasksLabelFn}
+              fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
             />
           )}
           {ingestMode && (
-            <Popover2
+            <Popover
               position={Position.BOTTOM_LEFT}
               content={
                 <Menu>
@@ -506,8 +570,16 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuItem
                       key={i}
                       icon={tickIcon(m === arrayIngestMode)}
-                      text={m ? ARRAY_INGEST_MODE_DESCRIPTION[m] : '(server default)'}
-                      onClick={() => changeQueryContext(changeArrayIngestMode(queryContext, m))}
+                      text={
+                        m
+                          ? ARRAY_INGEST_MODE_DESCRIPTION[m]
+                          : `(server default${
+                              defaultQueryContext.arrayIngestMode
+                                ? `: ${defaultQueryContext.arrayIngestMode}`
+                                : ''
+                            })`
+                      }
+                      onClick={() => changeQueryContext({ ...queryContext, arrayIngestMode: m })}
                     />
                   ))}
                   <MenuDivider />
@@ -524,14 +596,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 text={`Array ingest mode: ${arrayIngestMode ?? '(server default)'}`}
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover2>
+            </Popover>
           )}
         </ButtonGroup>
       )}
       {moreMenu && (
-        <Popover2 position={Position.BOTTOM_LEFT} content={moreMenu}>
+        <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
           <Button small={small} minimal={small} rightIcon={IconNames.MORE} />
-        </Popover2>
+        </Popover>
       )}
       {editContextDialogOpen && (
         <EditContextDialog
@@ -556,7 +628,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           title="Custom timezone"
           placeholder="Etc/UTC"
           maxLength={50}
-          onSubmit={tz => changeQueryContext(changeTimezone(queryContext, tz))}
+          onSubmit={sqlTimeZone => changeQueryContext({ ...queryContext, sqlTimeZone })}
           onClose={() => setCustomTimezoneDialogOpen(false)}
         />
       )}

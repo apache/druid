@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent, Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Tooltip2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
@@ -552,7 +551,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                 {(myError || warnings > 0) && (
                   <div className="error-warning">
                     {myError && (
-                      <Tooltip2
+                      <Tooltip
                         content={
                           <div>
                             {(error.error.errorCode ? `${error.error.errorCode}: ` : '') +
@@ -567,11 +566,11 @@ ${title} uncompressed size: ${formatBytesCompact(
                           intent={Intent.DANGER}
                           onClick={onErrorClick}
                         />
-                      </Tooltip2>
+                      </Tooltip>
                     )}
                     {myError && warnings > 0 && ' '}
                     {warnings > 0 && (
-                      <Tooltip2
+                      <Tooltip
                         content={
                           <pre>{formatBreakdown(stages.getWarningBreakdownForStage(stage))}</pre>
                         }
@@ -584,7 +583,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                           intent={Intent.WARNING}
                           onClick={onWarningClick}
                         />
-                      </Tooltip2>
+                      </Tooltip>
                     )}
                   </div>
                 )}

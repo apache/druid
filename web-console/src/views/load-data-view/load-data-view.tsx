@@ -31,6 +31,7 @@ import {
   Intent,
   Menu,
   MenuItem,
+  Popover,
   Radio,
   RadioGroup,
   Switch,
@@ -38,7 +39,6 @@ import {
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
@@ -113,11 +113,13 @@ import {
   invalidPartitionConfig,
   isDruidSource,
   isEmptyIngestionSpec,
+  isKafkaOrKinesis,
   isStreamingSpec,
   issueWithIoConfig,
   issueWithSampleData,
   joinFilter,
   KAFKA_METADATA_INPUT_FORMAT_FIELDS,
+  KINESIS_METADATA_INPUT_FORMAT_FIELDS,
   KNOWN_FILTER_TYPES,
   MAX_INLINE_DATA_LENGTH,
   METRIC_SPEC_FIELDS,
@@ -244,30 +246,44 @@ function showKafkaLine(line: SampleEntry): string {
   ]).join('\n');
 }
 
+function showKinesisLine(line: SampleEntry): string {
+  const { input } = line;
+  if (!input) return 'Invalid kinesis row';
+  return compact([
+    `[ Kinesis timestamp: ${input['kinesis.timestamp']}`,
+    input['kinesis.partitionKey'] ? `  Partition key: ${input['kinesis.partitionKey']}` : undefined,
+    `  Payload: ${input.raw}`,
+    ']',
+  ]).join('\n');
+}
+
 function showBlankLine(line: SampleEntry): string {
   return line.parsed ? `[Row: ${JSONBig.stringify(line.parsed)}]` : '[Binary data]';
 }
 
 function formatSampleEntries(
   sampleEntries: SampleEntry[],
-  druidSource: boolean,
-  kafkaSource: boolean,
+  specialSource: undefined | 'druid' | 'kafka' | 'kinesis',
 ): string {
   if (!sampleEntries.length) return 'No data returned from sampler';
 
-  if (druidSource) {
-    return sampleEntries.map(showDruidLine).join('\n');
-  }
+  switch (specialSource) {
+    case 'druid':
+      return sampleEntries.map(showDruidLine).join('\n');
 
-  if (kafkaSource) {
-    return sampleEntries.map(showKafkaLine).join('\n');
-  }
+    case 'kafka':
+      return sampleEntries.map(showKafkaLine).join('\n');
 
-  return (
-    sampleEntries.every(l => !l.parsed)
-      ? sampleEntries.map(showBlankLine)
-      : sampleEntries.map(showRawLine)
-  ).join('\n');
+    case 'kinesis':
+      return sampleEntries.map(showKinesisLine).join('\n');
+
+    default:
+      return (
+        sampleEntries.every(l => !l.parsed)
+          ? sampleEntries.map(showBlankLine)
+          : sampleEntries.map(showRawLine)
+      ).join('\n');
+  }
 }
 
 function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec {
@@ -1239,10 +1255,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderConnectStep() {
     const { inputQueryState, sampleStrategy } = this.state;
     const spec = this.getEffectiveSpec();
+    const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
     const druidSource = isDruidSource(spec);
-    const kafkaSource = getSpecType(spec) === 'kafka';
+    const specialSource = druidSource ? 'druid' : isKafkaOrKinesis(specType) ? specType : undefined;
 
     let mainFill: JSX.Element | string;
     if (inlineMode) {
@@ -1274,7 +1291,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <TextArea
               className="raw-lines"
               readOnly
-              value={formatSampleEntries(inputData, druidSource, kafkaSource)}
+              value={formatSampleEntries(inputData, specialSource)}
             />
           )}
           {inputQueryState.isLoading() && <Loader />}
@@ -1544,11 +1561,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <ParserMessage />
           {!selectedFlattenField && (
             <>
-              {specType !== 'kafka' ? (
+              {!isKafkaOrKinesis(specType) ? (
                 normalInputAutoForm
               ) : (
                 <>
-                  {inputFormat?.type !== 'kafka' ? (
+                  {!isKafkaOrKinesis(inputFormat?.type) ? (
                     normalInputAutoForm
                   ) : (
                     <AutoForm
@@ -1563,18 +1580,22 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   )}
                   <FormGroup className="parse-metadata">
                     <Switch
-                      label="Parse Kafka metadata (ts, headers, key)"
-                      checked={inputFormat?.type === 'kafka'}
+                      label={
+                        specType === 'kafka'
+                          ? 'Parse Kafka metadata (ts, headers, key)'
+                          : 'Parse Kinesis metadata (ts, partition key)'
+                      }
+                      checked={isKafkaOrKinesis(inputFormat?.type)}
                       onChange={() => {
                         this.updateSpecPreview(
-                          inputFormat?.type === 'kafka'
+                          isKafkaOrKinesis(inputFormat?.type)
                             ? deepMove(
                                 spec,
                                 'spec.ioConfig.inputFormat.valueFormat',
                                 'spec.ioConfig.inputFormat',
                               )
                             : deepSet(spec, 'spec.ioConfig.inputFormat', {
-                                type: 'kafka',
+                                type: specType,
                                 valueFormat: inputFormat,
                               }),
                         );
@@ -1584,6 +1605,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   {inputFormat?.type === 'kafka' && (
                     <AutoForm
                       fields={KAFKA_METADATA_INPUT_FORMAT_FIELDS}
+                      model={inputFormat}
+                      onChange={p =>
+                        this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
+                      }
+                    />
+                  )}
+                  {inputFormat?.type === 'kinesis' && (
+                    <AutoForm
+                      fields={KINESIS_METADATA_INPUT_FORMAT_FIELDS}
                       model={inputFormat}
                       onChange={p =>
                         this.updateSpecPreview(deepSet(spec, 'spec.ioConfig.inputFormat', p))
@@ -2532,9 +2562,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
               {schemaToolsMenu && (
                 <FormGroup>
-                  <Popover2 content={schemaToolsMenu}>
+                  <Popover content={schemaToolsMenu}>
                     <Button icon={IconNames.BUILD} />
-                  </Popover2>
+                  </Popover>
                 </FormGroup>
               )}
             </>
@@ -2895,25 +2925,25 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       >
         {selectedDimensionSpec.index !== -1 && (
           <FormGroup>
-            <Popover2 content={reorderDimensionMenu}>
+            <Popover content={reorderDimensionMenu}>
               <Button
                 icon={IconNames.ARROWS_HORIZONTAL}
                 text="Reorder dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover2>
+            </Popover>
           </FormGroup>
         )}
         {selectedDimensionSpec.index !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
           <FormGroup>
-            <Popover2 content={convertToMetricMenu}>
+            <Popover content={convertToMetricMenu}>
               <Button
                 icon={IconNames.EXCHANGE}
                 text="Convert to metric"
                 rightIcon={IconNames.CARET_DOWN}
                 disabled={dimensions.length <= 1}
               />
-            </Popover2>
+            </Popover>
           </FormGroup>
         )}
       </FormEditor>
@@ -2978,13 +3008,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           schemaMode === 'fixed' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
-              <Popover2 content={convertToDimensionMenu}>
+              <Popover content={convertToDimensionMenu}>
                 <Button
                   icon={IconNames.EXCHANGE}
                   text="Convert to dimension"
                   rightIcon={IconNames.CARET_DOWN}
                 />
-              </Popover2>
+              </Popover>
             </FormGroup>
           )}
       </FormEditor>

@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
@@ -192,7 +193,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         "druid",
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        AuthConfig.newBuilder().build()
+        AuthConfig.newBuilder().build(),
+        new DruidHookDispatcher()
     );
 
     PlannerContext context = PlannerContext.create(
@@ -224,7 +226,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             "druid",
             new CalciteRulesManager(ImmutableSet.of()),
             CalciteTests.TEST_AUTHORIZER_MAPPER,
-            AuthConfig.newBuilder().build()
+            AuthConfig.newBuilder().build(),
+            new DruidHookDispatcher()
     );
 
     PlannerContext contextWithBloat = PlannerContext.create(

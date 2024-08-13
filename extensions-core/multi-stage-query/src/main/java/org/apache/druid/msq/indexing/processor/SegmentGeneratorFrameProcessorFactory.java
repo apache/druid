@@ -177,9 +177,8 @@ public class SegmentGeneratorFrameProcessorFactory
 
           // Create directly, without using AppenderatorsManager, because we need different memory overrides due to
           // using one Appenderator per processing thread instead of per task.
-          // Note: "createOffline" ignores the batchProcessingMode and always acts like CLOSED_SEGMENTS_SINKS.
           final Appenderator appenderator =
-              Appenderators.createOffline(
+              Appenderators.createBatch(
                   idString,
                   dataSchema,
                   makeAppenderatorConfig(

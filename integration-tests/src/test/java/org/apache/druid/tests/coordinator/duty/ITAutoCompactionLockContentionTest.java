@@ -19,18 +19,19 @@
 
 package org.apache.druid.tests.coordinator.duty;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
-import org.apache.druid.testing.utils.CompactionUtil;
 import org.apache.druid.testing.utils.EventSerializer;
 import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.testing.utils.KafkaUtil;
@@ -53,7 +54,6 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -265,13 +265,13 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void ensureLockedIntervals(Interval... intervals)
   {
-    final Map<String, Integer> minTaskPriority = Collections.singletonMap(fullDatasourceName, 0);
+    final LockFilterPolicy lockFilterPolicy = new LockFilterPolicy(fullDatasourceName, 0, null, null);
     final List<Interval> lockedIntervals = new ArrayList<>();
     ITRetryUtil.retryUntilTrue(
         () -> {
           lockedIntervals.clear();
 
-          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(minTaskPriority);
+          Map<String, List<Interval>> allIntervals = indexer.getLockedIntervals(ImmutableList.of(lockFilterPolicy));
           if (allIntervals.containsKey(fullDatasourceName)) {
             lockedIntervals.addAll(allIntervals.get(fullDatasourceName));
           }
@@ -304,26 +304,26 @@ public class ITAutoCompactionLockContentionTest extends AbstractKafkaIndexingSer
    */
   private void submitAndVerifyCompactionConfig() throws Exception
   {
-    final DataSourceCompactionConfig compactionConfig = CompactionUtil
-        .createCompactionConfig(fullDatasourceName, Specs.MAX_ROWS_PER_SEGMENT, Period.ZERO);
+    final DataSourceCompactionConfig dataSourceCompactionConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(fullDatasourceName)
+        .withSkipOffsetFromLatest(Period.ZERO)
+        .withMaxRowsPerSegment(Specs.MAX_ROWS_PER_SEGMENT)
+        .build();
     compactionResource.updateCompactionTaskSlot(0.5, 10, null);
-    compactionResource.submitCompactionConfig(compactionConfig);
+    compactionResource.submitCompactionConfig(dataSourceCompactionConfig);
 
     // Wait for compaction config to persist
     Thread.sleep(2000);
 
     // Verify that the compaction config is updated correctly.
-    CoordinatorCompactionConfig coordinatorCompactionConfig = compactionResource.getCoordinatorCompactionConfigs();
-    DataSourceCompactionConfig observedCompactionConfig = null;
-    for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
-      if (dataSourceCompactionConfig.getDataSource().equals(fullDatasourceName)) {
-        observedCompactionConfig = dataSourceCompactionConfig;
-      }
-    }
-    Assert.assertEquals(observedCompactionConfig, compactionConfig);
+    DruidCompactionConfig compactionConfig = compactionResource.getCompactionConfig();
+    DataSourceCompactionConfig observedCompactionConfig
+        = compactionConfig.findConfigForDatasource(fullDatasourceName).orNull();
+    Assert.assertEquals(observedCompactionConfig, dataSourceCompactionConfig);
 
     observedCompactionConfig = compactionResource.getDataSourceCompactionConfig(fullDatasourceName);
-    Assert.assertEquals(observedCompactionConfig, compactionConfig);
+    Assert.assertEquals(observedCompactionConfig, dataSourceCompactionConfig);
   }
 
   /**

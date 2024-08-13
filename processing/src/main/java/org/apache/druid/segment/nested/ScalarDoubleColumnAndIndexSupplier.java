@@ -544,8 +544,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             final Iterator<Double> iterator = doubleDictionarySupplier.get().iterator();
             final DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();
 
-            int next;
-            int index = 0;
+            int index = -1;
             boolean nextSet = false;
 
             @Override
@@ -567,13 +566,14 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
                 }
               }
               nextSet = false;
-              return getBitmap(next);
+              return getBitmap(index);
             }
 
             private void findNext()
             {
               while (!nextSet && iterator.hasNext()) {
                 Double nextValue = iterator.next();
+                index++;
                 if (nextValue == null) {
                   if (NullHandling.sqlCompatible()) {
                     nextSet = doublePredicate.applyNull().matches(includeUnknown);
@@ -583,10 +583,6 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
                 } else {
                   nextSet = doublePredicate.applyDouble(nextValue).matches(includeUnknown);
                 }
-                if (nextSet) {
-                  next = index;
-                }
-                index++;
               }
             }
           };

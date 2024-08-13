@@ -406,6 +406,20 @@ SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', ?, '%')
 
 To solve this issue, explicitly provide the type of the dynamic parameter using the `CAST` keyword. Consider the fix for the preceding example:
 
-```
+```sql
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
+
+Dynamic parameters can even replace arrays, reducing the parsing time. Refer to the parameters in the [API request body](../api-reference/sql-api.md#request-body) for usage.
+
+```sql
+SELECT arrayColumn from druid.table where ARRAY_CONTAINS(?, arrayColumn)
+```
+
+With this, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array)
+
+```sql
+SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)
+```
+
+sample java code using dynamic parameters is provided [here](../api-reference/sql-jdbc.md#dynamic-parameters).
