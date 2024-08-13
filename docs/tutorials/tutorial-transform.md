@@ -90,7 +90,7 @@ Returns the following:
 | `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
 | `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
 
-Note that the "lion" row has been discarded, the animal column has been transformed, and both the original and transformed number columns have been ingested.
+Note that the "lion" row has been discarded, the `animal` column has been transformed, and both the original `number` column and the transformed `triple-number` column have been ingested.
 
 ## Learn more
 
