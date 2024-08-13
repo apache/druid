@@ -28,14 +28,7 @@ public class WindowOperatorQueryFrameProcessorFactoryTest
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(WindowOperatorQueryFrameProcessorFactory.class)
-                  .withNonnullFields(
-                      "query",
-                      "operatorList",
-                      "stageRowSignature",
-                      "maxRowsMaterializedInWindow",
-                      "partitionColumnNames",
-                      "addVirtualColumns"
-                  )
+                  .withNonnullFields("query", "operatorList", "stageRowSignature", "maxRowsMaterializedInWindow", "partitionColumnNames")
                   .usingGetClass()
                   .verify();
   }
