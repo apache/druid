@@ -1037,19 +1037,19 @@ public class QueryGranularityTest
     );
 
     ExpressionVirtualColumn column = Granularities.toVirtualColumn(hour, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H')", Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
     column = Granularities.toVirtualColumn(hourWithOrigin, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(hourWithTz, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(duration, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.NONE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.ALL, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     Assert.assertNull(column);
     column = Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H')", Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     Assert.assertEquals("timestamp_floor(__time,'PT1M')", column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.FIFTEEN_MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
