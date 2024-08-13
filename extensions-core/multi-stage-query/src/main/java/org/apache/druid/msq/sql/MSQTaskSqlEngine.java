@@ -20,6 +20,7 @@
 package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -85,15 +86,13 @@ public class MSQTaskSqlEngine implements SqlEngine
   private final ObjectMapper jsonMapper;
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
-  public MSQTaskSqlEngine(
-      final OverlordClient overlordClient,
-      final ObjectMapper jsonMapper
-  )
+  @Inject
+  public MSQTaskSqlEngine(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
   {
-    this(overlordClient, jsonMapper, null);
+    this(overlordClient, jsonMapper, new MSQTerminalStageSpecFactory());
   }
 
-  @Inject
+  @VisibleForTesting
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
