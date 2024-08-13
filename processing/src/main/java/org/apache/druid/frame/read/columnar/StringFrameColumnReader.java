@@ -67,7 +67,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Reader for {@link StringFrameColumnWriter}, types {@link ColumnType#STRING} and {@link ColumnType#STRING_ARRAY}.
+ * Reader for {@link StringFrameColumnWriter}, type {@link ColumnType#STRING}.
  */
 public class StringFrameColumnReader implements FrameColumnReader
 {
@@ -96,15 +96,14 @@ public class StringFrameColumnReader implements FrameColumnReader
     final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), multiValue);
     final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), multiValue);
 
-    StringFrameColumn frameCol =
-        new StringFrameColumn(
-            frame,
-            multiValue,
-            memory,
-            positionOfLengths,
-            positionOfPayloads,
-            multiValue // Read MVDs as String arrays
-        );
+    StringFrameColumn frameCol = new StringFrameColumn(
+        frame,
+        multiValue,
+        memory,
+        positionOfLengths,
+        positionOfPayloads,
+        multiValue // Read MVDs as String arrays
+    );
 
     return new ColumnAccessorBasedColumn(frameCol);
   }
@@ -119,30 +118,18 @@ public class StringFrameColumnReader implements FrameColumnReader
     final long startOfStringLengthSection = getStartOfStringLengthSection(frame.numRows(), multiValue);
     final long startOfStringDataSection = getStartOfStringDataSection(memory, frame.numRows(), multiValue);
 
-    final BaseColumn baseColumn;
-
-    if (multiValue) {
-      baseColumn = new StringArrayFrameColumn(
-          frame,
-          true,
-          memory,
-          startOfStringLengthSection,
-          startOfStringDataSection
-      );
-    } else {
-      baseColumn = new StringFrameColumn(
-          frame,
-          false,
-          memory,
-          startOfStringLengthSection,
-          startOfStringDataSection,
-          false
-      );
-    }
+    final BaseColumn baseColumn = new StringFrameColumn(
+        frame,
+        multiValue,
+        memory,
+        startOfStringLengthSection,
+        startOfStringDataSection,
+        false
+    );
 
     return new ColumnPlus(
         baseColumn,
-        new ColumnCapabilitiesImpl().setType(asArray ? ColumnType.STRING_ARRAY : ColumnType.STRING)
+        new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                     .setHasMultipleValues(multiValue)
                                     .setDictionaryEncoded(false)
                                     .setHasBitmapIndexes(false)
@@ -711,6 +698,9 @@ public class StringFrameColumnReader implements FrameColumnReader
   }
 }
 
+/**
+ * Reader for {@link ColumnType#STRING_ARRAY}.
+ */
 class StringArrayFrameColumnReader extends StringFrameColumnReader
 {
   StringArrayFrameColumnReader(int columnNumber)
@@ -729,15 +719,14 @@ class StringArrayFrameColumnReader extends StringFrameColumnReader
     final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), true);
     final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), true);
 
-    StringFrameColumn frameCol =
-        new StringFrameColumn(
-            frame,
-            true,
-            memory,
-            positionOfLengths,
-            positionOfPayloads,
-            true
-        );
+    StringFrameColumn frameCol = new StringFrameColumn(
+        frame,
+        true,
+        memory,
+        positionOfLengths,
+        positionOfPayloads,
+        true
+    );
 
     return new ColumnAccessorBasedColumn(frameCol);
   }
