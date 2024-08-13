@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 
 /**
  * Refer to extensions-contrib/druid-deltalake-extensions/src/test/resources/README.md to generate the
- * sample partitioned Delta Lake table used in the unit tests.
+ * sample complex types Delta Lake table used in the unit tests.
  *
  */
 public class ComplexTypesDeltaTable
