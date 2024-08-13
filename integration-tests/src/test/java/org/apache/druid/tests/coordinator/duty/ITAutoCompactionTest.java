@@ -535,7 +535,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
           new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
-          new AutoTypeColumnSchema("deleted", ColumnType.FLOAT)
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE)
       );
 
       submitCompactionConfig(
@@ -1996,7 +1996,11 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     for (DataSegment compactedSegment : foundCompactedSegments) {
       MatcherAssert.assertThat(
           dimensionSchemas,
-          Matchers.containsInAnyOrder(compactedSegment.getLastCompactionState().getDimensionsSpec().getDimensions())
+          Matchers.containsInAnyOrder(
+              compactedSegment.getLastCompactionState()
+                              .getDimensionsSpec()
+                              .getDimensions()
+                              .toArray(new DimensionSchema[0]))
       );
     }
   }
