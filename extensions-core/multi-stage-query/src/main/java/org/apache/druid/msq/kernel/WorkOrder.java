@@ -109,7 +109,7 @@ public class WorkOrder
 
   /**
    * Worker IDs for this query, if known in advance (at the time the work order is created). May be null, in which
-   * case workers use {@link ControllerClient#getTaskList()} to find worker IDs.
+   * case workers use {@link ControllerClient#getWorkerIds()} to find worker IDs.
    */
   @Nullable
   @JsonProperty("workers")

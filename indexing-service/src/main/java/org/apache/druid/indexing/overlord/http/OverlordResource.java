@@ -241,26 +241,11 @@ public class OverlordResource
     }
   }
 
-  @Deprecated
-  @POST
-  @Path("/lockedIntervals")
-  @Produces(MediaType.APPLICATION_JSON)
-  @ResourceFilters(StateResourceFilter.class)
-  public Response getDatasourceLockedIntervals(Map<String, Integer> minTaskPriority)
-  {
-    if (minTaskPriority == null || minTaskPriority.isEmpty()) {
-      return Response.status(Status.BAD_REQUEST).entity("No Datasource provided").build();
-    }
-
-    // Build the response
-    return Response.ok(taskQueryTool.getLockedIntervals(minTaskPriority)).build();
-  }
-
   @POST
   @Path("/lockedIntervals/v2")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response getDatasourceLockedIntervalsV2(List<LockFilterPolicy> lockFilterPolicies)
+  public Response getDatasourceLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
     if (lockFilterPolicies == null || lockFilterPolicies.isEmpty()) {
       return Response.status(Status.BAD_REQUEST).entity("No filter provided").build();
@@ -268,6 +253,20 @@ public class OverlordResource
 
     // Build the response
     return Response.ok(taskQueryTool.getLockedIntervals(lockFilterPolicies)).build();
+  }
+
+  @POST
+  @Path("/activeLocks")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
+  {
+    if (lockFilterPolicies == null || lockFilterPolicies.isEmpty()) {
+      return Response.status(Status.BAD_REQUEST).entity("No filter provided").build();
+    }
+
+    // Build the response
+    return Response.ok(new TaskLockResponse(taskQueryTool.getActiveLocks(lockFilterPolicies))).build();
   }
 
   @GET

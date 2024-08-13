@@ -121,6 +121,26 @@ statement.setString(2, "def");
 final ResultSet resultSet = statement.executeQuery();
 ```
 
+Sample code where dynamic parameters replace arrays using STRING_TO_ARRAY:
+```java
+PreparedStatement statement = connection.prepareStatement("select l1 from numfoo where SCALAR_IN_ARRAY(l1, STRING_TO_ARRAY(CAST(? as varchar),','))");
+List<Integer> li = ImmutableList.of(0, 7);
+String sqlArg = Joiner.on(",").join(li);
+statement.setString(1, sqlArg);
+statement.executeQuery();
+```
+
+Sample code using native array:
+```java
+PreparedStatement statement = connection.prepareStatement("select l1 from numfoo where SCALAR_IN_ARRAY(l1, ?)");
+Iterable<Object> list = ImmutableList.of(0, 7);
+ArrayFactoryImpl arrayFactoryImpl = new ArrayFactoryImpl(TimeZone.getDefault());
+AvaticaType type = ColumnMetaData.scalar(Types.INTEGER, SqlType.INTEGER.name(), Rep.INTEGER);
+Array array = arrayFactoryImpl.createArray(type, list);
+statement.setArray(1, array);
+statement.executeQuery();
+```
+
 ## Examples
 
 <!-- docs/tutorial-jdbc.md redirects here -->

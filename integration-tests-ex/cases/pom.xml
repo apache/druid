@@ -460,6 +460,15 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-BackwardCompatibilityMain</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>BackwardCompatibilityMain</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>

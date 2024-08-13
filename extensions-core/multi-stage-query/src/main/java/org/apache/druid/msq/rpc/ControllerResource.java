@@ -83,6 +83,27 @@ public class ControllerResource
   }
 
   /**
+   * Used by subtasks to inform the controller that they are done reading their input, in cases where they would
+   * not be calling {@link #httpPostPartialKeyStatistics(Object, String, int, int, HttpServletRequest)}.
+   *
+   * See {@link ControllerClient#postDoneReadingInput(StageId, int)} for the client-side code that calls this API.
+   */
+  @POST
+  @Path("/doneReadingInput/{queryId}/{stageNumber}/{workerNumber}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response httpPostDoneReadingInput(
+      @PathParam("stageNumber") final int stageNumber,
+      @PathParam("workerNumber") final int workerNumber,
+      @Context final HttpServletRequest req
+  )
+  {
+    MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
+    controller.doneReadingInput(stageNumber, workerNumber);
+    return Response.status(Response.Status.ACCEPTED).build();
+  }
+
+  /**
    * Used by subtasks to post system errors. Note that the errors are organized by taskId, not by query/stage/worker,
    * because system errors are associated with a task rather than a specific query/stage/worker execution context.
    *
@@ -166,7 +187,7 @@ public class ControllerResource
   }
 
   /**
-   * See {@link ControllerClient#getTaskList()} for the client-side code that calls this API.
+   * See {@link ControllerClient#getWorkerIds} for the client-side code that calls this API.
    */
   @GET
   @Path("/taskList")
@@ -174,7 +195,7 @@ public class ControllerResource
   public Response httpGetTaskList(@Context final HttpServletRequest req)
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    return Response.ok(new MSQTaskList(controller.getTaskIds())).build();
+    return Response.ok(new MSQTaskList(controller.getWorkerIds())).build();
   }
 
   /**

@@ -225,7 +225,7 @@ public class OverlordClientImplTest
     final Map<String, List<Interval>> lockMap =
         ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
     final List<LockFilterPolicy> requests = ImmutableList.of(
-        new LockFilterPolicy("foo", 3, null)
+        new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(
@@ -246,7 +246,7 @@ public class OverlordClientImplTest
   public void test_findLockedIntervals_nullReturn() throws Exception
   {
     final List<LockFilterPolicy> requests = ImmutableList.of(
-        new LockFilterPolicy("foo", 3, null)
+        new LockFilterPolicy("foo", 3, null, null)
     );
 
     serviceClient.expectAndRespond(

@@ -737,7 +737,7 @@ public class CompactionTaskTest
     );
     provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
   }
-  
+
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
@@ -1855,14 +1855,6 @@ public class CompactionTaskTest
           }
         }
 
-        final Metadata metadata = new Metadata(
-            null,
-            aggregatorFactories.toArray(new AggregatorFactory[0]),
-            null,
-            null,
-            null
-        );
-
         queryableIndexMap.put(
             entry.getValue(),
             new SimpleQueryableIndex(
@@ -1871,9 +1863,21 @@ public class CompactionTaskTest
                 null,
                 columnMap,
                 null,
-                metadata,
                 false
             )
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return new Metadata(
+                    null,
+                    aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
+                    null,
+                    null
+                );
+              }
+            }
         );
       }
     }
@@ -1896,10 +1900,15 @@ public class CompactionTaskTest
                 index.getBitmapFactoryForDimensions(),
                 index.getColumns(),
                 index.getFileMapper(),
-                null,
                 false
             )
-        );
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return null;
+              }
+            });
       }
     }
 

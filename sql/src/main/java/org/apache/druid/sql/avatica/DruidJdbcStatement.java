@@ -57,8 +57,8 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
   public synchronized void execute(SqlQueryPlus queryPlus, long maxRowCount)
   {
     closeResultSet();
-    queryPlus = queryPlus.withContext(queryContext);
-    DirectStatement stmt = lifecycleFactory.directStatement(queryPlus);
+    this.sqlQuery = queryPlus.withContext(queryContext);
+    DirectStatement stmt = lifecycleFactory.directStatement(this.sqlQuery);
     resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE, fetcherFactory);
     try {
       resultSet.execute();

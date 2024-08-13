@@ -363,6 +363,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
+        () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );

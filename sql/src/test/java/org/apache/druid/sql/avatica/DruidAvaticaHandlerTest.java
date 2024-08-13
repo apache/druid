@@ -89,6 +89,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -1048,7 +1049,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             new CalciteRulesManager(ImmutableSet.of()),
             CalciteTests.createJoinableFactoryWrapper(),
             CatalogResolver.NULL_RESOLVER,
-            new AuthConfig()
+            new AuthConfig(),
+            new DruidHookDispatcher()
         )
     );
   }

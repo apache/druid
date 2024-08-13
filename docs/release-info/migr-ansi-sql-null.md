@@ -45,15 +45,15 @@ The default Druid configurations for 28.0.0 and later that enable ANSI SQL compa
 
 Follow the [Null handling tutorial](../tutorials/tutorial-sql-null.md) to learn how the default null handling works in Druid.
 
-## Legacy null handling and two-value logic
+## Legacy null handling and two-valued logic
 
 Prior to Druid 28.0.0, Druid defaulted to a legacy mode which stored default values instead of nulls.
 In legacy mode, Druid created segments with the following characteristics at ingestion time:
 
-- String columns couldn't distinguish an empty string, '', from null.
+- String columns couldn't distinguish an empty string, `''`, from null.
     Therefore, Druid treated them both as interchangeable values.
 - Numeric columns couldn't represent null valued rows.
-    Therefore Druid stored 0 instead of null. 
+    Therefore, Druid stored `0` instead of `null`. 
 
 The Druid configurations for the deprecated legacy mode were the following:
 
