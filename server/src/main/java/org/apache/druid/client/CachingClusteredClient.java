@@ -884,7 +884,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
           Objects::nonNull
       );
       final VersionedIntervalTimeline<String, T> newTimeline =
-          new VersionedIntervalTimeline<>(Ordering.natural(), false);
+          new VersionedIntervalTimeline<>(Ordering.natural(), true);
       // VersionedIntervalTimeline#addAll implementation is much more efficient than calling VersionedIntervalTimeline#add
       // in a loop when there are lot of segments to be added for same interval and version.
       newTimeline.addAll(iterator);

@@ -260,7 +260,6 @@ public class ServerManager implements QuerySegmentWalker
 
     final ReferenceCountingSegment segment = chunk.getObject();
     return buildAndDecorateQueryRunner(
-        query.getType(),
         factory,
         toolChest,
         segmentMapFn.apply(segment),
@@ -271,7 +270,6 @@ public class ServerManager implements QuerySegmentWalker
   }
 
   private <T> QueryRunner<T> buildAndDecorateQueryRunner(
-      final String queryType,
       final QueryRunnerFactory<T, Query<T>> factory,
       final QueryToolChest<T, Query<T>> toolChest,
       final SegmentReference segment,
@@ -280,6 +278,9 @@ public class ServerManager implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
+
+
+
     final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     final SegmentId segmentId = segment.getId();
     final Interval segmentInterval = segment.getDataInterval();
@@ -293,10 +294,9 @@ public class ServerManager implements QuerySegmentWalker
     StorageAdapter storageAdapter = segment.asStorageAdapter();
     // Short-circuit when the index comes from a tombstone (it has no data by definition),
     // check for null also since no all segments (higher level ones) will have QueryableIndex...
-     if (storageAdapter.isFromTombstone() && queryType.equals(Query.SEGMENT_METADATA)) {
+    if (storageAdapter.isFromTombstone()) {
       return new NoopQueryRunner<>();
     }
-
     String segmentIdString = segmentId.toString();
 
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(
