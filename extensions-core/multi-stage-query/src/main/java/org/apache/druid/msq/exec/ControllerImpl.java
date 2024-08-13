@@ -2133,7 +2133,8 @@ public class ControllerImpl implements Controller
     if (dimensionToSchemaMap != null && dimensionToSchemaMap.containsKey(outputColumnName)) {
       return dimensionToSchemaMap.get(outputColumnName);
     }
-    // For aggregators moved to dimensions, we won't have an entry in the map. For those cases, use the default config.
+    // For regular ingestion, or for metrics moved to dimensions in case of compaction, we won't have an entry in the
+    // map. For those cases, use the default config.
     return DimensionSchemaUtils.createDimensionSchema(
         outputColumnName,
         queryType,
