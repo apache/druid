@@ -186,7 +186,7 @@ public class FrameFile implements Closeable
       // Verify minimum file length.
       if (fileLength <
           FrameFileWriter.MAGIC.length + FrameFileWriter.TRAILER_LENGTH + Byte.BYTES /* MARKER_NO_MORE_FRAMES */) {
-        throw new IOE("File [%s] is too short (size = [%,d])", file, fileLength);
+        throw new IOE("File[%s] is too short (size = [%,d])", file, fileLength);
       }
 
       // Verify magic.
@@ -195,7 +195,7 @@ public class FrameFile implements Closeable
       randomAccessFile.readFully(buf, 0, FrameFileWriter.MAGIC.length);
 
       if (!bufMemory.equalTo(0, Memory.wrap(FrameFileWriter.MAGIC), 0, FrameFileWriter.MAGIC.length)) {
-        throw new IOE("File [%s] is not a frame file", file);
+        throw new IOE("File[%s] is not a frame file", file);
       }
 
       // Read number of frames and partitions.
@@ -204,9 +204,9 @@ public class FrameFile implements Closeable
 
       final int footerLength = bufMemory.getInt(Integer.BYTES * 2L);
       if (footerLength < 0) {
-        throw new ISE("Negative-size footer. Corrupt or truncated file?");
+        throw new ISE("Negative-size footer. Corrupt or truncated file[%s]?", file);
       } else if (footerLength > fileLength) {
-        throw new ISE("Oversize footer. Corrupt or truncated file?");
+        throw new ISE("Oversize footer. Corrupt or truncated file[%s]?", file);
       }
 
       final Memory wholeFileMemory;
