@@ -1077,28 +1077,28 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. Returns `replaceMissingValueWith`, which defaults to `null` if `expr` is null or if the lookup doesn't contain a value for `expr`.
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. Returns `replaceMissingValueWith`, which defaults to `null` if `expr` is null or if the lookup doesn't contain a key for `expr`.
 
 * **Syntax:** `LOOKUP(expr, lookupName[, replaceMissingValueWith])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example uses a map lookup table named `acronym_to_name`, made with the following key-value pairs:
+The following example uses a `map`-typed lookup table named `acronym_to_name`, made with the following key-value pairs:
 
 ```json
 {
-	“SJU”: Luis Munoz Marin International Airport”,
-	“IAD”: “Dulles International AirportDulles International Airport”
+  "SJU": "Luis Munoz Marin International Airport",
+  "IAD": "Dulles International AirportDulles International Airport"
 }
 ```
 
-The example uses `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `NaN` if no matching value exists in the lookup table.
+The example uses `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `key not found` if no matching key exists in the lookup table.
 
 ```sql
 SELECT 
   "Origin" AS "origin_airport",
-  LOOKUP("Origin", 'acronym_to_names','NaN') AS "full_airport_name"
+  LOOKUP("Origin", 'acronym_to_names','key not found') AS "full_airport_name"
 FROM "flight-carriers"
 LIMIT 2
 ```
@@ -1108,7 +1108,7 @@ Returns the following:
 | `origin_airport` | `full_airport_name` | 
 | -- | -- |
 | `SJU` | `Luis Munoz Marin International Airport` |
-| `BOS` | `NaN` |
+| `BOS` | `key not found` |
 
 </details>
 
