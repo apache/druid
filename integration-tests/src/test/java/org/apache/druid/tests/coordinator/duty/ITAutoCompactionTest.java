@@ -22,7 +22,6 @@ package org.apache.druid.tests.coordinator.duty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -1995,10 +1994,10 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       }
     }
     for (DataSegment compactedSegment : foundCompactedSegments) {
-      Assert.assertTrue(CollectionUtils.isEqualCollection(
+      MatcherAssert.assertThat(
           dimensionSchemas,
-          compactedSegment.getLastCompactionState().getDimensionsSpec().getDimensions()
-      ));
+          Matchers.containsInAnyOrder(compactedSegment.getLastCompactionState().getDimensionsSpec().getDimensions())
+      );
     }
   }
 
