@@ -458,10 +458,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    // Skip adding tombstone segment to the cache, as they do not have any data or column
-    // If they are added, the cache tries to refresh these segments indefinitely
-    // since segment metadata queries doesn't reflect metadata in tombstones.
-    // Refer: https://github.com/apache/druid/pull/12137
+    // Skip adding tombstone segment to the cache. These segments lack data or column information.
+    // Additionally, segment metadata queries, which are not yet implemented for tombstone segments
+    // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
+    // leading to indefinite refresh attempts for these segments.
     if (segment.isTombstone()) {
       return;
     }
