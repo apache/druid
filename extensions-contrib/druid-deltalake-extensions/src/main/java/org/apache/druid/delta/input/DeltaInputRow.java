@@ -211,7 +211,7 @@ public class DeltaInputRow implements InputRow
     } else if (dataType instanceof MapType) {
       final MapValue map = dataRow.getMap(columnOrdinal);
       return VectorUtils.toJavaMap(map);
-    }else {
+    } else {
       throw InvalidInput.exception(
           "Unsupported data type[%s] for fieldName[%s].",
           dataType,
