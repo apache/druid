@@ -51,7 +51,6 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
@@ -125,13 +124,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     }
 
     // Get virtual columns to be added to the frame writer.
-    final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
-    final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
-    if (segmentGranularityVirtualColumn != null) {
-      frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
-    }
-    this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
+    this.frameWriterVirtualColumns = VirtualColumns.create(
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query)
+    );
   }
 
   @Override
