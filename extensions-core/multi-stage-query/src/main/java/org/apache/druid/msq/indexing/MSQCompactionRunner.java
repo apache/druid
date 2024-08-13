@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;

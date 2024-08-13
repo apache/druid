@@ -55,6 +55,8 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggrega
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -533,11 +535,8 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Granularity newSegmentGranularity = Granularities.YEAR;
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
-          new StringDimensionSchema(
-              "language",
-              DimensionSchema.MultiValueHandling.SORTED_ARRAY,
-              false
-          )
+          new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
+          new AutoTypeColumnSchema("deleted", ColumnType.FLOAT)
       );
 
       submitCompactionConfig(
