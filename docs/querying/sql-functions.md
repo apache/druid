@@ -1077,14 +1077,14 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-Look up `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. Returns `replaceMissingValueWith`, which defaults to `null`, when the `expr` is null or when the lookup does not contain a value for `expr`.
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. Returns `replaceMissingValueWith`, which defaults to `null` if `expr` is null or if the lookup doesn't contain a value for `expr`.
 
 * **Syntax:** `LOOKUP(expr, lookupName[, replaceMissingValueWith])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example uses a map lookup table, named `acronym_to_name` made with the following key-value pairs:
+The following example uses a map lookup table named `acronym_to_name`, made with the following key-value pairs:
 
 ```json
 {
@@ -1093,7 +1093,7 @@ The following example uses a map lookup table, named `acronym_to_name` made with
 }
 ```
 
-The example uses `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to its full airport name. Returns `NaN` if no matching value exist in the lookup table.
+The example uses `acronym_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `NaN` if no matching value exists in the lookup table.
 
 ```sql
 SELECT 
