@@ -65,13 +65,14 @@ PARTITIONED BY DAY
 ```
 
 In the SELECT clause, you specify the following transformations:
-* `animal`: prepends "super-" to the values in the `animal` column using the [`TEXTCAT`](../querying/sql-functions.md/#textcat) function. This will override the `animal` column with the transformed version.
+* `animal`: prepends "super-" to the values in the `animal` column using the [`TEXTCAT`](../querying/sql-functions.md/#textcat) function. Note that it only ingests the transformed data.
 * `triple-number`: multiplies the `number` column by three and stores the results in a column named `triple-number`. Note that the query ingests both the original and the transformed data.
 
-Additionally, a filter with the following three OR clauses are applied:
-* `animal` values that match "super-mongoose"
-* `triple-number` values that match 300
-* `location` values that match 3
+Additionally, the `WHERE` clause applies the following three OR clauses so that the query only ingests the rows where at least one of the following conditions are `true`:
+
+* `TEXTCAT('super-', "animal")` value matches "super-mongoose"
+* `location` value matches 3
+* `'number' * 3` value matches 300
 
 ## Query the transformed data
 
@@ -89,7 +90,7 @@ Returns the following:
 | `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
 | `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
 
-Note that the filter applies after the transformations. The only row that isn't ingested from the input data is the "lion" row because it doesn't meet any of the three filter condition listed. 
+Note that the "lion" row has been discarded, the animal column has been transformed, and both the original and transformed number columns have been ingested.
 
 ## Learn more
 
@@ -97,5 +98,4 @@ See the following topics for more information:
 
 * [All functions](../querying/sql-functions.md) for a list of functions that can be used to transform data. 
 * [Transform spec reference](../ingestion/ingestion-spec.md/#transformspec) to learn more about transforms in JSON-based batch ingestion.
-* [Query filters](../querying/filters.md) to learn about the types of filters available. 
 * [WHERE clause](../querying/sql.md#where) to learn how to specify filters in Druid SQL.
