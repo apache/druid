@@ -92,17 +92,18 @@ public class StringFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory);
 
-    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), false);
-    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), false);
+    final boolean multiValue = isMultiValue(memory);
+    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), multiValue);
+    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), multiValue);
 
     StringFrameColumn frameCol =
         new StringFrameColumn(
             frame,
-            false,
+            multiValue,
             memory,
             positionOfLengths,
             positionOfPayloads,
-            asArray || isMultiValue(memory) // Read MVDs as String arrays
+            asArray || multiValue // Read MVDs as String arrays
         );
 
     return new ColumnAccessorBasedColumn(frameCol);
@@ -397,7 +398,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     @Override
     protected Object getVal(int rowNum)
     {
-      return getString(frame.physicalRow(rowNum));
+      return getRowAsObject(frame.physicalRow(rowNum), true);
     }
 
     @Override

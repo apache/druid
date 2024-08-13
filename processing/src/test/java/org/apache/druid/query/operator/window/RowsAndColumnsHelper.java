@@ -280,6 +280,12 @@ public class RowsAndColumnsHelper
           } else {
             Assert.assertEquals(msg, ((Long) expectedVal).longValue(), accessor.getLong(i));
           }
+        } else if (expectedVal instanceof Object[]) {
+          if (expectedNulls[i]) {
+            Assert.assertEquals(msg, 0, accessor.getObject(i));
+          } else {
+            Assert.assertArrayEquals(msg, (Object[]) expectedVals[i], (Object[]) accessor.getObject(i));
+          }
         } else {
           if (expectedNulls[i]) {
             Assert.assertNull(msg, accessor.getObject(i));

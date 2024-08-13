@@ -49,10 +49,10 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
   public void testMaterializeVirtualColumns()
   {
     Object[][] vals = new Object[][] {
-        {1L, "a", 123L, 0L},
-        {2L, "a", 456L, 1L},
-        {3L, "b", 789L, 2L},
-        {4L, "b", 123L, 3L},
+        {1L, "a", 123L, 0L, new Object[]{"xyz", "x"}},
+        {2L, "a", 456L, 1L, new Object[]{"xyz", "abc"}},
+        {3L, "b", 789L, 2L, new Object[]{"xyz", "abc"}},
+        {4L, "b", 123L, 3L, new Object[]{"xyz"}},
     };
 
     RowSignature siggy = RowSignature.builder()
@@ -60,9 +60,21 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
         .add("dim", ColumnType.STRING)
         .add("val", ColumnType.LONG)
         .add("arrayIndex", ColumnType.LONG)
+        .add("array", ColumnType.STRING_ARRAY)
         .build();
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
+
+    Object[] expectedArr = new Object[][] {
+        {"xyz", "x"},
+        {"xyz", "abc"},
+        {"xyz", "abc"},
+        {"xyz"}
+    };
+
+    new RowsAndColumnsHelper()
+        .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
+        .validate(base);
 
     assumeNotNull("skipping: StorageAdapter not supported", base.as(StorageAdapter.class));
 
@@ -82,12 +94,14 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
     // do the materialziation
     ras.numRows();
 
-    assertEquals(Lists.newArrayList("__time", "dim", "val", "arrayIndex", "expr"), ras.getColumnNames());
+    assertEquals(Lists.newArrayList("__time", "dim", "val", "arrayIndex", "array", "expr"), ras.getColumnNames());
 
     new RowsAndColumnsHelper()
         .expectColumn("expr", new long[] {123 * 2, 456L * 2, 789 * 2, 123 * 2})
         .validate(ras);
 
+    new RowsAndColumnsHelper()
+        .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
+        .validate(ras);
   }
-
 }
