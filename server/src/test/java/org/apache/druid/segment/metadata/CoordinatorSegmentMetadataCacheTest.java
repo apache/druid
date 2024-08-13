@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
@@ -1791,7 +1792,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Assert.assertEquals(existingMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
-  private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest()
+  private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest(ServiceEmitter emitter)
   {
     // foo has both hot and cold segments
     DataSegment coldSegment =
@@ -1865,7 +1866,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
         new InternalQueryConfig(),
-        new NoopServiceEmitter(),
+        emitter,
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
@@ -1896,9 +1897,16 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   @Test
   public void testColdDatasourceSchema_refreshAfterColdSchemaExec() throws IOException
   {
-    CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest();
+    StubServiceEmitter emitter = new StubServiceEmitter("coordinator", "host");
+    CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest(emitter);
 
     schema.coldDatasourceSchemaExec();
+
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/process/time", 1);
 
     Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
 
@@ -1958,7 +1966,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   @Test
   public void testColdDatasourceSchema_coldSchemaExecAfterRefresh() throws IOException
   {
-    CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest();
+    StubServiceEmitter emitter = new StubServiceEmitter("coordinator", "host");
+    CoordinatorSegmentMetadataCache schema = setupForColdDatasourceSchemaTest(emitter);
 
     Set<SegmentId> segmentIds = new HashSet<>();
     segmentIds.add(segment1.getId());
@@ -1974,7 +1983,13 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.coldDatasourceSchemaExec();
 
-    // could datasource should be present now
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "foo"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/segment/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/refresh/count", ImmutableMap.of(DruidMetrics.DATASOURCE, "cold"), 1);
+    emitter.verifyEmitted("metadatacache/deepStorageOnly/process/time", 1);
+
+    // cold datasource should be present now
     Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
 
     RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
@@ -2164,10 +2179,50 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
+  public void testColdDatasourceSchemaExecRunsPeriodically() throws InterruptedException
+  {
+    // Make sure the thread runs more than once
+    CountDownLatch latch = new CountDownLatch(2);
+
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        segmentSchemaCache,
+        backFillQueue,
+        sqlSegmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    ) {
+      @Override
+      long getColdSchemaExecPeriodMillis()
+      {
+        return 10;
+      }
+
+      @Override
+      protected void coldDatasourceSchemaExec()
+      {
+        latch.countDown();
+        super.coldDatasourceSchemaExec();
+      }
+    };
+
+    schema.onLeaderStart();
+    schema.awaitInitialization();
+
+    latch.await(1, TimeUnit.SECONDS);
+    Assert.assertEquals(0, latch.getCount());
+  }
+
+  @Test
   public void testTombstoneSegmentIsNotAdded() throws InterruptedException
   {
     String datasource = "newSegmentAddTest";
     CountDownLatch addSegmentLatch = new CountDownLatch(1);
+
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
         getQueryLifecycleFactory(walker),
         serverView,
