@@ -64,7 +64,7 @@ WHERE (TEXTCAT('super-', "animal") = 'super-mongoose' OR "location" = 3 OR "numb
 PARTITIONED BY DAY
 ```
 
-In the SELECT clause, you specify the following transformations:
+In the `SELECT` clause, you specify the following transformations:
 * `animal`: prepends "super-" to the values in the `animal` column using the [`TEXTCAT`](../querying/sql-functions.md/#textcat) function. Note that it only ingests the transformed data.
 * `triple-number`: multiplies the `number` column by three and stores the results in a column named `triple-number`. Note that the query ingests both the original and the transformed data.
 
