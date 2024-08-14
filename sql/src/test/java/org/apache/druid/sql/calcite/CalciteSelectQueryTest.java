@@ -52,6 +52,7 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.util.CacheTestHelperModule;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTime;
@@ -2112,6 +2113,47 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                 new Object[] {"", 1.0D},
                 new Object[] {"10.1", 1.7D}
+            )
+        )
+        .run();
+  }
+
+  @SqlTestFrameworkConfig.ResultCache(ResultCacheMode.ENABLED)
+  @Test
+  public void testTimseriesResultCachePullConsistency()
+  {
+    skipVectorize();
+
+    String query = "SELECT \n"
+                   + "  (t1.\"__time\") AS \"__time\", \n"
+                   + "  (ANY_VALUE(t1.\"added\")) AS \"added\" \n"
+                   + "FROM \n"
+                   + "  (\n"
+                   + "    SELECT \n"
+                   + "      (time_floor(\"__time\", 'PT1H')) AS \"__time\", \n"
+                   + "      (SUM(added)) AS \"added\" \n"
+                   + "    FROM \"wikipedia\" \n"
+                   + "    GROUP BY 1 \n"
+                   + "    ORDER BY \"__time\" \n"
+                   + "    LIMIT 1\n"
+                   + "  ) t1 \n"
+                   + "GROUP BY 1 \n"
+                   + "ORDER BY \"__time\"";
+
+    testBuilder()
+        .sql(query)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{1442016000000L, 32251L}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql(query)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{1442016000000L, 32251L}
             )
         )
         .run();
