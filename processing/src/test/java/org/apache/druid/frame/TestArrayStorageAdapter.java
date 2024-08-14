@@ -218,18 +218,6 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
     }
 
     @Override
-    public void mark()
-    {
-      cursor.mark();
-    }
-
-    @Override
-    public void resetToMark()
-    {
-      cursor.resetToMark();
-    }
-
-    @Override
     public void reset()
     {
       cursor.reset();

@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -116,21 +115,6 @@ public class RowBasedCursor<RowType> implements Cursor
   public boolean isDoneOrInterrupted()
   {
     return isDone() || Thread.currentThread().isInterrupted();
-  }
-
-  @Override
-  public void mark()
-  {
-    markTime = DateTimes.utc(timestampFunction.applyAsLong(rowWalker.currentRow()));
-  }
-
-  @Override
-  public void resetToMark()
-  {
-    rowId = 0;
-    rowWalker.reset();
-    rowWalker.skipToDateTime(markTime, descending);
-    advanceToMatchingRow();
   }
 
   @Override

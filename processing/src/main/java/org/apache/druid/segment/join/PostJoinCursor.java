@@ -140,19 +140,6 @@ public class PostJoinCursor implements Cursor
   }
 
   @Override
-  public void mark()
-  {
-    baseCursor.mark();
-  }
-
-  @Override
-  public void resetToMark()
-  {
-    baseCursor.resetToMark();
-    advanceToMatch();
-  }
-
-  @Override
   public void reset()
   {
     baseCursor.reset();

@@ -71,20 +71,6 @@ public class RowNumberUpdatingCursor implements Cursor
   }
 
   @Override
-  public void mark()
-  {
-    baseCursor.mark();
-    markRowNumber = rowNumberVirtualColumn.getValue();
-  }
-
-  @Override
-  public void resetToMark()
-  {
-    rowNumberVirtualColumn.setValue(markRowNumber);
-    baseCursor.resetToMark();
-  }
-
-  @Override
   public void reset()
   {
     markRowNumber = 0;

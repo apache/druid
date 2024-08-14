@@ -470,18 +470,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
     }
 
     @Override
-    public void mark()
-    {
-      cursorOffset.mark();
-    }
-
-    @Override
-    public void resetToMark()
-    {
-      cursorOffset.resetToMark();
-    }
-
-    @Override
     public void reset()
     {
       cursorOffset.reset();

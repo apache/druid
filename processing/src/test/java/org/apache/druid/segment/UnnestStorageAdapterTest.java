@@ -248,22 +248,11 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       }
       cursor.reset();
 
-      // test cursor mark/resetToMark
-      int mark = 2;
       while (!cursor.isDone()) {
-        if (count == mark) {
-          cursor.mark();
-        }
         Object dimSelectorVal = dimSelector.getObject();
         rows.add(dimSelectorVal);
         cursor.advance();
         count++;
-      }
-      cursor.resetToMark();
-      while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        rows.set(mark++, dimSelectorVal);
-        cursor.advance();
       }
         /*
       each row has 8 entries.
@@ -295,22 +284,11 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       }
       cursor.reset();
 
-      // test cursor mark/resetToMark
-      int mark = 2;
       while (!cursor.isDone()) {
-        if (count == mark) {
-          cursor.mark();
-        }
         Object dimSelectorVal = dimSelector.getObject();
         rows.add(dimSelectorVal);
         cursor.advance();
         count++;
-      }
-      cursor.resetToMark();
-      while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        rows.set(mark++, dimSelectorVal);
-        cursor.advance();
       }
       Assert.assertEquals(count, 12);
       Assert.assertEquals(
@@ -371,29 +349,15 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
       }
       cursor.reset();
 
-      // test cursor mark/resetToMark
-      int mark = 4;
       while (!cursor.isDone()) {
-        if (count == mark) {
-          cursor.mark();
-        }
         Object dimSelectorVal = dimSelector.getObject();
         rows.add(dimSelectorVal);
         cursor.advance();
         count++;
       }
-      cursor.resetToMark();
-      rows.removeAll(rows.subList(mark, rows.size()));
-      while (!cursor.isDone()) {
-        Object dimSelectorVal = dimSelector.getObject();
-        rows.add(dimSelectorVal);
-        cursor.advance();
-      }
       Assert.assertEquals(count, 11);
       Assert.assertEquals(
-          // marked at position 4, however first row has the same timestamp so we effectively restart cursor after
-          // position 4
-          Arrays.asList(1L, 2L, 3L, 4L, 1L, 2L, 3L, 4L, 5L, 6L, null, 7L, 8L, 9L, 10L),
+          Arrays.asList(1L, 2L, 3L, 4L, 5L, 6L, null, 7L, 8L, 9L, 10L),
           rows
       );
     }

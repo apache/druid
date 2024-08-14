@@ -215,50 +215,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     }
 
     @Override
-    public void mark()
-    {
-      if (!done && currEntry.get() != null) {
-        IncrementalIndexRow row = currEntry.get();
-        markRowId = row.getRowIndex();
-        markMillis = row.getTimestamp();
-      } else {
-        markRowId = -1;
-        markMillis = isDescending ? Long.MAX_VALUE : Long.MIN_VALUE;
-      }
-    }
-
-    @Override
-    public void resetToMark()
-    {
-      if (markRowId < 0) {
-        reset();
-        return;
-      }
-      baseIter = facts.timeRangeIterable(
-          isDescending,
-          isDescending ? interval.getStartMillis() : markMillis,
-          isDescending ? markMillis : interval.getEndMillis()
-      ).iterator();
-
-      BaseQuery.checkInterrupted();
-
-      boolean foundMatched = false;
-      while (baseIter.hasNext()) {
-        IncrementalIndexRow entry = baseIter.next();
-        if (beyondMaxRowIndex(entry.getRowIndex())) {
-          continue;
-        }
-        currEntry.set(entry);
-        if (entry.getRowIndex() == markRowId && filterMatcher.matches(false)) {
-          foundMatched = true;
-          break;
-        }
-      }
-
-      done = !foundMatched && (emptyRange || !baseIter.hasNext());
-    }
-
-    @Override
     public void reset()
     {
       markRowId = -1;

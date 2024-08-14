@@ -142,18 +142,6 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
         }
 
         @Override
-        public void mark()
-        {
-          cursor.mark();
-        }
-
-        @Override
-        public void resetToMark()
-        {
-          cursor.resetToMark();
-        }
-
-        @Override
         public void reset()
         {
           cursor.reset();

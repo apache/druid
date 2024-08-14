@@ -115,22 +115,6 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
   }
 
   @Override
-  public void mark()
-  {
-    markCounter = rowCounter;
-  }
-
-  @Override
-  public void resetToMark()
-  {
-    rowCounter = markCounter;
-    iterator = iteratorSupplier.get();
-    for (int i = 0; i < markCounter; i++) {
-      iterator.next();
-    }
-  }
-
-  @Override
   public void reset()
   {
     rowCounter = 0;

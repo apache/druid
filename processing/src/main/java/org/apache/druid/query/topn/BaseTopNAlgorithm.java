@@ -124,7 +124,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       numProcessed += numToProcess;
       if (numProcessed < cardinality) {
-        params.getCursor().resetToMark();
+        params.getCursor().reset();
       }
     }
     if (queryMetrics != null) {

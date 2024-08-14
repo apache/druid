@@ -710,24 +710,13 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
         )
-    );
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
-            // duplicate row, right join reset to mark starts at beginning
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
-        ),
-        1
     );
   }
 
@@ -754,24 +743,13 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis"},
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca"}
         )
-    );
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis"},
-            // duplicate row, right join reset to mark starts at beginning
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis"},
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca"}
-        ),
-        1
     );
   }
 
@@ -799,24 +777,13 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
         )
-    );
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
-            // duplicate row, full join reset to mark starts at beginning
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis", 14L},
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca", 16L}
-        ),
-        1
     );
   }
 
@@ -843,24 +810,13 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis"},
             new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca"}
         )
-    );
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis"},
-            // duplicate row, full join reset to mark starts at beginning
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "AX", "Atlantis"},
-            new Object[]{null, null, NullHandling.sqlCompatible() ? null : 0L, "USCA", "Usca"}
-        ),
-        1
     );
   }
 
@@ -1298,7 +1254,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
@@ -1321,36 +1277,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Diskussion:Sebastian Schulz", "Usca"},
             new Object[]{"Diskussion:Sebastian Schulz", "Fourems"}
         )
-    );
-
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Diskussion:Sebastian Schulz", "Australia"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Canada"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Chile"},
-            // duplicate rows start here, reset to mark resets right
-            new Object[]{"Diskussion:Sebastian Schulz", "Australia"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Canada"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Chile"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Germany"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Ecuador"},
-            new Object[]{"Diskussion:Sebastian Schulz", "France"},
-            new Object[]{"Diskussion:Sebastian Schulz", "United Kingdom"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Italy"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Japan"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Republic of Korea"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Mexico"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Norway"},
-            new Object[]{"Diskussion:Sebastian Schulz", "El Salvador"},
-            new Object[]{"Diskussion:Sebastian Schulz", "United States"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
-            new Object[]{"Diskussion:Sebastian Schulz", "States United"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Usca"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Fourems"}
-        ),
-        3
     );
   }
 
@@ -1429,7 +1355,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "v"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
@@ -1452,36 +1378,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Diskussion:Sebastian Schulz", "Usca"},
             new Object[]{"Diskussion:Sebastian Schulz", "Fourems"}
         )
-    );
-
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Diskussion:Sebastian Schulz", "Australia"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Canada"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Chile"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Germany"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Australia"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Canada"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Chile"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Germany"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Ecuador"},
-            new Object[]{"Diskussion:Sebastian Schulz", "France"},
-            new Object[]{"Diskussion:Sebastian Schulz", "United Kingdom"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Italy"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Japan"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Republic of Korea"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Mexico"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Norway"},
-            new Object[]{"Diskussion:Sebastian Schulz", "El Salvador"},
-            new Object[]{"Diskussion:Sebastian Schulz", "United States"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Atlantis"},
-            new Object[]{"Diskussion:Sebastian Schulz", "States United"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Usca"},
-            new Object[]{"Diskussion:Sebastian Schulz", "Fourems"}
-        ),
-        4
     );
   }
 
@@ -1758,7 +1654,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_REGION_PREFIX + "countryIsoCode"
     );
     CursorBuildSpec buildSpec = CursorBuildSpec.builder().setFilter(filter).build();
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(buildSpec),
         columns,
         ImmutableList.of(
@@ -1769,22 +1665,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{"Old Anatolian Turkish", "VA", "US", "Provincia di Varese", "IT"},
             new Object[]{"Old Anatolian Turkish", "VA", "US", "Virginia", "US"}
         )
-    );
-
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(buildSpec),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Giusy Ferreri discography", "VA", "IT", "Provincia di Varese", "IT"},
-            new Object[]{"Giusy Ferreri discography", "VA", "IT", "Virginia", "US"},
-            new Object[]{"Roma-Bangkok", "VA", "IT", "Provincia di Varese", "IT"},
-            new Object[]{"Roma-Bangkok", "VA", "IT", "Virginia", "US"},
-            new Object[]{"Old Anatolian Turkish", "VA", "US", "Provincia di Varese", "IT"},
-            // duplicate row from mark/reset to mark
-            new Object[]{"Old Anatolian Turkish", "VA", "US", "Provincia di Varese", "IT"},
-            new Object[]{"Old Anatolian Turkish", "VA", "US", "Virginia", "US"}
-        ),
-        5
     );
   }
 
@@ -2107,7 +1987,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
     );
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         columns,
         ImmutableList.of(
@@ -2132,66 +2012,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{null, null, "USCA", "Usca", 16L},
             new Object[]{null, null, "MMMM", "Fourems", 205L}
         )
-    );
-
-    // no dupes because mark/reset happens while advancing left
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
-            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
-            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
-            new Object[]{null, null, "AU", "Australia", 0L},
-            new Object[]{null, null, "CL", "Chile", 2L},
-            new Object[]{null, null, "DE", "Germany", 3L},
-            new Object[]{null, null, "EC", "Ecuador", 4L},
-            new Object[]{null, null, "FR", "France", 5L},
-            new Object[]{null, null, "GB", "United Kingdom", 6L},
-            new Object[]{null, null, "IT", "Italy", 7L},
-            new Object[]{null, null, "JP", "Japan", 8L},
-            new Object[]{null, null, "KR", "Republic of Korea", 9L},
-            new Object[]{null, null, "MX", "Mexico", 10L},
-            new Object[]{null, null, "NO", "Norway", 11L},
-            new Object[]{null, null, "SV", "El Salvador", 12L},
-            new Object[]{null, null, "US", "United States", 13L},
-            new Object[]{null, null, "AX", "Atlantis", 14L},
-            new Object[]{null, null, "SU", "States United", 15L},
-            new Object[]{null, null, "USCA", "Usca", 16L},
-            new Object[]{null, null, "MMMM", "Fourems", 205L}
-        ),
-        2
-    );
-
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
-            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
-            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
-            new Object[]{null, null, "AU", "Australia", 0L},
-            new Object[]{null, null, "CL", "Chile", 2L},
-            // dupes start here from mark/reset
-            new Object[]{null, null, "AU", "Australia", 0L},
-            new Object[]{null, null, "CL", "Chile", 2L},
-            new Object[]{null, null, "DE", "Germany", 3L},
-            new Object[]{null, null, "EC", "Ecuador", 4L},
-            new Object[]{null, null, "FR", "France", 5L},
-            new Object[]{null, null, "GB", "United Kingdom", 6L},
-            new Object[]{null, null, "IT", "Italy", 7L},
-            new Object[]{null, null, "JP", "Japan", 8L},
-            new Object[]{null, null, "KR", "Republic of Korea", 9L},
-            new Object[]{null, null, "MX", "Mexico", 10L},
-            new Object[]{null, null, "NO", "Norway", 11L},
-            new Object[]{null, null, "SV", "El Salvador", 12L},
-            new Object[]{null, null, "US", "United States", 13L},
-            new Object[]{null, null, "AX", "Atlantis", 14L},
-            new Object[]{null, null, "SU", "States United", 15L},
-            new Object[]{null, null, "USCA", "Usca", 16L},
-            new Object[]{null, null, "MMMM", "Fourems", 205L}
-        ),
-        5
     );
   }
 
@@ -2222,7 +2042,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName",
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryNumber"
     );
-    JoinTestHelper.verifyCursorNoMarkReset(
+    JoinTestHelper.verifyCursor(
         adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN),
         columns,
         ImmutableList.of(
@@ -2248,67 +2068,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             new Object[]{null, null, "USCA", "Usca", 16L},
             new Object[]{null, null, "MMMM", "Fourems", 205L}
         )
-    );
-
-    // no dupes because mark/reset happens while advancing left
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
-            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
-            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
-            new Object[]{"Orange Soda", "MatchNothing", null, null, NullHandling.sqlCompatible() ? null : 0L},
-            new Object[]{null, null, "AU", "Australia", 0L},
-            new Object[]{null, null, "CL", "Chile", 2L},
-            new Object[]{null, null, "DE", "Germany", 3L},
-            new Object[]{null, null, "EC", "Ecuador", 4L},
-            new Object[]{null, null, "FR", "France", 5L},
-            new Object[]{null, null, "GB", "United Kingdom", 6L},
-            new Object[]{null, null, "IT", "Italy", 7L},
-            new Object[]{null, null, "JP", "Japan", 8L},
-            new Object[]{null, null, "KR", "Republic of Korea", 9L},
-            new Object[]{null, null, "MX", "Mexico", 10L},
-            new Object[]{null, null, "NO", "Norway", 11L},
-            new Object[]{null, null, "SV", "El Salvador", 12L},
-            new Object[]{null, null, "US", "United States", 13L},
-            new Object[]{null, null, "AX", "Atlantis", 14L},
-            new Object[]{null, null, "SU", "States United", 15L},
-            new Object[]{null, null, "USCA", "Usca", 16L},
-            new Object[]{null, null, "MMMM", "Fourems", 205L}
-        ),
-        1
-    );
-
-    JoinTestHelper.verifyCursorMarkReset(
-        adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        columns,
-        ImmutableList.of(
-            new Object[]{"Didier Leclair", "CA", "CA", "Canada", 1L},
-            new Object[]{"Les Argonautes", "CA", "CA", "Canada", 1L},
-            new Object[]{"Sarah Michelle Gellar", "CA", "CA", "Canada", 1L},
-            new Object[]{"Orange Soda", "MatchNothing", null, null, NullHandling.sqlCompatible() ? null : 0L},
-            new Object[]{null, null, "AU", "Australia", 0L},
-            // dupes start here
-            new Object[]{null, null, "AU", "Australia", 0L},
-            new Object[]{null, null, "CL", "Chile", 2L},
-            new Object[]{null, null, "DE", "Germany", 3L},
-            new Object[]{null, null, "EC", "Ecuador", 4L},
-            new Object[]{null, null, "FR", "France", 5L},
-            new Object[]{null, null, "GB", "United Kingdom", 6L},
-            new Object[]{null, null, "IT", "Italy", 7L},
-            new Object[]{null, null, "JP", "Japan", 8L},
-            new Object[]{null, null, "KR", "Republic of Korea", 9L},
-            new Object[]{null, null, "MX", "Mexico", 10L},
-            new Object[]{null, null, "NO", "Norway", 11L},
-            new Object[]{null, null, "SV", "El Salvador", 12L},
-            new Object[]{null, null, "US", "United States", 13L},
-            new Object[]{null, null, "AX", "Atlantis", 14L},
-            new Object[]{null, null, "SU", "States United", 15L},
-            new Object[]{null, null, "USCA", "Usca", 16L},
-            new Object[]{null, null, "MMMM", "Fourems", 205L}
-        ),
-        5
     );
   }
 

@@ -23,6 +23,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -106,7 +107,6 @@ public class TopNQueryEngine
         Sequences.simple(granularizer.getBucketIterable())
                  .map(bucketInterval -> {
                    granularizer.advanceToBucket(bucketInterval);
-                   cursor.mark();
                    return mapFn.apply(cursor, granularizer, queryMetrics);
                  }),
                  Predicates.notNull()
@@ -141,13 +141,13 @@ public class TopNQueryEngine
 
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
-    if (canUsePooledAlgorithm(selector, query, columnCapabilities)) {
+    if (canUsePooledAlgorithm(selector, query, columnCapabilities, bufferPool, cardinality, numBytesPerRecord)) {
       // pool based algorithm selection, if we can
       if (selector.isAggregateAllMetrics()) {
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
         // this
         topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
-      } else if (selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false)) {
+      } else if (shouldUseAggregateMetricFirstAlgorithm(query, selector)) {
         // for high cardinality dimensions with larger result sets we aggregate with only the ordering aggregation to
         // compute the first 'n' values, and then for the rest of the metrics but for only the 'n' values
         topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
@@ -182,7 +182,7 @@ public class TopNQueryEngine
    * algorithm) are optimized off-heap algorithms for aggregating dictionary encoded string columns. These algorithms
    * rely on dictionary ids being unique so to aggregate on the dictionary ids directly and defer
    * {@link org.apache.druid.segment.DimensionSelector#lookupName(int)} until as late as possible in query processing.
-   *
+   * <p>
    * When these conditions are not true, we have an on-heap fall-back algorithm, the {@link HeapBasedTopNAlgorithm}
    * (and {@link TimeExtractionTopNAlgorithm} for a specialized form for long columns) which aggregates on values of
    * selectors.
@@ -190,7 +190,10 @@ public class TopNQueryEngine
   private static boolean canUsePooledAlgorithm(
       final TopNAlgorithmSelector selector,
       final TopNQuery query,
-      final ColumnCapabilities capabilities
+      final ColumnCapabilities capabilities,
+      final NonBlockingPool<ByteBuffer> bufferPool,
+      final int cardinality,
+      final int numBytesPerRecord
   )
   {
     if (selector.isHasExtractionFn()) {
@@ -202,13 +205,39 @@ public class TopNQueryEngine
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
-    if (Types.is(capabilities, ValueType.STRING)) {
-      // string columns must use the on heap algorithm unless they have the following capabilites
-      return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
-    } else {
+    if (!Types.is(capabilities, ValueType.STRING)) {
       // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
       return false;
     }
+
+    // string columns must use the on heap algorithm unless they have the following capabilites
+    if (!capabilities.isDictionaryEncoded().isTrue() || !capabilities.areDictionaryValuesUnique().isTrue()) {
+      return false;
+    }
+    if (Granularities.ALL.equals(query.getGranularity())) {
+      // all other requirements have been satisfied, ALL granularity can always use the pooled algorithms
+      return true;
+    }
+    // if not using ALL granularity, we can still potentially use the pooled algorithm if we are certain it doesn't
+    // need to make multiple passes (e.g. reset the cursor)
+    try (final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take()) {
+      final ByteBuffer resultsBuf = resultsBufHolder.get();
+      resultsBuf.clear();
+
+      final int numBytesToWorkWith = resultsBuf.remaining();
+      final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
+
+      return numValuesPerPass <= cardinality;
+    }
+  }
+
+  private static boolean shouldUseAggregateMetricFirstAlgorithm(TopNQuery query, TopNAlgorithmSelector selector)
+  {
+    // must be using ALL granularity since it makes multiple passes and must reset the cursor
+    if (Granularities.ALL.equals(query.getGranularity())) {
+      return selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false);
+    }
+    return false;
   }
 
   public static CursorBuildSpec makeCursorBuildSpec(TopNQuery query, @Nullable QueryMetrics<?> queryMetrics)

@@ -36,7 +36,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -510,7 +509,7 @@ public class RowBasedStorageAdapterTest
       );
     }
 
-    Assert.assertEquals(3, numCloses.get());
+    Assert.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -857,100 +856,6 @@ public class RowBasedStorageAdapterTest
     Assert.assertEquals(2, numCloses.get());
   }
 
-  @Test
-  public void test_makeCursor_mark_resets_to_different_row()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 0, 1, 2, 3, 4, 5, 6, 7);
-
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .build();
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
-          ImmutableList.of(
-              ImmutableList.of("0"),
-              ImmutableList.of("1"),
-              ImmutableList.of("2"),
-              ImmutableList.of("3"),
-              // duplicate row since mark at 4 but resets to 3 since same timestamp
-              ImmutableList.of("3"),
-              ImmutableList.of("4"),
-              ImmutableList.of("5"),
-              ImmutableList.of("6"),
-              ImmutableList.of("7")
-          ),
-          walkCursorMarkResetDifferentRow(cursor, READ_STRING, 4)
-      );
-    }
-
-    Assert.assertEquals(3, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursor_mark_resets_to_different_row_descending()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 0, 1, 2, 3, 4, 5, 6, 7);
-
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setPreferredOrdering(Cursors.descendingTimeOrder())
-                                                     .build();
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
-          ImmutableList.of(
-              ImmutableList.of("7"),
-              ImmutableList.of("6"),
-              ImmutableList.of("5"),
-              ImmutableList.of("4"),
-              // duplicate rows since mark at 4 but resets to 5 since same timestamp
-              ImmutableList.of("5"),
-              ImmutableList.of("4"),
-              ImmutableList.of("3"),
-              ImmutableList.of("2"),
-              ImmutableList.of("1"),
-              ImmutableList.of("0")
-          ),
-          walkCursorMarkResetDifferentRow(cursor, READ_STRING, 4)
-      );
-    }
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursor_filterOnLong_resets_to_different_row()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 1, 2, 3, 4, 5, 6, 7);
-
-    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setFilter(
-                                                         new TypedInFilter(
-                                                             ValueType.LONG.name(),
-                                                             ColumnType.LONG,
-                                                             null,
-                                                             Arrays.asList(3L, 4L),
-                                                             null
-                                                         )
-                                                     )
-                                                     .build();
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-
-      Assert.assertEquals(
-          ImmutableList.of(
-              ImmutableList.of("3"),
-              // duplicate rows since cursor is marked at 1, but resets to 0 since same timestamp
-              ImmutableList.of("3"),
-              ImmutableList.of("4")
-          ),
-          walkCursorMarkResetDifferentRow(cursor, READ_STRING, 1)
-      );
-    }
-
-
-    Assert.assertEquals(3, numCloses.get());
-  }
-
   private static List<List<Object>> walkCursor(
       final Cursor cursor,
       final List<Function<Cursor, Supplier<Object>>> processors
@@ -970,13 +875,7 @@ public class RowBasedStorageAdapterTest
 
     cursor.reset();
 
-    // test cursor mark/resetToMark
-    int ctr = 0;
-    int mark = 2;
     while (!cursor.isDone()) {
-      if (ctr == mark) {
-        cursor.mark();
-      }
       final List<Object> row = new ArrayList<>();
 
       for (Supplier<Object> supplier : suppliers) {
@@ -984,79 +883,7 @@ public class RowBasedStorageAdapterTest
       }
 
       retVal.add(row);
-      ctr++;
       cursor.advanceUninterruptibly();
-    }
-
-    if (ctr > mark) {
-      cursor.resetToMark();
-      while (!cursor.isDone()) {
-
-        final List<Object> row = new ArrayList<>();
-
-        for (Supplier<Object> supplier : suppliers) {
-          row.add(supplier.get());
-        }
-
-        retVal.set(mark++, row);
-        cursor.advanceUninterruptibly();
-      }
-    }
-
-    return retVal;
-  }
-
-  private static List<List<Object>> walkCursorMarkResetDifferentRow(
-      final Cursor cursor,
-      final List<Function<Cursor, Supplier<Object>>> processors,
-      int mark
-  )
-  {
-    final List<Supplier<Object>> suppliers = new ArrayList<>();
-    for (Function<Cursor, Supplier<Object>> processor : processors) {
-      suppliers.add(processor.apply(cursor));
-    }
-
-    final List<List<Object>> retVal = new ArrayList<>();
-
-    // test cursor reset
-    while (!cursor.isDone()) {
-      cursor.advanceUninterruptibly();
-    }
-
-    cursor.reset();
-
-    // test cursor mark/resetToMark
-    int ctr = 0;
-    while (!cursor.isDone()) {
-      if (ctr == mark) {
-        cursor.mark();
-      }
-      final List<Object> row = new ArrayList<>();
-
-      for (Supplier<Object> supplier : suppliers) {
-        row.add(supplier.get());
-      }
-
-      retVal.add(row);
-      ctr++;
-      cursor.advanceUninterruptibly();
-    }
-
-    if (ctr > mark) {
-      cursor.resetToMark();
-      retVal.removeAll(retVal.subList(mark, retVal.size()));
-      while (!cursor.isDone()) {
-
-        final List<Object> row = new ArrayList<>();
-
-        for (Supplier<Object> supplier : suppliers) {
-          row.add(supplier.get());
-        }
-
-        retVal.add(row);
-        cursor.advanceUninterruptibly();
-      }
     }
 
     return retVal;

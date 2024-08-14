@@ -68,7 +68,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
@@ -381,88 +380,6 @@ public class JoinTestHelper
     }
   }
 
-  public static List<Object[]> readCursorMarkReset(final CursorHolder cursorHolder, final List<String> columns, int mark)
-  {
-    try {
-      final Cursor cursor = cursorHolder.asCursor();
-      final List<Supplier<Object>> readers = columns
-          .stream()
-          .map(
-              column ->
-                  ColumnProcessors.makeProcessor(
-                      column,
-                      SIMPLE_READER,
-                      cursor.getColumnSelectorFactory()
-                  )
-          )
-          .collect(Collectors.toList());
-
-      final List<Object[]> rows = new ArrayList<>();
-      boolean interruptible = false; // test both advance() and advanceUninterruptibly()
-
-      // test cursor reset
-      while (!cursor.isDone()) {
-        if (interruptible) {
-          cursor.advance();
-        } else {
-          cursor.advanceUninterruptibly();
-        }
-
-        interruptible = !interruptible;
-      }
-
-      cursor.reset();
-
-      // test cursor mark/resetToMark
-      int ctr = 0;
-      while (!cursor.isDone()) {
-        if (ctr == mark) {
-          cursor.mark();
-        }
-        final Object[] row = new Object[columns.size()];
-
-        for (int i = 0; i < row.length; i++) {
-          row[i] = readers.get(i).get();
-        }
-
-        rows.add(row);
-        if (interruptible) {
-          cursor.advance();
-        } else {
-          cursor.advanceUninterruptibly();
-        }
-
-        interruptible = !interruptible;
-        ctr++;
-      }
-
-      if (rows.size() > mark) {
-        cursor.resetToMark();
-        rows.removeAll(rows.subList(mark, rows.size()));
-        while (!cursor.isDone()) {
-          final Object[] row = new Object[columns.size()];
-
-          for (int i = 0; i < row.length; i++) {
-            row[i] = readers.get(i).get();
-          }
-
-          rows.add(row);
-          if (interruptible) {
-            cursor.advance();
-          } else {
-            cursor.advanceUninterruptibly();
-          }
-
-          interruptible = !interruptible;
-        }
-      }
-
-      return rows;
-    }
-    finally {
-      cursorHolder.close();
-    }
-  }
 
   public static void verifyCursor(
       final CursorHolder cursorHolder,
@@ -470,64 +387,7 @@ public class JoinTestHelper
       final List<Object[]> expectedRows
   )
   {
-    final int max = expectedRows.size();
-    final List<Object[]> rows;
-    int mark = -1;
-    if (max > 1) {
-      mark = ThreadLocalRandom.current().nextInt(1, max);
-      rows = readCursorMarkReset(cursorHolder, columns, mark);
-    } else {
-      rows = readCursor(cursorHolder, columns);
-    }
-
-    for (int i = 0; i < rows.size(); i++) {
-      try {
-        log.info("Row #%-2d: %s", i, TestHelper.JSON_MAPPER.writeValueAsString(rows.get(i)));
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    Assert.assertEquals("number of rows" + (mark > 0 ? " (mark: " + mark + ")" : ""), expectedRows.size(), rows.size());
-
-    for (int i = 0; i < rows.size(); i++) {
-      Assert.assertArrayEquals("row #" + i, expectedRows.get(i), rows.get(i));
-    }
-  }
-
-  public static void verifyCursorNoMarkReset(
-      final CursorHolder cursorHolder,
-      final List<String> columns,
-      final List<Object[]> expectedRows
-  )
-  {
     final List<Object[]> rows = readCursor(cursorHolder, columns);
-
-    for (int i = 0; i < rows.size(); i++) {
-      try {
-        log.info("Row #%-2d: %s", i, TestHelper.JSON_MAPPER.writeValueAsString(rows.get(i)));
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    Assert.assertEquals("number of rows", expectedRows.size(), rows.size());
-
-    for (int i = 0; i < rows.size(); i++) {
-      Assert.assertArrayEquals("row #" + i, expectedRows.get(i), rows.get(i));
-    }
-  }
-
-  public static void verifyCursorMarkReset(
-      final CursorHolder cursorHolder,
-      final List<String> columns,
-      final List<Object[]> expectedRows,
-      int mark
-  )
-  {
-    final List<Object[]> rows = readCursorMarkReset(cursorHolder, columns, mark);
 
     for (int i = 0; i < rows.size(); i++) {
       try {

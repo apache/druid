@@ -243,25 +243,6 @@ public class HashJoinEngine
       }
 
       @Override
-      public void mark()
-      {
-        // join cursor handles mark and resetToMark imperfectly. The left cursor will be marked, but the right matchers
-        // will be completely reset. This is fine for left and inner joins per the contract of mark and resetToMark
-        // since the left cursor defines the rows timestamp. However for right and full joins, in an ideal world we
-        // would mark the right side, so we would have a way to reset to those positions. However, the contract of
-        // JoinMatcher is too loose to be able to guarantee that the underlying data behind the right side cursors
-        leftCursor.mark();
-      }
-
-      @Override
-      public void resetToMark()
-      {
-        leftCursor.resetToMark();
-        joinMatcher.reset();
-        initialize();
-      }
-
-      @Override
       public void reset()
       {
         leftCursor.reset();

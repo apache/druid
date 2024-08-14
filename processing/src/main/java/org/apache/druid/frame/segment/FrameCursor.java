@@ -80,18 +80,6 @@ public class FrameCursor implements Cursor
   }
 
   @Override
-  public void mark()
-  {
-    markOffset = offset.getOffset();
-  }
-
-  @Override
-  public void resetToMark()
-  {
-    offset.setCurrentOffset(markOffset);
-  }
-
-  @Override
   public void reset()
   {
     markOffset = 0;
