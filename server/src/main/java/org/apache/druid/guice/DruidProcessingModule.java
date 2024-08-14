@@ -32,20 +32,17 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.collections.DummyNonBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ExecutorServiceMonitor;
-import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.MetricsEmittingQueryProcessingPool;
 import org.apache.druid.query.PrioritizedExecutorService;
 import org.apache.druid.query.QueryProcessingPool;
@@ -103,9 +100,6 @@ public class DruidProcessingModule implements Module
       Lifecycle lifecycle
   )
   {
-    if (config.getNumThreads() == 0) {
-      return new ForwardingQueryProcessingPool(Execs.dummy());
-    }
     return new MetricsEmittingQueryProcessingPool(
         PrioritizedExecutorService.create(
             lifecycle,
@@ -121,9 +115,6 @@ public class DruidProcessingModule implements Module
   public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
-    if (config.getNumThreads() == 0) {
-      return DummyNonBlockingPool.instance();
-    }
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),

@@ -427,20 +427,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
                      node.isEnableTlsPort()
                  )
     );
-    if (!task.supportsQueries()) {
-      javaOpts.add(
-          org.apache.druid.java.util.common.StringUtils.format(
-              "-Ddruid.processing.numMergeBuffers=%d",
-              0
-          )
-      );
-      javaOpts.add(
-          org.apache.druid.java.util.common.StringUtils.format(
-              "-Ddruid.processing.numThreads=%d",
-              0
-          )
-      );
-    }
     return javaOpts;
   }
 
