@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -79,6 +80,13 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentStorageAdapterTest
           public Cursor asCursor()
           {
             return new CursorNoAdvance(delegate.asCursor(), countDownLatch);
+          }
+
+          @Nullable
+          @Override
+          public List<OrderBy> getOrdering()
+          {
+            return delegate.getOrdering();
           }
 
           @Override

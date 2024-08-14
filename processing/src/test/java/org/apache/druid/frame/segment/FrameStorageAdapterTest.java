@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.extraction.TimeFormatExtractionFn;
@@ -39,6 +38,7 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
@@ -271,13 +271,7 @@ public class FrameStorageAdapterTest
                                       .setFilter(this.filter)
                                       .setInterval(this.interval)
                                       .setVirtualColumns(this.virtualColumns)
-                                      .setPreferredOrdering(
-                                          descending ?
-                                          Collections.singletonList(
-                                              OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                          ) :
-                                          null
-                                      )
+                                      .setPreferredOrdering(descending ? Cursors.descendingTimeOrder() : null)
                                       .setQueryContext(queryContext)
                                       .build();
     }

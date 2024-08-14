@@ -34,12 +34,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.CursorGranularizer;
-import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -602,11 +600,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setPreferredOrdering(
-                                                         Collections.singletonList(
-                                                             OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                                         )
-                                                     )
+                                                     .setPreferredOrdering(Cursors.descendingTimeOrder())
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -720,11 +714,7 @@ public class RowBasedStorageAdapterTest
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT2H"))
-                                                     .setPreferredOrdering(
-                                                         Collections.singletonList(
-                                                             OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                                         )
-                                                     )
+                                                     .setPreferredOrdering(Cursors.descendingTimeOrder())
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -902,11 +892,7 @@ public class RowBasedStorageAdapterTest
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(SAME_TIME_ROW_ADAPTER, 0, 1, 2, 3, 4, 5, 6, 7);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
-                                                     .setPreferredOrdering(
-                                                         Collections.singletonList(
-                                                             OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                                         )
-                                                     )
+                                                     .setPreferredOrdering(Cursors.descendingTimeOrder())
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -1089,7 +1075,7 @@ public class RowBasedStorageAdapterTest
         cursor,
         granularity,
         buildSpec.getInterval(),
-        CursorBuildSpec.preferDescendingTimeOrder(buildSpec.getPreferredOrdering())
+        Cursors.preferDescendingTimeOrdering(buildSpec)
     );
 
     final List<Supplier<Object>> suppliers = new ArrayList<>();

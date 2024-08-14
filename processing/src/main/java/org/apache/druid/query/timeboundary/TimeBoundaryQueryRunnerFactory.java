@@ -27,7 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
-import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
@@ -42,6 +42,7 @@ import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -51,7 +52,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Iterator;
 
 /**
@@ -120,12 +120,13 @@ public class TimeBoundaryQueryRunnerFactory
     {
       final CursorBuildSpec.CursorBuildSpecBuilder bob = CursorBuildSpec.builder(makeCursorBuildSpec(legacyQuery));
       if (descending) {
-        bob.setPreferredOrdering(Collections.singletonList(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)));
+        bob.setPreferredOrdering(Cursors.descendingTimeOrder());
       } else {
-        bob.setPreferredOrdering(Collections.singletonList(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)));
+        bob.setPreferredOrdering(Cursors.ascendingTimeOrder());
       }
 
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(bob.build())) {
+        Cursors.requireTimeOrdering(cursorHolder, descending ? Order.DESCENDING : Order.ASCENDING);
         final Cursor cursor = cursorHolder.asCursor();
         if (cursor == null) {
           return null;

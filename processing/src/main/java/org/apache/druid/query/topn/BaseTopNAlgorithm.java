@@ -123,7 +123,9 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       resetAggregators(aggregatesStore);
 
       numProcessed += numToProcess;
-      params.getCursor().resetToMark();
+      if (numProcessed < cardinality) {
+        params.getCursor().resetToMark();
+      }
     }
     if (queryMetrics != null) {
       queryMetrics.addProcessedRows(processedRows);
@@ -152,7 +154,6 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     long processedRows = scanAndAggregate(params, null, aggregatesStore);
     updateResults(params, null, aggregatesStore, resultBuilder);
     resetAggregators(aggregatesStore);
-    params.getCursor().resetToMark();
     if (queryMetrics != null) {
       queryMetrics.addProcessedRows(processedRows);
       queryMetrics.stopRecordingScanTime();

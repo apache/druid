@@ -25,8 +25,10 @@ import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.segment.FrameFilteredOffset;
+import org.apache.druid.frame.segment.row.RowFrameCursorHolderFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
@@ -34,6 +36,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorHolderFactory;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
@@ -55,15 +58,15 @@ import java.util.List;
  *
  * This class is only used for columnar frames. It is not used for row-based frames.
  *
- * @see org.apache.druid.frame.segment.row.FrameCursorHolderFactory the row-based version
+ * @see RowFrameCursorHolderFactory the row-based version
  */
-public class FrameCursorHolderFactory implements CursorHolderFactory
+public class ColumnarFrameCursorHolderFactory implements CursorHolderFactory
 {
   private final Frame frame;
   private final RowSignature signature;
   private final List<FrameColumnReader> columnReaders;
 
-  public FrameCursorHolderFactory(
+  public ColumnarFrameCursorHolderFactory(
       final Frame frame,
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders
@@ -78,6 +81,16 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final Closer closer = Closer.create();
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
     return new CursorHolder()
     {
       @Override
@@ -85,7 +98,7 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
       {
         return (spec.getFilter() == null || spec.getFilter().canVectorizeMatcher(signature))
                && spec.getVirtualColumns().canVectorize(signature)
-               && !CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
+               && !descending;
       }
 
       @Override
@@ -94,7 +107,7 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
         final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
         final ColumnCache columnCache = new ColumnCache(index, closer);
         final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
-        final boolean descendingTimeOrder = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
+        final boolean descendingTimeOrder = Cursors.preferDescendingTimeOrdering(spec);
         final SimpleSettableOffset baseOffset = descendingTimeOrder
                                                 ? new SimpleDescendingOffset(frame.numRows())
                                                 : new SimpleAscendingOffset(frame.numRows());
@@ -114,6 +127,12 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
         }
 
         return new FrameCursor(offset, columnSelectorFactory);
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
       }
 
       @Nullable

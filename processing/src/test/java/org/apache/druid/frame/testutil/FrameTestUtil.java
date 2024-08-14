@@ -35,6 +35,7 @@ import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -309,6 +310,12 @@ public class FrameTestUtil
             return null;
           }
           return new RowNumberUpdatingCursor(cursor, rowNumberVirtualColumn);
+        }
+
+        @Override
+        public List<OrderBy> getOrdering()
+        {
+          return cursorHolder.getOrdering();
         }
 
         @Override

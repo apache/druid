@@ -20,6 +20,7 @@
 package org.apache.druid.frame;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -40,6 +41,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Storage adapter around {@link QueryableIndex} that transforms all multi-value strings columns into string arrays.
@@ -62,6 +64,13 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
       public Cursor asCursor()
       {
         return new DecoratedCursor(delegate.asCursor());
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return delegate.getOrdering();
       }
 
       @Override

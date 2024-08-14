@@ -21,24 +21,29 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterators;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
+import java.util.List;
 
 public class IncrementalIndexCursorHolder implements CursorHolder
 {
   private final IncrementalIndexStorageAdapter storageAdapter;
   private final IncrementalIndex index;
   private final CursorBuildSpec spec;
+  private final List<OrderBy> ordering;
+  private final boolean descending;
 
   public IncrementalIndexCursorHolder(
       IncrementalIndexStorageAdapter storageAdapter,
@@ -49,6 +54,14 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     this.storageAdapter = storageAdapter;
     this.index = index;
     this.spec = spec;
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      this.ordering = Cursors.descendingTimeOrder();
+      this.descending = true;
+    } else {
+      this.ordering = Cursors.ascendingTimeOrder();
+      this.descending = false;
+    }
   }
 
   @Override
@@ -67,10 +80,16 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         storageAdapter,
         index,
         spec.getVirtualColumns(),
-        CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
+        descending,
         spec.getFilter(),
         spec.getInterval()
     );
+  }
+
+  @Override
+  public List<OrderBy> getOrdering()
+  {
+    return ordering;
   }
 
   static class IncrementalIndexCursor implements Cursor

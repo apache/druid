@@ -26,12 +26,15 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.segment.FrameFilteredOffset;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorHolderFactory;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorHolderFactory;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
@@ -44,15 +47,15 @@ import java.util.List;
  *
  * This class is only used for row-based frames.
  *
- * @see org.apache.druid.frame.segment.columnar.FrameCursorHolderFactory the columnar version
+ * @see ColumnarFrameCursorHolderFactory the columnar version
  */
-public class FrameCursorHolderFactory implements CursorHolderFactory
+public class RowFrameCursorHolderFactory implements CursorHolderFactory
 {
   private final Frame frame;
   private final FrameReader frameReader;
   private final List<FieldReader> fieldReaders;
 
-  public FrameCursorHolderFactory(
+  public RowFrameCursorHolderFactory(
       final Frame frame,
       final FrameReader frameReader,
       final List<FieldReader> fieldReaders
@@ -66,6 +69,16 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
     return new CursorHolder()
     {
       @Nullable
@@ -74,7 +87,7 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
       {
         final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
 
-        final SimpleSettableOffset baseOffset = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering())
+        final SimpleSettableOffset baseOffset = descending
                                                 ? new SimpleDescendingOffset(frame.numRows())
                                                 : new SimpleAscendingOffset(frame.numRows());
 
@@ -101,6 +114,13 @@ public class FrameCursorHolderFactory implements CursorHolderFactory
         // Note: if anything closeable is ever added to this Sequence, make sure to update FrameProcessors.makeCursor.
         // Currently, it assumes that closing the Sequence does nothing.
         return cursor;
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
       }
     };
   }

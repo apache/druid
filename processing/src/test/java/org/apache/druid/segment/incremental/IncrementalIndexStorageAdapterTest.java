@@ -35,7 +35,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
@@ -63,9 +62,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.OrFilter;
@@ -287,11 +286,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                                        .setFilter(new SelectorFilter("sally", "bo"))
                                                        .setInterval(interval)
                                                        .setPreferredOrdering(
-                                                           descending ?
-                                                           Collections.singletonList(
-                                                               OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                                           ) :
-                                                           null
+                                                           descending ? Cursors.descendingTimeOrder() : null
                                                        )
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
@@ -374,11 +369,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                                        )
                                                        .setInterval(interval)
                                                        .setPreferredOrdering(
-                                                           descending ?
-                                                           Collections.singletonList(
-                                                               OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                                           ) :
-                                                           null
+                                                           descending ? Cursors.descendingTimeOrder() : null
                                                        )
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {

@@ -20,13 +20,11 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -34,7 +32,7 @@ import java.util.List;
 
 public class CursorBuildSpec
 {
-  public static final CursorBuildSpec FULL_SCAN = CursorBuildSpec.builder().build();
+  public static final CursorBuildSpec FULL_SCAN = builder().build();
 
   public static CursorBuildSpecBuilder builder()
   {
@@ -166,20 +164,6 @@ public class CursorBuildSpec
   public QueryMetrics<?> getQueryMetrics()
   {
     return queryMetrics;
-  }
-
-  /**
-   * Check if the first {@link OrderBy} column of {@link CursorBuildSpec#getPreferredOrdering()} is
-   * {@link Order#DESCENDING}, which allow {@link Cursor} on time ordered data to advance in descending order if
-   * possible.
-   */
-  public static boolean preferDescendingTimeOrder(@Nullable List<OrderBy> preferredOrdering)
-  {
-    if (preferredOrdering != null && !preferredOrdering.isEmpty()) {
-      final OrderBy orderBy = preferredOrdering.get(0);
-      return ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()) && Order.DESCENDING == orderBy.getOrder();
-    }
-    return false;
   }
 
   public static class CursorBuildSpecBuilder

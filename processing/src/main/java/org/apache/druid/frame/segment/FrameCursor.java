@@ -19,15 +19,16 @@
 
 package org.apache.druid.frame.segment;
 
-import org.apache.druid.frame.segment.columnar.FrameCursorHolderFactory;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorHolderFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorHolderFactory;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SimpleSettableOffset;
 
 /**
- * An implementation of {@link Cursor} used by {@link org.apache.druid.frame.segment.row.FrameCursorHolderFactory}
- * and {@link FrameCursorHolderFactory}.
+ * An implementation of {@link Cursor} used by {@link RowFrameCursorHolderFactory}
+ * and {@link ColumnarFrameCursorHolderFactory}.
  *
  * Adds the methods {@link #getCurrentRow()} and {@link #setCurrentRow(int)} so the cursor can be moved to
  * particular rows.

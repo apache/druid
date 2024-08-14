@@ -112,6 +112,8 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(storageAdapter, query, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
+      // reset cursor to starting position (mark was set by the call to run)
+      params.getCursor().resetToMark();
       // Run topN for all metrics for top N dimension values
       allMetricsParam = allMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor(), params.getGranularizer());
       allMetricAlgo.run(

@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -106,6 +108,7 @@ public class TimeseriesQueryEngine
 
 
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
+    Cursors.requireTimeOrdering(cursorHolder, query.isDescending() ? Order.DESCENDING : Order.ASCENDING);
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize(), cursorHolder::close)) {

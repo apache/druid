@@ -122,7 +122,8 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     // we must know cardinality to use array based aggregation. in cases where the same dictionary ids map to different
     // values (1:* or *:*), results can be entirely incorrect since an aggregator for a different value might be
     // chosen from the array based on the re-used dictionary id
-    if (notUnknown && hasDictionary) {
+    // finally, 'run' passes in selector as null for unknown case, so to be safe check for null
+    if (notUnknown && hasDictionary && rowSelector != null) {
       return scanAndAggregateWithCardinalityKnown(query, cursor, granularizer, selector, rowSelector);
     } else {
       return scanAndAggregateWithCardinalityUnknown(query, cursor, granularizer, selector);

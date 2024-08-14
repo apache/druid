@@ -24,10 +24,12 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -39,7 +41,6 @@ import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
-import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -231,6 +232,17 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       return baseAdapter.makeCursorHolder(newSpec);
     }
 
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
+
     return new CursorHolder()
     {
       final Closer joinablesCloser = Closer.create();
@@ -290,10 +302,9 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         }
 
         Cursor retVal = baseCursor;
-        final boolean isDescendingTimeOrdering = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
 
         for (JoinableClause clause : clauses) {
-          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, isDescendingTimeOrdering, joinablesCloser);
+          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
         }
 
         return PostJoinCursor.wrap(
@@ -303,23 +314,17 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
       }
 
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
+      }
+
       @Override
       public void close()
       {
         CloseableUtils.closeAndWrapExceptions(joinablesCloser);
-      }
-
-      @Override
-      public boolean canVectorize()
-      {
-        return CursorHolder.super.canVectorize();
-      }
-
-      @Nullable
-      @Override
-      public VectorCursor asVectorCursor()
-      {
-        return CursorHolder.super.asVectorCursor();
       }
     };
   }

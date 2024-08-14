@@ -31,10 +31,10 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -47,7 +47,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class CursorGranularizerTest extends InitializedNullHandlingTest
@@ -205,11 +204,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   public void testGranularizeFullScanDescending()
   {
     final CursorBuildSpec descending = CursorBuildSpec.builder()
-                                                      .setPreferredOrdering(
-                                                          Collections.singletonList(
-                                                              OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME)
-                                                          )
-                                                      )
+                                                      .setPreferredOrdering(Cursors.descendingTimeOrder())
                                                       .build();
     try (CursorHolder cursorHolder = adapter.makeCursorHolder(descending)) {
       final Cursor cursor = cursorHolder.asCursor();

@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.Iterables;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
@@ -30,6 +31,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -47,6 +49,16 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHo
   @Override
   default CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
     return new CursorHolder()
     {
       @Override
@@ -55,7 +67,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHo
         return StorageAdapter.this.canVectorize(
             spec.getFilter(),
             spec.getVirtualColumns(),
-            CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering())
+            Cursors.preferDescendingTimeOrdering(spec)
         );
       }
 
@@ -68,7 +80,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHo
                 spec.getInterval(),
                 spec.getVirtualColumns(),
                 Granularities.ALL,
-                CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
+                descending,
                 spec.getQueryMetrics()
             ).toList()
         );
@@ -81,10 +93,17 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHo
             spec.getFilter(),
             spec.getInterval(),
             spec.getVirtualColumns(),
-            CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering()),
+            descending,
             spec.getQueryContext().getVectorSize(),
             spec.getQueryMetrics()
         );
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
       }
 
       @Override

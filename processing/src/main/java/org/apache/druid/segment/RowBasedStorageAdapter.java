@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.SimpleSequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
@@ -168,6 +169,16 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
     return new CursorHolder()
     {
       final Closer closer = Closer.create();
@@ -175,12 +186,8 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
       @Override
       public Cursor asCursor()
       {
-        final boolean descendingTimeOrder = CursorBuildSpec.preferDescendingTimeOrder(spec.getPreferredOrdering());
         final RowWalker<RowType> rowWalker = closer.register(
-            new RowWalker<>(
-                 descendingTimeOrder ? reverse(rowSequence) : rowSequence,
-                rowAdapter
-            )
+            new RowWalker<>(descending ? reverse(rowSequence) : rowSequence, rowAdapter)
         );
         return new RowBasedCursor<>(
             rowWalker,
@@ -188,9 +195,16 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
             spec.getFilter(),
             spec.getInterval(),
             spec.getVirtualColumns(),
-            descendingTimeOrder,
+            descending,
             rowSignature
         );
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
       }
 
       @Override

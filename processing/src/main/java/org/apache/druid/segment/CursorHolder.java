@@ -20,10 +20,13 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.vector.VectorCursor;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.util.Collections;
+import java.util.List;
 
 public interface CursorHolder extends Closeable
 {
@@ -48,6 +51,15 @@ public interface CursorHolder extends Closeable
   default boolean canVectorize()
   {
     return false;
+  }
+
+  /**
+   * Returns cursor ordering, which may or may not match {@link CursorBuildSpec#getPreferredOrdering()}. If returns
+   * null then the cursor has no defined ordering
+   */
+  default List<OrderBy> getOrdering()
+  {
+    return Collections.emptyList();
   }
 
   /**

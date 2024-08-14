@@ -20,10 +20,12 @@
 package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -56,6 +58,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * This class serves as the Storage Adapter for the Unnest Segment and is responsible for creating the cursors
@@ -108,11 +111,14 @@ public class UnnestStorageAdapter implements StorageAdapter
     return new CursorHolder()
     {
       final Closer closer = Closer.create();
+      final Supplier<CursorHolder> cursorHolderSupplier = Suppliers.memoize(
+          () -> closer.register(baseAdapter.makeCursorHolder(unnestBuildSpec))
+      );
+
       @Override
       public Cursor asCursor()
       {
-        final CursorHolder cursorHolder = closer.register(baseAdapter.makeCursorHolder(unnestBuildSpec));
-        final Cursor cursor = cursorHolder.asCursor();
+        final Cursor cursor = cursorHolderSupplier.get().asCursor();
         if (cursor == null) {
           return null;
         }
@@ -142,6 +148,13 @@ public class UnnestStorageAdapter implements StorageAdapter
             spec.getVirtualColumns(),
             filterPair.rhs
         );
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return cursorHolderSupplier.get().getOrdering();
       }
 
       @Override

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
@@ -56,6 +57,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -72,6 +74,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private final Filter filter;
   @Nullable
   private final QueryMetrics<? extends Query> metrics;
+  private final List<OrderBy> ordering;
   private final boolean descending;
   private final QueryContext queryContext;
   private final int vectorSize;
@@ -87,7 +90,14 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.virtualColumns = cursorBuildSpec.getVirtualColumns();
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
-    this.descending = CursorBuildSpec.preferDescendingTimeOrder(cursorBuildSpec.getPreferredOrdering());
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)) {
+      this.ordering = Collections.singletonList(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME));
+      this.descending = true;
+    } else {
+      this.ordering = Collections.singletonList(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
+      this.descending = false;
+    }
     this.queryContext = cursorBuildSpec.getQueryContext();
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();

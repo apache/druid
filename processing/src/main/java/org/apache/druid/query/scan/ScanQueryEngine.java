@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -118,6 +120,19 @@ public class ScanQueryEngine
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
+    if (Order.NONE != query.getTimeOrder()) {
+      final Order requiredOrder = query.getTimeOrder();
+      if (!(Cursors.isTimeOrdered(cursorHolder) && cursorHolder.getOrdering().get(0).getOrder() == requiredOrder)) {
+        String failureReason = StringUtils.format(
+            "Cursor must be ordered by [%s] with direction [%s] but was [%s] instead.",
+            ColumnHolder.TIME_COLUMN_NAME,
+            requiredOrder,
+            cursorHolder.getOrdering()
+        );
+        cursorHolder.close();
+        throw DruidException.defensive(failureReason);
+      }
+    }
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
         {

@@ -6193,6 +6193,55 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResults(expectedResults, query);
   }
 
+  @Test
+  public void testTopNAggregateTopnMetricFirst()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+            .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+            .granularity(QueryRunnerTestHelper.ALL_GRAN)
+            .dimension(QueryRunnerTestHelper.MARKET_DIMENSION)
+            .metric(QueryRunnerTestHelper.INDEX_METRIC)
+            .threshold(4)
+            .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
+            .aggregators(commonAggregators)
+            .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
+            .context(ImmutableMap.of("doAggregateTopNMetricFirst", true))
+            .build();
+
+
+    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+            new Result<>(
+                    DateTimes.of("2011-04-01T00:00:00.000Z"),
+                    TopNResultValue.create(
+                            Arrays.<Map<String, Object>>asList(
+                                    ImmutableMap.of(
+                                            QueryRunnerTestHelper.MARKET_DIMENSION, "total_market",
+                                            "rows", 4L,
+                                            "index", 5351.814783D,
+                                            "addRowsIndexConstant", 5356.814783D,
+                                            "uniques", QueryRunnerTestHelper.UNIQUES_2
+                                    ),
+                                    ImmutableMap.of(
+                                            QueryRunnerTestHelper.MARKET_DIMENSION, "upfront",
+                                            "rows", 4L,
+                                            "index", 4875.669692D,
+                                            "addRowsIndexConstant", 4880.669692D,
+                                            "uniques", QueryRunnerTestHelper.UNIQUES_2
+                                    ),
+                                    ImmutableMap.of(
+                                            QueryRunnerTestHelper.MARKET_DIMENSION, "spot",
+                                            "rows", 18L,
+                                            "index", 2231.876812D,
+                                            "addRowsIndexConstant", 2250.876812D,
+                                            "uniques", QueryRunnerTestHelper.UNIQUES_9
+                                    )
+                            )
+                    )
+            )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
   private static Map<String, Object> makeRowWithNulls(
       String dimName,
       @Nullable Object dimValue,
