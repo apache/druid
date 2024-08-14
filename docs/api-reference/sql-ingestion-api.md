@@ -836,7 +836,7 @@ import requests
 
 url = "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/task/query-655efe33-781a-4c50-ae84-c2911b42d63c/shutdown"
 
-payload={}
+payload = {}
 headers = {}
 username = 'USER'
 password = 'PASSWORD'
