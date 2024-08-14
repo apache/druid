@@ -1077,14 +1077,14 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. Returns `replaceMissingValueWith`, which defaults to `null` if `expr` is null or if the lookup doesn't contain a key for `expr`.
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `replaceMissingValueWith` if supplied, otherwise null.
 
 * **Syntax:** `LOOKUP(expr, lookupName[, replaceMissingValueWith])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example uses a `map`-typed lookup table named `acronym_to_name`, made with the following key-value pairs:
+The following example uses a `map`-typed lookup table named `acronym_to_name`, which contains the following key-value pairs:
 
 ```json
 {
