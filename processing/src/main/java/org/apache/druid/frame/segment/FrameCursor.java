@@ -37,7 +37,6 @@ public class FrameCursor implements Cursor
 {
   private final SimpleSettableOffset offset;
   private final ColumnSelectorFactory columnSelectorFactory;
-  private int markOffset = 0;
 
   public FrameCursor(
       SimpleSettableOffset offset,
@@ -82,7 +81,6 @@ public class FrameCursor implements Cursor
   @Override
   public void reset()
   {
-    markOffset = 0;
     offset.reset();
   }
 

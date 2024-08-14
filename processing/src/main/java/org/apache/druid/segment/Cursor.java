@@ -87,9 +87,9 @@ public interface Cursor
   boolean isDoneOrInterrupted();
 
   /**
-   * Reset to start of cursor and discard mark. Most cursor implementations are backed by immutable data, but there is
-   * generically no guarantee that advancing through a cursor again will read exactly the same data or even number of
-   * rows, since the underlying data might be mutable in some cases.
+   * Reset to start of cursor. Most cursor implementations are backed by immutable data, but there is generically no
+   * guarantee that advancing through a cursor again will read exactly the same data or even number of rows, since the
+   * underlying data might be mutable in some cases.
    */
   void reset();
 }
