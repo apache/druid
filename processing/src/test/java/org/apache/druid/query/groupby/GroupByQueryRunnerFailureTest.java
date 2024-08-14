@@ -130,7 +130,7 @@ public class GroupByQueryRunnerFailureTest
   private QueryRunner<ResultRow> runner;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     Assert.assertEquals(
         "MERGE_BUFFER_POOL size, pre-test",
@@ -140,7 +140,7 @@ public class GroupByQueryRunnerFailureTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     Assert.assertEquals(
         "MERGE_BUFFER_POOL size, post-test",
