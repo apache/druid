@@ -434,6 +434,6 @@ Druid SQL reserves certain keywords which are used in its query language. Apache
 To use the reserved keywords in queries, enclose them in double quotation marks. For example, the reserved keyword **PARTITIONED** can be used in a query if and only if it is correctly quoted:
 
 ```sql
-SELECT "CLUSTERED" from druid.table
+SELECT "PARTITIONED" from druid.table
 
 ```
