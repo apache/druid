@@ -2441,11 +2441,12 @@ export function fillInputFormatIfNeeded(
   sampleResponse: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.ioConfig.inputFormat.type')) return spec;
+  const specType = getSpecType(spec);
 
   return deepSet(
     spec,
     'spec.ioConfig.inputFormat',
-    getSpecType(spec) === 'kafka'
+    specType === 'kafka'
       ? guessKafkaInputFormat(
           filterMap(sampleResponse.data, l => l.input),
           typeof deepGet(spec, 'spec.ioConfig.topicPattern') === 'string',

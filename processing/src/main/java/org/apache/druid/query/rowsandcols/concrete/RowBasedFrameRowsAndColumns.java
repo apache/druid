@@ -19,12 +19,13 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.field.FieldReader;
+import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
@@ -65,6 +66,7 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
   @Override
   public Column findColumn(String name)
   {
+    // Use contains so that we can negative cache.
     if (!colCache.containsKey(name)) {
       final int columnIndex = signature.indexOf(name);
       if (columnIndex < 0) {
@@ -72,9 +74,16 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
       } else {
         final ColumnType columnType = signature
             .getColumnType(columnIndex)
-            .orElseThrow(() -> new ISE("just got the id, why is columnType not there?"));
+            .orElseThrow(
+                () -> DruidException.defensive(
+                    "just got the id [%s][%s], why is columnType not there?",
+                    columnIndex,
+                    name
+                )
+            );
 
-        colCache.put(name, FrameColumnReaders.create(name, columnIndex, columnType).readRACColumn(frame));
+        final FieldReader reader = FieldReaders.create(name, columnType);
+        colCache.put(name, reader.makeRACColumn(frame, signature, name));
       }
     }
     return colCache.get(name);

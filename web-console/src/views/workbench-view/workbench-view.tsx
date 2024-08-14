@@ -30,17 +30,22 @@ import type { SqlQuery } from '@druid-toolkit/query';
 import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React, { ComponentProps } from 'react';
+import React from 'react';
 
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
   CapacityInfo,
   DruidEngine,
   Execution,
+  QueryContext,
   QueryWithContext,
   TabEntry,
 } from '../../druid-models';
-import { guessDataSourceNameFromInputSource, WorkbenchQuery } from '../../druid-models';
+import {
+  DEFAULT_SERVER_QUERY_CONTEXT,
+  guessDataSourceNameFromInputSource,
+  WorkbenchQuery,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
 import { getLink } from '../../links';
@@ -70,6 +75,7 @@ import type { ExecutionDetailsTab } from './execution-details-pane/execution-det
 import { ExecutionSubmitDialog } from './execution-submit-dialog/execution-submit-dialog';
 import { ExplainDialog } from './explain-dialog/explain-dialog';
 import { MetadataChangeDetector } from './metadata-change-detector';
+import type { QueryTabProps } from './query-tab/query-tab';
 import { QueryTab } from './query-tab/query-tab';
 import { RecentQueryTaskPanel } from './recent-query-task-panel/recent-query-task-panel';
 import { TabRenameDialog } from './tab-rename-dialog/tab-rename-dialog';
@@ -90,20 +96,24 @@ function externalDataTabId(tabId: string | undefined): boolean {
   return String(tabId).startsWith('connect-external-data');
 }
 
-export interface WorkbenchViewProps {
+export interface WorkbenchViewProps
+  extends Pick<
+    QueryTabProps,
+    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
+  > {
   capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
   initQueryWithContext: QueryWithContext | undefined;
-  defaultQueryContext?: Record<string, any>;
-  mandatoryQueryContext?: Record<string, any>;
+  baseQueryContext?: QueryContext;
+  defaultQueryContext?: QueryContext;
+  mandatoryQueryContext?: QueryContext;
+  serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
   allowExplain: boolean;
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
-  maxTaskMenuHeader?: JSX.Element;
-  enginesLabelFn?: ComponentProps<typeof QueryTab>['enginesLabelFn'];
-  maxTaskLabelFn?: ComponentProps<typeof QueryTab>['maxTaskLabelFn'];
+  hideToolbar?: boolean;
 }
 
 export interface WorkbenchViewState {
@@ -247,11 +257,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     });
   };
 
+  private getInitWorkbenchQuery(): WorkbenchQuery {
+    return WorkbenchQuery.blank().changeQueryContext(this.props.defaultQueryContext || {});
+  }
+
   private getInitTab(): TabEntry {
     return {
       id: generate8HexId(),
       tabName: 'Tab 1',
-      query: WorkbenchQuery.blank().changeQueryContext(this.props.defaultQueryContext || {}),
+      query: this.getInitWorkbenchQuery(),
     };
   }
 
@@ -463,7 +477,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }
 
           this.handleNewTab(
-            WorkbenchQuery.fromEffectiveQueryAndContext(
+            WorkbenchQuery.fromTaskQueryAndContext(
               execution.sqlQuery,
               execution.queryContext,
             ).changeLastExecution({ engine: 'sql-msq-task', id: taskId }),
@@ -605,7 +619,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           icon={IconNames.PLUS}
           minimal
           onClick={() => {
-            this.handleNewTab(WorkbenchQuery.blank());
+            this.handleNewTab(this.getInitWorkbenchQuery());
           }}
         />
       </div>
@@ -613,8 +627,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderToolbar() {
-    const { queryEngines } = this.props;
+    const { queryEngines, hideToolbar } = this.props;
     if (!queryEngines.includes('sql-msq-task')) return;
+    if (hideToolbar) return;
 
     const { showRecentQueryTaskPanel } = this.state;
     return (
@@ -648,13 +663,16 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const {
       capabilities,
       mandatoryQueryContext,
+      baseQueryContext,
+      serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
       allowExplain,
       goToTask,
       getClusterCapacity,
-      maxTaskMenuHeader,
+      maxTasksMenuHeader,
       enginesLabelFn,
-      maxTaskLabelFn,
+      maxTasksLabelFn,
+      fullClusterCapacityLabelFn,
     } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
@@ -671,6 +689,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           query={currentTabEntry.query}
           id={currentTabEntry.id}
           mandatoryQueryContext={mandatoryQueryContext}
+          baseQueryContext={baseQueryContext}
+          serverQueryContext={serverQueryContext}
           columnMetadata={columnMetadataState.getSomeData()}
           onQueryChange={this.handleQueryChange}
           onQueryTab={this.handleNewTab}
@@ -679,9 +699,10 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
           getClusterCapacity={getClusterCapacity}
-          maxTaskMenuHeader={maxTaskMenuHeader}
+          maxTasksMenuHeader={maxTasksMenuHeader}
           enginesLabelFn={enginesLabelFn}
-          maxTaskLabelFn={maxTaskLabelFn}
+          maxTasksLabelFn={maxTasksLabelFn}
+          fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
           runMoreMenu={
             <Menu>
               {allowExplain &&

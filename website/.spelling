@@ -31,6 +31,9 @@ apache.org
 AvroStorage
 ARN
 ASC
+arcsine
+arccosine
+arctangent
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -379,6 +382,7 @@ json_query
 json_query_array
 json_value
 karlkfi
+kbps
 kerberos
 keystore
 keytool

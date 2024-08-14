@@ -54,6 +54,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -73,6 +74,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class MSQCompactionRunnerTest
 {
@@ -196,6 +198,19 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testRollupTrueWithoutMetricsSpecIsInValid()
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        new ClientCompactionTaskGranularitySpec(null, null, true),
+        null
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+  }
+
+  @Test
   public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
   {
     // Aggregators having different input and ouput column names are unsupported.
@@ -211,7 +226,7 @@ public class MSQCompactionRunnerTest
     CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask);
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
         validationResult.getReason()
     );
   }
@@ -288,6 +303,10 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertNull(msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY));
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assert.assertEquals(PARTITION_DIMENSIONS.stream().map(col -> new ScanQuery.OrderBy(
+        col,
+        ScanQuery.Order.ASCENDING
+    )).collect(Collectors.toList()), ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys());
   }
 
   @Test

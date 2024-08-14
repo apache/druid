@@ -92,7 +92,7 @@ public class ClientCompactionRunnerInfo
   {
     CompactionEngine compactionEngine = newConfig.getEngine() == null ? defaultCompactionEngine : newConfig.getEngine();
     if (compactionEngine == CompactionEngine.NATIVE) {
-      return new CompactionConfigValidationResult(true, null);
+      return CompactionConfigValidationResult.success();
     } else {
       return compactionConfigSupportedByMSQEngine(newConfig);
     }
@@ -103,9 +103,8 @@ public class ClientCompactionRunnerInfo
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
-   * <li>queryGranularity set to ALL in granularitySpec.</li>
-   * <li>Each metric has output column name same as the input name.</li>
+   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's empty.</li>
+   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
@@ -125,7 +124,7 @@ public class ClientCompactionRunnerInfo
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
-                            .orElse(new CompactionConfigValidationResult(true, null));
+                            .orElse(CompactionConfigValidationResult.success());
   }
 
   /**
@@ -135,39 +134,41 @@ public class ClientCompactionRunnerInfo
   {
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
-      return new CompactionConfigValidationResult(
-          false,
-          "Invalid partitionsSpec type[%s] for MSQ engine. Type must be either 'dynamic' or 'range'.",
+      return CompactionConfigValidationResult.failure(
+          "MSQ: Invalid partitioning type[%s]. Must be either 'dynamic' or 'range'",
           partitionsSpec.getClass().getSimpleName()
 
       );
     }
     if (partitionsSpec instanceof DynamicPartitionsSpec
         && ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows() != null) {
-      return new CompactionConfigValidationResult(
-          false,
-          "maxTotalRows[%d] in DynamicPartitionsSpec not supported for MSQ engine.",
-          ((DynamicPartitionsSpec) partitionsSpec).getMaxTotalRows()
+      return CompactionConfigValidationResult.failure(
+          "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning"
       );
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
-   * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
+   * Validate rollup in granularitySpec is set to true when metricsSpec is specified and false if it's null.
+   * If rollup set to null, all existing segments are analyzed, and it's set to true iff all segments have rollup
+   * set to true.
    */
   public static CompactionConfigValidationResult validateRollupForMSQ(
       AggregatorFactory[] metricsSpec,
       @Nullable Boolean isRollup
   )
   {
-    if (metricsSpec != null && isRollup != null && !isRollup) {
-      return new CompactionConfigValidationResult(
-          false,
-          "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine."
+    if (metricsSpec != null && metricsSpec.length != 0 && isRollup != null && !isRollup) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified"
+      );
+    } else if ((metricsSpec == null || metricsSpec.length == 0) && isRollup != null && isRollup) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null"
       );
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
@@ -179,38 +180,31 @@ public class ClientCompactionRunnerInfo
       int maxNumTasks = QueryContext.of(context)
                                     .getInt(ClientMSQContext.CTX_MAX_NUM_TASKS, ClientMSQContext.DEFAULT_MAX_NUM_TASKS);
       if (maxNumTasks < 2) {
-        return new CompactionConfigValidationResult(false,
-                                                    "MSQ context maxNumTasks [%,d] cannot be less than 2, "
-                                                    + "since at least 1 controller and 1 worker is necessary.",
-                                                    maxNumTasks
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Context maxNumTasks[%,d] must be at least 2 (1 controller + 1 worker)",
+            maxNumTasks
         );
       }
     }
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
-   * Validate each metric has output column name same as the input name.
+   * Validate each metric is idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A = A.combiningFactory()'.
    */
   public static CompactionConfigValidationResult validateMetricsSpecForMSQ(AggregatorFactory[] metricsSpec)
   {
     if (metricsSpec == null) {
-      return new CompactionConfigValidationResult(true, null);
+      return CompactionConfigValidationResult.success();
     }
     return Arrays.stream(metricsSpec)
-                 .filter(aggregatorFactory ->
-                             !(aggregatorFactory.requiredFields().isEmpty()
-                               || aggregatorFactory.requiredFields().size() == 1
-                                  && aggregatorFactory.requiredFields()
-                                                      .get(0)
-                                                      .equals(aggregatorFactory.getName())))
+                 .filter(aggregatorFactory -> !aggregatorFactory.equals(aggregatorFactory.getCombiningFactory()))
                  .findFirst()
                  .map(aggregatorFactory ->
-                          new CompactionConfigValidationResult(
-                              false,
-                              "Different name[%s] and fieldName(s)[%s] for aggregator unsupported for MSQ engine.",
-                              aggregatorFactory.getName(),
-                              aggregatorFactory.requiredFields()
-                          )).orElse(new CompactionConfigValidationResult(true, null));
+                          CompactionConfigValidationResult.failure(
+                              "MSQ: Non-idempotent aggregator[%s] not supported in 'metricsSpec'.",
+                              aggregatorFactory.getName()
+                          )
+                 ).orElse(CompactionConfigValidationResult.success());
   }
 }

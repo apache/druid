@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
@@ -38,8 +39,9 @@ import org.apache.druid.segment.vector.VectorValueSelector;
  * values to be aggregated are null values, or if no values are aggregated at all. If any of the values are non-null,
  * the result will be the aggregated value of the non-null values.
  *
- * This superclass should only be extended by aggregators that read primitive numbers. It implements logic that is
- * not valid for non-numeric selector methods such as {@link ColumnValueSelector#getObject()}.
+ * Aggregators that use {@link ColumnValueSelector#getObject()} must override
+ * {@link #useGetObject(ColumnSelectorFactory)}. Otherwise, the logic in this class is not correct for
+ * non-numeric selectors.
  *
  * @see BaseNullableColumnValueSelector#isNull() for why this only works in the numeric case
  */
@@ -51,16 +53,18 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
   public final Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
     T selector = selector(columnSelectorFactory);
+    BaseNullableColumnValueSelector nullSelector = makeNullSelector(selector, columnSelectorFactory);
     Aggregator aggregator = factorize(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericAggregator(aggregator, selector);
+    return NullHandling.sqlCompatible() ? new NullableNumericAggregator(aggregator, nullSelector) : aggregator;
   }
 
   @Override
   public final BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
     T selector = selector(columnSelectorFactory);
+    BaseNullableColumnValueSelector nullSelector = makeNullSelector(selector, columnSelectorFactory);
     BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericBufferAggregator(aggregator, selector);
+    return NullHandling.sqlCompatible() ? new NullableNumericBufferAggregator(aggregator, nullSelector) : aggregator;
   }
 
   @Override
@@ -69,20 +73,37 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
     VectorValueSelector selector = vectorSelector(columnSelectorFactory);
     VectorAggregator aggregator = factorizeVector(columnSelectorFactory, selector);
-    return NullHandling.replaceWithDefault() ? aggregator : new NullableNumericVectorAggregator(aggregator, selector);
+    return NullHandling.sqlCompatible() ? new NullableNumericVectorAggregator(aggregator, selector) : aggregator;
   }
 
   @Override
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
-    AggregateCombiner combiner = makeAggregateCombiner();
-    return NullHandling.replaceWithDefault() ? combiner : new NullableNumericAggregateCombiner(combiner);
+    AggregateCombiner<?> combiner = makeAggregateCombiner();
+    return NullHandling.sqlCompatible() ? new NullableNumericAggregateCombiner<>(combiner) : combiner;
   }
 
   @Override
   public final int getMaxIntermediateSizeWithNulls()
   {
     return getMaxIntermediateSize() + (NullHandling.replaceWithDefault() ? 0 : Byte.BYTES);
+  }
+
+  /**
+   * Returns the selector that should be used by {@link NullableNumericAggregator} and
+   * {@link NullableNumericBufferAggregator} to determine if the current value is null.
+   */
+  private BaseNullableColumnValueSelector makeNullSelector(
+      final T selector,
+      final ColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    if (useGetObject(columnSelectorFactory)) {
+      final BaseObjectColumnValueSelector<?> objectSelector = (BaseObjectColumnValueSelector<?>) selector;
+      return () -> objectSelector.getObject() == null;
+    } else {
+      return selector;
+    }
   }
 
   // ---- ABSTRACT METHODS BELOW ------
@@ -93,6 +114,17 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
    * @see ColumnValueSelector
    */
   protected abstract T selector(ColumnSelectorFactory columnSelectorFactory);
+
+  /**
+   * Returns whether the selector created by {@link #selector(ColumnSelectorFactory)} for the given
+   * {@link ColumnSelectorFactory} prefers {@link BaseObjectColumnValueSelector#getObject()}.
+   *
+   * For backwards compatibilty with older extensions, this is a non-abstract method.
+   */
+  protected boolean useGetObject(ColumnSelectorFactory columnSelectorFactory)
+  {
+    return false;
+  }
 
   /**
    * Creates a {@link VectorValueSelector} for the aggregated column.
