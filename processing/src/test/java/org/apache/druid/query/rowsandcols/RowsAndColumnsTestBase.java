@@ -24,6 +24,8 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -67,7 +69,8 @@ public abstract class RowsAndColumnsTestBase
         new Object[]{ConcatRowsAndColumns.class, ConcatRowsAndColumnsTest.MAKER},
         new Object[]{RearrangedRowsAndColumns.class, RearrangedRowsAndColumnsTest.MAKER},
         new Object[]{ColumnBasedFrameRowsAndColumns.class, ColumnBasedFrameRowsAndColumnsTest.MAKER},
-        new Object[]{StorageAdapterRowsAndColumns.class, StorageAdapterRowsAndColumnsTest.MAKER}
+        new Object[]{StorageAdapterRowsAndColumns.class, StorageAdapterRowsAndColumnsTest.MAKER},
+        new Object[]{RowBasedFrameRowsAndColumns.class, RowBasedFrameRowsAndColumnsTest.MAKER}
     );
   }
 

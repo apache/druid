@@ -20,7 +20,11 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.error.NotYetImplemented;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 
@@ -59,5 +63,11 @@ public class LongArrayFieldReader extends NumericArrayFieldReader
         return FIELD_SIZE;
       }
     };
+  }
+
+  @Override
+  public Column makeRACColumn(Frame frame, RowSignature signature, String columnName)
+  {
+    throw NotYetImplemented.ex(null, "Class cannot create an RAC column.");
   }
 }
