@@ -28,10 +28,9 @@ This tutorial demonstrates how to transform input data during ingestion.
 
 ## Prerequisite
 
-This tutorial assumes you've already downloaded Apache Druid&circledR; as described in
-the [single-machine quickstart](./index.md) and have it running on your local machine.
+Before proceeding, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
-It's helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and [Query data](../tutorials/tutorial-query.md) tutorials.
+You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
 ## Sample data
 
@@ -61,7 +60,7 @@ SELECT
   "number",
   "number" * 3 AS "triple-number"
 FROM "ext"
-WHERE (TEXTCAT('super-', "animal") = 'super-mongoose' OR "location" = 3 OR "number" * 3 = 300)
+WHERE (TEXTCAT('super-', "animal") = 'super-mongoose' OR "location" = 3 OR "number" = 100)
 PARTITIONED BY DAY
 ```
 
@@ -69,11 +68,11 @@ In the `SELECT` clause, you specify the following transformations:
 * `animal`: prepends "super-" to the values in the `animal` column using the [`TEXTCAT`](../querying/sql-functions.md/#textcat) function. Note that it only ingests the transformed data.
 * `triple-number`: multiplies the `number` column by three and stores the results in a column named `triple-number`. Note that the query ingests both the original and the transformed data.
 
-Additionally, the `WHERE` clause applies the following three OR clauses so that the query only ingests the rows where at least one of the following conditions are `true`:
+Additionally, the `WHERE` clause applies the following three OR operators so that the query only ingests the rows where at least one of the following conditions is `true`:
 
-* `TEXTCAT('super-', "animal")` value matches "super-mongoose"
-* `location` value matches 3
-* `'number' * 3` value matches 300
+* `TEXTCAT('super-', "animal")` matches "super-mongoose"
+* `location` matches 3
+* `number` matches 100
 
 ## Query the transformed data
 
@@ -91,7 +90,7 @@ Returns the following:
 | `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
 | `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
 
-Note that the "lion" row has been discarded, the `animal` column has been transformed, and both the original `number` column and the transformed `triple-number` column have been ingested.
+Once a row is accepted by the filter, the ingestion job applies the transformations. In this example, the filter selects the first three rows because each row meets at least one of the necessary OR conditions. Note that for the three rows selected, the ingestion job ingests the transformed `animal` column, the `location` column, and both the original `number` and the transformed `triple-number` column. The "lion" row is not accepted by the filter, so it is not ingested or transformed.
 
 ## Learn more
 
