@@ -1124,7 +1124,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|`PT30S`|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
 |`druid.indexer.queue.maxTaskPayloadSize`|Maximum allowed size in bytes of a single task payload accepted by the Overlord.|none (allow all task payload sizes)|
-|`druid.indexer.queue.controllerTaskSlotRatio`|Optional value which defines the proportion of available task slots that can be allocated to `query_controller` tasks. This is a floating-point value between 0 and 1. |`null`|
+|`druid.indexer.queue.controllerTaskSlotRatio`|Optional value which defines the proportion of available task slots that can be allocated to `query_controller` tasks. This is a floating-point value between 0 and 1.|`null`|
 |`druid.indexer.queue.maxControllerTaskSlots`|Optional value which specifies the maximum number of task slots that can be allocated to controller tasks. This is an integer value that provides a hard limit on the number of task slots available for `query_controller` tasks.|`null`|
 
 The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
