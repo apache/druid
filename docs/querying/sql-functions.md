@@ -1058,11 +1058,13 @@ SELECT
 FROM "taxi-trips"
 LIMIT 1
 ```
+
 Returns the following:
 
 | `max_temperature` | `natural_log_max_temp` | 
 | -- | -- | 
 | `76` | `4.330733340286331` | 
+
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1122,21 +1124,23 @@ Returns a string of size `length` from `expr`. When the length of `expr` is less
 
 <details><summary>Example</summary>
 
-The following example left pads the value of `OriginState` from `flight-carriers` to return a total of 5 characters.
+The following example left pads the value of `OriginStateName` from the `flight-carriers` datasource to return a total of 11 characters.
 
 ```sql
 SELECT 
-  "OriginState" AS "origin_state",
-  LPAD("OriginState", 5, '+') AS "add_left_padding"
+  "OriginStateName" AS "origin_state",
+  LPAD("OriginStateName", 11, '+') AS "add_left_padding"
 FROM "flight-carriers"
-LIMIT 1
+LIMIT 3
 ```
 
 Returns the following:
 
 | `origin_state` | `add_left_padding` |
 | -- | -- |
-| `PR` | `+++PR` |
+| `Puerto Rico` | `Puerto Rico` |
+| `Massachusetts` | `Massachuset` |
+| `Florida` | `++++Florida` |
 
 </details>
 
@@ -1493,19 +1497,19 @@ Replaces all occurrences of a regular expression in a string expression with a r
 
 <details><summary>Example</summary>
 
-The following example matches instances of the word `Fort` and replaces it with it's abbreviation `Ft.`
+The following example matches three consecutive words, where each word is its own capture group, and replaces the matched words with the word in the second capture group punctuated with exclamation marks.
 
 ```sql
 SELECT 
-  'Fort Lauderdale, FL' AS "original_string",
-  REGEXP_REPLACE('Fort Lauderdale, FL', 'Fort', 'Ft.') AS "modified_string"
+  'foo bar baz' AS "original_string",
+  REGEXP_REPLACE('foo bar baz', '([A-Za-z]+) ([A-Za-z]+) ([A-Za-z]+)' , '$2!!') AS "modified_string"
 ```
 
 Returns the following:
 
 | `original_string` | `modified_string` |
 | -- | -- |
-| `Fort Lauderdale, FL` | `Ft. Lauderdale, FL` |
+| `foo bar baz` | `bar!` |
 
 </details>
 
@@ -1569,21 +1573,23 @@ Returns a string of size `length` from `expr`. When the length of `expr` is less
 
 <details><summary>Example</summary>
 
-The following example inserts `+` characters as padding to the right of the `OriginState` column from the `flight-carriers` datasource, making the return expression a length of `5` characters.
+The following example right pads the value of `OriginStateName` from the `flight-carriers` datasource to return a total of 11 characters.
 
 ```sql
 SELECT 
-  "OriginState" AS "origin_state",
-  RPAD("OriginState", 5, '+') AS "add_right_padding"
+  "OriginStateName" AS "origin_state",
+  RPAD("OriginStateName", 11, '+') AS "add_right_padding"
 FROM "flight-carriers"
-LIMIT 1
+LIMIT 3
 ```
 
 Returns the following:
 
 | `origin_state` | `add_right_padding` |
 | -- | -- |
-| `PR` | `PR+++` |
+| `Puerto Rico` | `Puerto Rico` |
+| `Massachusetts` | `Massachuset` |
+| `Florida` | `Florida++++` |
 
 </details>
 
