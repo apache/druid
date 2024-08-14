@@ -36,6 +36,7 @@ It's helpful to have finished [Load a file](../tutorials/tutorial-batch.md) and 
 ## Sample data
 
 For this tutorial, you use the following sample data:
+
 ```json
 {"timestamp":"2018-01-01T07:01:35Z", "animal":"octopus", "location":1, "number":100}
 {"timestamp":"2018-01-01T05:01:35Z", "animal":"mongoose", "location":2,"number":200}
