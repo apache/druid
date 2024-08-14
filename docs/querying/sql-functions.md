@@ -807,27 +807,70 @@ Returns the cumulative distribution of the current row within the window calcula
 
 ## CURRENT_DATE
 
-`CURRENT_DATE`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Returns the current date in the connection's time zone.
+
+* **Syntax:** `CURRENT_DATE`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example returns the current date.
+
+```sql
+SELECT CURRENT_DATE AS "current_date"
+```
+
+Returns the following:
+
+| `current_date` | 
+| -- |
+| `2024-08-14T00:00:00.000Z `|
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## CURRENT_TIMESTAMP
 
-`CURRENT_TIMESTAMP`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Returns the current timestamp in the connection's time zone.
+
+
+* **Syntax:** `CURRENT_TIMESTAMP`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example returns the current timestamp:
+
+```sql
+SELECT CURRENT_TIMESTAMP AS "current_timestamp"
+```
+
+Returns the following:
+
+| `current_timestamp` |
+| -- |
+| `2024-08-14T21:30:13.793Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## DATE_TRUNC
 
-`DATE_TRUNC(<CHARACTER>, <TIMESTAMP>)`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Rounds down a timestamp by a given time unit.
+
+* **Syntax:** `DATE_TRUNC(unit, timestamp_expr)`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example truncates a timestamp from the `__time` column in 
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
+
 
 ## DECODE_BASE64_COMPLEX
 

@@ -147,7 +147,7 @@ The best ways to filter based on time are by using ISO8601 intervals, like
 `TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')`, or by using literal timestamps with the `>=` and `<` operators, like
 `__time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-02-01 00:00:00'`.
 
-Druid supports the standard SQL BETWEEN operator, but we recommend avoiding it for time filters. BETWEEN is inclusive
+Druid supports the standard SQL `BETWEEN` operator, but we recommend avoiding it for time filters. `BETWEEN` is inclusive
 of its upper bound, which makes it awkward to write time filters correctly. For example, the equivalent of
 `TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')` is
 `__time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-01-31 23:59:59.999'`.
