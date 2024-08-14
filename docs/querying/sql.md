@@ -435,5 +435,4 @@ To use the reserved keywords in queries, enclose them in double quotation marks.
 
 ```sql
 SELECT "PARTITIONED" from druid.table
-
 ```
