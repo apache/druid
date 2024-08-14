@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import org.apache.calcite.schema.Table;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
+import org.apache.druid.sql.calcite.table.DruidTable;
 
 import javax.inject.Inject;
 import java.util.Set;
@@ -56,11 +57,16 @@ public class DruidSchema extends AbstractTableSchema
   @Override
   public Table getTable(String name)
   {
-    if (druidSchemaManager != null) {
-      return druidSchemaManager.getTable(name);
-    } else {
+    DruidTable schemaMgrTable = null;
+    DruidTable catalogTable = catalogResolver.resolveDatasource(name, null);
+    if (catalogTable == null && druidSchemaManager != null) {
+      schemaMgrTable = druidSchemaManager.getTable(name, segmentMetadataCache);
+    }
+    if (schemaMgrTable == null) {
       DatasourceTable.PhysicalDatasourceMetadata dsMetadata = segmentMetadataCache.getDatasource(name);
       return catalogResolver.resolveDatasource(name, dsMetadata);
+    } else {
+      return schemaMgrTable;
     }
   }
 

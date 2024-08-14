@@ -77,7 +77,7 @@ public @interface NotYetSupported
   enum Modes
   {
     // @formatter:off
-    NOT_ENOUGH_RULES(DruidException.class, "not enough rules"),
+    DISTINCT_AGGREGATE_NOT_SUPPORTED(DruidException.class, "DISTINCT is not supported"),
     ERROR_HANDLING(AssertionError.class, "targetPersona: is <[A-Z]+> and category: is <[A-Z_]+> and errorCode: is"),
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),

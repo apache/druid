@@ -32,9 +32,12 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernelUtils;
 public enum OutputChannelMode
 {
   /**
-   * In-memory output channels. Stage shuffle data does not hit disk. This mode requires a consumer stage to run
-   * at the same time as its corresponding producer stage. See {@link ControllerQueryKernelUtils#computeStageGroups} for the
-   * logic that determines when we can use in-memory channels.
+   * In-memory output channels. Stage shuffle data does not hit disk. In-memory channels do not fully buffer stage
+   * output. They use a blocking queue; see {@link RunWorkOrder#makeStageOutputChannelFactory()}.
+   *
+   * Because stage output is not fully buffered, this mode requires a consumer stage to run at the same time as its
+   * corresponding producer stage. See {@link ControllerQueryKernelUtils#computeStageGroups} for the logic that
+   * determines when we can use in-memory channels.
    */
   MEMORY("memory"),
 

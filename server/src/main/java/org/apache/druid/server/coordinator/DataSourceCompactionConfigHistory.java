@@ -27,7 +27,7 @@ import java.util.Stack;
 
 /**
  * A utility class to build the config history for a datasource from audit entries for
- * {@link CoordinatorCompactionConfig}. The {@link CoordinatorCompactionConfig} contains the entire config for the
+ * {@link DruidCompactionConfig}. The {@link DruidCompactionConfig} contains the entire config for the
  * cluster, so this class creates adds audit entires to the history only when a setting for this datasource or a global
  * setting has changed.
  */
@@ -41,54 +41,29 @@ public class DataSourceCompactionConfigHistory
     this.dataSource = dataSource;
   }
 
-  public void add(CoordinatorCompactionConfig coordinatorCompactionConfig, AuditInfo auditInfo, DateTime auditTime)
+  public void add(DruidCompactionConfig compactionConfig, AuditInfo auditInfo, DateTime auditTime)
   {
-    DataSourceCompactionConfigAuditEntry current = auditEntries.isEmpty() ? null : auditEntries.peek();
-    DataSourceCompactionConfigAuditEntry newEntry = null;
-    boolean hasDataSourceCompactionConfig = false;
-    for (DataSourceCompactionConfig dataSourceCompactionConfig : coordinatorCompactionConfig.getCompactionConfigs()) {
-      if (dataSource.equals(dataSourceCompactionConfig.getDataSource())) {
-        hasDataSourceCompactionConfig = true;
-        if (
-            current == null ||
-            (
-                !dataSourceCompactionConfig.equals(current.getCompactionConfig()) ||
-                !current.getGlobalConfig().hasSameConfig(coordinatorCompactionConfig)
-            )
-        ) {
-          current = new DataSourceCompactionConfigAuditEntry(
-              new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-                  coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
-                  coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
-                  coordinatorCompactionConfig.isUseAutoScaleSlots()
-              ),
-              dataSourceCompactionConfig,
-              auditInfo,
-              auditTime
-          );
-          newEntry = current;
-        }
-        break;
-      }
+    final DataSourceCompactionConfigAuditEntry previousEntry = auditEntries.isEmpty() ? null : auditEntries.peek();
+    final DataSourceCompactionConfigAuditEntry newEntry = new DataSourceCompactionConfigAuditEntry(
+        compactionConfig.clusterConfig(),
+        compactionConfig.findConfigForDatasource(dataSource).orNull(),
+        auditInfo,
+        auditTime
+    );
+
+    final boolean shouldAddEntry;
+    if (previousEntry == null) {
+      shouldAddEntry = newEntry.getCompactionConfig() != null;
+    } else {
+      shouldAddEntry = !newEntry.hasSameConfig(previousEntry);
     }
-    if (newEntry != null) {
-      auditEntries.push(newEntry);
-    } else if (current != null && !hasDataSourceCompactionConfig) {
-      newEntry = new DataSourceCompactionConfigAuditEntry(
-          new DataSourceCompactionConfigAuditEntry.GlobalCompactionConfig(
-              coordinatorCompactionConfig.getCompactionTaskSlotRatio(),
-              coordinatorCompactionConfig.getMaxCompactionTaskSlots(),
-              coordinatorCompactionConfig.isUseAutoScaleSlots()
-          ),
-          null,
-          auditInfo,
-          auditTime
-      );
+
+    if (shouldAddEntry) {
       auditEntries.push(newEntry);
     }
   }
 
-  public List<DataSourceCompactionConfigAuditEntry> getHistory()
+  public List<DataSourceCompactionConfigAuditEntry> getEntries()
   {
     return auditEntries;
   }

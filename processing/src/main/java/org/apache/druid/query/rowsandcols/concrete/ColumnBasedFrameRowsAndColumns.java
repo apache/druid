@@ -28,7 +28,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
@@ -80,7 +79,6 @@ public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoClose
       }
     }
     return colCache.get(name);
-
   }
 
   @SuppressWarnings("unchecked")
@@ -90,9 +88,6 @@ public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoClose
   {
     if (StorageAdapter.class.equals(clazz)) {
       return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
-    }
-    if (WireTransferable.class.equals(clazz)) {
-      return (T) this;
     }
     return null;
   }

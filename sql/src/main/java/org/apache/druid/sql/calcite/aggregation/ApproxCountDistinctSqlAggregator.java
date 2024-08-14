@@ -80,6 +80,7 @@ public class ApproxCountDistinctSqlAggregator implements SqlAggregator
     );
   }
 
+  @NativelySupportsDistinct
   private static class ApproxCountDistinctSqlAggFunction extends SqlAggFunction
   {
     ApproxCountDistinctSqlAggFunction(SqlAggFunction delegate)
