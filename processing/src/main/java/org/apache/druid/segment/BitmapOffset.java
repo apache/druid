@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
@@ -204,20 +203,6 @@ public class BitmapOffset extends Offset
   public boolean withinBounds()
   {
     return value > INVALID_VALUE;
-  }
-
-  @Override
-  public void mark()
-  {
-    iteratorForMark = iterator.clone();
-    valueForMark = value;
-  }
-
-  @Override
-  public void resetToMark()
-  {
-    iterator = Preconditions.checkNotNull(iteratorForMark).clone();
-    value = valueForMark;
   }
 
   @Override

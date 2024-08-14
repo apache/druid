@@ -54,16 +54,6 @@ public abstract class Offset implements ReadableOffset, Cloneable
   public abstract boolean withinBounds();
 
   /**
-   * Mark the current offset to recall later with {@link #resetToMark()}
-   */
-  public abstract void mark();
-
-  /**
-   * Reset to the offset set by {@link #mark()}
-   */
-  public abstract void resetToMark();
-
-  /**
    * Resets the Offset to the position it was created or cloned with.
    */
   public abstract void reset();

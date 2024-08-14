@@ -23,8 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import it.unimi.dsi.fastutil.ints.IntArrayList;
-import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.collections.bitmap.BitSetBitmapFactory;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
@@ -38,7 +36,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
@@ -106,58 +103,4 @@ public class BitmapOffsetTest
     }
     Assert.assertEquals(count, expected.length);
   }
-
-  @Test
-  public void testMarkResetToMark()
-  {
-    MutableBitmap mutable = factory.makeEmptyMutableBitmap();
-    IntList rows = new IntArrayList();
-    for (int i = 0; i < 1_000_000; i++) {
-      if (ThreadLocalRandom.current().nextBoolean()) {
-        rows.add(i);
-        mutable.add(i);
-      }
-    }
-
-    ImmutableBitmap bitmap = factory.makeImmutableBitmap(mutable);
-    final BitmapOffset offset = BitmapOffset.of(bitmap, descending, bitmap.size());
-    final IntList expected;
-    if (descending) {
-      expected = new IntArrayList(rows.size());
-      for (int i = rows.size() - 1; i >= 0; i--) {
-        expected.add(rows.getInt(i));
-      }
-    } else {
-      expected = rows;
-    }
-
-    int count = 0;
-    int mark = rows.size() / 2;
-    while (offset.withinBounds()) {
-      Assert.assertEquals(expected.getInt(count), offset.getOffset());
-
-      if (count == mark) {
-        offset.mark();
-      }
-
-      ++count;
-      offset.increment();
-    }
-
-    offset.resetToMark();
-    count = mark;
-    while (offset.withinBounds()) {
-      Assert.assertEquals(expected.getInt(count), offset.getOffset());
-
-      if (count == mark) {
-        offset.mark();
-      }
-
-      ++count;
-      offset.increment();
-    }
-
-    Assert.assertEquals(count, expected.size());
-  }
-
 }
