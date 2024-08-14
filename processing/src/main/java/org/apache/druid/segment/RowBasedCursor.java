@@ -41,7 +41,7 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ToLongFunction<RowType> timestampFunction;
   private final Interval interval;
   private final boolean descending;
-  private DateTime startTime;
+  private final DateTime startTime;
   private final ColumnSelectorFactory columnSelectorFactory;
   private final ValueMatcher valueMatcher;
 

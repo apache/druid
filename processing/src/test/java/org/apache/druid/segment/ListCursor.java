@@ -42,7 +42,6 @@ public class ListCursor implements Cursor
 {
   private final List<Object> baseList;
   private int index;
-  private int markIndex = 0;
 
   public ListCursor(List<Object> inputList)
   {
@@ -218,6 +217,5 @@ public class ListCursor implements Cursor
   public void reset()
   {
     index = 0;
-    markIndex = 0;
   }
 }

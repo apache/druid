@@ -250,10 +250,11 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       @Override
       public Cursor asCursor()
       {
-        // Filter pre-analysis key implied by the call to "makeCursor". We need to sanity-check that it matches
-        // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursor" call (it
-        // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
-        // in the cached key.)
+        // Filter pre-analysis key implied by the call to "makeCursorHolder". We need to sanity-check that it matches
+        // the actual pre-analysis that was done. Note: we could now infer a rewrite config from the "makeCursorHolder"
+        // call (it requires access to the query context which we now have access to since the move away from
+        // CursorFactory) but this code hasn't been updated to sanity-check it, so currently we are still skipping it
+        // by re-using the one present in the cached key.
         final JoinFilterPreAnalysisKey keyIn =
             new JoinFilterPreAnalysisKey(
                 joinFilterPreAnalysis.getKey().getRewriteConfig(),
@@ -265,7 +266,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
         final JoinFilterPreAnalysis preAnalysis;
         if (keyIn.equals(keyCached)) {
-          // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursor call
+          // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursorHolder call
           // (keyIn).
           preAnalysis = joinFilterPreAnalysis;
         } else {
@@ -353,7 +354,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    */
   private Optional<JoinableClause> getClauseForColumn(final String column)
   {
-    // Check clauses in reverse, since "makeCursor" creates the cursor in such a way that the last clause
+    // Check clauses in reverse, since "makeCursorHolder" creates the cursor in such a way that the last clause
     // gets first dibs to claim a column.
     return Lists.reverse(clauses)
                 .stream()

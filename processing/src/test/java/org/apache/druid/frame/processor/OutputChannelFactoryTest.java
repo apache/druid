@@ -128,32 +128,30 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     Assert.assertTrue(readableFrameChannel.isFinished());
     readableFrameChannel.close();
 
+    FrameStorageAdapter frameStorageAdapter = new FrameStorageAdapter(
+        readbackFrame,
+        FrameReader.create(adapter.getRowSignature()),
+        Intervals.ETERNITY
+    );
     // build list of rows from written and read data to verify
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN);) {
-      List<List<Object>> writtenData =
-          FrameTestUtil.readRowsFromCursor(
-              cursorHolder.asCursor(),
-              adapter.getRowSignature()
-          ).toList();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+         final CursorHolder frameMaker = frameStorageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)
+    ) {
+      List<List<Object>> writtenData = FrameTestUtil.readRowsFromCursor(
+          cursorHolder.asCursor(),
+          adapter.getRowSignature()
+      ).toList();
+      List<List<Object>> readData = FrameTestUtil.readRowsFromCursor(
+          frameMaker.asCursor(),
+          frameStorageAdapter.getRowSignature()
+      ).toList();
 
-      FrameStorageAdapter frameStorageAdapter = new FrameStorageAdapter(
-          readbackFrame,
-          FrameReader.create(adapter.getRowSignature()),
-          Intervals.ETERNITY
+      Assert.assertEquals(
+          "Read rows count is different from written rows count",
+          writtenData.size(),
+          readData.size()
       );
-      try (final CursorHolder frameMaker = frameStorageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
-        List<List<Object>> readData = FrameTestUtil.readRowsFromCursor(
-            frameMaker.asCursor(),
-            frameStorageAdapter.getRowSignature()
-        ).toList();
-
-        Assert.assertEquals(
-            "Read rows count is different from written rows count",
-            writtenData.size(),
-            readData.size()
-        );
-        Assert.assertEquals("Read data is different from written data", writtenData, readData);
-      }
+      Assert.assertEquals("Read data is different from written data", writtenData, readData);
     }
   }
 

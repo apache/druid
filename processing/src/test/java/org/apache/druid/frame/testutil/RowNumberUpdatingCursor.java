@@ -30,7 +30,6 @@ public class RowNumberUpdatingCursor implements Cursor
 {
   private final Cursor baseCursor;
   private final SettableLongVirtualColumn rowNumberVirtualColumn;
-  private long markRowNumber = 0;
 
   RowNumberUpdatingCursor(Cursor baseCursor, SettableLongVirtualColumn rowNumberVirtualColumn)
   {
@@ -73,7 +72,6 @@ public class RowNumberUpdatingCursor implements Cursor
   @Override
   public void reset()
   {
-    markRowNumber = 0;
     rowNumberVirtualColumn.setValue(0);
     baseCursor.reset();
   }
