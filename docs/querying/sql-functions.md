@@ -1077,7 +1077,7 @@ Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
-Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `replaceMissingValueWith` if supplied, otherwise null.
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `replaceMissingValueWith` if supplied, otherwise returns null.
 
 * **Syntax:** `LOOKUP(expr, lookupName[, replaceMissingValueWith])`
 * **Function type:** Scalar, string
