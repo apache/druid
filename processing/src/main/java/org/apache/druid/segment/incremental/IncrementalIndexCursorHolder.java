@@ -99,8 +99,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
     private final IncrementalIndex.FactsHolder facts;
-    private final Interval interval;
-    private final boolean isDescending;
     private Iterator<IncrementalIndexRow> baseIter;
     private Iterable<IncrementalIndexRow> cursorIterable;
     private boolean emptyRange;
@@ -128,8 +126,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       filterMatcher = filter == null ? ValueMatchers.allTrue() : filter.makeMatcher(columnSelectorFactory);
       numAdvanced = -1;
       facts = index.getFacts();
-      interval = actualInterval;
-      isDescending = descending;
       cursorIterable = facts.timeRangeIterable(
           descending,
           actualInterval.getStartMillis(),
