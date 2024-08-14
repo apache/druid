@@ -251,6 +251,11 @@ const KAFKA_SAMPLE_INPUT_FORMAT: InputFormat = {
   valueFormat: WHOLE_ROW_INPUT_FORMAT,
 };
 
+const KINESIS_SAMPLE_INPUT_FORMAT: InputFormat = {
+  type: 'kinesis',
+  valueFormat: WHOLE_ROW_INPUT_FORMAT,
+};
+
 export async function sampleForConnect(
   spec: Partial<IngestionSpec>,
   sampleStrategy: SampleStrategy,
@@ -267,7 +272,11 @@ export async function sampleForConnect(
     ioConfig = deepSet(
       ioConfig,
       'inputFormat',
-      samplerType === 'kafka' ? KAFKA_SAMPLE_INPUT_FORMAT : WHOLE_ROW_INPUT_FORMAT,
+      samplerType === 'kafka'
+        ? KAFKA_SAMPLE_INPUT_FORMAT
+        : samplerType === 'kinesis'
+        ? KINESIS_SAMPLE_INPUT_FORMAT
+        : WHOLE_ROW_INPUT_FORMAT,
     );
   }
 

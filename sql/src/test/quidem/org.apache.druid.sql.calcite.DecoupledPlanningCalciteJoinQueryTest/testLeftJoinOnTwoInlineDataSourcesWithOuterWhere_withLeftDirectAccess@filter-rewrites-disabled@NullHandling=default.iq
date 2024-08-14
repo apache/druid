@@ -78,7 +78,8 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
         "columnTypes" : [ "LONG", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {
@@ -103,7 +104,8 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
         "columnTypes" : [ "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "rightPrefix" : "j0.",
@@ -125,6 +127,7 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
   "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

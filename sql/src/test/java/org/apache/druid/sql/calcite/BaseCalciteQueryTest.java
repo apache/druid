@@ -887,6 +887,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       this.isRunningMSQ = isRunningMSQ;
     }
 
+    public CalciteTestConfig(Map<String, Object> baseQueryContext, boolean isRunningMSQ)
+    {
+      this(baseQueryContext);
+      this.isRunningMSQ = isRunningMSQ;
+    }
+
     public CalciteTestConfig(Map<String, Object> baseQueryContext)
     {
       Preconditions.checkNotNull(baseQueryContext, "baseQueryContext is null");
@@ -1209,6 +1215,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
+  }
+
+  protected void sqlNativeIncompatible()
+  {
+    assumeTrue(testBuilder().config.isRunningMSQ(), "test case is not SQL native compatible");
   }
 
   protected void msqIncompatible()

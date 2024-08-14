@@ -30,6 +30,7 @@ import type {
   QueryWithContext,
 } from '../../druid-models';
 import {
+  DEFAULT_SERVER_QUERY_CONTEXT,
   Execution,
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
@@ -65,12 +66,20 @@ export interface SqlDataLoaderViewProps {
   goToTask(taskId: string): void;
   goToTaskGroup(taskGroupId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  serverQueryContext?: QueryContext;
 }
 
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { capabilities, goToQuery, goToTask, goToTaskGroup, getClusterCapacity } = props;
+  const {
+    capabilities,
+    goToQuery,
+    goToTask,
+    goToTaskGroup,
+    getClusterCapacity,
+    serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
+  } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
@@ -187,6 +196,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
               clusterCapacity={capabilities.getMaxTaskSlots()}
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
+              defaultQueryContext={serverQueryContext}
               minimal
             />
           }

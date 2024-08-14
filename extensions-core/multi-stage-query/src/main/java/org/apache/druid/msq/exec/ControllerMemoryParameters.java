@@ -91,7 +91,8 @@ public class ControllerMemoryParameters
               memoryIntrospector.totalMemoryInJvm(),
               usableMemoryInJvm,
               numControllersInJvm,
-              memoryIntrospector.numProcessorsInJvm()
+              memoryIntrospector.numProcessorsInJvm(),
+              0
           )
       );
     }
