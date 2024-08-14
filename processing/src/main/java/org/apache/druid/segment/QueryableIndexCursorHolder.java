@@ -285,6 +285,12 @@ public class QueryableIndexCursorHolder implements CursorHolder
   }
 
   @Override
+  public List<OrderBy> getOrdering()
+  {
+    return ordering;
+  }
+
+  @Override
   public void close()
   {
     CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
