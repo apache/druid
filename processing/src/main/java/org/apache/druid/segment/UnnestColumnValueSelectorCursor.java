@@ -65,7 +65,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   @MonotonicNonNull
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
-  private int markIndex = 0;
 
 
   public UnnestColumnValueSelectorCursor(
@@ -247,7 +246,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   public void reset()
   {
     index = 0;
-    markIndex = 0;
     needInitialization = true;
     baseCursor.reset();
   }

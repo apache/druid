@@ -77,7 +77,6 @@ public class UnnestDimensionCursor implements Cursor
   private SingleIndexInts indexIntsForRow;
   private final int nullId;
   private final int idOffset;
-  private int markIndex = 0;
 
   public UnnestDimensionCursor(
       Cursor cursor,
@@ -295,7 +294,6 @@ public class UnnestDimensionCursor implements Cursor
   public void reset()
   {
     index = 0;
-    markIndex = 0;
     needInitialization = true;
     baseCursor.reset();
   }

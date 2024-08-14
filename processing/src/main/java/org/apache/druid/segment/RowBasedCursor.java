@@ -46,7 +46,6 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ValueMatcher valueMatcher;
 
   private long rowId = 0;
-  private DateTime markTime;
 
   public RowBasedCursor(
       final RowWalker<RowType> rowWalker,
@@ -63,7 +62,6 @@ public class RowBasedCursor<RowType> implements Cursor
     this.interval = interval;
     this.descending = descending;
     this.startTime = descending ? interval.getEnd().minus(1) : interval.getStart();
-    this.markTime = startTime;
     this.columnSelectorFactory = virtualColumns.wrap(
         new RowBasedColumnSelectorFactory<>(
             rowWalker::currentRow,
@@ -121,7 +119,6 @@ public class RowBasedCursor<RowType> implements Cursor
   public void reset()
   {
     rowId = 0;
-    markTime = startTime;
     rowWalker.reset();
     rowWalker.skipToDateTime(startTime, descending);
     advanceToMatchingRow();

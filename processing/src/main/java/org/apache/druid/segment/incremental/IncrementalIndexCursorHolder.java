@@ -106,8 +106,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     private boolean emptyRange;
     private int numAdvanced;
     private boolean done;
-    private int markRowId = -1;
-    private long markMillis = -1;
 
     IncrementalIndexCursor(
         IncrementalIndexStorageAdapter storageAdapter,
@@ -217,8 +215,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     @Override
     public void reset()
     {
-      markRowId = -1;
-      markMillis = isDescending ? Long.MAX_VALUE : Long.MIN_VALUE;
       baseIter = cursorIterable.iterator();
 
       if (numAdvanced == -1) {
