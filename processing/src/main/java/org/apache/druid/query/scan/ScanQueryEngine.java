@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -121,17 +120,7 @@ public class ScanQueryEngine
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
     if (Order.NONE != query.getTimeOrder()) {
-      final Order requiredOrder = query.getTimeOrder();
-      if (!(Cursors.isTimeOrdered(cursorHolder) && cursorHolder.getOrdering().get(0).getOrder() == requiredOrder)) {
-        String failureReason = StringUtils.format(
-            "Cursor must be ordered by [%s] with direction [%s] but was [%s] instead.",
-            ColumnHolder.TIME_COLUMN_NAME,
-            requiredOrder,
-            cursorHolder.getOrdering()
-        );
-        cursorHolder.close();
-        throw DruidException.defensive(failureReason);
-      }
+      Cursors.requireTimeOrdering(cursorHolder, query.getTimeOrder());
     }
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
