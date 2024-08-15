@@ -173,12 +173,12 @@ public final class CompressedBlockReader implements Closeable
     final int startBlockOffset = loadBlock(startOffset);
     final int startBlockNumber = currentBlockNumber;
     decompressedDataBuffer.position(startBlockOffset);
-    // patch together value from n underlying compressed pages
+    // possibly patch together value from n underlying compressed pages
     if (size < decompressedDataBuffer.remaining()) {
-      // sweet, same buffer, we can slice out a view directly to the value
+      // sweet, same buffer, we can return the buffer directly with position and limit set
       final ByteBuffer dupe = decompressedDataBuffer.duplicate().order(byteOrder);
       dupe.position(startBlockOffset).limit(startBlockOffset + size);
-      return dupe.slice().order(byteOrder);
+      return dupe;
     } else {
       // spans multiple blocks, copy on heap
       final byte[] bytes = new byte[size];
