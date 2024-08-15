@@ -20,6 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.guice.annotations.ExtensionPoint;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
 import javax.annotation.Nullable;
@@ -55,6 +56,19 @@ public interface ObjectStrategy<T> extends Comparator<T>
    * Whether {@link #compare} is valid or not.
    */
   default boolean canCompare()
+  {
+    return true;
+  }
+
+  /**
+   * Whether the {@link #fromByteBuffer(ByteBuffer, int)}, {@link #fromByteBufferWithSize(ByteBuffer)}, and
+   * {@link #fromByteBufferSafe(ByteBuffer, int)} methods return an object that may retain a reference to the provided
+   * {@link ByteBuffer}. If a reference is sometimes retained, this method returns true. It returns false if, and only
+   * if, a reference is *never* retained.
+   *
+   * @see TypeStrategy#readRetainsBufferReference()
+   */
+  default boolean readRetainsBufferReference()
   {
     return true;
   }

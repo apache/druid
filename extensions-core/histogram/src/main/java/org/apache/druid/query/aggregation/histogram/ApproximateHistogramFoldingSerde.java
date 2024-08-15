@@ -111,6 +111,12 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       {
         return ApproximateHistogramAggregator.COMPARATOR.compare(o1, o2);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 }

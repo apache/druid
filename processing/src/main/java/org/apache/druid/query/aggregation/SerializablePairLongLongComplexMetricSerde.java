@@ -113,6 +113,12 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
       {
         return SERDE.serialize(inPair);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 

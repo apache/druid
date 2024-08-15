@@ -159,6 +159,12 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
       {
         return comparator.compare(o1, o2);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 }

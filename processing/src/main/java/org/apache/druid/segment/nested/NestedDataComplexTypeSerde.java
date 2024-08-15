@@ -157,6 +157,12 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
           throw new ISE(e, "Unable to serialize value [%s]", val);
         }
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 

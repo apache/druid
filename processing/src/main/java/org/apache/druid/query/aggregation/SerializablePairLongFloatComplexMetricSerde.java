@@ -114,6 +114,12 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
       {
         return SERDE.serialize(inPair);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 

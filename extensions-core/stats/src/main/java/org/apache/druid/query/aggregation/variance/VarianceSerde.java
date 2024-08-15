@@ -105,6 +105,12 @@ public class VarianceSerde extends ComplexMetricSerde
       {
         return COMPARATOR.compare(o1, o2);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 }

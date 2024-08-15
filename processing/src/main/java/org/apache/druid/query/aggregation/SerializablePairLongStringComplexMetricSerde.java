@@ -268,5 +268,11 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
 
           return bbuf.array();
         }
+
+        @Override
+        public boolean readRetainsBufferReference()
+        {
+          return false;
+        }
       };
 }
