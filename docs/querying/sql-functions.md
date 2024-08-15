@@ -1960,7 +1960,7 @@ Returns `true` if the regular expression `pattern` finds a match in `expr`. Retu
 
 <details><summary>Example</summary>
 
-The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name with a space in the name.
+The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name containing a space.
 
 ```sql
 SELECT 
@@ -1983,7 +1983,7 @@ Returns the following:
 
 ## REGEXP_REPLACE
 
-Replaces all occurrences of a regular expression in a string expression with a replacement string. The replacement string may refer to capture groups using `$1`, `$2`, etc.
+Replaces all occurrences of a regular expression in a string expression with a replacement string. Refer to capture groups in the replacement string using `$group` syntax. For example: `$1` or `$2`.
 
 * **Syntax:** `REGEXP_REPLACE(expr, pattern, replacement)`
 * **Function type:** Scalar, string
@@ -1995,7 +1995,7 @@ The following example matches three consecutive words, where each word is its ow
 ```sql
 SELECT 
   'foo bar baz' AS "original_string",
-  REGEXP_REPLACE('foo bar baz', '([A-Za-z]+) ([A-Za-z]+) ([A-Za-z]+)' , '$2!!') AS "modified_string"
+  REGEXP_REPLACE('foo bar baz', '([A-Za-z]+) ([A-Za-z]+) ([A-Za-z]+)' , '$2!') AS "modified_string"
 ```
 
 Returns the following:
