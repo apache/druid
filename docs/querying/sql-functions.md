@@ -1532,12 +1532,12 @@ Searches for `expr` in a registered [query-time lookup table](lookups.md) named 
 
 <details><summary>Example</summary>
 
-The following example uses a `map`-typed lookup table named `acronym_to_name`, which contains the following key-value pairs:
+The following example uses a `map` type lookup table named `acronym_to_name`, which contains the following key-value pairs:
 
 ```json
 {
   "SJU": "Luis Munoz Marin International Airport",
-  "IAD": "Dulles International AirportDulles International Airport"
+  "IAD": "Dulles International Airport"
 }
 ```
 
