@@ -389,6 +389,12 @@ export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return compact(xs);
 }
 
+export function removeUndefinedValues<T extends Record<string, any>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined),
+  ) as Partial<T>;
+}
+
 export function moveToEnd<T>(
   xs: T[],
   predicate: (value: T, index: number, array: T[]) => unknown,
