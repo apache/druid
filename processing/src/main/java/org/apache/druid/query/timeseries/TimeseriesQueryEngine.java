@@ -109,19 +109,25 @@ public class TimeseriesQueryEngine
 
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
     Cursors.requireTimeOrdering(cursorHolder, query.isDescending() ? Order.DESCENDING : Order.ASCENDING);
-    final Sequence<Result<TimeseriesResultValue>> result;
+    try {
+      final Sequence<Result<TimeseriesResultValue>> result;
 
-    if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize(), cursorHolder::close)) {
-      result = processVectorized(query, adapter, cursorHolder, interval, gran);
-    } else {
-      result = processNonVectorized(query, adapter, cursorHolder, interval, gran);
+      if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize())) {
+        result = processVectorized(query, adapter, cursorHolder, interval, gran);
+      } else {
+        result = processNonVectorized(query, adapter, cursorHolder, interval, gran);
+      }
+
+      final int limit = query.getLimit();
+      if (limit < Integer.MAX_VALUE) {
+        return result.limit(limit).withBaggage(cursorHolder);
+      } else {
+        return result.withBaggage(cursorHolder);
+      }
     }
-
-    final int limit = query.getLimit();
-    if (limit < Integer.MAX_VALUE) {
-      return result.limit(limit).withBaggage(cursorHolder);
-    } else {
-      return result.withBaggage(cursorHolder);
+    catch (Throwable t) {
+      cursorHolder.close();
+      throw t;
     }
   }
 

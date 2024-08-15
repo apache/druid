@@ -73,6 +73,11 @@ public class ExprMacroTable
     return NIL;
   }
 
+  /**
+   * Specialized {@link ExprMacroTable} that only knows about {@link TimestampFloorExprMacro}, intended for use
+   * parsing generated expressions which translate {@link org.apache.druid.java.util.common.granularity.Granularity}
+   * into {@link Expr}
+   */
   public static ExprMacroTable granularity()
   {
     return TIME_FLOOR_MACRO_TABLE;

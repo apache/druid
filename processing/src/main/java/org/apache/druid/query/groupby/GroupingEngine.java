@@ -503,12 +503,12 @@ public class GroupingEngine
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
-      // group by specific vectorization check:
-
       final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
       final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
 
       final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
+
+      // group by specific vectorization check
       final boolean canVectorize = cursorHolder.canVectorize() &&
                                    VectorGroupByEngine.canVectorizeDimensions(inspector, query.getDimensions());
       final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(canVectorize);

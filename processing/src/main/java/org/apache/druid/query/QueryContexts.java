@@ -180,11 +180,6 @@ public class QueryContexts
 
     public abstract boolean shouldVectorize(boolean canVectorize);
 
-    public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
-    {
-      return shouldVectorize(canVectorize);
-    }
-
     @JsonCreator
     public static Vectorize fromString(String str)
     {
