@@ -216,9 +216,8 @@ public class TopNQueryEngine
     // need to make multiple passes (e.g. reset the cursor)
     try (final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take()) {
       final ByteBuffer resultsBuf = resultsBufHolder.get();
-      resultsBuf.clear();
 
-      final int numBytesToWorkWith = resultsBuf.remaining();
+      final int numBytesToWorkWith = resultsBuf.capacity();
       final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
       return numValuesPerPass <= cardinality;
