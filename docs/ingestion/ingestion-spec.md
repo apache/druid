@@ -301,15 +301,15 @@ An example `metricsSpec` is:
 
 ### `granularitySpec`
 
-The `granularitySpec` is located in `dataSchema` → `granularitySpec` and is responsible for configuring
-the following operations:
+The `granularitySpec`, located in `dataSchema` → `granularitySpec`, specifies the following:
 
-1. Partitioning a datasource into [time chunks](../design/storage.md) (via `segmentGranularity`).
-2. Truncating the timestamp, if desired (via `queryGranularity`).
-3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
-4. Specifying whether ingestion-time [rollup](./rollup.md) should be used or not (via `rollup`).
+1. `segmentGranularity` to partitioning a datasource into [time chunks](../design/storage.md).
+2. `queryGranularity` to optionally truncate the timestamp.
+3. `intervals` to define the time chunks of segments to create for batch ingestion.
+4.  `rollup` to enable ingestion-time [rollup](./rollup.md) or not.
 
 Other than `rollup`, these operations are all based on the [primary timestamp](./schema-model.md#primary-timestamp).
+Use the format in [Query granularities] to specify both `segmentGranualarity` and `queryGranularity`.
 
 An example `granularitySpec` is:
 
