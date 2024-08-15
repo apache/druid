@@ -376,7 +376,7 @@ Druid returns the following:
 | -- |
 | 100 |
 | 1 |
-| null |
+| 1 |
 
 ## Learn more
 
