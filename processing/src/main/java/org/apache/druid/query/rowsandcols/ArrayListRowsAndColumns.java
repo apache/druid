@@ -144,6 +144,9 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   {
     if (!rowSignature.contains(name)) {
       final Column retVal = extraColumns.get(name);
+      if (retVal == null) {
+        return null;
+      }
       if (numRows() == rows.size()) {
         return retVal;
       }
