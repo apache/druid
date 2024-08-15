@@ -196,7 +196,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         VirtualColumns.create(
-            Granularities.toVirtualColumn(query),
+            Granularities.toVirtualColumn(query.getGranularity(), Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()

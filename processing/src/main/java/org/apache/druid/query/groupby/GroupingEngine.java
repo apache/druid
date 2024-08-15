@@ -80,7 +80,6 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -95,7 +94,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -849,36 +847,18 @@ public class GroupingEngine
 
   public static CursorBuildSpec makeCursorBuildSpec(GroupByQuery query, @Nullable QueryMetrics<?> queryMetrics)
   {
-    // virtual column is currently only used as a decorator to pass to the cursor holder to allow specializing cursor
-    // and vector cursors if any pre-aggregated data at the matching granularity is available
-    // eventually this could probably be reworked to be used by the granularizer instead of the existing method
-    // of creating a selector on the time column
-    final VirtualColumn granularityVirtual = Granularities.toVirtualColumn(query);
-    VirtualColumns virtualColumns;
-    List<String> groupingColumns;
-    if (granularityVirtual == null) {
-      virtualColumns = query.getVirtualColumns();
-      groupingColumns = query.getGroupingColumns();
-    } else {
-      virtualColumns = VirtualColumns.fromIterable(
-          Iterables.concat(
-              Collections.singletonList(granularityVirtual),
-              () -> Arrays.stream(query.getVirtualColumns().getVirtualColumns()).iterator()
-          )
-      );
-      groupingColumns = ImmutableList.<String>builder()
-                                     .add(granularityVirtual.getOutputName())
-                                     .addAll(query.getGroupingColumns()).build();
-    }
-    return CursorBuildSpec.builder()
-                          .setInterval(query.getSingleInterval())
-                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
-                          .setVirtualColumns(virtualColumns)
-                          .setGroupingColumns(groupingColumns)
-                          .setAggregators(query.getAggregatorSpecs())
-                          .setQueryContext(query.context())
-                          .setQueryMetrics(queryMetrics)
-                          .build();
+    return Granularities.decorateCursorBuildSpec(
+        query,
+        CursorBuildSpec.builder()
+                       .setInterval(query.getSingleInterval())
+                       .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                       .setVirtualColumns(query.getVirtualColumns())
+                       .setGroupingColumns(query.getGroupingColumns())
+                       .setAggregators(query.getAggregatorSpecs())
+                       .setQueryContext(query.context())
+                       .setQueryMetrics(queryMetrics)
+                       .build()
+    );
   }
 
 
