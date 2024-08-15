@@ -135,22 +135,10 @@ public class QueryContexts
       {
         return false;
       }
-
-      @Override
-      public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
-      {
-        return false;
-      }
     },
     TRUE {
       @Override
       public boolean shouldVectorize(final boolean canVectorize)
-      {
-        return canVectorize;
-      }
-
-      @Override
-      public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
       {
         return canVectorize;
       }
@@ -160,17 +148,6 @@ public class QueryContexts
       public boolean shouldVectorize(final boolean canVectorize)
       {
         if (!canVectorize) {
-          throw new ISE("Cannot vectorize!");
-        }
-
-        return true;
-      }
-
-      @Override
-      public boolean shouldVectorize(boolean canVectorize, Runnable cleanup)
-      {
-        if (!canVectorize) {
-          cleanup.run();
           throw new ISE("Cannot vectorize!");
         }
 
