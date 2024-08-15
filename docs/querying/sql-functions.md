@@ -1924,7 +1924,7 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 ## REGEXP_EXTRACT
 
-Apply regular expression `pattern` to `expr` and extract the `N`-th capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns `null` if there is no matching pattern.
+Apply regular expression `pattern` to `expr` and extract the Nth capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns `null` if there is no matching pattern.
 
 * **Syntax:** `REGEXP_EXTRACT(expr, pattern[, N])`
 * **Function type:** Scalar, string 
