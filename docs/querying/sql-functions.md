@@ -2303,7 +2303,7 @@ Rounds up a timestamp to a given ISO 8601 time period. Specify a timestamp, `ori
 
 <details><summary>Example</summary>
 
-The following example takes `__time` column from the `taxi-trips` datasource and rounds up to nearest 45th minute in reference to the timestampe `2013-08-01 08:0:00`
+The following example takes `__time` column from the `taxi-trips` datasource and rounds up to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`
 
 ```sql
 SELECT 
@@ -2362,7 +2362,7 @@ Rounds down a timestamp to a given ISO 8601 time period. Specify a timestamp, `o
 
 <details><summary>Example</summary>
 
-The following example takes `__time` column from the `taxi-trips` datasource and rounds down to nearest 45th minute in reference to the timestampe `2013-08-01 08:0:00`
+The following example takes `__time` column from the `taxi-trips` datasource and rounds down to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`
 
 ```sql
 SELECT 
