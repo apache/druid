@@ -38,9 +38,9 @@ import java.util.function.Function;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeNotNull;
 
-public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestBase
+public class EvaluateRowsAndColumnsTest extends SemanticTestBase
 {
-  public TestVirtualColumnEvaluationRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
+  public EvaluateRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
   {
     super(name, fn);
   }

@@ -40,13 +40,11 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 import org.apache.druid.query.rowsandcols.column.accessor.ObjectColumnAccessorBase;
 import org.apache.druid.segment.BaseSingleValueDimensionSelector;
-import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.DimensionSelectorUtils;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
@@ -128,10 +126,7 @@ public class StringFrameColumnReader implements FrameColumnReader
         baseColumn,
         new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                     .setHasMultipleValues(multiValue)
-                                    .setDictionaryEncoded(false)
-                                    .setHasBitmapIndexes(false)
-                                    .setHasSpatialIndexes(false)
-                                    .setHasNulls(ColumnCapabilities.Capable.UNKNOWN),
+                                    .setDictionaryEncoded(false),
         frame.numRows()
     );
   }
@@ -144,18 +139,17 @@ public class StringFrameColumnReader implements FrameColumnReader
     }
 
     final byte typeCode = region.getByte(0);
-    final byte expectedTypeCode = FrameColumnWriters.TYPE_STRING;
-    if (typeCode != expectedTypeCode) {
+    if (typeCode != FrameColumnWriters.TYPE_STRING) {
       throw DruidException.defensive(
           "Column[%s] does not have the correct type code; expected[%s], got[%s]",
           columnNumber,
-          expectedTypeCode,
+          FrameColumnWriters.TYPE_STRING,
           typeCode
       );
     }
   }
 
-  static boolean isMultiValue(final Memory memory)
+  private static boolean isMultiValue(final Memory memory)
   {
     return memory.getByte(1) == 1;
   }
@@ -165,7 +159,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     return StringFrameColumnWriter.DATA_OFFSET;
   }
 
-  static long getStartOfStringLengthSection(
+  private static long getStartOfStringLengthSection(
       final int numRows,
       final boolean multiValue
   )
@@ -177,7 +171,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     }
   }
 
-  static long getStartOfStringDataSection(
+  private static long getStartOfStringDataSection(
       final Memory memory,
       final int numRows,
       final boolean multiValue
@@ -517,7 +511,7 @@ public class StringFrameColumnReader implements FrameColumnReader
      * Selector used by this column. It's versatile: it can run as string array (asArray = true) or regular string
      * column (asArray = false).
      */
-    private DimensionSelector makeDimensionSelectorInternal(ReadableOffset offset, @Nullable ExtractionFn extractionFn)
+    protected DimensionSelector makeDimensionSelectorInternal(ReadableOffset offset, @Nullable ExtractionFn extractionFn)
     {
       if (multiValue) {
         class MultiValueSelector implements DimensionSelector
@@ -655,126 +649,6 @@ public class StringFrameColumnReader implements FrameColumnReader
 
         return new SingleValueSelector();
       }
-    }
-  }
-
-  static class StringArrayFrameColumn implements BaseColumn
-  {
-    private final StringFrameColumn delegate;
-
-    StringArrayFrameColumn(
-        Frame frame,
-        boolean multiValue,
-        Memory memory,
-        long startOfStringLengthSection,
-        long startOfStringDataSection
-    )
-    {
-      this.delegate = new StringFrameColumn(
-          frame,
-          multiValue,
-          memory,
-          startOfStringLengthSection,
-          startOfStringDataSection,
-          true
-      );
-    }
-
-    @Override
-    @SuppressWarnings("rawtypes")
-    public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
-    {
-      return delegate.makeDimensionSelectorInternal(offset, null);
-    }
-
-    @Override
-    public void close()
-    {
-      delegate.close();
-    }
-  }
-}
-
-/**
- * Reader for {@link ColumnType#STRING_ARRAY}.
- */
-class StringArrayFrameColumnReader extends StringFrameColumnReader
-{
-  StringArrayFrameColumnReader(int columnNumber)
-  {
-    super(columnNumber);
-  }
-
-  @Override
-  public Column readRACColumn(Frame frame)
-  {
-    final Memory memory = frame.region(columnNumber);
-    validate(memory);
-
-    // we expect the memory to be stored as if there are multi values
-    assert isMultiValue(memory);
-    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), true);
-    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), true);
-
-    StringFrameColumn frameCol = new StringFrameColumn(
-        frame,
-        true,
-        memory,
-        positionOfLengths,
-        positionOfPayloads,
-        true
-    );
-
-    return new ColumnAccessorBasedColumn(frameCol);
-  }
-
-  @Override
-  public ColumnPlus readColumn(final Frame frame)
-  {
-    final Memory memory = frame.region(columnNumber);
-    validate(memory);
-
-    // we expect the memory to be stored as if there are multi values
-    assert isMultiValue(memory);
-    final long startOfStringLengthSection = getStartOfStringLengthSection(frame.numRows(), true);
-    final long startOfStringDataSection = getStartOfStringDataSection(memory, frame.numRows(), true);
-
-    final BaseColumn baseColumn = new StringArrayFrameColumn(
-        frame,
-        true,
-        memory,
-        startOfStringLengthSection,
-        startOfStringDataSection
-    );
-
-    return new ColumnPlus(
-        baseColumn,
-        new ColumnCapabilitiesImpl().setType(ColumnType.STRING_ARRAY)
-                                    .setHasMultipleValues(false)
-                                    .setDictionaryEncoded(false)
-                                    .setHasBitmapIndexes(false)
-                                    .setHasSpatialIndexes(false)
-                                    .setHasNulls(ColumnCapabilities.Capable.UNKNOWN),
-        frame.numRows()
-    );
-  }
-
-  private void validate(final Memory region)
-  {
-    // Check if column is big enough for a header
-    if (region.getCapacity() < StringFrameColumnWriter.DATA_OFFSET) {
-      throw DruidException.defensive("Column[%s] is not big enough for a header", columnNumber);
-    }
-
-    final byte typeCode = region.getByte(0);
-    final byte expectedTypeCode = FrameColumnWriters.TYPE_STRING_ARRAY;
-    if (typeCode != expectedTypeCode) {
-      throw DruidException.defensive(
-          "Column[%s] does not have the correct type code; expected[%s], got[%s]",
-          columnNumber,
-          expectedTypeCode,
-          typeCode
-      );
     }
   }
 }

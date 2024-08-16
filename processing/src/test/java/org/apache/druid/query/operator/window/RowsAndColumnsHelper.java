@@ -284,7 +284,7 @@ public class RowsAndColumnsHelper
         } else if (expectedVal instanceof Object[]) {
           Object actualVal = accessor.getObject(i);
           if (expectedNulls[i]) {
-            Assert.assertEquals(msg, 0, actualVal);
+            Assert.assertNull(msg, accessor.getObject(i));
           } else {
             if (actualVal instanceof ArrayList) {
               Assert.assertArrayEquals(msg, (Object[]) expectedVals[i], ((ArrayList<?>) actualVal).toArray());
