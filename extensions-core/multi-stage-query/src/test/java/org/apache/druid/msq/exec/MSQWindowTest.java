@@ -32,6 +32,7 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -2135,9 +2136,9 @@ public class MSQWindowTest extends MSQTestBase
                                   .columns("d0", "d1", "d2", "w0", "w1")
                                   .orderBy(
                                       ImmutableList.of(
-                                          new ScanQuery.OrderBy("d0", ScanQuery.Order.ASCENDING),
-                                          new ScanQuery.OrderBy("d1", ScanQuery.Order.ASCENDING),
-                                          new ScanQuery.OrderBy("d2", ScanQuery.Order.ASCENDING)
+                                          OrderBy.ascending("d0"),
+                                          OrderBy.ascending("d1"),
+                                          OrderBy.ascending("d2")
                                       )
                                   )
                                   .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)

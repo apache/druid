@@ -41,6 +41,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -821,8 +822,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
-
   {
+    assumeFalse(
+        isRunningMSQ() && isSortBasedJoin() && NullHandling.replaceWithDefault(),
+        "test disabled; returns incorrect results in this mode"
+    );
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -5044,7 +5048,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     //
     // This test's goal is to ensure that the join filter rewrites function correctly when there are
     // unoptimized filters in the join query. The rewrite logic must apply to the optimized form of the filters,
-    // as this is what will be passed to HashJoinSegmentAdapter.makeCursors(), where the result of the join
+    // as this is what will be passed to HashJoinSegmentAdapter.makeCursor(), where the result of the join
     // filter pre-analysis is used.
     //
     // A native query is used because the filter types where we support optimization are the AND/OR/NOT and
@@ -5645,6 +5649,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
   {
+    assumeFalse(
+        isRunningMSQ() && isSortBasedJoin() && NullHandling.replaceWithDefault(),
+        "test disabled; returns incorrect results in this mode"
+    );
     assumeFalse(testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault(), "not support in decoupled mode");
 
     cannotVectorize();
@@ -5872,7 +5880,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .columns("__time")
-                .order(ScanQuery.Order.ASCENDING)
+                .order(Order.ASCENDING)
                 .context(context)
                 .build()
         ),

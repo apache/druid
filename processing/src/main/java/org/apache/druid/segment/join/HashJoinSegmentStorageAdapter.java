@@ -23,14 +23,13 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -42,11 +41,10 @@ import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
-import org.apache.druid.segment.vector.VectorCursor;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -219,135 +217,123 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    // HashJoinEngine isn't vectorized yet.
-    // However, we can still vectorize if there are no clauses, since that means all we need to do is apply
-    // a base filter. That's easy enough!
-    return clauses.isEmpty() && baseAdapter.canVectorize(baseFilterAnd(filter), virtualColumns, descending);
+    // make a copy of CursorBuildSpec with filters removed
+    final CursorBuildSpec.CursorBuildSpecBuilder cursorBuildSpecBuilder = CursorBuildSpec.builder(spec)
+                                                                                         .setFilter(null);
+
+    final Filter combinedFilter = baseFilterAnd(spec.getFilter());
+
+    if (clauses.isEmpty()) {
+      // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
+      final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
+                                                            .build();
+      return baseAdapter.makeCursorHolder(newSpec);
+    }
+
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
+
+    return new CursorHolder()
+    {
+      final Closer joinablesCloser = Closer.create();
+
+      @Override
+      public Cursor asCursor()
+      {
+        // Filter pre-analysis key implied by the call to "makeCursorHolder". We need to sanity-check that it matches
+        // the actual pre-analysis that was done. Note: we could now infer a rewrite config from the "makeCursorHolder"
+        // call (it requires access to the query context which we now have access to since the move away from
+        // CursorFactory) but this code hasn't been updated to sanity-check it, so currently we are still skipping it
+        // by re-using the one present in the cached key.
+        final JoinFilterPreAnalysisKey keyIn =
+            new JoinFilterPreAnalysisKey(
+                joinFilterPreAnalysis.getKey().getRewriteConfig(),
+                clauses,
+                spec.getVirtualColumns(),
+                combinedFilter
+            );
+
+        final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
+        final JoinFilterPreAnalysis preAnalysis;
+        if (keyIn.equals(keyCached)) {
+          // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursorHolder call
+          // (keyIn).
+          preAnalysis = joinFilterPreAnalysis;
+        } else {
+          // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
+          // layered on top of a join datasource.
+          preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn);
+        }
+
+        final JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+            preAnalysis,
+            baseFilter
+        );
+
+
+        if (joinFilterSplit.getBaseTableFilter().isPresent()) {
+          cursorBuildSpecBuilder.setFilter(joinFilterSplit.getBaseTableFilter().get());
+        }
+        final VirtualColumns preJoinVirtualColumns = VirtualColumns.fromIterable(
+            Iterables.concat(
+                Sets.difference(
+                    ImmutableSet.copyOf(spec.getVirtualColumns().getVirtualColumns()),
+                    joinFilterPreAnalysis.getPostJoinVirtualColumns()
+                ),
+                joinFilterSplit.getPushDownVirtualColumns()
+            )
+        );
+        cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
+
+        final Cursor baseCursor = joinablesCloser.register(baseAdapter.makeCursorHolder(cursorBuildSpecBuilder.build()))
+                                                 .asCursor();
+
+        if (baseCursor == null) {
+          return null;
+        }
+
+        Cursor retVal = baseCursor;
+
+        for (JoinableClause clause : clauses) {
+          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
+        }
+
+        return PostJoinCursor.wrap(
+            retVal,
+            VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
+            joinFilterSplit.getJoinTableFilter().orElse(null)
+        );
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
+      }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(joinablesCloser);
+      }
+    };
   }
 
   @Override
   public boolean isFromTombstone()
   {
     return baseAdapter.isFromTombstone();
-  }
-
-  @Nullable
-  @Override
-  public VectorCursor makeVectorCursor(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    if (!canVectorize(filter, virtualColumns, descending)) {
-      throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
-    }
-
-    // Should have been checked by canVectorize.
-    assert clauses.isEmpty();
-
-    return baseAdapter.makeVectorCursor(
-        baseFilterAnd(filter),
-        interval,
-        virtualColumns,
-        descending,
-        vectorSize,
-        queryMetrics
-    );
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      @Nonnull final Interval interval,
-      @Nonnull final VirtualColumns virtualColumns,
-      @Nonnull final Granularity gran,
-      final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    final Filter combinedFilter = baseFilterAnd(filter);
-
-    if (clauses.isEmpty()) {
-      return baseAdapter.makeCursors(
-          combinedFilter,
-          interval,
-          virtualColumns,
-          gran,
-          descending,
-          queryMetrics
-      );
-    }
-
-    // Filter pre-analysis key implied by the call to "makeCursors". We need to sanity-check that it matches
-    // the actual pre-analysis that was done. Note: we can't infer a rewrite config from the "makeCursors" call (it
-    // requires access to the query context) so we'll need to skip sanity-checking it, by re-using the one present
-    // in the cached key.)
-    final JoinFilterPreAnalysisKey keyIn =
-        new JoinFilterPreAnalysisKey(
-            joinFilterPreAnalysis.getKey().getRewriteConfig(),
-            clauses,
-            virtualColumns,
-            combinedFilter
-        );
-
-    final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
-    final JoinFilterPreAnalysis preAnalysis;
-    if (keyIn.equals(keyCached)) {
-      // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursors call (keyIn).
-      preAnalysis = joinFilterPreAnalysis;
-    } else {
-      // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
-      // layered on top of a join datasource.
-      preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn);
-    }
-
-
-    final JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-        preAnalysis,
-        baseFilter
-    );
-
-    final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        joinFilterSplit.getBaseTableFilter().isPresent() ? joinFilterSplit.getBaseTableFilter().get() : null,
-        interval,
-        VirtualColumns.fromIterable(
-            Iterables.concat(
-                Sets.difference(
-                    ImmutableSet.copyOf(virtualColumns.getVirtualColumns()),
-                    joinFilterPreAnalysis.getPostJoinVirtualColumns()
-                ),
-                joinFilterSplit.getPushDownVirtualColumns()
-            )
-        ),
-        gran,
-        descending,
-        queryMetrics
-    );
-
-    final Closer joinablesCloser = Closer.create();
-    return Sequences.<Cursor, Cursor>map(
-        baseCursorSequence,
-        cursor -> {
-          assert cursor != null;
-          Cursor retVal = cursor;
-
-          for (JoinableClause clause : clauses) {
-            retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
-          }
-
-          return PostJoinCursor.wrap(
-              retVal,
-              VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
-              joinFilterSplit.getJoinTableFilter().orElse(null)
-          );
-        }
-    ).withBaggage(joinablesCloser);
   }
 
   /**
@@ -368,7 +354,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
    */
   private Optional<JoinableClause> getClauseForColumn(final String column)
   {
-    // Check clauses in reverse, since "makeCursors" creates the cursor in such a way that the last clause
+    // Check clauses in reverse, since "makeCursorHolder" creates the cursor in such a way that the last clause
     // gets first dibs to claim a column.
     return Lists.reverse(clauses)
                 .stream()

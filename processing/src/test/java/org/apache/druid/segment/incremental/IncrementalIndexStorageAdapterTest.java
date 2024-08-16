@@ -50,6 +50,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -58,9 +59,11 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -83,7 +86,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -131,34 +133,34 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     );
 
 
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                           .addDimension("billy")
+                                           .addDimension("sally")
+                                           .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                                           .addOrderByColumn("billy")
+                                           .build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
         );
-        ResourceHolder<ByteBuffer> processingBuffer = pool.take()
+        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
+        final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)
     ) {
-      final GroupByQuery query = GroupByQuery.builder()
-                                             .setDataSource("test")
-                                             .setGranularity(Granularities.ALL)
-                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                                             .addDimension("billy")
-                                             .addDimension("sally")
-                                             .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                                             .addOrderByColumn("billy")
-                                             .build();
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          new IncrementalIndexStorageAdapter(index),
+          adapter,
+          cursorHolder,
+          buildSpec,
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
-          new DruidProcessingConfig(),
-          filter,
-          interval,
-          null
+          new DruidProcessingConfig()
       );
 
       final List<ResultRow> results = rows.toList();
@@ -195,46 +197,46 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         )
     );
 
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                           .addDimension("billy")
+                                           .addDimension("sally")
+                                           .addAggregator(
+                                               new LongSumAggregatorFactory("cnt", "cnt")
+                                           )
+                                           .addAggregator(
+                                               new JavaScriptAggregatorFactory(
+                                                   "fieldLength",
+                                                   Arrays.asList("sally", "billy"),
+                                                   "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
+                                                   "function() { return 0; }",
+                                                   "function(a,b) { return a + b; }",
+                                                   JavaScriptConfig.getEnabledInstance()
+                                               )
+                                           )
+                                           .addOrderByColumn("billy")
+                                           .build();
+    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
+        final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)
     ) {
-      final GroupByQuery query = GroupByQuery.builder()
-                                             .setDataSource("test")
-                                             .setGranularity(Granularities.ALL)
-                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                                             .addDimension("billy")
-                                             .addDimension("sally")
-                                             .addAggregator(
-                                                 new LongSumAggregatorFactory("cnt", "cnt")
-                                             )
-                                             .addAggregator(
-                                                 new JavaScriptAggregatorFactory(
-                                                     "fieldLength",
-                                                     Arrays.asList("sally", "billy"),
-                                                     "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
-                                                     "function() { return 0; }",
-                                                     "function(a,b) { return a + b; }",
-                                                     JavaScriptConfig.getEnabledInstance()
-                                                 )
-                                             )
-                                             .addOrderByColumn("billy")
-                                             .build();
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          new IncrementalIndexStorageAdapter(index),
+          adapter,
+          cursorHolder,
+          buildSpec,
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
-          new DruidProcessingConfig(),
-          filter,
-          interval,
-          null
+          new DruidProcessingConfig()
       );
 
       final List<ResultRow> results = rows.toList();
@@ -278,38 +280,38 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
 
     for (boolean descending : Arrays.asList(false, true)) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          new SelectorFilter("sally", "bo"),
-          interval,
-          VirtualColumns.EMPTY,
-          Granularities.NONE,
-          descending,
-          null
-      );
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                       .setFilter(new SelectorFilter("sally", "bo"))
+                                                       .setInterval(interval)
+                                                       .setPreferredOrdering(
+                                                           descending ? Cursors.descendingTimeOrder() : null
+                                                       )
+                                                       .build();
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+        Cursor cursor = cursorHolder.asCursor();
+        DimensionSelector dimSelector;
 
-      Cursor cursor = cursorSequence.limit(1).toList().get(0);
-      DimensionSelector dimSelector;
+        dimSelector = cursor
+            .getColumnSelectorFactory()
+            .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+        Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-      dimSelector = cursor
-          .getColumnSelectorFactory()
-          .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
-      Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+        index.add(
+            new MapBasedInputRow(
+                t.minus(1).getMillis(),
+                Collections.singletonList("sally"),
+                ImmutableMap.of("sally", "ah")
+            )
+        );
 
-      index.add(
-          new MapBasedInputRow(
-              t.minus(1).getMillis(),
-              Collections.singletonList("sally"),
-              ImmutableMap.of("sally", "ah")
-          )
-      );
+        // Cursor reset should not be affected by out of order values
+        cursor.reset();
 
-      // Cursor reset should not be affected by out of order values
-      cursor.reset();
-
-      dimSelector = cursor
-          .getColumnSelectorFactory()
-          .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
-      Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+        dimSelector = cursor
+            .getColumnSelectorFactory()
+            .makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+        Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+      }
     }
   }
 
@@ -374,36 +376,36 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         )
     );
 
+
+    final GroupByQuery query = GroupByQuery.builder()
+                                           .setDataSource("test")
+                                           .setGranularity(Granularities.ALL)
+                                           .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
+                                           .addDimension("billy")
+                                           .addDimension("sally")
+                                           .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                                           .setDimFilter(DimFilters.dimEquals("sally", (String) null))
+                                           .build();
+    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
+        final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)
     ) {
-
-      final GroupByQuery query = GroupByQuery.builder()
-                                             .setDataSource("test")
-                                             .setGranularity(Granularities.ALL)
-                                             .setInterval(new Interval(DateTimes.EPOCH, DateTimes.nowUtc()))
-                                             .addDimension("billy")
-                                             .addDimension("sally")
-                                             .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
-                                             .setDimFilter(DimFilters.dimEquals("sally", (String) null))
-                                             .build();
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
-
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          new IncrementalIndexStorageAdapter(index),
+          adapter,
+          cursorHolder,
+          buildSpec,
           processingBuffer.get(),
           null,
           new GroupByQueryConfig(),
-          new DruidProcessingConfig(),
-          filter,
-          interval,
-          null
+          new DruidProcessingConfig()
       );
 
       final List<ResultRow> results = rows.toList();
@@ -433,48 +435,40 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = sa.makeCursors(
-        null,
-        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-    final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
+                                                     .build();
+    try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
+      DimensionSelector dimSelector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+      int cardinality = dimSelector.getValueCardinality();
 
-    cursors
-        .map(cursor -> {
-          DimensionSelector dimSelector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
-          int cardinality = dimSelector.getValueCardinality();
+      //index gets more rows at this point, while other thread is iterating over the cursor
+      try {
+        for (int i = 0; i < 1; i++) {
+          index.add(new MapBasedInputRow(
+              timestamp,
+              Collections.singletonList("billy"),
+              ImmutableMap.of("billy", "v2" + i)
+          ));
+        }
+      }
+      catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
 
-          //index gets more rows at this point, while other thread is iterating over the cursor
-          try {
-            for (int i = 0; i < 1; i++) {
-              index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2" + i)));
-            }
-          }
-          catch (Exception ex) {
-            throw new RuntimeException(ex);
-          }
-
-          int rowNumInCursor = 0;
-          // and then, cursoring continues in the other thread
-          while (!cursor.isDone()) {
-            IndexedInts row = dimSelector.getRow();
-            row.forEach(i -> Assert.assertTrue(i < cardinality));
-            cursor.advance();
-            rowNumInCursor++;
-          }
-          Assert.assertEquals(2, rowNumInCursor);
-          assertCursorsNotEmpty.incrementAndGet();
-
-          return null;
-        })
-        .toList();
-    Assert.assertEquals(1, assertCursorsNotEmpty.get());
+      int rowNumInCursor = 0;
+      // and then, cursoring continues in the other thread
+      while (!cursor.isDone()) {
+        IndexedInts row = dimSelector.getRow();
+        row.forEach(i -> Assert.assertTrue(i < cardinality));
+        cursor.advance();
+        rowNumInCursor++;
+      }
+      Assert.assertEquals(2, rowNumInCursor);
+    }
   }
 
   @Test
@@ -497,37 +491,26 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = sa.makeCursors(
-        new DictionaryRaceTestFilter(index, timestamp),
-        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-    final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(new DictionaryRaceTestFilter(index, timestamp))
+                                                     .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
+                                                     .build();
+    try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
+      DimensionSelector dimSelector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+      int cardinality = dimSelector.getValueCardinality();
 
-    cursors
-        .map(cursor -> {
-          DimensionSelector dimSelector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
-          int cardinality = dimSelector.getValueCardinality();
-
-          int rowNumInCursor = 0;
-          while (!cursor.isDone()) {
-            IndexedInts row = dimSelector.getRow();
-            row.forEach(i -> Assert.assertTrue(i < cardinality));
-            cursor.advance();
-            rowNumInCursor++;
-          }
-          Assert.assertEquals(5, rowNumInCursor);
-          assertCursorsNotEmpty.incrementAndGet();
-
-          return null;
-        })
-        .toList();
-    Assert.assertEquals(1, assertCursorsNotEmpty.get());
+      int rowNumInCursor = 0;
+      while (!cursor.isDone()) {
+        IndexedInts row = dimSelector.getRow();
+        row.forEach(i -> Assert.assertTrue(i < cardinality));
+        cursor.advance();
+        rowNumInCursor++;
+      }
+      Assert.assertEquals(5, rowNumInCursor);
+    }
   }
 
   @Test
@@ -548,93 +531,86 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
-    Sequence<Cursor> cursors = sa.makeCursors(
-        null,
-        Intervals.utc(timestamp - 60_000, timestamp + 60_000),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-    final AtomicInteger assertCursorsNotEmpty = new AtomicInteger(0);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
+                                                     .build();
+    try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
+      Cursor cursor = cursorHolder.asCursor();
 
-    cursors
-        .map(cursor -> {
-          DimensionSelector dimSelector1A = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
-          int cardinalityA = dimSelector1A.getValueCardinality();
+      DimensionSelector dimSelector1A = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+      int cardinalityA = dimSelector1A.getValueCardinality();
 
-          //index gets more rows at this point, while other thread is iterating over the cursor
-          try {
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v1")));
-          }
-          catch (Exception ex) {
-            throw new RuntimeException(ex);
-          }
+      //index gets more rows at this point, while other thread is iterating over the cursor
+      try {
+        index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v1")));
+      }
+      catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
 
-          DimensionSelector dimSelector1B = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
-          //index gets more rows at this point, while other thread is iterating over the cursor
-          try {
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2")));
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy2"), ImmutableMap.of("billy2", "v3")));
-          }
-          catch (Exception ex) {
-            throw new RuntimeException(ex);
-          }
+      DimensionSelector dimSelector1B = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+      //index gets more rows at this point, while other thread is iterating over the cursor
+      try {
+        index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v2")));
+        index.add(new MapBasedInputRow(
+            timestamp,
+            Collections.singletonList("billy2"),
+            ImmutableMap.of("billy2", "v3")
+        ));
+      }
+      catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
 
-          DimensionSelector dimSelector1C = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
+      DimensionSelector dimSelector1C = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy", "billy"));
 
-          DimensionSelector dimSelector2D = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
-          //index gets more rows at this point, while other thread is iterating over the cursor
-          try {
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v3")));
-            index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy3"), ImmutableMap.of("billy3", "")));
-          }
-          catch (Exception ex) {
-            throw new RuntimeException(ex);
-          }
+      DimensionSelector dimSelector2D = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy2", "billy2"));
+      //index gets more rows at this point, while other thread is iterating over the cursor
+      try {
+        index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy"), ImmutableMap.of("billy", "v3")));
+        index.add(new MapBasedInputRow(timestamp, Collections.singletonList("billy3"), ImmutableMap.of("billy3", "")));
+      }
+      catch (Exception ex) {
+        throw new RuntimeException(ex);
+      }
 
-          DimensionSelector dimSelector3E = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec("billy3", "billy3"));
+      DimensionSelector dimSelector3E = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec("billy3", "billy3"));
 
-          int rowNumInCursor = 0;
-          // and then, cursoring continues in the other thread
-          while (!cursor.isDone()) {
-            IndexedInts rowA = dimSelector1A.getRow();
-            rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
-            IndexedInts rowB = dimSelector1B.getRow();
-            rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
-            IndexedInts rowC = dimSelector1C.getRow();
-            rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
-            IndexedInts rowD = dimSelector2D.getRow();
-            // no null id, so should get empty dims array
-            Assert.assertEquals(0, rowD.size());
-            IndexedInts rowE = dimSelector3E.getRow();
-            if (NullHandling.replaceWithDefault()) {
-              Assert.assertEquals(1, rowE.size());
-              // the null id
-              Assert.assertEquals(0, rowE.get(0));
-            } else {
-              Assert.assertEquals(0, rowE.size());
-            }
-            cursor.advance();
-            rowNumInCursor++;
-          }
-          Assert.assertEquals(2, rowNumInCursor);
-          assertCursorsNotEmpty.incrementAndGet();
-
-          return null;
-        })
-        .toList();
-    Assert.assertEquals(1, assertCursorsNotEmpty.get());
+      int rowNumInCursor = 0;
+      // and then, cursoring continues in the other thread
+      while (!cursor.isDone()) {
+        IndexedInts rowA = dimSelector1A.getRow();
+        rowA.forEach(i -> Assert.assertTrue(i < cardinalityA));
+        IndexedInts rowB = dimSelector1B.getRow();
+        rowB.forEach(i -> Assert.assertTrue(i < cardinalityA));
+        IndexedInts rowC = dimSelector1C.getRow();
+        rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
+        IndexedInts rowD = dimSelector2D.getRow();
+        // no null id, so should get empty dims array
+        Assert.assertEquals(0, rowD.size());
+        IndexedInts rowE = dimSelector3E.getRow();
+        if (NullHandling.replaceWithDefault()) {
+          Assert.assertEquals(1, rowE.size());
+          // the null id
+          Assert.assertEquals(0, rowE.get(0));
+        } else {
+          Assert.assertEquals(0, rowE.size());
+        }
+        cursor.advance();
+        rowNumInCursor++;
+      }
+      Assert.assertEquals(2, rowNumInCursor);
+    }
   }
 
   private static class DictionaryRaceTestFilter implements Filter

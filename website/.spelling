@@ -325,6 +325,7 @@ deserializes
 downtimes
 druid
 druid–kubernetes-extensions
+druid.table
 e.g.
 encodings
 endian

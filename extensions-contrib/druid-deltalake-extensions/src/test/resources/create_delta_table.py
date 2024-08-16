@@ -15,12 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-
 import argparse
 from delta import *
 import pyspark
-from pyspark.sql.types import StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType
+from pyspark.sql.types import MapType, StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType, ArrayType
 from datetime import datetime, timedelta
 import random
 
@@ -37,6 +35,55 @@ def config_spark_with_delta_lake():
     spark = configure_spark_with_delta_pip(builder).getOrCreate()
     spark.sparkContext.setLogLevel("ERROR")
     return spark
+
+
+def create_dataset_with_complex_types(num_records):
+    """
+    Create a mock dataset with records containing complex types like arrays, structs and maps.
+
+    Parameters:
+    - num_records (int): Number of records to generate.
+
+    Returns:
+    - Tuple: A tuple containing a list of records and the corresponding schema.
+      - List of Records: Each record is a tuple representing a row of data.
+      - StructType: The schema defining the structure of the records.
+
+    Example:
+    ```python
+    data, schema = create_dataset_with_complex_types(10)
+    ```
+    """
+    schema = StructType([
+        StructField("id", LongType(), False),
+        StructField("array_info", ArrayType(IntegerType(), True), True),
+        StructField("struct_info", StructType([
+            StructField("id", LongType(), False),
+            StructField("name", StringType(), True)
+        ])),
+        StructField("nested_struct_info", StructType([
+            StructField("id", LongType(), False),
+            StructField("name", StringType(), True),
+            StructField("nested", StructType([
+                StructField("nested_int", IntegerType(), False),
+                StructField("nested_double", DoubleType(), True),
+            ]))
+        ])),
+        StructField("map_info", MapType(StringType(), FloatType()))
+    ])
+
+    data = []
+
+    for idx in range(num_records):
+        record = (
+            idx,
+            (idx, idx + 1, idx + 2, idx + 3),
+            (idx, f"{idx}"),
+            (idx, f"{idx}", (idx, idx + 1.0)),
+            {"key1": idx + 1.0, "key2": idx + 1.0}
+        )
+        data.append(record)
+    return data, schema
 
 
 def create_dataset(num_records):
@@ -94,6 +141,9 @@ def main():
     parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    parser.add_argument("--gen_complex_types", type=bool, default=False, help="Generate a Delta table with records"
+                                                                              " containing complex types like structs,"
+                                                                              " maps and arrays.")
     parser.add_argument('--save_path', default=None, required=True, help="Save path for Delta table")
     parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
                         help="Specify write mode (append/overwrite)")
@@ -103,6 +153,7 @@ def main():
 
     args = parser.parse_args()
 
+    is_gen_complex_types = args.gen_complex_types
     save_mode = args.save_mode
     save_path = args.save_path
     num_records = args.num_records
@@ -110,7 +161,11 @@ def main():
 
     spark = config_spark_with_delta_lake()
 
-    data, schema = create_dataset(num_records=num_records)
+    if is_gen_complex_types:
+        data, schema = create_dataset_with_complex_types(num_records=num_records)
+    else:
+        data, schema = create_dataset(num_records=num_records)
+
     df = spark.createDataFrame(data, schema=schema)
     if not partitioned_by:
         df.write.format("delta").mode(save_mode).save(save_path)

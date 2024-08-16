@@ -33,7 +33,7 @@ import org.apache.druid.data.input.IntermediateRowParsingReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -48,10 +48,11 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -123,15 +124,16 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         ),
         intervalFilter
     );
+    final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                           .setFilter(Filters.toFilter(dimFilter))
+                                                           .setInterval(storageAdapter.getInterval())
+                                                           .build();
 
-    final Sequence<Cursor> cursors = storageAdapter.getAdapter().makeCursors(
-        Filters.toFilter(dimFilter),
-        storageAdapter.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    final CursorHolder cursorHolder = storageAdapter.getAdapter().makeCursorHolder(cursorBuildSpec);
+    final Cursor cursor = cursorHolder.asCursor();
+    if (cursor == null) {
+      return CloseableIterators.wrap(Collections.emptyIterator(), cursorHolder);
+    }
 
     // Retain order of columns from the original segments. Useful for preserving dimension order if we're in
     // schemaless mode.
@@ -142,12 +144,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
         )
     );
 
-    final Sequence<Map<String, Object>> sequence = Sequences.concat(
-        Sequences.map(
-            cursors,
-            cursor -> cursorToSequence(cursor, columnsToRead)
-        )
-    );
+    final Sequence<Map<String, Object>> sequence = cursorToSequence(cursor, columnsToRead).withBaggage(cursorHolder);
 
     return makeCloseableIteratorFromSequenceAndSegmentFile(sequence, segmentFile);
   }
