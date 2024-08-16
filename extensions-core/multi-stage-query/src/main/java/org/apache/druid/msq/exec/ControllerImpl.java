@@ -3009,6 +3009,7 @@ public class ControllerImpl implements Controller
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
             cancellationId,
+            null,
             MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context())
         );
 

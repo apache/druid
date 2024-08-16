@@ -19,19 +19,30 @@
 
 package org.apache.druid.msq.counters;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 
 /**
- * Marker interface for the results of {@link QueryCounter#snapshot()}. No methods, because the only purpose of these
- * snapshots is to pass things along from worker -> controller -> report.
- *
- * To support easy adding of new counters, implementations must use forward-compatible deserialization setups.
- * In particular, implementations should avoid using enums where new values may be added in the future.
- *
- * The default impl is {@link NilQueryCounterSnapshot}. This means that readers will see {@link NilQueryCounterSnapshot}
- * if they don't understand the particular counter type in play.
+ * Represents an unknown counter type. This is the "defaultType" for {@link QueryCounterSnapshot}, so it is
+ * substituted at deserialization time if the type is unknown. This can happen when running mixed versions, where some
+ * servers support a newer counter type and some don't.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NilQueryCounterSnapshot.class)
-public interface QueryCounterSnapshot
+@JsonTypeName("nil")
+public class NilQueryCounterSnapshot implements QueryCounterSnapshot
 {
+  private NilQueryCounterSnapshot()
+  {
+    // Singleton
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    return obj != null && obj.getClass().equals(NilQueryCounterSnapshot.class);
+  }
 }
