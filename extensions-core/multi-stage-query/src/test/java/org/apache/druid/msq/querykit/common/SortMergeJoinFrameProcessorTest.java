@@ -1570,11 +1570,11 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
   private FrameWriterFactory makeFrameWriterFactory(final RowSignature signature)
   {
     return new LimitedFrameWriterFactory(
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+        FrameWriters.makeRowBasedFrameWriterFactory(
             new SingleMemoryAllocatorFactory(ArenaMemoryAllocator.createOnHeap(1_000_000)),
             signature,
-            Collections.emptyList()
+            Collections.emptyList(),
+            false
         ),
         rowsPerOutputFrame
     );

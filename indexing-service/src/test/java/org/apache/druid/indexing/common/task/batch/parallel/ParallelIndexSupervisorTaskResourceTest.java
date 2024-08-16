@@ -39,6 +39,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.SegmentAllocators;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTaskRunner.SubTaskSpecStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -130,7 +131,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     task = newTask(
         Intervals.of("2017/2018"),
         new ParallelIndexIOConfig(
-            null,
             new TestInputSource(IntStream.range(0, NUM_SUB_TASKS).boxed().collect(Collectors.toList())),
             new NoopInputFormat(),
             false,
@@ -290,19 +290,11 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     Assert.assertEquals(200, response.getStatus());
     final ParallelIndexingPhaseProgress monitorStatus = (ParallelIndexingPhaseProgress) response.getEntity();
 
-    // numRunningTasks
+    // Verify the number of tasks in different states
     Assert.assertEquals(runningTasks.size(), monitorStatus.getRunning());
-
-    // numSucceededTasks
     Assert.assertEquals(expectedSucceededTasks, monitorStatus.getSucceeded());
-
-    // numFailedTasks
     Assert.assertEquals(expectedFailedTask, monitorStatus.getFailed());
-
-    // numCompleteTasks
     Assert.assertEquals(expectedSucceededTasks + expectedFailedTask, monitorStatus.getComplete());
-
-    // numTotalTasks
     Assert.assertEquals(runningTasks.size() + expectedSucceededTasks + expectedFailedTask, monitorStatus.getTotal());
 
     // runningSubTasks
@@ -407,7 +399,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       ParallelIndexIOConfig ioConfig
   )
   {
-    // set up ingestion spec
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         new DataSchema(
             "dataSource",
@@ -424,43 +415,9 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
             null
         ),
         ioConfig,
-        new ParallelIndexTuningConfig(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            NUM_SUB_TASKS,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        TuningConfigBuilder.forParallelIndexTask().withMaxNumConcurrentSubTasks(NUM_SUB_TASKS).build()
     );
 
-    // set up test tools
     return new TestSupervisorTask(
         null,
         null,
@@ -503,7 +460,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     }
   }
 
-  private class TestSupervisorTask extends TestParallelIndexSupervisorTask
+  private class TestSupervisorTask extends ParallelIndexSupervisorTask
   {
     TestSupervisorTask(
         String id,
@@ -514,6 +471,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     {
       super(
           id,
+          null,
           taskResource,
           ingestionSchema,
           context
@@ -523,10 +481,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     @Override
     SinglePhaseParallelIndexTaskRunner createSinglePhaseTaskRunner(TaskToolbox toolbox)
     {
-      return new TestRunner(
-          toolbox,
-          this
-      );
+      return new TestRunner(toolbox, this);
     }
   }
 
@@ -563,7 +518,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
           new ParallelIndexIngestionSpec(
               getIngestionSchema().getDataSchema(),
               new ParallelIndexIOConfig(
-                  null,
                   baseInputSource.withSplit(split),
                   getIngestionSchema().getIOConfig().getInputFormat(),
                   getIngestionSchema().getIOConfig().isAppendToExisting(),

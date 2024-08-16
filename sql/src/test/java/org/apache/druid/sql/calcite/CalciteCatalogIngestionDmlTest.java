@@ -36,12 +36,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
@@ -55,10 +56,20 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 @SqlTestFrameworkConfig.ComponentSupplier(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
 {
+
+  private static final Map<String, Object> CONTEXT_WITH_VALIDATION_DISABLED;
+
+  static {
+    CONTEXT_WITH_VALIDATION_DISABLED = new HashMap<>(DEFAULT_CONTEXT);
+    CONTEXT_WITH_VALIDATION_DISABLED.put(QueryContexts.CATALOG_VALIDATION_ENABLED, false);
+  }
+
   private final String operationName;
   private final String dmlPrefixPattern;
 
@@ -570,8 +581,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("d", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("b"),
+                        OrderBy.ascending("d")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -632,7 +643,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("b")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -697,7 +708,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("e", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("e")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -919,7 +930,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "  b AS dim1,\n" +
              "  1 AS cnt,\n" +
              "  c AS m2,\n" +
-             "  CAST(d AS BIGINT) AS extra2\n" +
+             "  d AS extra2\n" +
              "FROM TABLE(inline(\n" +
              "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
              "  format => 'csv'))\n" +
@@ -929,6 +940,65 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .expectValidationError(
             DruidException.class,
             "Column [extra2] is not defined in the target table [druid.fooSealed] strict schema"
+        )
+        .verify();
+  }
+
+  /**
+   * Adding a new column during ingestion that is not defined in a sealed table, when catalog validation is disabled,
+   * should plan accordingly.
+   */
+  @Test
+  public void testInsertAddNonDefinedColumnIntoSealedCatalogTableAndValidationDisabled()
+  {
+    ExternalDataSource externalDataSource = new ExternalDataSource(
+        new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        RowSignature.builder()
+            .add("a", ColumnType.STRING)
+            .add("b", ColumnType.STRING)
+            .add("c", ColumnType.LONG)
+            .add("d", ColumnType.STRING)
+            .add("e", ColumnType.STRING)
+            .build()
+    );
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING)
+        .add("cnt", ColumnType.LONG)
+        .add("m2", ColumnType.LONG)
+        .add("extra2", ColumnType.STRING)
+        .build();
+    testIngestionQuery()
+        .context(CONTEXT_WITH_VALIDATION_DISABLED)
+        .sql(StringUtils.format(dmlPrefixPattern, "fooSealed") + "\n" +
+             "SELECT\n" +
+             "  TIME_PARSE(a) AS __time,\n" +
+             "  b AS dim1,\n" +
+             "  1 AS cnt,\n" +
+             "  c AS m2,\n" +
+             "  d AS extra2\n" +
+             "FROM TABLE(inline(\n" +
+             "  data => ARRAY['2022-12-26T12:34:56,extra,10,\"20\",foo'],\n" +
+             "  format => 'csv'))\n" +
+             "  (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR, e VARCHAR)\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("fooSealed", signature)
+        .expectResources(dataSourceWrite("fooSealed"), Externals.externalRead("EXTERNAL"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(externalDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG),
+                    expressionVirtualColumn("v1", "1", ColumnType.LONG)
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("b", "c", "d", "v0", "v1")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
         )
         .verify();
   }
@@ -1104,6 +1174,10 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .verify();
   }
 
+  /**
+   * Assigning a column during ingestion, to an input type that is not compatible with the defined type of the
+   * column, should result in a proper validation error.
+   */
   @Test
   public void testInsertIntoExistingWithIncompatibleTypeAssignment()
   {
@@ -1120,6 +1194,48 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .verify();
   }
 
+  /**
+   * Assigning a column during ingestion, to an input type that is not compatible with the defined type of the
+   * column, when catalog validation is disabled, should plan accordingly.
+   */
+  @Test
+  public void testInsertIntoExistingWithIncompatibleTypeAssignmentAndValidationDisabled()
+  {
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("dim1", ColumnType.STRING_ARRAY)
+        .build();
+    testIngestionQuery()
+        .context(CONTEXT_WITH_VALIDATION_DISABLED)
+        .sql(StringUtils.format(dmlPrefixPattern, "foo") + "\n"
+             + "SELECT\n"
+             + "  __time AS __time,\n"
+             + "  ARRAY[dim1] AS dim1\n"
+             + "FROM foo\n"
+             + "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("foo", signature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "array(\"dim1\")", ColumnType.STRING_ARRAY)
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("__time", "v0")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
+        .verify();
+  }
+
+  /**
+   * Assigning a complex type column during ingestion, to an input type that is not compatible with the defined type of
+   * the column, should result in a proper validation error.
+   */
   @Test
   public void testGroupByInsertIntoExistingWithIncompatibleTypeAssignment()
   {
@@ -1133,6 +1249,44 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         .expectValidationError(
             DruidException.class,
             "Cannot assign to target field 'unique_dim1' of type COMPLEX<hyperUnique> from source field 'unique_dim1' of type VARCHAR ARRAY (line [4], column [3])")
+        .verify();
+  }
+
+  /**
+   * Assigning a complex type column during ingestion, to an input type that is not compatible with the defined type of
+   * the column, when catalog validation is disabled, should plan accordingly.
+   */
+  @Test
+  public void testGroupByInsertIntoExistingWithIncompatibleTypeAssignmentAndValidationDisabled()
+  {
+    final RowSignature signature = RowSignature.builder()
+        .add("__time", ColumnType.LONG)
+        .add("unique_dim1", ColumnType.STRING_ARRAY)
+        .build();
+    testIngestionQuery()
+        .context(CONTEXT_WITH_VALIDATION_DISABLED)
+        .sql(StringUtils.format(dmlPrefixPattern, "foo") + "\n"
+             + "SELECT\n"
+             + "  __time AS __time,\n"
+             + "  ARRAY[dim1] AS unique_dim1\n"
+             + "FROM foo\n"
+             + "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("foo", signature)
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"))
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource("foo")
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "array(\"dim1\")", ColumnType.STRING_ARRAY)
+                )
+                // Scan query lists columns in alphabetical order independent of the
+                // SQL project list or the defined schema.
+                .columns("__time", "v0")
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+        )
         .verify();
   }
 }

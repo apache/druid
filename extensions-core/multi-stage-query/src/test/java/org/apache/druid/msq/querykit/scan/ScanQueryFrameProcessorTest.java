@@ -108,18 +108,17 @@ public class ScanQueryFrameProcessorTest extends InitializedNullHandlingTest
               .dataSource("test")
               .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
               .columns(adapter.getRowSignature().getColumnNames())
-              .legacy(false)
               .build();
 
     final StagePartition stagePartition = new StagePartition(new StageId("query", 0), 0);
 
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+        FrameWriters.makeRowBasedFrameWriterFactory(
             new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
             signature,
-            Collections.emptyList()
+            Collections.emptyList(),
+            false
         ),
         1
     );

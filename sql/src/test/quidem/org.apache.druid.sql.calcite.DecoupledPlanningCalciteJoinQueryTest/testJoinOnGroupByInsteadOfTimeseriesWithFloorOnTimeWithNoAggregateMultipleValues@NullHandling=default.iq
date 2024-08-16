@@ -1,0 +1,155 @@
+# testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues@NullHandling=default case-crc:86f4769d
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100, false) FROM foo WHERE (CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1, m1) IN
+   (
+     SELECT CAST(TIME_FLOOR(__time, 'PT1H') AS BIGINT) + 1 AS t1, MIN(m1) AS t2 FROM foo WHERE dim3 = 'b'
+         AND __time BETWEEN '1994-04-29 00:00:00' AND '2020-01-11 00:00:00' GROUP BY 1
+    )
+GROUP BY 1, 2
+;
++--------------+-----+--------+
+| EXPR$0       | m1  | EXPR$2 |
++--------------+-----+--------+
+| 946684800000 | 1.0 | a      |
+| 946771200000 | 2.0 | b      |
++--------------+-----+--------+
+(2 rows)
+
+!ok
+LogicalAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3, $4)])
+  LogicalProject(EXPR$0=[CAST($0):BIGINT NOT NULL], m1=[$2], dim3=[$1], $f3=[100], $f4=[false])
+    LogicalJoin(condition=[AND(=($3, $4), =($2, $5))], joinType=[inner])
+      LogicalProject(__time=[$0], dim3=[$3], m1=[$5], $f3=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{0}], t2=[MIN($1)])
+        LogicalProject(t1=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], m1=[$5])
+          LogicalFilter(condition=[AND(=($3, 'b'), SEARCH($0, Sarg[[1994-04-29 00:00:00:TIMESTAMP(3)..2020-01-11 00:00:00:TIMESTAMP(3)]]:TIMESTAMP(3)))])
+            LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3, $4)], druid=[logical])
+  DruidProject(EXPR$0=[CAST($0):BIGINT NOT NULL], m1=[$2], dim3=[$1], $f3=[100], $f4=[false], druid=[logical])
+    DruidJoin(condition=[AND(=($3, $4), =($2, $5))], joinType=[inner])
+      DruidProject(__time=[$0], dim3=[$3], m1=[$5], $f3=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidAggregate(group=[{0}], t2=[MIN($1)], druid=[logical])
+        DruidProject(t1=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], m1=[$5], druid=[logical])
+          DruidFilter(condition=[AND(=($3, 'b'), SEARCH($0, Sarg[[1994-04-29 00:00:00:TIMESTAMP(3)..2020-01-11 00:00:00:TIMESTAMP(3)]]:TIMESTAMP(3)))])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1)",
+          "outputType" : "LONG"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "__time", "dim3", "m1", "v0" ],
+        "columnTypes" : [ "LONG", "STRING", "FLOAT", "LONG" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "1994-04-29T00:00:00.000Z/2020-01-11T00:00:00.001Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1)",
+          "outputType" : "LONG"
+        } ],
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "dim3",
+          "value" : "b"
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "v0",
+          "outputName" : "d0",
+          "outputType" : "LONG"
+        } ],
+        "aggregations" : [ {
+          "type" : "floatMin",
+          "name" : "a0",
+          "fieldName" : "m1"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "((\"v0\" == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "__time",
+    "outputName" : "d0",
+    "outputType" : "LONG"
+  }, {
+    "type" : "default",
+    "dimension" : "m1",
+    "outputName" : "d1",
+    "outputType" : "FLOAT"
+  } ],
+  "aggregations" : [ {
+    "type" : "stringAny",
+    "name" : "a0",
+    "fieldName" : "dim3",
+    "maxStringBytes" : 100,
+    "aggregateMultipleValues" : false
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

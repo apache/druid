@@ -20,9 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -35,36 +32,36 @@ import javax.annotation.Nullable;
 
 public class FilteredStorageAdapter implements StorageAdapter
 {
+  @Nullable
   private final DimFilter filterOnDataSource;
   private final StorageAdapter baseStorageAdapter;
 
-  public FilteredStorageAdapter(final StorageAdapter adapter, final DimFilter filter)
+  public FilteredStorageAdapter(final StorageAdapter adapter, @Nullable final DimFilter filter)
   {
     this.baseStorageAdapter = adapter;
     this.filterOnDataSource = filter;
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final Filter andFilter;
-    if (filter == null) {
+    final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
+    final Filter newFilter;
+    if (spec.getFilter() == null) {
       if (filterOnDataSource != null) {
-        andFilter = filterOnDataSource.toFilter();
+        newFilter = filterOnDataSource.toFilter();
       } else {
-        andFilter = null;
+        newFilter = null;
       }
     } else {
-      andFilter = new AndFilter(ImmutableList.of(filter, filterOnDataSource.toFilter()));
+      if (filterOnDataSource != null) {
+        newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filterOnDataSource.toFilter()));
+      } else {
+        newFilter = spec.getFilter();
+      }
     }
-    return baseStorageAdapter.makeCursors(andFilter, interval, virtualColumns, gran, descending, queryMetrics);
+    buildSpecBuilder.setFilter(newFilter);
+    return baseStorageAdapter.makeCursorHolder(buildSpecBuilder.build());
   }
 
   @Override
@@ -141,5 +138,11 @@ public class FilteredStorageAdapter implements StorageAdapter
   public Metadata getMetadata()
   {
     return baseStorageAdapter.getMetadata();
+  }
+
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseStorageAdapter.isFromTombstone();
   }
 }

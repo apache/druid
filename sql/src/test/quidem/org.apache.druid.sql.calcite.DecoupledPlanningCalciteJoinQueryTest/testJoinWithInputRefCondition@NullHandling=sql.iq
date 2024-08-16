@@ -1,0 +1,186 @@
+# testJoinWithInputRefCondition@NullHandling=sql case-crc:9a6c217b
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) FROM foo;
++--------+
+| EXPR$0 |
++--------+
+|      6 |
++--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0])
+  LogicalProject($f0=[OR(=($1, 0), AND(IS NULL($4), >=($2, $1)))])
+    LogicalJoin(condition=[=(CAST(FLOOR(100)):FLOAT NOT NULL, $3)], joinType=[left])
+      LogicalJoin(condition=[true], joinType=[inner])
+        LogicalProject(DUMMY=[0])
+          LogicalTableScan(table=[[druid, foo]])
+        LogicalAggregate(group=[{}], c=[COUNT()], ck=[COUNT($5)])
+          LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{5}], i=[LITERAL_AGG(true)])
+        LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
+  DruidProject($f0=[OR(=($1, 0), AND(IS NULL($4), >=($2, $1)))], druid=[logical])
+    DruidJoin(condition=[=(CAST(FLOOR(100)):FLOAT NOT NULL, $3)], joinType=[left])
+      DruidJoin(condition=[true], joinType=[inner])
+        DruidProject(DUMMY=[0], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidAggregate(group=[{}], c=[COUNT()], ck=[COUNT($5)], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidAggregate(group=[{5}], i=[LITERAL_AGG(true)], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "timeseries",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "scan",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "virtualColumns" : [ {
+            "type" : "expression",
+            "name" : "v0",
+            "expression" : "0",
+            "outputType" : "LONG"
+          } ],
+          "resultFormat" : "compactedList",
+          "columns" : [ "v0" ],
+          "columnTypes" : [ "LONG" ],
+          "granularity" : {
+            "type" : "all"
+          },
+          "legacy" : false
+        }
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "timeseries",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "a0"
+          }, {
+            "type" : "filtered",
+            "aggregator" : {
+              "type" : "count",
+              "name" : "a1"
+            },
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "null",
+                "column" : "m1"
+              }
+            },
+            "name" : "a1"
+          } ]
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "1",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "m1",
+          "outputName" : "d0",
+          "outputType" : "FLOAT"
+        } ],
+        "postAggregations" : [ {
+          "type" : "expression",
+          "name" : "a0",
+          "expression" : "1",
+          "outputType" : "LONG"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(CAST(floor(100), 'DOUBLE') == \"_j0.d0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "or",
+      "fields" : [ {
+        "type" : "equals",
+        "column" : "j0.a0",
+        "matchValueType" : "LONG",
+        "matchValue" : 0
+      }, {
+        "type" : "and",
+        "fields" : [ {
+          "type" : "null",
+          "column" : "_j0.a0"
+        }, {
+          "type" : "expression",
+          "expression" : "(\"j0.a1\" >= \"j0.a0\")"
+        } ]
+      } ]
+    },
+    "name" : "a0"
+  } ]
+}
+!nativePlan

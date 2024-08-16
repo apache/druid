@@ -31,20 +31,20 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -82,7 +82,6 @@ public class SegmentManagerThreadSafetyTest
 
   private TestSegmentPuller segmentPuller;
   private ObjectMapper objectMapper;
-  private IndexIO indexIO;
   private File segmentCacheDir;
   private File segmentDeepStorageDir;
   private SegmentLocalCacheManager segmentCacheManager;
@@ -98,23 +97,34 @@ public class SegmentManagerThreadSafetyTest
             new SimpleModule().registerSubtypes(new NamedType(LocalLoadSpec.class, "local"), new NamedType(TestSegmentizerFactory.class, "test"))
         )
         .setInjectableValues(new Std().addValue(LocalDataSegmentPuller.class, segmentPuller));
-    indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
+
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
+    {
+      @Override
+      public File getInfoDir()
+      {
+        return segmentCacheDir;
+      }
+
+      @Override
+      public List<StorageLocationConfig> getLocations()
+      {
+        return Collections.singletonList(
+            new StorageLocationConfig(segmentCacheDir, null, null)
+        );
+      }
+    };
+    final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     segmentCacheManager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public List<StorageLocationConfig> getLocations()
-          {
-            return Collections.singletonList(
-                new StorageLocationConfig(segmentCacheDir, null, null)
-            );
-          }
-        },
+        storageLocations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestIndex.INDEX_IO,
         objectMapper
     );
-    segmentManager = new SegmentManager(new SegmentLocalCacheLoader(segmentCacheManager, indexIO, objectMapper));
+    segmentManager = new SegmentManager(segmentCacheManager);
     exec = Execs.multiThreaded(NUM_THREAD, "SegmentManagerThreadSafetyTest-%d");
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
@@ -132,7 +142,14 @@ public class SegmentManagerThreadSafetyTest
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
     final List<Future> futures = IntStream
         .range(0, 16)
-        .mapToObj(i -> exec.submit(() -> segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP)))
+        .mapToObj(i -> exec.submit(() -> {
+          try {
+            segmentManager.loadSegment(segment);
+          }
+          catch (SegmentLoadingException | IOException e) {
+            throw new RuntimeException(e);
+          }
+        }))
         .collect(Collectors.toList());
     for (Future future : futures) {
       future.get();
@@ -157,9 +174,9 @@ public class SegmentManagerThreadSafetyTest
         .mapToObj(i -> exec.submit(() -> {
           for (DataSegment segment : segments) {
             try {
-              segmentManager.loadSegment(segment, false, SegmentLazyLoadFailCallback.NOOP);
+              segmentManager.loadSegment(segment);
             }
-            catch (SegmentLoadingException e) {
+            catch (SegmentLoadingException | IOException e) {
               throw new RuntimeException(e);
             }
           }

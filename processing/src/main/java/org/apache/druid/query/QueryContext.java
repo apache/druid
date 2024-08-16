@@ -613,11 +613,11 @@ public class QueryContext
     );
   }
 
-  public boolean isWindowingStrictValidation()
+  public boolean isCatalogValidationEnabled()
   {
     return getBoolean(
-        QueryContexts.WINDOWING_STRICT_VALIDATION,
-        QueryContexts.DEFAULT_WINDOWING_STRICT_VALIDATION
+        QueryContexts.CATALOG_VALIDATION_ENABLED,
+        QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED
     );
   }
 

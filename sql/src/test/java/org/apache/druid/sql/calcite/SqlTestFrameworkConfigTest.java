@@ -19,7 +19,10 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.NumMergeBuffers;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ResultCache;
@@ -27,9 +30,11 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.Annotation;
+import java.net.URI;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SqlTestFrameworkConfigTest
 {
@@ -117,5 +122,34 @@ public class SqlTestFrameworkConfigTest
     assertEquals(1, config.minTopNThreshold);
     assertEquals(1, config.numMergeBuffers);
     assertEquals(ResultCacheMode.DISABLED, config.resultCache);
+  }
+
+  @Test
+  public void testInvalidConfigKeySpecified()
+  {
+    ImmutableMap<String, String> configMap = ImmutableMap.<String, String>builder()
+        .put("nonExistent", "someValue")
+        .build();
+    IAE e = assertThrows(
+        IAE.class,
+        () -> new SqlTestFrameworkConfig(configMap)
+    );
+
+    assertEquals(
+        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[numMergeBuffers, minTopNThreshold, resultCache, componentSupplier]]",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testURI()
+  {
+    SqlTestFrameworkConfig c = new SqlTestFrameworkConfig(
+        ImmutableMap.of(
+            "componentSupplier", DrillComponentSupplier.class.getSimpleName()
+        )
+    );
+    URI uri = c.getDruidTestURI();
+    assertEquals("druidtest:///?componentSupplier=DrillComponentSupplier", uri.toString());
   }
 }

@@ -53,18 +53,20 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
@@ -84,8 +86,8 @@ public class StreamAppenderatorTester implements AutoCloseable
   public static final String DATASOURCE = "foo";
 
   private final DataSchema schema;
-  private final RealtimeTuningConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final AppenderatorConfig tuningConfig;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final Appenderator appenderator;
@@ -132,31 +134,21 @@ public class StreamAppenderatorTester implements AutoCloseable
         null,
         objectMapper
     );
-    tuningConfig = new RealtimeTuningConfig(
-        null,
-        maxRowsInMemory,
-        maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
-        skipBytesInMemoryOverheadCheck,
-        null,
-        null,
-        basePersistDirectory,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        0,
-        0,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+    tuningConfig = new TestAppenderatorConfig(
+      TuningConfig.DEFAULT_APPENDABLE_INDEX,
+      maxRowsInMemory,
+      maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
+      skipBytesInMemoryOverheadCheck,
+      IndexSpec.DEFAULT,
+      0,
+      false,
+      0L,
+      OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+      IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
+      basePersistDirectory
+  );
 
-    metrics = new FireDepartmentMetrics();
+    metrics = new SegmentGenerationMetrics();
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
     IndexIO indexIO = new IndexIO(
@@ -230,10 +222,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                       QueryRunnerTestHelper.NOOP_QUERYWATCHER
                   ),
                   ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(
-                          new ScanQueryConfig(),
-                          new DefaultGenericQueryMetricsFactory()
-                      ),
+                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                       new ScanQueryEngine(),
                       new ScanQueryConfig()
                   )
@@ -277,10 +266,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                       QueryRunnerTestHelper.NOOP_QUERYWATCHER
                   ),
                   ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(
-                          new ScanQueryConfig(),
-                          new DefaultGenericQueryMetricsFactory()
-                      ),
+                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                       new ScanQueryEngine(),
                       new ScanQueryConfig()
                   )
@@ -310,12 +296,12 @@ public class StreamAppenderatorTester implements AutoCloseable
     return schema;
   }
 
-  public RealtimeTuningConfig getTuningConfig()
+  public AppenderatorConfig getTuningConfig()
   {
     return tuningConfig;
   }
 
-  public FireDepartmentMetrics getMetrics()
+  public SegmentGenerationMetrics getMetrics()
   {
     return metrics;
   }

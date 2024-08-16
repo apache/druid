@@ -20,6 +20,7 @@
 package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -96,7 +97,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public Comparator<Result<SearchResultValue>> createResultComparator(Query<Result<SearchResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
+    return ResultGranularTimestampComparator.create(query.getGranularity(), false);
   }
 
   @Override
@@ -124,6 +125,15 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
 
   @Override
   public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(final SearchQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
+
+  @Override
+  public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(
+      final SearchQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
   {
 
     return new CacheStrategy<Result<SearchResultValue>, Object, SearchQuery>()

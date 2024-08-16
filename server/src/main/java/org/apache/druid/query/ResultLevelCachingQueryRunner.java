@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache;
+import org.apache.druid.client.cache.Cache.NamedKey;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -72,7 +73,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.query = query;
-    this.strategy = queryToolChest.getCacheStrategy(query);
+    this.strategy = queryToolChest.getCacheStrategy(query, objectMapper);
     this.populateResultCache = CacheUtil.isPopulateResultCache(
         query,
         strategy,
@@ -87,8 +88,9 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   {
     if (useResultCache || populateResultCache) {
 
-      final String cacheKeyStr = StringUtils.fromUtf8(strategy.computeResultLevelCacheKey(query));
-      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKeyStr);
+      final byte[] queryCacheKey = strategy.computeResultLevelCacheKey(query);
+      final Cache.NamedKey cacheKey = CacheUtil.computeResultLevelCacheKey(queryCacheKey);
+      final byte[] cachedResultSet = fetchResultsFromResultLevelCache(cacheKey);
       String existingResultSetId = extractEtagFromResults(cachedResultSet);
 
       existingResultSetId = existingResultSetId == null ? "" : existingResultSetId;
@@ -107,7 +109,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       } else {
         @Nullable
         ResultLevelCachePopulator resultLevelCachePopulator = createResultLevelCachePopulator(
-            cacheKeyStr,
+            cacheKey,
             newResultSetId
         );
         if (resultLevelCachePopulator == null) {
@@ -166,11 +168,11 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
   @Nullable
   private byte[] fetchResultsFromResultLevelCache(
-      final String queryCacheKey
+      final NamedKey cacheKey
   )
   {
-    if (useResultCache && queryCacheKey != null) {
-      return cache.get(CacheUtil.computeResultLevelCacheKey(queryCacheKey));
+    if (useResultCache && cacheKey != null) {
+      return cache.get(cacheKey);
     }
     return null;
   }
@@ -216,7 +218,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
   }
 
   private ResultLevelCachePopulator createResultLevelCachePopulator(
-      String cacheKeyStr,
+      NamedKey cacheKey,
       String resultSetId
   )
   {
@@ -224,7 +226,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
       ResultLevelCachePopulator resultLevelCachePopulator = new ResultLevelCachePopulator(
           cache,
           objectMapper,
-          CacheUtil.computeResultLevelCacheKey(cacheKeyStr),
+          cacheKey,
           cacheConfig,
           true
       );
@@ -302,11 +304,8 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
 
     public void populateResults()
     {
-      CacheUtil.populateResultCache(
-          cache,
-          key,
-          Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream").toByteArray()
-      );
+      byte[] cachedResults = Preconditions.checkNotNull(cacheObjectStream, "cacheObjectStream").toByteArray();
+      cache.put(key, cachedResults);
     }
   }
 }

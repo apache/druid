@@ -167,12 +167,7 @@ public class CompactionStatus
       this.objectMapper = objectMapper;
       this.lastCompactionState = candidateSegments.getFirst().getLastCompactionState();
       this.compactionConfig = compactionConfig;
-      this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(
-          compactionConfig.getTuningConfig(),
-          compactionConfig.getMaxRowsPerSegment(),
-          null
-      );
-
+      this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();
       if (lastCompactionState == null) {
         this.existingGranularitySpec = null;

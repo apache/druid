@@ -139,11 +139,34 @@ public class SchemaRegistryBasedAvroBytesDecoder implements AvroBytesDecoder
       ParsedSchema parsedSchema = registry.getSchemaById(id);
       schema = parsedSchema instanceof AvroSchema ? ((AvroSchema) parsedSchema).rawSchema() : null;
     }
-    catch (IOException | RestClientException ex) {
-      throw new ParseException(null, ex, "Failed to fetch Avro schema id[%s] from registry. Check if the schema "
-                                         + "exists in the registry. Otherwise it could mean that there is "
-                                         + "malformed data in the stream or data that doesn't conform to the schema "
-                                         + "specified.", id);
+    catch (IOException ex1) {
+      throw new ParseException(
+          null,
+          ex1,
+          "Failed to fetch Avro schema id[%s] from registry. Check if the schema exists in the registry. Otherwise it"
+          + " could mean that there is malformed data in the stream or data that doesn't conform to the schema"
+          + " specified.",
+          id
+      );
+    }
+    catch (RestClientException ex2) {
+      if (ex2.getErrorCode() == 401) {
+        throw new ParseException(
+            null,
+            ex2,
+            "Failed to authenticate to schema registry for Avro schema id[%s]. Please check your credentials.",
+            id
+        );
+      }
+      // For all other errors, just include the code and message received from the library.
+      throw new ParseException(
+          null,
+          ex2,
+          "Failed to fetch Avro schema id[%s] from registry. Error code[%s] and message[%s].",
+          id,
+          ex2.getErrorCode(),
+          ex2.getMessage()
+      );
     }
     if (schema == null) {
       throw new ParseException(null, "No Avro schema id[%s] in registry", id);

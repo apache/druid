@@ -23,19 +23,22 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
@@ -59,8 +62,6 @@ import java.util.Set;
 
 public class ScanQueryEngine
 {
-  static final String LEGACY_TIMESTAMP_KEY = "timestamp";
-
   public Sequence<ScanResultValue> process(
       final ScanQuery query,
       final Segment segment,
@@ -68,12 +69,8 @@ public class ScanQueryEngine
       @Nullable final QueryMetrics<?> queryMetrics
   )
   {
-
-    // "legacy" should be non-null due to toolChest.mergeResults
-    final boolean legacy = Preconditions.checkNotNull(query.isLegacy(), "Expected non-null 'legacy' parameter");
-
     final Long numScannedRows = responseContext.getRowScanCount();
-    if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+    if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(Order.NONE)) {
       return Sequences.empty();
     }
     final boolean hasTimeout = query.context().hasTimeout();
@@ -93,9 +90,6 @@ public class ScanQueryEngine
     final List<String> allColumns = new ArrayList<>();
 
     if (query.getColumns() != null && !query.getColumns().isEmpty()) {
-      if (legacy && !query.getColumns().contains(LEGACY_TIMESTAMP_KEY)) {
-        allColumns.add(LEGACY_TIMESTAMP_KEY);
-      }
 
       // Unless we're in legacy mode, allColumns equals query.getColumns() exactly. This is nice since it makes
       // the compactedList form easier to use.
@@ -103,7 +97,7 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              Collections.singleton(legacy ? LEGACY_TIMESTAMP_KEY : ColumnHolder.TIME_COLUMN_NAME),
+              Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
@@ -114,10 +108,6 @@ public class ScanQueryEngine
       );
 
       allColumns.addAll(availableColumns);
-
-      if (legacy) {
-        allColumns.remove(ColumnHolder.TIME_COLUMN_NAME);
-      }
     }
 
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
@@ -125,147 +115,121 @@ public class ScanQueryEngine
 
     final SegmentId segmentId = segment.getId();
 
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
-    return Sequences.concat(
-            adapter
-                .makeCursors(
-                    filter,
-                    intervals.get(0),
-                    query.getVirtualColumns(),
-                    Granularities.ALL,
-                    query.getTimeOrder().equals(ScanQuery.Order.DESCENDING) ||
-                    (query.getTimeOrder().equals(ScanQuery.Order.NONE) && query.isDescending()),
-                    queryMetrics
-                )
-                .map(cursor -> new BaseSequence<>(
-                    new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
-                    {
-                      @Override
-                      public Iterator<ScanResultValue> make()
-                      {
-                        final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
-                        final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
+    if (Order.NONE != query.getTimeOrder()) {
+      Cursors.requireTimeOrdering(cursorHolder, query.getTimeOrder());
+    }
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
+        {
+          @Override
+          public Iterator<ScanResultValue> make()
+          {
+            final Cursor cursor = cursorHolder.asCursor();
+            if (cursor == null) {
+              return Collections.emptyIterator();
+            }
+            final List<BaseObjectColumnValueSelector> columnSelectors = new ArrayList<>(allColumns.size());
+            final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
+            final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
-                        for (String column : allColumns) {
-                          final BaseObjectColumnValueSelector selector;
+            for (String column : allColumns) {
+              final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
+              ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
+              rowSignatureBuilder.add(
+                  column,
+                  columnCapabilities == null ? null : columnCapabilities.toColumnType()
+              );
 
-                          if (legacy && LEGACY_TIMESTAMP_KEY.equals(column)) {
-                            selector = cursor.getColumnSelectorFactory()
-                                             .makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
-                            ColumnCapabilities columnCapabilities = cursor.getColumnSelectorFactory()
-                                                                          .getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME);
-                            rowSignatureBuilder.add(
-                                column,
-                                columnCapabilities == null ? null : columnCapabilities.toColumnType()
-                            );
-                          } else {
-                            selector = cursor.getColumnSelectorFactory().makeColumnValueSelector(column);
-                            ColumnCapabilities columnCapabilities = cursor.getColumnSelectorFactory()
-                                                                          .getColumnCapabilities(column);
-                            rowSignatureBuilder.add(
-                                column,
-                                columnCapabilities == null ? null : columnCapabilities.toColumnType()
-                            );
-                          }
+              columnSelectors.add(selector);
+            }
 
-                          columnSelectors.add(selector);
-                        }
+            final int batchSize = query.getBatchSize();
+            return new Iterator<ScanResultValue>()
+            {
+              private long offset = 0;
 
-                        final int batchSize = query.getBatchSize();
-                        return new Iterator<ScanResultValue>()
-                        {
-                          private long offset = 0;
+              @Override
+              public boolean hasNext()
+              {
+                return !cursor.isDone() && offset < limit;
+              }
 
-                          @Override
-                          public boolean hasNext()
-                          {
-                            return !cursor.isDone() && offset < limit;
-                          }
+              @Override
+              public ScanResultValue next()
+              {
+                if (!hasNext()) {
+                  throw new NoSuchElementException();
+                }
+                if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
+                  throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
+                }
+                final long lastOffset = offset;
+                final Object events;
+                final ScanQuery.ResultFormat resultFormat = query.getResultFormat();
+                if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
+                  events = rowsToCompactedList();
+                } else if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
+                  events = rowsToList();
+                } else {
+                  throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
+                }
+                responseContext.addRowScanCount(offset - lastOffset);
+                return new ScanResultValue(segmentId.toString(), allColumns, events, rowSignatureBuilder.build());
+              }
 
-                          @Override
-                          public ScanResultValue next()
-                          {
-                            if (!hasNext()) {
-                              throw new NoSuchElementException();
-                            }
-                            if (hasTimeout && System.currentTimeMillis() >= timeoutAt) {
-                              throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
-                            }
-                            final long lastOffset = offset;
-                            final Object events;
-                            final ScanQuery.ResultFormat resultFormat = query.getResultFormat();
-                            if (ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST.equals(resultFormat)) {
-                              events = rowsToCompactedList();
-                            } else if (ScanQuery.ResultFormat.RESULT_FORMAT_LIST.equals(resultFormat)) {
-                              events = rowsToList();
-                            } else {
-                              throw new UOE("resultFormat[%s] is not supported", resultFormat.toString());
-                            }
-                            responseContext.addRowScanCount(offset - lastOffset);
-                            return new ScanResultValue(segmentId.toString(), allColumns, events, rowSignatureBuilder.build());
-                          }
+              @Override
+              public void remove()
+              {
+                throw new UnsupportedOperationException();
+              }
 
-                          @Override
-                          public void remove()
-                          {
-                            throw new UnsupportedOperationException();
-                          }
+              private List<List<Object>> rowsToCompactedList()
+              {
+                final List<List<Object>> events = new ArrayList<>(batchSize);
+                final long iterLimit = Math.min(limit, offset + batchSize);
+                for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
+                  final List<Object> theEvent = new ArrayList<>(allColumns.size());
+                  for (int j = 0; j < allColumns.size(); j++) {
+                    theEvent.add(getColumnValue(j));
+                  }
+                  events.add(theEvent);
+                }
+                return events;
+              }
 
-                          private List<List<Object>> rowsToCompactedList()
-                          {
-                            final List<List<Object>> events = new ArrayList<>(batchSize);
-                            final long iterLimit = Math.min(limit, offset + batchSize);
-                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
-                              final List<Object> theEvent = new ArrayList<>(allColumns.size());
-                              for (int j = 0; j < allColumns.size(); j++) {
-                                theEvent.add(getColumnValue(j));
-                              }
-                              events.add(theEvent);
-                            }
-                            return events;
-                          }
+              private List<Map<String, Object>> rowsToList()
+              {
+                List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
+                final long iterLimit = Math.min(limit, offset + batchSize);
+                for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
+                  final Map<String, Object> theEvent = new LinkedHashMap<>();
+                  for (int j = 0; j < allColumns.size(); j++) {
+                    theEvent.put(allColumns.get(j), getColumnValue(j));
+                  }
+                  events.add(theEvent);
+                }
+                return events;
+              }
 
-                          private List<Map<String, Object>> rowsToList()
-                          {
-                            List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
-                            final long iterLimit = Math.min(limit, offset + batchSize);
-                            for (; !cursor.isDone() && offset < iterLimit; cursor.advance(), offset++) {
-                              final Map<String, Object> theEvent = new LinkedHashMap<>();
-                              for (int j = 0; j < allColumns.size(); j++) {
-                                theEvent.put(allColumns.get(j), getColumnValue(j));
-                              }
-                              events.add(theEvent);
-                            }
-                            return events;
-                          }
+              private Object getColumnValue(int i)
+              {
+                final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
+                final Object value = selector == null ? null : selector.getObject();
+                return value;
+              }
+            };
+          }
 
-                          private Object getColumnValue(int i)
-                          {
-                            final BaseObjectColumnValueSelector selector = columnSelectors.get(i);
-                            final Object value;
-
-                            if (legacy && allColumns.get(i).equals(LEGACY_TIMESTAMP_KEY)) {
-                              value = DateTimes.utc((long) selector.getObject());
-                            } else {
-                              value = selector == null ? null : selector.getObject();
-                            }
-
-                            return value;
-                          }
-                        };
-                      }
-
-                      @Override
-                      public void cleanup(Iterator<ScanResultValue> iterFromMake)
-                      {
-                      }
-                    }
-            ))
-    );
+          @Override
+          public void cleanup(Iterator<ScanResultValue> iterFromMake)
+          {
+          }
+        }
+    ).withBaggage(cursorHolder);
   }
 
   /**
@@ -274,9 +238,21 @@ public class ScanQueryEngine
    */
   private long calculateRemainingScanRowsLimit(ScanQuery query, ResponseContext responseContext)
   {
-    if (query.getTimeOrder().equals(ScanQuery.Order.NONE)) {
+    if (query.getTimeOrder().equals(Order.NONE)) {
       return query.getScanRowsLimit() - (Long) responseContext.getRowScanCount();
     }
     return query.getScanRowsLimit();
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(ScanQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    return CursorBuildSpec.builder()
+                          .setInterval(query.getSingleInterval())
+                          .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                          .setVirtualColumns(query.getVirtualColumns())
+                          .setPreferredOrdering(query.getOrderBys())
+                          .setQueryContext(query.context())
+                          .setQueryMetrics(queryMetrics)
+                          .build();
   }
 }

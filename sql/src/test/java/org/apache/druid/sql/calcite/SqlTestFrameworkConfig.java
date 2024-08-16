@@ -19,24 +19,36 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.quidem.DruidAvaticaTestDriver;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.reflections.Configuration;
 import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
-
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -45,14 +57,21 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -146,6 +165,13 @@ public class SqlTestFrameworkConfig
     Class<? extends QueryComponentSupplier> value();
   }
 
+  private static final Set<String> KNOWN_CONFIG_KEYS = ImmutableSet.<String>builder()
+      .add(NumMergeBuffers.PROCESSOR.getConfigName())
+      .add(MinTopNThreshold.PROCESSOR.getConfigName())
+      .add(ResultCache.PROCESSOR.getConfigName())
+      .add(ComponentSupplier.PROCESSOR.getConfigName())
+      .build();
+
   public final int numMergeBuffers;
   public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
@@ -166,6 +192,7 @@ public class SqlTestFrameworkConfig
 
   public SqlTestFrameworkConfig(Map<String, String> queryParams)
   {
+    validateConfigKeys(queryParams.keySet());
     try {
       numMergeBuffers = NumMergeBuffers.PROCESSOR.fromMap(queryParams);
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromMap(queryParams);
@@ -175,6 +202,15 @@ public class SqlTestFrameworkConfig
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void validateConfigKeys(Set<String> keySet)
+  {
+    Set<String> diff = Sets.difference(keySet, KNOWN_CONFIG_KEYS);
+    if (diff.isEmpty()) {
+      return;
+    }
+    throw new IAE("Invalid configuration key(s) specified [%s]; valid options are [%s]", diff, KNOWN_CONFIG_KEYS);
   }
 
   @Override
@@ -198,11 +234,18 @@ public class SqlTestFrameworkConfig
 
   public static class SqlTestFrameworkConfigStore implements Closeable
   {
+    private final Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper;
+
+    public SqlTestFrameworkConfigStore(
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper)
+    {
+      this.queryComponentSupplierWrapper = queryComponentSupplierWrapper;
+    }
+
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
 
     public ConfigurationInstance getConfigurationInstance(
-        SqlTestFrameworkConfig config,
-        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
+        SqlTestFrameworkConfig config) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
@@ -241,9 +284,10 @@ public class SqlTestFrameworkConfig
    */
   public static class Rule implements AfterAllCallback, BeforeEachCallback
   {
-    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
+    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore(Function.identity());
     private SqlTestFrameworkConfig config;
     private Method method;
+    private String testName;
 
     @Override
     public void afterAll(ExtensionContext context)
@@ -259,10 +303,29 @@ public class SqlTestFrameworkConfig
 
     private void setConfig(ExtensionContext context)
     {
+      testName = buildTestCaseName(context);
       method = context.getTestMethod().get();
       Class<?> testClass = context.getTestClass().get();
       List<Annotation> annotations = collectAnnotations(testClass, method);
       config = new SqlTestFrameworkConfig(annotations);
+    }
+
+    /**
+     * Returns a string identifying the testcase.
+     *
+     *
+     */
+    public String buildTestCaseName(ExtensionContext context)
+    {
+      List<String> names = new ArrayList<String>();
+      Pattern pattern = Pattern.compile("\\([^)]*\\)");
+      // this will add all name pieces - except the "last" which would be the
+      // Class level name
+      do {
+        names.add(0, pattern.matcher(context.getDisplayName()).replaceAll(""));
+        context = context.getParent().get();
+      } while (context.getTestMethod().isPresent());
+      return Joiner.on("@").join(names);
     }
 
     public SqlTestFrameworkConfig getConfig()
@@ -272,7 +335,7 @@ public class SqlTestFrameworkConfig
 
     public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, Function.identity()).framework;
+      return configStore.getConfigurationInstance(config).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -282,7 +345,7 @@ public class SqlTestFrameworkConfig
 
     public String testName()
     {
-      return method.getName();
+      return testName;
     }
   }
 
@@ -292,12 +355,13 @@ public class SqlTestFrameworkConfig
 
     ConfigurationInstance(SqlTestFrameworkConfig config, QueryComponentSupplier testHost)
     {
-
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
+          .withConfig(config)
           .catalogResolver(testHost.createCatalogResolver())
           .minTopNThreshold(config.minTopNThreshold)
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
+
       framework = builder.build();
     }
 
@@ -321,6 +385,69 @@ public class SqlTestFrameworkConfig
     }
   }
 
+  public URI getDruidTestURI()
+  {
+    try {
+      Map<String, String> params = getNonDefaultMap();
+      URIBuilder ub = new URIBuilder("druidtest:///");
+      for (Entry<String, String> entry : params.entrySet()) {
+        ub.setParameter(entry.getKey(), entry.getValue());
+      }
+      ub.setPath("///");
+      return ub.build();
+    }
+    catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private Map<String, String> getNonDefaultMap()
+  {
+    Map<String, String> map = new HashMap<>();
+    SqlTestFrameworkConfig def = new SqlTestFrameworkConfig(Collections.emptyList());
+    if (def.numMergeBuffers != numMergeBuffers) {
+      map.put("numMergeBuffers", String.valueOf(numMergeBuffers));
+    }
+    if (def.minTopNThreshold != minTopNThreshold) {
+      map.put("minTopNThreshold", String.valueOf(minTopNThreshold));
+    }
+    if (def.componentSupplier != componentSupplier) {
+      map.put("componentSupplier", componentSupplier.getSimpleName());
+    }
+    if (!equals(new SqlTestFrameworkConfig(map))) {
+      throw new IAE("Can't reproduce config via map!");
+    }
+    return map;
+  }
+
+  public static SqlTestFrameworkConfig fromURL(String url) throws SQLException
+  {
+
+    Map<String, String> queryParams;
+    queryParams = new HashMap<>();
+    try {
+      URI uri = new URI(url);
+      if (!DruidAvaticaTestDriver.SCHEME.equals(uri.getScheme())) {
+        throw new SQLException(
+            StringUtils.format("URI [%s] is invalid ; only scheme [%s] is supported.", url, DruidAvaticaTestDriver.SCHEME)
+        );
+      }
+      if (uri.getHost() != null || uri.getPort() != -1) {
+        throw new SQLException(StringUtils.format("URI [%s] is invalid ; only query parameters are supported.", url));
+      }
+      List<NameValuePair> params = URLEncodedUtils.parse(uri, StandardCharsets.UTF_8);
+      for (NameValuePair pair : params) {
+        queryParams.put(pair.getName(), pair.getValue());
+      }
+      // possible caveat: duplicate entries overwrite earlier ones
+    }
+    catch (URISyntaxException e) {
+      throw new SQLException("Can't decode URI", e);
+    }
+
+    return new SqlTestFrameworkConfig(queryParams);
+  }
+
   abstract static class ConfigOptionProcessor<T>
   {
     final Class<? extends Annotation> annotationClass;
@@ -328,6 +455,11 @@ public class SqlTestFrameworkConfig
     public ConfigOptionProcessor(Class<? extends Annotation> annotationClass)
     {
       this.annotationClass = annotationClass;
+    }
+
+    public final String getConfigName()
+    {
+      return CaseFormat.UPPER_CAMEL.to(CaseFormat.LOWER_CAMEL, annotationClass.getSimpleName());
     }
 
     @SuppressWarnings("unchecked")
@@ -358,7 +490,7 @@ public class SqlTestFrameworkConfig
 
     public final T fromMap(Map<String, String> map) throws Exception
     {
-      String key = annotationClass.getSimpleName();
+      String key = getConfigName();
       String value = map.get(key);
       if (value == null) {
         return defaultValue();
@@ -376,7 +508,15 @@ public class SqlTestFrameworkConfig
         @Override
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
-          return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
+          Configuration cfg = new ConfigurationBuilder()
+              .setScanners(new SubTypesScanner(true))
+              .setUrls(ClasspathHelper.forJavaClassPath())
+              .filterInputsBy(
+                  new FilterBuilder()
+                      .includePackage(pkg)
+                      .and(s -> s.contains("ComponentSupplier"))
+              );
+          return new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
         }
       });
 

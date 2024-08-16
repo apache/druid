@@ -1,0 +1,93 @@
+# testInnerJoinLeftFunction@all_enabled case-crc:51164f2b
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT foo.dim1, foo.dim2, l.k, l.v
+FROM foo
+INNER JOIN lookup.lookyloo l ON SUBSTRING(foo.dim2, 1, 1) = l.k
+;
++------+------+---+----+
+| dim1 | dim2 | k | v  |
++------+------+---+----+
+|      | a    | a | xa |
+| 1    | a    | a | xa |
+| def  | abc  | a | xa |
++------+------+---+----+
+(3 rows)
+
+!ok
+LogicalProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4])
+  LogicalJoin(condition=[=($2, $3)], joinType=[inner])
+    LogicalProject(dim1=[$1], dim2=[$2], $f8=[SUBSTRING($2, 1, 1)])
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4], druid=[logical])
+  DruidJoin(condition=[=($2, $3)], joinType=[inner])
+    DruidProject(dim1=[$1], dim2=[$2], $f8=[SUBSTRING($2, 1, 1)], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "substring(\"dim2\", 0, 1)",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim1", "dim2", "v0" ],
+        "columnTypes" : [ "STRING", "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"v0\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
+  "columnTypes" : [ "STRING", "STRING", "STRING", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

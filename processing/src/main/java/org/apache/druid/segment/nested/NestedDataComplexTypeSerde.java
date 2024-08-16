@@ -25,7 +25,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -62,7 +62,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     smileFactory.delegateToTextual(true);
     final ObjectMapper mapper = new DefaultObjectMapper(smileFactory, null);
     mapper.getFactory().setCodec(mapper);
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     OBJECT_MAPPER = mapper;
   }
 

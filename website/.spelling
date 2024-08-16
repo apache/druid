@@ -31,6 +31,9 @@ apache.org
 AvroStorage
 ARN
 ASC
+arcsine
+arccosine
+arctangent
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -55,6 +58,7 @@ CPUs
 CSVs
 CentralizedDatasourceSchema
 Ceph
+circledR
 CloudWatch
 ColumnDescriptor
 Corretto
@@ -97,7 +101,6 @@ EMRFS
 ETL
 Elasticsearch
 Enums
-FirehoseFactory
 FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
@@ -112,7 +115,6 @@ GUIs
 GroupBy
 Guice
 HDFS
-HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -123,6 +125,7 @@ IANA
 IcebergFilter
 IcebergInputSource
 IETF
+IoT
 IP
 IPv4
 IPv6
@@ -215,6 +218,7 @@ ROUTINE_TYPE
 Rackspace
 Redis
 S3
+SAS
 SDK
 SIGAR
 SPNEGO
@@ -226,7 +230,6 @@ SSDs
 SSL
 Samza
 Splunk
-SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
@@ -277,6 +280,7 @@ backpressure
 base64
 big-endian
 bigint
+blkio
 blobstore
 Boolean
 boolean
@@ -320,6 +324,7 @@ deserializes
 downtimes
 druid
 druid–kubernetes-extensions
+druid.table
 e.g.
 encodings
 endian
@@ -357,6 +362,8 @@ https
 idempotency
 i.e.
 influxdb
+influencer
+influencers
 ingestions
 ingestionSpec
 injective
@@ -376,6 +383,7 @@ json_query
 json_query_array
 json_value
 karlkfi
+kbps
 kerberos
 keystore
 keytool
@@ -504,6 +512,7 @@ schemas
 schemaless
 searchable
 secondaryPartitionPruning
+seekable
 seekable-stream
 servlet
 setProcessingThreadNames
@@ -531,6 +540,7 @@ subqueries
 subquery
 subsecond
 substring
+substrings
 subtask
 subtasks
 supervisorTaskId
@@ -873,8 +883,6 @@ hadoop3
 ambari-metrics
 metricName
 trustStore
-StaticAzureBlobStoreFirehose
-StaticS3Firehose
 fetchTimeout
 gz
 maxCacheCapacityBytes
@@ -883,11 +891,9 @@ maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
 sharedAccessStorageToken
-StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
-StaticAzureBlobStoreFirehose
 gz
 shardSpecs
 maxCacheCapacityBytes
@@ -1089,7 +1095,6 @@ POD_NAMESPACE
 ConfigMap
 PT17S
 GCS
-StaticGoogleBlobStoreFirehose
 gcs-connector
 hdfs
 Aotearoa
@@ -1274,7 +1279,7 @@ ComplexMetrics
 DataSegmentArchiver
 DataSegmentKiller
 DataSegmentMover
-DataSegmentPuller
+URIDataPuller
 DataSegmentPusher
 DruidModule
 ExtractionFns
@@ -1289,7 +1294,6 @@ QueryRunnerFactory
 segmentmetadataquery
 SegmentMetadataQuery
 SegmentMetadataQueryQueryToolChest
-StaticS3FirehoseFactory
 loadSpec
 multibind
 pom.xml
@@ -1330,10 +1334,8 @@ valueFormat
 IOConfig
 compactionTask
 compactionTasks
-ingestSegmentFirehose
 numShards
 IngestSegment
-IngestSegmentFirehose
 maxSizes
 snapshotTime
 windowPeriod
@@ -1395,14 +1397,10 @@ useYarnRMJobStatusFallback
 workingPath
 z.example.com
 150MB
-CombiningFirehose
 DataSchema
 DefaultPassword
 EnvironmentVariablePasswordProvider
-HttpFirehose
 IOConfig
-InlineFirehose
-LocalFirehose
 PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
@@ -1439,12 +1437,9 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
-StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
-LocalFirehose
 baseDir
-HttpFirehose
 httpAuthenticationUsername
 DefaultPassword
 PasswordProviders
@@ -1455,8 +1450,6 @@ maxInputSegmentBytesPerTask
 foldCase
 sqls
 connectorConfig
-InlineFirehose
-CombiningFirehose
 httpAuthenticationPassword
 accessKeyId
 secretAccessKey
@@ -1653,13 +1646,10 @@ Temurin
 0.14.x
 1s
 Bufferpool
-EventReceiverFirehose
-EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
 jvmVersion
 QueryCountStatsMonitor
-RealtimeMetricsMonitor
 Sys
 SysMonitor
 TaskCountStatsMonitor
@@ -1978,7 +1968,6 @@ GiB
 Autoscaler
 APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
-EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool

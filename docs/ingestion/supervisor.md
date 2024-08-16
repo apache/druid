@@ -42,6 +42,7 @@ The following table outlines the high-level configuration options for a supervis
 |`spec.dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
 |`spec.ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
 |`spec.tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
+|`suspended`|Boolean|Puts the supervisor in a suspended state|No|
 
 ### I/O configuration
 

@@ -25,6 +25,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.column.LongArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -168,6 +169,12 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
     public Builder add(String name, int[] vals)
     {
       return add(name, new IntArrayColumn(vals));
+    }
+
+    @SuppressWarnings("unused")
+    public Builder add(String name, long[] vals)
+    {
+      return add(name, new LongArrayColumn(vals));
     }
 
     public Builder add(String name, double[] vals)

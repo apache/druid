@@ -109,4 +109,11 @@ public class AuthenticationResult
   {
     return Objects.hash(getIdentity(), getAuthorizerName(), getAuthenticatedBy(), getContext());
   }
+
+  @Override
+  public String toString()
+  {
+    return "AuthenticationResult [identity=" + identity + ", authorizerName=" + authorizerName + ", authenticatedBy="
+        + authenticatedBy + ", context=" + context + "]";
+  }
 }

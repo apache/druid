@@ -52,7 +52,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
@@ -64,7 +64,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -145,7 +144,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegments() throws IOException
+  public void testCheckSegments()
   {
     List<DataSegment> baseSegments = createBaseSegments();
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -171,7 +170,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists() throws IOException
+  public void testSubmitTasksDoesNotFailIfTaskAlreadyExists()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -193,7 +192,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testSubmitTasksFailsIfTaskCannotBeAdded() throws IOException
+  public void testSubmitTasksFailsIfTaskCannotBeAdded()
   {
     Set<DataSegment> baseSegments = Sets.newHashSet(createBaseSegments());
     Set<DataSegment> derivativeSegments = Sets.newHashSet(createDerivativeSegments());
@@ -219,7 +218,7 @@ public class MaterializedViewSupervisorTest
   }
 
   @Test
-  public void testCheckSegmentsAndSubmitTasks() throws IOException
+  public void testCheckSegmentsAndSubmitTasks()
   {
     Set<DataSegment> baseSegments = Collections.singleton(createBaseSegments().get(0));
     indexerMetadataStorageCoordinator.commitSegments(baseSegments, null);

@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -65,7 +65,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
@@ -676,6 +676,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("greatest()", null);
     assertExpr("greatest(null, null)", null);
     assertExpr("greatest(1, null, 'A')", "A");
+    assertExpr("greatest(1.0, 1, null)", 1.0);
   }
 
   @Test
@@ -702,6 +703,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+    assertExpr("least(1.0, 1, null)", 1.0);
   }
 
   @Test
