@@ -28,7 +28,7 @@ This tutorial demonstrates how to transform input data during ingestion.
 
 ## Prerequisite
 
-Before proceeding, download Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before proceeding, download Apache Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
@@ -90,7 +90,7 @@ Returns the following:
 | `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
 | `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
 
-Once a row is accepted by the filter, the ingestion job applies the transformations. In this example, the filter selects the first three rows because each row meets at least one of the necessary OR conditions. Note that for the three rows selected, the ingestion job ingests the transformed `animal` column, the `location` column, and both the original `number` and the transformed `triple-number` column. The "lion" row is not accepted by the filter, so it is not ingested or transformed.
+Once a row passes the filter, the ingestion job applies the transformations. In this example, the filter selects the first three rows because each row meets at least one of the required OR conditions. For the selected rows, the ingestion job ingests the transformed `animal` column, the `location` column, and both the original `number` and the transformed `triple-number` column. The "lion" row doesn't meet any of the conditions, so it is not ingested or transformed.
 
 ## Learn more
 
