@@ -23,13 +23,13 @@ import { ArrayInput } from '../../components';
 import { Api } from '../../singletons';
 import { AsyncActionDialog } from '../async-action-dialog/async-action-dialog';
 
-export interface SupervisorHandoffDialogProps {
+export interface TaskGroupHandoffDialogProps {
   supervisorId: string;
   onSuccess(): void;
   onClose(): void;
 }
 
-export function SupervisorHandoffDialog(props: SupervisorHandoffDialogProps) {
+export function TaskGroupHandoffDialog(props: TaskGroupHandoffDialogProps) {
   const { supervisorId, onSuccess, onClose } = props;
   const [groupIds, setGroupIds] = useState<string[]>([]);
 
@@ -42,15 +42,16 @@ export function SupervisorHandoffDialog(props: SupervisorHandoffDialogProps) {
         );
         return resp.data;
       }}
-      confirmButtonText="Handoff supervisor"
-      successText="Supervisor handoff has been initiated"
-      failText="Could not initiate handoff for the supervisor"
+      confirmButtonText="Handoff task groups"
+      successText="Task group handoff has been initiated"
+      failText="Could not initiate handoff for the selected task groups"
       intent={Intent.PRIMARY}
       onClose={onClose}
       onSuccess={onSuccess}
     >
       <p>
-        Are you sure you want to initiate handoff for the supervisor <Tag minimal>{supervisorId}</Tag>?
+        Are you sure you want to initiate early handoff for the given task groups belonging to
+        supervisor <Tag minimal>{supervisorId}</Tag>?
       </p>
       <FormGroup label="Task group IDs">
         <ArrayInput

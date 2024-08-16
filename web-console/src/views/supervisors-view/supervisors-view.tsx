@@ -45,8 +45,8 @@ import {
   SpecDialog,
   SupervisorTableActionDialog,
 } from '../../dialogs';
-import { SupervisorHandoffDialog } from '../../dialogs/supervisor-handoff-dialog/supervisor-handoff-dialog';
 import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
+import { TaskGroupHandoffDialog } from '../../dialogs/task-group-handoff-dialog/task-group-handoff-dialog';
 import type {
   IngestionSpec,
   QueryWithContext,
@@ -532,12 +532,12 @@ export class SupervisorsView extends React.PureComponent<
     );
   }
 
-  renderHandoffSupervisorAction() {
+  renderTaskGroupHandoffAction() {
     const { handoffSupervisorId } = this.state;
     if (!handoffSupervisorId) return;
 
     return (
-      <SupervisorHandoffDialog
+      <TaskGroupHandoffDialog
         supervisorId={handoffSupervisorId}
         onClose={() => {
           this.setState({ handoffSupervisorId: undefined });
@@ -689,7 +689,7 @@ export class SupervisorsView extends React.PureComponent<
         ofText=""
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination
+        showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: twoLines('Supervisor ID', <i>(datasource)</i>),
@@ -1090,7 +1090,7 @@ export class SupervisorsView extends React.PureComponent<
         {this.renderSupervisorTable()}
         {this.renderResumeSupervisorAction()}
         {this.renderSuspendSupervisorAction()}
-        {this.renderHandoffSupervisorAction()}
+        {this.renderTaskGroupHandoffAction()}
         {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
         {this.renderTerminateSupervisorAction()}
