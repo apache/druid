@@ -74,6 +74,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MSQCompactionRunnerTest
@@ -87,13 +88,9 @@ public class MSQCompactionRunnerTest
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
   private static List<String> PARTITION_DIMENSIONS;
 
-  private static final StringDimensionSchema DIM1 = new StringDimensionSchema(
-      "string_dim",
-      null,
-      null
-  );
-  private static final LongDimensionSchema LONG_DIMENSION_SCHEMA = new LongDimensionSchema("long_dim");
-  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(DIM1, LONG_DIMENSION_SCHEMA);
+  private static final StringDimensionSchema STRING_DIMENSION = new StringDimensionSchema("string_dim", null, null);
+  private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
+  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(STRING_DIMENSION, LONG_DIMENSION);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
@@ -291,7 +288,8 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
         ),
         actualMSQSpec.getDestination()
     );
@@ -360,7 +358,8 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
         ),
         actualMSQSpec.getDestination()
     );

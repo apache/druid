@@ -81,6 +81,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MSQCompactionRunner implements CompactionRunner
@@ -237,7 +238,11 @@ public class MSQCompactionRunner implements CompactionRunner
         dataSchema.getDataSource(),
         dataSchema.getGranularitySpec().getSegmentGranularity(),
         null,
-        ImmutableList.of(replaceInterval)
+        ImmutableList.of(replaceInterval),
+        dataSchema.getDimensionsSpec()
+                  .getDimensions()
+                  .stream()
+                  .collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
     );
   }
 
@@ -494,9 +499,10 @@ public class MSQCompactionRunner implements CompactionRunner
     // Used for writing the data schema during segment generation phase.
     context.putIfAbsent(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false);
     // Add appropriate finalization to native query context i.e. for the GroupBy query
-    context.put(QueryContexts.FINALIZE_KEY, false);
+    context.putIfAbsent(QueryContexts.FINALIZE_KEY, false);
     // Only scalar or array-type dimensions are allowed as grouping keys.
     context.putIfAbsent(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false);
+    context.putIfAbsent(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "array");
     return context;
   }
 
