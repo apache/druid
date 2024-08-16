@@ -92,7 +92,7 @@ Returns the following:
 | `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
 | `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
 
-Notice how the "lion" row is missing, and how the other three rows that were ingested into the table have transformations applied to them.
+Notice how the "lion" row is missing, and how the other three rows that were ingested have transformations applied to them.
 
 ## Learn more
 
