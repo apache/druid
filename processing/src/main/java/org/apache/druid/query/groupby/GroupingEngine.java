@@ -47,11 +47,13 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
@@ -63,7 +65,6 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
@@ -74,6 +75,9 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -486,6 +490,8 @@ public class GroupingEngine
 
     final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
 
+    Closer closer = Closer.create();
+    closer.register(bufferHolder);
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
           query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP)
@@ -495,45 +501,44 @@ public class GroupingEngine
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
+      final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
 
-      final boolean doVectorize = query.context().getVectorize().shouldVectorize(
-          VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
-      );
+      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
 
+      // group by specific vectorization check
+      final boolean canVectorize = cursorHolder.canVectorize() &&
+                                   VectorGroupByEngine.canVectorizeDimensions(inspector, query.getDimensions());
+      final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(canVectorize);
       final Sequence<ResultRow> result;
-
-      if (doVectorize) {
+      if (shouldVectorize) {
         result = VectorGroupByEngine.process(
             query,
             storageAdapter,
+            cursorHolder,
             bufferHolder.get(),
             fudgeTimestamp,
-            filter,
-            interval,
+            buildSpec.getInterval(),
             querySpecificConfig,
-            processingConfig,
-            groupByQueryMetrics
+            processingConfig
         );
       } else {
         result = GroupByQueryEngine.process(
             query,
             storageAdapter,
+            cursorHolder,
+            buildSpec,
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
-            processingConfig,
-            filter,
-            interval,
-            groupByQueryMetrics
+            processingConfig
         );
       }
 
-      return result.withBaggage(bufferHolder);
+      return result.withBaggage(closer);
     }
     catch (Throwable e) {
-      bufferHolder.close();
+      CloseableUtils.closeAndWrapExceptions(closer);
       throw e;
     }
   }
@@ -838,6 +843,22 @@ public class GroupingEngine
     }
 
     return aggsAndPostAggs;
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(GroupByQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    return Granularities.decorateCursorBuildSpec(
+        query,
+        CursorBuildSpec.builder()
+                       .setInterval(query.getSingleInterval())
+                       .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                       .setVirtualColumns(query.getVirtualColumns())
+                       .setGroupingColumns(query.getGroupingColumns())
+                       .setAggregators(query.getAggregatorSpecs())
+                       .setQueryContext(query.context())
+                       .setQueryMetrics(queryMetrics)
+                       .build()
+    );
   }
 
 

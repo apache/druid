@@ -23,19 +23,17 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Accumulator;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -52,8 +50,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -274,48 +270,25 @@ public class SegmentAnalyzer
     }
 
     if (analyzingSize()) {
-      final DateTime start = storageAdapter.getMinTime();
-      final DateTime end = storageAdapter.getMaxTime();
+      try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
 
-      final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(
-              null,
-              new Interval(start, end),
-              VirtualColumns.EMPTY,
-              Granularities.ALL,
-              false,
-              null
-          );
-
-      size = cursors.accumulate(
-          0L,
-          new Accumulator<Long, Cursor>()
-          {
-            @Override
-            public Long accumulate(Long accumulated, Cursor cursor)
-            {
-              DimensionSelector selector = cursor
-                  .getColumnSelectorFactory()
-                  .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
-              if (selector == null) {
-                return accumulated;
+        if (cursor != null) {
+          final DimensionSelector selector =
+              cursor.getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
+          while (!cursor.isDone()) {
+            final IndexedInts row = selector.getRow();
+            for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
+              final String dimVal = selector.lookupName(row.get(i));
+              if (dimVal != null && !dimVal.isEmpty()) {
+                size += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
               }
-              long current = accumulated;
-              while (!cursor.isDone()) {
-                final IndexedInts row = selector.getRow();
-                for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
-                  final String dimVal = selector.lookupName(row.get(i));
-                  if (dimVal != null && !dimVal.isEmpty()) {
-                    current += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
-                  }
-                }
-                cursor.advance();
-              }
-
-              return current;
             }
+            cursor.advance();
           }
-      );
+        }
+      }
     }
 
     if (analyzingMinMax()) {

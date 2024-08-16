@@ -47,6 +47,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -60,7 +62,6 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -382,9 +383,9 @@ public class MSQCompactionRunner implements CompactionRunner
           orderByColumnSpecs
               .stream()
               .map(orderByColumnSpec ->
-                       new ScanQuery.OrderBy(
+                       new OrderBy(
                            orderByColumnSpec.getDimension(),
-                           ScanQuery.Order.fromString(orderByColumnSpec.getDirection().toString())
+                           Order.fromString(orderByColumnSpec.getDirection().toString())
                        ))
               .collect(Collectors.toList())
       );

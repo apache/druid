@@ -28,9 +28,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -45,6 +43,8 @@ import org.apache.druid.segment.BaseSingleValueDimensionSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
@@ -138,17 +138,9 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "string3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Cursor cursor = cursorHolder.asCursor();
 
-
-      cursorSequence.accumulate(null, (accumulated, cursor) -> {
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         ExpressionPlan plan = ExpressionPlanner.plan(
             adapter,
@@ -202,9 +194,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 
           cursor.advance();
         }
-
-        return null;
-      });
+      }
     }
   }
 
@@ -213,16 +203,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "multi-string3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(null, (ignored, cursor) -> {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
 
         // identifier, uses dimension selector supplier supplier, no null coercion
@@ -289,8 +271,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 
           cursor.advance();
         }
-        return ignored;
-      });
+      }
     }
   }
 
@@ -299,16 +280,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "long3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -343,9 +316,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           }
           cursor.advance();
         }
-
-        return null;
-      });
+      }
     }
   }
 
@@ -354,17 +325,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   {
     final String columnName = "double3";
     for (StorageAdapter adapter : ADAPTERS) {
-      Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          null,
-          adapter.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-
-      cursorSequence.accumulate(null, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         // an assortment of plans
         ExpressionPlan plan = ExpressionPlanner.plan(
@@ -399,9 +361,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
           }
           cursor.advance();
         }
-
-        return null;
-      });
+      }
     }
   }
 
@@ -684,16 +644,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     );
 
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-
-    Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-    int rowsProcessed = cursors.map(cursor -> {
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
       DimensionSelector xExprSelector = ExpressionSelectors.makeDimensionSelector(
           cursor.getColumnSelectorFactory(),
           Parser.parse("concat(x, 'foo')", ExprMacroTable.nil()),
@@ -722,10 +674,9 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         rowCount++;
         cursor.advance();
       }
-      return rowCount;
-    }).accumulate(0, (in, acc) -> in + acc);
 
-    Assert.assertEquals(2, rowsProcessed);
+      Assert.assertEquals(2, rowCount);
+    }
   }
 
   private static DimensionSelector dimensionSelectorFromSupplier(
