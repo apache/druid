@@ -28,7 +28,7 @@ This tutorial demonstrates how to transform input data during ingestion.
 
 ## Prerequisite
 
-Before proceeding, download Apache Druid as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before proceeding, download Apache Druid&circledR; as described in [Quickstart (local)](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
@@ -74,6 +74,8 @@ Additionally, the `WHERE` clause applies the following three OR operators so tha
 * `location` matches 3
 * `number` matches 100
 
+Once a row passes the filter, the ingestion job applies the transformations. In this example, the filter selects the first three rows because each row meets at least one of the required OR conditions. For the selected rows, the ingestion job ingests the transformed `animal` column, the `location` column, and both the original `number` and the transformed `triple-number` column. The "lion" row doesn't meet any of the conditions, so it is not ingested or transformed.
+
 ## Query the transformed data
 
 In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
@@ -90,7 +92,7 @@ Returns the following:
 | `2018-01-01T06:01:35.000Z` | `super-snake` | `3` | `300` | `900` |
 | `2018-01-01T07:01:35.000Z` | `super-octopus` | `1` |  `100` | `300` |
 
-Once a row passes the filter, the ingestion job applies the transformations. In this example, the filter selects the first three rows because each row meets at least one of the required OR conditions. For the selected rows, the ingestion job ingests the transformed `animal` column, the `location` column, and both the original `number` and the transformed `triple-number` column. The "lion" row doesn't meet any of the conditions, so it is not ingested or transformed.
+Notice how the "lion" row is missing, and how the other three rows that were ingested into the table have transformations applied to them.
 
 ## Learn more
 
