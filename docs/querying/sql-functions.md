@@ -1525,9 +1525,9 @@ Returns the following:
 
 ## LOOKUP
 
-Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `replaceMissingValueWith` if supplied, otherwise returns null.
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `defaultValue` if supplied, otherwise returns null.
 
-* **Syntax:** `LOOKUP(expr, lookupName[, replaceMissingValueWith])`
+* **Syntax:** `LOOKUP(expr, lookupName[, defaultValue])`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
