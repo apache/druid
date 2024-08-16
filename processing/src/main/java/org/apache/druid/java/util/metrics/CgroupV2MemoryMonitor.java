@@ -34,6 +34,8 @@ public class CgroupV2MemoryMonitor extends CgroupMemoryMonitor
     super(cgroupDiscoverer, ImmutableMap.of(), DEFAULT_METRICS_FEED);
   }
 
+  // This would be invoked when monitor is specified in config (supressing to satisy intellij-inspections)
+  @SuppressWarnings("unused")
   CgroupV2MemoryMonitor()
   {
     this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class));
