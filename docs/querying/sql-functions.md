@@ -2337,7 +2337,7 @@ The following example extracts the hour from the `__time` column in the `taxi-tr
 ```sql
 SELECT 
   "__time" AS "original_timestamp",
-  TIME_EXTRACT("__time", 'hour', '-4:00') AS "extract_hour"
+  TIME_EXTRACT("__time", 'hour', '-04:00') AS "extract_hour"
 FROM "taxi-trips"
 LIMIT 2
 ```
@@ -2385,12 +2385,30 @@ Returns the following:
 
 ## TIME_FORMAT
 
-Formats a timestamp as a string using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 (example: `2000-01-02T03:04:05Z`) if the pattern is not provided.
+Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, defaults to ISO 8601 (example: `2000-01-02T03:04:05Z`). If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_FORMAT(timestamp_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
+<details><summary>Example</summary>
 
+  The following example formats the timestamp into a string format and includes an offset of `-05:00`
+
+```sql
+SELECT
+  "__time" AS "original_time",
+TIME_FORMAT( "__time", 'dd-MM-YYYY hh:mm aa zzz', '-05:00') AS "string"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `string` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `01-08-2013 03:14 AM -05:00` |
+
+</details>
 
 [Learn more](sql-scalar.md#date-and-time-functions)
 
@@ -2404,20 +2422,21 @@ Returns whether a timestamp is contained within a particular interval, formatted
 
 ## TIME_PARSE
 
-Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 (example: `2000-01-02T03:04:05Z`) if the pattern is not provided. Returns epoch time if string cannot be parsed. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 (example: `2000-01-02T03:04:05Z`) if the pattern is not provided. Returns NULL if string cannot be parsed. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_PARSE(string_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example parses a `string_expr` into a valid timestamp.
+The following example parses the `FlightDate` column from the `flight-carriers` datasource, which is stored as a `string`, into a valid timestamp with an offset of `-05:00`.
+
 
 ```sql
 SELECT
-  '31-12-2020 11:59PM GMT' AS "original_string",
-  TIME_PARSE('31-12-2020 11:59PM GMT', 'dd-MM-YYYY HH:mmaa zzz') AS "timestamp"
-FROM "taxi-trips"
+  "FlightDate" AS "original_string",
+  TIME_PARSE("FlightDate", 'YYYY-MM-dd', '-05:00') AS "timestamp"
+FROM "flight-carriers"
 LIMIT 1
 ```
 
@@ -2425,7 +2444,7 @@ Returns the following:
 
 | `original_string` | `timestamp` | 
 | -- | -- |
-| `31-12-2020 11:59PM GMT` | `2020-12-31T11:59:00.000Z` |
+| `2005-11-01` | `2005-11-01T05:00:00.000Z` |
 
 </details>
 
