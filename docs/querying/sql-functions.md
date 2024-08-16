@@ -1558,7 +1558,7 @@ Returns the following:
 | `SJU` | `Luis Munoz Marin International Airport` |
 | `BOS` | `key not found` |
 
-</details>
+</details> 
 
 [Learn more](sql-scalar.md#string-functions)
 
