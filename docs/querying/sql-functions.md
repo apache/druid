@@ -860,12 +860,12 @@ Returns the following:
 
 Rounds down a timestamp by a given time unit.
 
-* **Syntax:** `DATE_TRUNC(unit, timestamp_expr)`
+* **Syntax:** `DATE_TRUNC(unit, timestamp_expr)` 
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example truncates a timestamp from the `__time` column from the `taxi-trips` datasource, to the most recent `decade`.
+The following example truncates a timestamp from the `__time` column from the `taxi-trips` datasource to the most recent `decade`.
 
 ```sql
 SELECT 
@@ -2303,7 +2303,7 @@ Rounds up a timestamp to a given ISO 8601 time period. Specify a timestamp, `ori
 
 <details><summary>Example</summary>
 
-The following example takes `__time` column from the `taxi-trips` datasource and rounds up to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`
+The following example takes the `__time` column from the `taxi-trips` datasource and rounds up to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`
 
 ```sql
 SELECT 
@@ -2362,7 +2362,7 @@ Rounds down a timestamp to a given ISO 8601 time period. Specify a timestamp, `o
 
 <details><summary>Example</summary>
 
-The following example takes `__time` column from the `taxi-trips` datasource and rounds down to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`
+The following example takes the `__time` column from the `taxi-trips` datasource and rounds down to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`
 
 ```sql
 SELECT 
@@ -2385,14 +2385,14 @@ Returns the following:
 
 ## TIME_FORMAT
 
-Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, defaults to ISO 8601 (example: `2000-01-02T03:04:05Z`). If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, `pattern` defaults to ISO 8601. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_FORMAT(timestamp_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-  The following example formats the timestamp into a string format and includes an offset of `-05:00`
+  The following example formats the `__time` column from the `flight-carriers` datasource into a string format and includes an offset of `-05:00`
 
 ```sql
 SELECT
@@ -2422,15 +2422,14 @@ Returns whether a timestamp is contained within a particular interval, formatted
 
 ## TIME_PARSE
 
-Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 (example: `2000-01-02T03:04:05Z`) if the pattern is not provided. Returns NULL if string cannot be parsed. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 if the pattern is not provided. Returns NULL if string cannot be parsed. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_PARSE(string_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example parses the `FlightDate` column from the `flight-carriers` datasource, which is stored as a `string`, into a valid timestamp with an offset of `-05:00`.
-
+The following example parses the `FlightDate` column from the `flight-carriers` datasource, which is stored as a `string`, into a valid timestamp with an offset of `-05:00` hours.
 
 ```sql
 SELECT
@@ -2459,7 +2458,7 @@ Shifts a timestamp by a given number of time units. Period can be any ISO 8601 p
 
 <details><summary>Example</summary>
 
-The following example shifts the time back by 24 hours.
+The following example shifts the `__time` column from `taxi-trips` back by 24 hours.
 
 ```sql
 SELECT
