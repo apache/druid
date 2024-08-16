@@ -75,8 +75,10 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -613,7 +615,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         granularitySpec.isRollup() == null,
         granularitySpec.getQueryGranularity() == null,
         dimensionsSpec == null,
-        metricsSpec == null
+        metricsSpec == null,
+        true         // TODO vishesh: make it conditional on only the native engine
+
     );
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -665,13 +669,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       finalMetricsSpec = metricsSpec;
     }
 
-    return new DataSchema(
+    return new CombinedDataSchema(
         dataSource,
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,
-        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null)
+        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
+        // TODO vishesh: make it conditional on only the native engine
+        existingSegmentAnalyzer.getMultiValuedColumnsInfo()
     );
   }
 
@@ -745,6 +751,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final boolean needQueryGranularity;
     private final boolean needDimensionsSpec;
     private final boolean needMetricsSpec;
+    private final boolean needMultiValuedColumns;
 
     // For processRollup:
     private boolean rollup = true;
@@ -758,13 +765,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     // For processMetricsSpec:
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
+    private CombinedDataSchema.MultiValuedColumnsInfo multiValuedColumnsInfo = CombinedDataSchema.MultiValuedColumnsInfo.notProcessed();
 
     ExistingSegmentAnalyzer(
         final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable,
         final boolean needRollup,
         final boolean needQueryGranularity,
         final boolean needDimensionsSpec,
-        final boolean needMetricsSpec
+        final boolean needMetricsSpec,
+        final boolean needMultiValuedColumns
     )
     {
       this.segmentsIterable = segmentsIterable;
@@ -772,13 +781,23 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.needQueryGranularity = needQueryGranularity;
       this.needDimensionsSpec = needDimensionsSpec;
       this.needMetricsSpec = needMetricsSpec;
+      this.needMultiValuedColumns = needMultiValuedColumns;
+    }
+
+    private boolean fetchSegments(){
+      // Don't fetch segments just for needMultiValueDimensions
+      return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec;
     }
 
     public void fetchAndProcessIfNeeded()
     {
-      if (!needRollup && !needQueryGranularity && !needDimensionsSpec && !needMetricsSpec) {
+      if (!fetchSegments()) {
         // Nothing to do; short-circuit and don't fetch segments.
         return;
+      }
+
+      if (needMultiValuedColumns) {
+        multiValuedColumnsInfo = CombinedDataSchema.MultiValuedColumnsInfo.processed();
       }
 
       final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments = sortSegmentsListNewestFirst();
@@ -801,6 +820,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             processQueryGranularity(index);
             processDimensionsSpec(index);
             processMetricsSpec(index);
+            processMultiValuedColumns(index);
           }
         }
       }
@@ -870,6 +890,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
 
       return mergedAggregators;
+    }
+
+    public CombinedDataSchema.MultiValuedColumnsInfo getMultiValuedColumnsInfo()
+    {
+      return multiValuedColumnsInfo;
     }
 
     /**
@@ -960,6 +985,32 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         // different segments.
         aggregatorFactoryLists.add(Arrays.asList(aggregators));
       }
+    }
+
+    private void processMultiValuedColumns(final QueryableIndex index)
+    {
+      if (!needMultiValuedColumns) {
+        return;
+      }
+      // Process both dimensions and metrics since user-specified dimensions in compaction config may contain metric
+      // columns.
+      for (String dimension: index.getAvailableDimensions()){
+        if (isMultiValueColumn(index, dimension)){
+          multiValuedColumnsInfo.addMultiValuedColumn(dimension);
+        }
+      }
+      final AggregatorFactory[] aggregators = index.getMetadata().getAggregators();
+      if (aggregators != null) {
+        Arrays.stream(aggregators)
+              .filter(agg -> isMultiValueColumn(index, agg.getName()))
+              .forEach(agg -> multiValuedColumnsInfo.addMultiValuedColumn(agg.getName()));
+      }
+    }
+
+    private boolean isMultiValueColumn(final QueryableIndex index, String col)
+    {
+      ColumnCapabilities columnCapabilities = index.getColumnCapabilities(col);
+      return columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
     }
 
     static Granularity compareWithCurrent(Granularity queryGranularity, Granularity current)

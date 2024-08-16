@@ -52,20 +52,22 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.expression.TimestampFloorExprMacro;
-import org.apache.druid.query.expression.TimestampParseExprMacro;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -81,6 +83,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MSQCompactionRunner implements CompactionRunner
@@ -96,6 +99,7 @@ public class MSQCompactionRunner implements CompactionRunner
   // b) custom query granularity -- to create a virtual column containing the rounded-off row timestamp.
   // In both cases, the new column is converted back to __time later using columnMappings.
   public static final String TIME_VIRTUAL_COLUMN = "__vTime";
+  public static final String ARRAY_VIRTUAL_COLUMN_PREFIX = "__vArray_";
 
   @JsonIgnore
   private final CurrentSubTaskHolder currentSubTaskHolder = new CurrentSubTaskHolder(
@@ -190,11 +194,29 @@ public class MSQCompactionRunner implements CompactionRunner
       Query<?> query;
       Interval interval = intervalDataSchema.getKey();
       DataSchema dataSchema = intervalDataSchema.getValue();
+      Map<String, VirtualColumn> inputToVirtualColMap = getVirtualColumns(dataSchema, interval);
+      VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
 
       if (isGroupBy(dataSchema)) {
-        query = buildGroupByQuery(compactionTask, interval, dataSchema);
+        // Convert MVD columns converted to arrays back to MVD, with the same name as the input column.
+        // This is safe since input column names no longer exist at post-aggregation stage.
+        List<PostAggregator> postAggregators =
+            inputToVirtualColMap.entrySet()
+                                .stream()
+                                .map(
+                                    entry ->
+                                        new ExpressionPostAggregator(
+                                            entry.getKey(),
+                                            StringUtils.format("array_to_mv(\"%s\")", entry.getValue().getOutputName()),
+                                            null,
+                                            ColumnType.STRING,
+                                            injector.getInstance(ExprMacroTable.class)
+                                        )
+                                )
+                                .collect(Collectors.toList());
+        query = buildGroupByQuery(compactionTask, interval, dataSchema, virtualColumns, postAggregators);
       } else {
-        query = buildScanQuery(compactionTask, interval, dataSchema);
+        query = buildScanQuery(compactionTask, interval, dataSchema, virtualColumns);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
@@ -358,13 +380,13 @@ public class MSQCompactionRunner implements CompactionRunner
     return Collections.emptyList();
   }
 
-  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema)
+  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema, VirtualColumns virtualColumns)
   {
     RowSignature rowSignature = getRowSignature(dataSchema);
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
         .dataSource(dataSchema.getDataSource())
         .columns(rowSignature.getColumnNames())
-        .virtualColumns(getVirtualColumns(dataSchema, interval))
+        .virtualColumns(virtualColumns)
         .columnTypes(rowSignature.getColumnTypes())
         .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
         .filters(dataSchema.getTransformSpec().getFilter())
@@ -409,51 +431,95 @@ public class MSQCompactionRunner implements CompactionRunner
   }
 
   /**
-   * Creates a virtual timestamp column to create a new __time field according to the provided queryGranularity, as
-   * queryGranularity field itself is mandated to be ALL in MSQControllerTask.
+   * Creates below virtual columns
+   * <ul>
+   * <li>virtual timestamp column (for custom query_granularity): to create a new __time field according to the
+   * provided queryGranularity, as queryGranularity field itself is mandated to be ALL in MSQControllerTask.</li>
+   * <li>array columns (for group-by queries): converts MVD columns to array to group them without unnesting.</li>
+   * </ul>
+   *
    */
-  private static VirtualColumns getVirtualColumns(DataSchema dataSchema, Interval interval)
+  private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval)
   {
-    if (isQueryGranularityEmptyOrNone(dataSchema)) {
-      return VirtualColumns.EMPTY;
+    Map<String, VirtualColumn> inputToVirtualColMap = new HashMap<>();
+    if (!isQueryGranularityEmptyOrNone(dataSchema)) {
+      String virtualColumnExpr;
+      if (dataSchema.getGranularitySpec()
+                    .getQueryGranularity()
+                    .equals(Granularities.ALL)) {
+        // For ALL query granularity, all records in a segment are assigned the interval start timestamp of the segment.
+        // It's the same behaviour in native compaction.
+        virtualColumnExpr = StringUtils.format("timestamp_parse('%s')", interval.getStart());
+      } else {
+        PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
+                                                                                 .getQueryGranularity();
+        // Round of the __time column according to the required granularity.
+        virtualColumnExpr =
+            StringUtils.format(
+                "timestamp_floor(\"%s\", '%s')",
+                ColumnHolder.TIME_COLUMN_NAME,
+                periodQueryGranularity.getPeriod().toString()
+            );
+      }
+      inputToVirtualColMap.put(ColumnHolder.TIME_COLUMN_NAME, new ExpressionVirtualColumn(
+          TIME_VIRTUAL_COLUMN,
+          virtualColumnExpr,
+          ColumnType.LONG,
+          injector.getInstance(ExprMacroTable.class)
+      ));
     }
-    String virtualColumnExpr;
-    if (dataSchema.getGranularitySpec()
-                  .getQueryGranularity()
-                  .equals(Granularities.ALL)) {
-      // For ALL query granularity, all records in a segment are assigned the interval start timestamp of the segment.
-      // It's the same behaviour in native compaction.
-      virtualColumnExpr = StringUtils.format("timestamp_parse('%s')", interval.getStart());
-    } else {
-      PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
-                                                                               .getQueryGranularity();
-      // Round of the __time column according to the required granularity.
-      virtualColumnExpr =
-          StringUtils.format(
-              "timestamp_floor(\"%s\", '%s')",
-              ColumnHolder.TIME_COLUMN_NAME,
-              periodQueryGranularity.getPeriod().toString()
-          );
+    if (isGroupBy(dataSchema)) {
+      // Convert MVD cols to arrays for grouping to avoid unnest, assuming all string cols to be MVDs.
+      Set<String> multiValuedColumns = dataSchema.getDimensionsSpec()
+                                                 .getDimensions()
+                                                 .stream()
+                                                 .filter(dim -> dim.getColumnType().equals(ColumnType.STRING_ARRAY))
+                                                 .map(DimensionSchema::getName)
+                                                 .collect(Collectors.toSet());
+      if (dataSchema instanceof CombinedDataSchema &&
+          ((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().isProcessed()) {
+        // Filter actual MVD columns from schema info.
+        Set<String> multiValuedColumnsFromSchema =
+            ((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().getMultiValuedColumns();
+        multiValuedColumns = multiValuedColumnsFromSchema.stream()
+                                                         .filter(multiValuedColumnsFromSchema::contains)
+                                                         .collect(Collectors.toSet());
+      }
+
+      for (String dim : multiValuedColumns) {
+        String virtualColumnExpr = StringUtils.format("mv_to_array(\"%s\")", dim);
+        inputToVirtualColMap.put(
+            dim,
+            new ExpressionVirtualColumn(
+                ARRAY_VIRTUAL_COLUMN_PREFIX + dim,
+                virtualColumnExpr,
+                ColumnType.STRING,
+                injector.getInstance(ExprMacroTable.class)
+            )
+        );
+      }
     }
-    return VirtualColumns.create(new ExpressionVirtualColumn(
-        TIME_VIRTUAL_COLUMN,
-        virtualColumnExpr,
-        ColumnType.LONG,
-        new ExprMacroTable(ImmutableList.of(new TimestampFloorExprMacro(), new TimestampParseExprMacro()))
-    ));
+    return inputToVirtualColMap;
   }
 
-  private static Query<?> buildGroupByQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema)
+  private static Query<?> buildGroupByQuery(
+      CompactionTask compactionTask,
+      Interval interval,
+      DataSchema dataSchema,
+      VirtualColumns virtualColumns,
+      List<PostAggregator> postAggregators
+  )
   {
     DimFilter dimFilter = dataSchema.getTransformSpec().getFilter();
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(new TableDataSource(compactionTask.getDataSource()))
-        .setVirtualColumns(getVirtualColumns(dataSchema, interval))
+        .setVirtualColumns(virtualColumns)
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())
         .setDimensions(getAggregateDimensions(dataSchema))
         .setAggregatorSpecs(Arrays.asList(dataSchema.getAggregators()))
+        .setPostAggregatorSpecs(postAggregators)
         .setContext(compactionTask.getContext())
         .setInterval(interval);
 
