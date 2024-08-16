@@ -25,23 +25,31 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.FrameType;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.segment.FrameCursor;
+import org.apache.druid.frame.write.FrameWriter;
+import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
+import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
-import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.join.table.FrameBasedIndexedTable;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -52,7 +60,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Processor that reads broadcast join data and creates a segment mapping function. The resulting segment
@@ -67,7 +74,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
   private final Int2IntMap inputNumberToProcessorChannelMap;
   private final List<ReadableFrameChannel> channels;
   private final List<FrameReader> channelReaders;
-  private final List<List<Object[]>> channelData;
+  private final List<List<FrameSignaturePair>> channelData;
   private final IntSet sideChannelNumbers;
   private final long memoryReservedForBroadcastJoin;
 
@@ -171,24 +178,24 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
 
   private void addFrame(final int channelNumber, final Frame frame)
   {
-    final List<Object[]> data = channelData.get(channelNumber);
-    final FrameReader frameReader = channelReaders.get(channelNumber);
-    final Cursor cursor = FrameProcessors.makeCursor(frame, frameReader);
+    final Frame columnarFrame = toColumnarFrame(frame, channelReaders.get(channelNumber));
 
-    final List<ColumnValueSelector> selectors =
-        frameReader.signature().getColumnNames().stream().map(
-            columnName ->
-                cursor.getColumnSelectorFactory().makeColumnValueSelector(columnName)
-        ).collect(Collectors.toList());
+    memoryUsed += columnarFrame.numBytes();
 
-    while (!cursor.isDone()) {
-      final Object[] row = new Object[selectors.size()];
-      for (int i = 0; i < row.length; i++) {
-        row[i] = selectors.get(i).getObject();
-      }
-      data.add(row);
-      cursor.advance();
+    if (memoryUsed > memoryReservedForBroadcastJoin) {
+      throw new MSQException(
+          new BroadcastTablesTooLargeFault(
+              memoryReservedForBroadcastJoin,
+              Optional.ofNullable(query)
+                      .map(q -> q.context().getString(PlannerContext.CTX_SQL_JOIN_ALGORITHM))
+                      .map(JoinAlgorithm::fromString)
+                      .orElse(null)
+          )
+      );
     }
+
+    channelData.get(channelNumber)
+               .add(new FrameSignaturePair(columnarFrame, channelReaders.get(channelNumber).signature()));
   }
 
   private Function<SegmentReference, SegmentReference> createSegmentMapFunction()
@@ -204,7 +211,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
         final int channelNumber = inputNumberToProcessorChannelMap.get(inputNumber);
 
         if (sideChannelNumbers.contains(channelNumber)) {
-          return InlineDataSource.fromIterable(
+          return new FrameBasedInlineDataSource(
               channelData.get(channelNumber),
               channelReaders.get(channelNumber).signature()
           );
@@ -241,21 +248,6 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
       final int channelNumber = inputChannelIterator.nextInt();
       if (sideChannelNumbers.contains(channelNumber) && channels.get(channelNumber).canRead()) {
         final Frame frame = channels.get(channelNumber).read();
-
-        memoryUsed += frame.numBytes();
-
-        if (memoryUsed > memoryReservedForBroadcastJoin) {
-          throw new MSQException(
-              new BroadcastTablesTooLargeFault(
-                  memoryReservedForBroadcastJoin,
-                  Optional.ofNullable(query)
-                          .map(q -> q.context().getString(PlannerContext.CTX_SQL_JOIN_ALGORITHM))
-                          .map(JoinAlgorithm::fromString)
-                          .orElse(null)
-              )
-          );
-        }
-
         addFrame(channelNumber, frame);
       }
     }
@@ -272,5 +264,37 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
   IntSet getSideChannelNumbers()
   {
     return sideChannelNumbers;
+  }
+
+  /**
+   * Converts a frame to {@link FrameType#COLUMNAR}. Required by {@link FrameBasedIndexedTable}.
+   */
+  private static Frame toColumnarFrame(final Frame frame, final FrameReader frameReader)
+  {
+    if (frame.type() == FrameType.COLUMNAR) {
+      return frame;
+    }
+
+    final FrameWriterFactory frameWriterFactory =
+        FrameWriters.makeColumnBasedFrameWriterFactory(
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            frameReader.signature(),
+            Collections.emptyList()
+        );
+
+    final FrameCursor cursor = FrameProcessors.makeCursor(frame, frameReader);
+
+    try (final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(cursor.getColumnSelectorFactory())) {
+      while (!cursor.isDone()) {
+        if (!frameWriter.addSelection()) {
+          // addSelection never fails, because we're using an unlimited allocator.
+          throw DruidException.defensive("Unexpected failure to add row to frame");
+        }
+
+        cursor.advance();
+      }
+
+      return Frame.wrap(frameWriter.toByteArray());
+    }
   }
 }

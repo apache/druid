@@ -179,7 +179,7 @@ public class FrameBasedIndexedTable implements IndexedTable
                                           .map(builder -> builder != null ? builder.build() : null)
                                           .collect(Collectors.toList());
 
-    LOG.info("Created FrameBasedIndexedTable with %s rows.", totalRows);
+    LOG.debug("Created FrameBasedIndexedTable with row count[%s].", totalRows);
   }
 
   @Override
