@@ -17,33 +17,37 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics.cgroups;
+package org.apache.druid.java.util.metrics;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
+import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
-public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
+public class CgroupV2MemoryMonitor extends CgroupMemoryMonitor
 {
-  private final CgroupDiscoverer delegate;
 
-  public ProcSelfCgroupDiscoverer()
+  @VisibleForTesting
+  CgroupV2MemoryMonitor(CgroupDiscoverer cgroupDiscoverer)
   {
-    this(ProcCgroupDiscoverer.class);
+    super(cgroupDiscoverer, ImmutableMap.of(), DEFAULT_METRICS_FEED);
   }
 
-  public ProcSelfCgroupDiscoverer(Class<? extends CgroupDiscoverer> discoverer)
+  CgroupV2MemoryMonitor()
   {
-    try {
-      delegate = discoverer.getDeclaredConstructor(Path.class).newInstance(Paths.get("/proc/self"));
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    this(new ProcSelfCgroupDiscoverer(ProcCgroupV2Discoverer.class));
   }
 
   @Override
-  public Path discover(String cgroup)
+  public String memoryUsageFile()
   {
-    return delegate.discover(cgroup);
+    return "memory.current";
+  }
+
+  @Override
+  public String memoryLimitFile()
+  {
+    return "memory.max";
   }
 }

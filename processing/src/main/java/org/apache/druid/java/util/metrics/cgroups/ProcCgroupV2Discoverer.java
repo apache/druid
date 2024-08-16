@@ -19,31 +19,43 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
+import com.google.common.io.Files;
+import org.apache.druid.java.util.common.RE;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
-public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
+public class ProcCgroupV2Discoverer extends ProcCgroupDiscoverer
 {
-  private final CgroupDiscoverer delegate;
+  private static final String CGROUP_TYPE = "cgroup2";
 
-  public ProcSelfCgroupDiscoverer()
+  /**
+   * Create a proc discovery mechanism based on a `/proc` directory.
+   *
+   * @param procDir The directory under proc. This is usually `/proc/self` or `/proc/#pid`
+   */
+  public ProcCgroupV2Discoverer(Path procDir)
   {
-    this(ProcCgroupDiscoverer.class);
-  }
-
-  public ProcSelfCgroupDiscoverer(Class<? extends CgroupDiscoverer> discoverer)
-  {
-    try {
-      delegate = discoverer.getDeclaredConstructor(Path.class).newInstance(Paths.get("/proc/self"));
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    super(procDir);
   }
 
   @Override
   public Path discover(String cgroup)
   {
-    return delegate.discover(cgroup);
+    try {
+      for (final String line : Files.readLines(new File(procDir, "mounts"), StandardCharsets.UTF_8)) {
+        final ProcMountsEntry entry = ProcMountsEntry.parse(line);
+        if (CGROUP_TYPE.equals(entry.type)) {
+          return entry.path;
+        }
+      }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    throw new RE("Cgroup location not found");
   }
 }

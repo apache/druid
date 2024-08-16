@@ -64,10 +64,10 @@ public class CgroupDiskMonitor extends FeedDefiningMonitor
       final Map<String, Long> stats = diff.to(
           entry.getKey(),
           ImmutableMap.<String, Long>builder()
-                      .put("cgroup/disk/read/bytes", entry.getValue().getReadBytes())
-                      .put("cgroup/disk/read/count", entry.getValue().getReadCount())
-                      .put("cgroup/disk/write/bytes", entry.getValue().getWriteBytes())
-                      .put("cgroup/disk/write/count", entry.getValue().getWriteCount())
+                      .put(CgroupUtil.DISK_READ_BYTES_METRIC, entry.getValue().getReadBytes())
+                      .put(CgroupUtil.DISK_READ_COUNT_METRIC, entry.getValue().getReadCount())
+                      .put(CgroupUtil.DISK_WRITE_BYTES_METRIC, entry.getValue().getWriteBytes())
+                      .put(CgroupUtil.DISK_WRITE_COUNT_METRIC, entry.getValue().getWriteCount())
                       .build()
       );
 

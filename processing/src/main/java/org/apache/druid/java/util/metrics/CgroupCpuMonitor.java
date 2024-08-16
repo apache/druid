@@ -38,12 +38,6 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
 {
   private static final Logger LOG = new Logger(CgroupCpuMonitor.class);
   private static final Long DEFAULT_USER_HZ = 100L;
-  public static final String TOTAL_USAGE_METRIC = "cgroup/cpu/usage/total/percentage";
-  public static final String USER_USAGE_METRIC = "cgroup/cpu/usage/user/percentage";
-  public static final String SYS_USAGE_METRIC = "cgroup/cpu/usage/sys/percentage";
-  private static final String TOTAL = "total";
-  private static final String USER = "user";
-  private static final String SYSTEM = "system";
   final CgroupDiscoverer cgroupDiscoverer;
   final Map<String, String[]> dimensions;
   private Long userHz;
@@ -111,18 +105,18 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
       final Map<String, Long> elapsedJiffies = jiffies.to(
           "usage",
           ImmutableMap.<String, Long>builder()
-                      .put(USER, cpuSnapshot.getUserJiffies())
-                      .put(SYSTEM, cpuSnapshot.getSystemJiffies())
-                      .put(TOTAL, cpuSnapshot.getTotalJiffies())
+                      .put(CgroupUtil.USER, cpuSnapshot.getUserJiffies())
+                      .put(CgroupUtil.SYSTEM, cpuSnapshot.getSystemJiffies())
+                      .put(CgroupUtil.TOTAL, cpuSnapshot.getTotalJiffies())
                       .build()
       );
       if (elapsedJiffies != null) {
-        double totalUsagePct = 100.0 * elapsedJiffies.get(TOTAL) / userHz / elapsedJiffiesSnapshotSecs;
-        double sysUsagePct = 100.0 * elapsedJiffies.get(SYSTEM) / userHz / elapsedJiffiesSnapshotSecs;
-        double userUsagePct = 100.0 * elapsedJiffies.get(USER) / userHz / elapsedJiffiesSnapshotSecs;
-        emitter.emit(builder.setMetric(TOTAL_USAGE_METRIC, totalUsagePct));
-        emitter.emit(builder.setMetric(SYS_USAGE_METRIC, sysUsagePct));
-        emitter.emit(builder.setMetric(USER_USAGE_METRIC, userUsagePct));
+        double totalUsagePct = 100.0 * elapsedJiffies.get(CgroupUtil.TOTAL) / userHz / elapsedJiffiesSnapshotSecs;
+        double sysUsagePct = 100.0 * elapsedJiffies.get(CgroupUtil.SYSTEM) / userHz / elapsedJiffiesSnapshotSecs;
+        double userUsagePct = 100.0 * elapsedJiffies.get(CgroupUtil.USER) / userHz / elapsedJiffiesSnapshotSecs;
+        emitter.emit(builder.setMetric(CgroupUtil.CPU_TOTAL_USAGE_METRIC, totalUsagePct));
+        emitter.emit(builder.setMetric(CgroupUtil.CPU_SYS_USAGE_METRIC, sysUsagePct));
+        emitter.emit(builder.setMetric(CgroupUtil.CPU_USER_USAGE_METRIC, userUsagePct));
       }
     }
     return true;
