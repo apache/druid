@@ -111,15 +111,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     // Get segment granularity from query context, and create ShuffleSpec and RowSignature to be used for the final window stage.
     final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryToRun.getContext());
-    final ClusterBy finalWindowClusterBy = QueryKitUtils.clusterByWithSegmentGranularity(ClusterBy.none(), segmentGranularity);
-    ShuffleSpec finalWindowStageShuffleSpec = resultShuffleSpecFactory.build(finalWindowClusterBy, false);
-    if (Objects.equals(segmentGranularity, Granularities.ALL)) {
-      finalWindowStageShuffleSpec = MixShuffleSpec.instance();
-    }
-    final RowSignature finalWindowStageRowSignature = QueryKitUtils.sortableSignature(
-        QueryKitUtils.signatureWithSegmentGranularity(rowSignature, segmentGranularity),
-        finalWindowClusterBy.getColumns()
-    );
+    final ClusterBy finalWindowClusterBy = computeClusterByForFinalWindowStage(segmentGranularity);
+    final ShuffleSpec finalWindowStageShuffleSpec = resultShuffleSpecFactory.build(finalWindowClusterBy, false);
+    final RowSignature finalWindowStageRowSignature = computeSignatureForFinalWindowStage(rowSignature, finalWindowClusterBy, segmentGranularity);
 
     final int maxRowsMaterialized;
     if (originalQuery.context() != null && originalQuery.context().containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
@@ -359,5 +353,37 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
     }
     return queryDefBuilder;
+  }
+
+  /**
+   * Computes the ClusterBy for the final window stage which may or may not have the partition boosted column,
+   * depending on the {@code segmentGranularity} parameter passed. We don't have to take the CLUSTERED BY
+   * columns into account, as they are handled as {@link org.apache.druid.query.scan.ScanQuery#orderBys}.
+   */
+  private static ClusterBy computeClusterByForFinalWindowStage(Granularity segmentGranularity)
+  {
+    if (Objects.equals(segmentGranularity, Granularities.ALL)) {
+      final List<KeyColumn> clusterByColumns = Collections.singletonList(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+      return new ClusterBy(clusterByColumns, 0);
+    } else {
+      return QueryKitUtils.clusterByWithSegmentGranularity(ClusterBy.none(), segmentGranularity);
+    }
+  }
+
+  /**
+   * Computes the signature for the final window stage which may or may not have the partition boosted column depending on the
+   * {@code segmentGranularity} passed. It expects that the finalWindowClusterBy already has the partition boost column
+   * if the parameter {@code segmentGranularity} is set as ALL.
+   */
+  private static RowSignature computeSignatureForFinalWindowStage(RowSignature rowSignature, ClusterBy finalWindowClusterBy, Granularity segmentGranularity)
+  {
+    final RowSignature.Builder finalWindowStageRowSignatureBuilder = RowSignature.builder().addAll(rowSignature);
+    if (Objects.equals(segmentGranularity, Granularities.ALL)) {
+      finalWindowStageRowSignatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
+    }
+    return QueryKitUtils.sortableSignature(
+        QueryKitUtils.signatureWithSegmentGranularity(finalWindowStageRowSignatureBuilder.build(), segmentGranularity),
+        finalWindowClusterBy.getColumns()
+    );
   }
 }

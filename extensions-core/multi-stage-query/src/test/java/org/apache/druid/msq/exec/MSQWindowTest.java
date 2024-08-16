@@ -1271,20 +1271,20 @@ public class MSQWindowTest extends MSQTestBase
         .setExpectedResultRows(
             NullHandling.replaceWithDefault() ?
             ImmutableList.of(
-                new Object[]{"", 11.0},
+                new Object[]{"a", 5.0},
                 new Object[]{"", 11.0},
                 new Object[]{"", 11.0},
                 new Object[]{"a", 5.0},
-                new Object[]{"a", 5.0},
-                new Object[]{"abc", 5.0}
+                new Object[]{"abc", 5.0},
+                new Object[]{"", 11.0}
             ) :
             ImmutableList.of(
-                new Object[]{null, 8.0},
+                new Object[]{"a", 5.0},
                 new Object[]{null, 8.0},
                 new Object[]{"", 3.0},
                 new Object[]{"a", 5.0},
-                new Object[]{"a", 5.0},
-                new Object[]{"abc", 5.0}
+                new Object[]{"abc", 5.0},
+                new Object[]{null, 8.0}
             ))
         .setQueryContext(context)
         .verifyResults();
@@ -1934,11 +1934,11 @@ public class MSQWindowTest extends MSQTestBase
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(
-            new Object[]{"Al Ain", 8L, 6334L},
-            new Object[]{"Dubai", 3L, 6334L},
-            new Object[]{"Dubai", 6323L, 6334L},
-            new Object[]{"Tirana", 26L, 26L},
-            new Object[]{"Benguela", 0L, 0L}
+            new Object[]{"Auburn", 0L, 1698L},
+            new Object[]{"Mexico City", 0L, 6136L},
+            new Object[]{"Seoul", 663L, 5582L},
+            new Object[]{"Tokyo", 0L, 12615L},
+            new Object[]{"Santiago", 161L, 401L}
         ))
         .setQueryContext(context)
         .verifyResults();
@@ -2265,13 +2265,13 @@ public class MSQWindowTest extends MSQTestBase
             2, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(13).bytes(1158).frames(1),
+            CounterSnapshotMatcher.with().rows(13).bytes(1379).frames(1),
             2, 0, "output"
         )
 
         // Stage 3, Worker 0
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(13).bytes(1158).frames(1),
+            CounterSnapshotMatcher.with().rows(13).bytes(1327).frames(1),
             3, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
