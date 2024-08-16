@@ -123,6 +123,7 @@ public class SuperSorter
 {
   private static final Logger log = new Logger(SuperSorter.class);
 
+  public static final long UNLIMITED = -1;
   public static final int UNKNOWN_LEVEL = -1;
   public static final long UNKNOWN_TOTAL = -1;
 
@@ -135,10 +136,8 @@ public class SuperSorter
   private final OutputChannelFactory intermediateOutputChannelFactory;
   private final int maxChannelsPerMerger;
   private final int maxActiveProcessors;
-  private final long rowLimit;
   private final String cancellationId;
   private final boolean removeNullBytes;
-
   private final Object runWorkersLock = new Object();
 
   @GuardedBy("runWorkersLock")
@@ -183,6 +182,9 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   SuperSorterProgressTracker superSorterProgressTracker;
 
+  @GuardedBy("runWorkersLock")
+  private long rowLimit;
+
   /**
    * See {@link #setNoWorkRunnable}.
    */
@@ -211,9 +213,9 @@ public class SuperSorter
    * @param maxChannelsPerMerger             maximum number of channels to merge at once, for regular mergers
    *                                         (does not apply to direct mergers; see
    *                                         {@link #getMaxInputBufferFramesForDirectMerging()})
-   * @param rowLimit                         limit to apply during sorting. The limit is merely advisory: the actual number
-   *                                         of rows returned may be larger than the limit. The limit is applied across
-   *                                         all partitions, not to each partition individually.
+   * @param rowLimit                         limit to apply during sorting. The limit is applied across all partitions,
+   *                                         not to each partition individually. Use {@link #UNLIMITED} if there is
+   *                                         no limit.
    * @param cancellationId                   cancellation id to use when running processors in the provided
    *                                         {@link FrameProcessorExecutor}.
    * @param superSorterProgressTracker       progress tracker
@@ -258,6 +260,10 @@ public class SuperSorter
 
     if (maxChannelsPerMerger < 2) {
       throw new IAE("maxChannelsPerMerger[%d] < 2", maxChannelsPerMerger);
+    }
+
+    if (rowLimit != UNLIMITED && rowLimit <= 0) {
+      throw new IAE("rowLimit[%d] must be positive", rowLimit);
     }
   }
 
@@ -382,29 +388,42 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   private void setAllDoneIfPossible()
   {
-    if (totalInputFrames == 0 && outputPartitionsFuture.isDone()) {
-      // No input data -- generate empty output channels.
-      final ClusterByPartitions partitions = getOutputPartitions();
-      final List<OutputChannel> channels = new ArrayList<>(partitions.size());
+    try {
+      if (totalInputFrames == 0 && outputPartitionsFuture.isDone()) {
+        // No input data -- generate empty output channels.
+        final ClusterByPartitions partitions = getOutputPartitions();
+        final List<OutputChannel> channels = new ArrayList<>(partitions.size());
 
-      for (int partitionNum = 0; partitionNum < partitions.size(); partitionNum++) {
-        channels.add(outputChannelFactory.openNilChannel(partitionNum));
-      }
+        for (int partitionNum = 0; partitionNum < partitions.size(); partitionNum++) {
+          channels.add(outputChannelFactory.openNilChannel(partitionNum));
+        }
 
-      // OK to use wrap, not wrapReadOnly, because nil channels are already read-only.
-      allDone.set(OutputChannels.wrap(channels));
-    } else if (totalMergingLevels != UNKNOWN_LEVEL
-               && outputsReadyByLevel.containsKey(totalMergingLevels - 1)
-               && (outputsReadyByLevel.get(totalMergingLevels - 1).size() ==
-                   getTotalMergersInLevel(totalMergingLevels - 1))) {
-      // We're done!!
-      try {
+        // OK to use wrap, not wrapReadOnly, because nil channels are already read-only.
+        allDone.set(OutputChannels.wrap(channels));
+      } else if (rowLimit == 0 && activeProcessors == 0) {
+        // We had a row limit, and got it all the way down to zero.
+        // Generate empty output channels for any partitions that we haven't written yet.
+        superSorterProgressTracker.markTriviallyComplete();
+
+        for (int partitionNum = 0; partitionNum < outputChannels.size(); partitionNum++) {
+          if (outputChannels.get(partitionNum) == null) {
+            outputChannels.set(partitionNum, outputChannelFactory.openNilChannel(partitionNum));
+          }
+        }
+
+        // OK to use wrap, not wrapReadOnly, because all channels in this list are already read-only.
+        allDone.set(OutputChannels.wrap(outputChannels));
+      } else if (totalMergingLevels != UNKNOWN_LEVEL
+                 && outputsReadyByLevel.containsKey(totalMergingLevels - 1)
+                 && (outputsReadyByLevel.get(totalMergingLevels - 1).size() ==
+                     getTotalMergersInLevel(totalMergingLevels - 1))) {
+        // We're done!!
         // OK to use wrap, not wrapReadOnly, because all channels in this list are already read-only.
         allDone.set(OutputChannels.wrap(outputChannels));
       }
-      catch (Throwable e) {
-        allDone.setException(e);
-      }
+    }
+    catch (Throwable e) {
+      allDone.setException(e);
     }
   }
 
@@ -457,6 +476,11 @@ public class SuperSorter
     if (!(totalMergingLevels == 1
           && allInputRead()
           && ultimateMergersRunSoFar < getTotalMergersInLevel(0))) {
+      return false;
+    }
+
+    if (isLimited() && (rowLimit == 0 || activeProcessors > 0)) {
+      // Run final-layer mergers one at a time, to ensure limit is applied across the entire dataset.
       return false;
     }
 
@@ -614,6 +638,11 @@ public class SuperSorter
       return false;
     }
 
+    if (isLimited() && (rowLimit == 0 || activeProcessors > 0)) {
+      // Run final-layer mergers one at a time, to ensure limit is applied across the entire dataset.
+      return false;
+    }
+
     final int inLevel = totalMergingLevels - 2;
     final int outLevel = inLevel + 1;
     final LongSortedSet inputsReady = outputsReadyByLevel.get(inLevel);
@@ -716,11 +745,20 @@ public class SuperSorter
               rowLimit
           );
 
-      runWorker(worker, ignored1 -> {
+      runWorker(worker, outputRows -> {
         synchronized (runWorkersLock) {
           outputsReadyByLevel.computeIfAbsent(level, ignored2 -> new LongRBTreeSet())
                              .add(rank);
           superSorterProgressTracker.addMergedBatchesForLevel(level, 1);
+
+          if (isLimited() && totalMergingLevels != UNKNOWN_LEVEL && level == totalMergingLevels - 1) {
+            rowLimit -= outputRows;
+
+            if (rowLimit < 0) {
+              throw DruidException.defensive("rowLimit[%d] below zero after outputRows[%d]", rowLimit, outputRows);
+            }
+          }
+
           for (PartitionedReadableFrameChannel partitionedReadableFrameChannel : partitionedReadableChannelsToClose) {
             try {
               partitionedReadableFrameChannel.close();
@@ -979,6 +1017,12 @@ public class SuperSorter
   private int getMaxInputBufferFramesForDirectMerging()
   {
     return maxChannelsPerMerger * maxActiveProcessors;
+  }
+
+  @GuardedBy("runWorkersLock")
+  private boolean isLimited()
+  {
+    return rowLimit != UNLIMITED;
   }
 
   /**
