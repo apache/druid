@@ -597,11 +597,30 @@ Returns true if the expression is contained in a Base64-serialized Bloom filter.
 
 ## BTRIM
 
-`BTRIM(<CHARACTER>, [<CHARACTER>])`
+Trims characters from both the leading and trailing ends of an expression. Defaults `chars` to a space if none is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `BTRIM(expr[, chars])`
+* **Function type:** Scalar, string
 
-Trims characters from both the leading and trailing ends of an expression.
+<details><summary>Example</summary>
+
+The following example trims the `_` characters from both ends of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  BTRIM('___abc___', '_') AS "trim_both_ends"
+```
+
+Returns the following:
+
+| `original_string` | `trim_both_ends` |
+| -- | -- | 
+| `___abc___` | `abc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## CASE
 
@@ -1553,11 +1572,30 @@ Returns the leftmost number of characters from an expression, optionally padded 
 
 ## LTRIM
 
-`LTRIM(<CHARACTER>, [<CHARACTER>])`
+Trims characters from the leading end of an expression. Defaults `chars` to a space if none is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LTRIM(expr[, chars])`
+* **Function type:** Scalar, string
 
-Trims characters from the leading end of an expression.
+<details><summary>Example</summary>
+
+The following example trims the `_` characters from the leading end of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  LTRIM('___abc___', '_') AS "trim_leading_end_of_expression"
+```
+
+Returns the following:
+
+| `original_string` | `trim_leading_end_of_expression` |
+| -- | -- | 
+| `___abc___` | `abc___` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## MAX
 
@@ -1863,27 +1901,84 @@ string may refer to capture groups using `$1`, `$2`, etc.
 
 ## REPEAT
 
-`REPEAT(<CHARACTER>, [<INTEGER>])`
+Repeats the string expression `N` times, where `N` is an integer.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REPEAT(expr, N)`
+* **Function type:** Scalar, string
 
-Repeats the string expression an integer number of times.
+<details><summary>Example</summary>
+
+The following example returns the string expression `abc` repeated `3` times.
+
+```sql
+SELECT 
+  'abc' AS "original_string",
+  REPEAT('abc', 3) AS "with_repetition"
+```
+
+Returns the following: 
+
+| `original_string` | `with_repetition` |
+| -- | -- |
+| `abc` | `abcabcabc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REPLACE
 
-`REPLACE(expr, pattern, replacement)`
+Replaces instances of a substring with a replacement string in the given expression.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REPLACE(expr, substring, replacement)`
+* **Function type:** Scalar, string 
 
-Replaces a pattern with another string in the given expression.
+<details><summary>Example</summary>
+
+The following example replaces instances of the substring `abc` with `XYZ`.
+
+```sql
+SELECT 
+  'abc 123 abc 123' AS "original_string",
+   REPLACE('abc 123 abc 123', 'abc', 'XYZ') AS "modified_string"
+```
+
+Returns the following:
+
+| `original_string` | `modified_string` | 
+| -- | -- |
+| `abc 123 abc 123` | `XYZ 123 XYZ 123` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REVERSE
 
-`REVERSE(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Reverses the given expression.
+
+* **Syntax:** `REVERSE(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example reverses the string expression `abc`.
+
+```sql
+SELECT 
+  'abc' AS "original_string",
+  REVERSE('abc') AS "reversal"
+```
+
+Returns the following:
+
+| `original_string` | `reversal` |
+| -- | -- |
+| `abc` | `cba` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## RIGHT
 
@@ -1958,11 +2053,30 @@ Returns the rightmost number of characters from an expression, optionally padded
 
 ## RTRIM
 
-`RTRIM(<CHARACTER>, [<CHARACTER>])`
+Trims characters from the trailing end of an expression. Defaults `chars` to a space if none is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `RTRIM(expr[, chars])`
+* **Function type:** Scalar, string
 
-Trims characters from the trailing end of an expression.
+<details><summary>Example</summary>
+
+The following example trims the `_` characters from the trailing end of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  RTRIM('___abc___', '_') AS "trim_end"
+```
+
+Returns the following:
+
+| `original_string` | `trim_end` |
+| -- | -- | 
+| `___abc___` | `___abc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## SAFE_DIVIDE
 
@@ -2078,11 +2192,33 @@ Splits `str1` into an array on the delimiter specified by `str2`, which is a reg
 
 ## STRING_FORMAT
 
-`STRING_FORMAT(pattern[, args...])`
+Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `STRING_FORMAT(pattern[, args...])`
+* **Function type:** Scalar, string 
 
-Returns a string formatted in accordance to Java's String.format method.
+<details><summary>Example</summary>
+
+The following example uses Java String format to pass in `Flight_Number_Reporting_Airline` and `origin_airport` columns, from the `flight-carriers` datasource, as arguments into the string. 
+
+```sql
+SELECT 
+  "Flight_Number_Reporting_Airline" AS "flight_number",
+  "Origin" AS "origin_airport",
+  STRING_FORMAT('Flight No.%d departing from %s', "Flight_Number_Reporting_Airline", "Origin") AS "departure_announcement"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `flight_number` | `origin_airport` | `departure_announcement` |
+| -- | -- | -- |
+| `314` | `SJU` | `Flight No.314 departing from SJU` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## STRING_TO_MV
 
@@ -2103,27 +2239,69 @@ Alias for [`LENGTH`](#length).
 
 ## STRPOS
 
-`STRPOS(<CHARACTER>, <CHARACTER>)`
+Returns the one-based index position of a substring within an expression. If `substring` is not found, returns 0.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `STRPOS(expr, substring)`
+* **Function type:** Scalar, string
 
-Returns the one-based index position of a substring within an expression.
+<details><summary>Example</summary>
+
+The following example returns the one-based index position of `World`.
+
+```sql
+SELECT 
+  'Hello World!' AS "original_string",
+  STRPOS('Hello World!', 'World') AS "index"
+```
+
+Returns the following:
+
+| `original_string` | `index` |
+| -- | -- |
+| `Hello World!` | `7` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## SUBSTR
 
-`SUBSTR(<CHARACTER>, <INTEGER>, [<INTEGER>])`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Alias for [`SUBSTRING`](#substring).
+
+* **Syntax:** `SUBSTR(expr, index[, length])`
+* **Function type:** Scalar, string
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## SUBSTRING
 
-`SUBSTRING(<CHARACTER>, <INTEGER>, [<INTEGER>])`
+Returns a substring of the expression starting at a given one-based index. If `length` is omitted, extracts characters to the end of the string, otherwise returns a substring of `length` characters.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `SUBSTRING(expr, index[, length])`
+* **Function type:** Scalar, string
 
-Returns a substring of the expression starting at a given one-based index.
+<details><summary>Example</summary>
+
+The following example extracts a substring from the string expression `abcdefghi` of length `3` starting at index `4`
+
+```sql
+SELECT 
+  'abcdefghi' AS "original_string",
+  SUBSTRING('abcdefghi', 4, 3) AS "substring"
+```
+
+Returns the following:
+
+| `original_string` | `substring` |
+| -- | -- |
+| `abcdefghi` | `def` |
+
+</details>
+
+
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## SUM
 
@@ -2326,17 +2504,35 @@ Takes the difference between two timestamps, returning the results in the given 
 **Function type:** [JSON](sql-json-functions.md)
 
 `TO_JSON_STRING(expr)`
-
 Serializes `expr` into a JSON string.
 
 
 ## TRIM
 
-`TRIM([BOTH|LEADING|TRAILING] [<chars> FROM] expr)`
+Trims the leading and/or trailing characters of an expression. Defaults `chars` to a space if none is provided. Defaults to `BOTH` if no directional argument is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `TRIM([BOTH|LEADING|TRAILING] [chars FROM] expr)`
+* **Function type:** Scalar, string
 
-Trims the leading or trailing characters of an expression.
+<details><summary>Example</summary>
+
+The following example trims `_` characters from both ends of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  TRIM( BOTH '_' FROM '___abc___') AS "trim_expression"
+```
+
+Returns the following:
+
+| `original_string` | `trim_expression` |
+| -- | -- |
+| `___abc___` | `abc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## TRUNC
 
