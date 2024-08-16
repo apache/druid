@@ -2133,8 +2133,8 @@ public class ControllerImpl implements Controller
     if (dimensionToSchemaMap != null && dimensionToSchemaMap.containsKey(outputColumnName)) {
       return dimensionToSchemaMap.get(outputColumnName);
     }
-    // For regular ingestion, or for metrics moved to dimensions in case of compaction, we won't have an entry in the
-    // map. For those cases, use the default config.
+    // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollup,
+    // we won't have an entry in the map. For those cases, use the default config.
     return DimensionSchemaUtils.createDimensionSchema(
         outputColumnName,
         queryType,
