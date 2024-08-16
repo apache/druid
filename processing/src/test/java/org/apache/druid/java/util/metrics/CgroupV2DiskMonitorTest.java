@@ -56,7 +56,7 @@ public class CgroupV2DiskMonitorTest
   }
 
   @Test
-  public void testMonitor() throws IOException, InterruptedException
+  public void testMonitor() throws IOException
   {
     final CgroupV2DiskMonitor monitor = new CgroupV2DiskMonitor(discoverer);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
