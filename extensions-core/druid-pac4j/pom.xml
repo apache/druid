@@ -39,7 +39,7 @@
     <!-- Following must be updated along with any updates to pac4j version. One can find the compatible version of nimbus libraries in org.pac4j:pac4j-oidc dependencies-->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>
     <nimbus.jose.jwt.version>9.37.2</nimbus.jose.jwt.version>
-    <oauth2.oidc.sdk.version>8.22</oauth2.oidc.sdk.version>
+    <oauth2.oidc.sdk.version>11.16</oauth2.oidc.sdk.version>
   </properties>
 
   <dependencies>
