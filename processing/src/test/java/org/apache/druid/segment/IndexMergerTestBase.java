@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -179,7 +180,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompression());
@@ -236,7 +237,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(6, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Arrays.asList("dim1", "dim2", "__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("dim1", "dim2", "__time"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompression());
@@ -306,7 +307,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(4, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Arrays.asList("dim1", "dim2", "__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("dim1", "dim2", "__time"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompression());
@@ -359,7 +360,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
     assertDimCompression(index, indexSpec.getDimensionCompression());
 
@@ -396,7 +397,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompression());
@@ -408,7 +409,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             null,
             Granularities.NONE,
             Boolean.TRUE,
-            Metadata.SORTED_BY_TIME_ONLY
+            Cursors.ascendingTimeOrder()
         ),
         index.getMetadata()
     );
@@ -966,7 +967,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(Arrays.asList("dimA", "dimC"), Lists.newArrayList(merged.getAvailableDimensions()));
 
     // dimB is included even though it's not actually stored.
-    Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC", "__time"), Lists.newArrayList(merged.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("dimA", "dimB", "dimC", "__time"), Lists.newArrayList(merged.getOrdering()));
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
     final List<DebugRow> rowList = RowIteratorHelper.toList(adapter.getRows());
@@ -2164,7 +2165,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(ImmutableList.of("__time", "dim1", "dim2"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time", "dim1", "dim2"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     Assert.assertEquals(2, rowList.size());
@@ -2197,7 +2198,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(1, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(ImmutableList.of("__time", "dim1", "dim2"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time", "dim1", "dim2"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     adapter = new QueryableIndexIndexableAdapter(index);
@@ -2229,7 +2230,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(2, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(ImmutableList.of("__time", "dim1", "dim2"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time", "dim1", "dim2"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     adapter = new QueryableIndexIndexableAdapter(index);
@@ -2287,7 +2288,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     Assert.assertEquals(3, index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(Collections.singletonList("__time"), Lists.newArrayList(index.getSortOrder()));
+    Assert.assertEquals(makeOrderBys("__time"), Lists.newArrayList(index.getOrdering()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompression());
@@ -3042,5 +3043,10 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                          )
                      )
                      .collect(Collectors.toList());
+  }
+
+  private static List<OrderBy> makeOrderBys(final String... columnNames)
+  {
+    return Arrays.stream(columnNames).map(OrderBy::ascending).collect(Collectors.toList());
   }
 }

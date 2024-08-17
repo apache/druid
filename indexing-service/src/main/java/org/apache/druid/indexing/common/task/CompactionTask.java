@@ -42,6 +42,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
@@ -70,6 +71,8 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
@@ -938,10 +941,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
 
       final Metadata metadata = index.getMetadata();
-      final List<String> sortOrder =
-          metadata != null && metadata.getSortOrder() != null
-          ? metadata.getSortOrder()
-          : Collections.emptyList();
+      final List<String> sortOrder = new ArrayList<>();
+
+      if (metadata != null && metadata.getOrdering() != null) {
+        for (final OrderBy orderBy : metadata.getOrdering()) {
+          final String dimension = orderBy.getColumnName();
+          if (orderBy.getOrder() != Order.ASCENDING) {
+            throw DruidException.defensive("Order[%s] for dimension[%s] not supported", orderBy.getOrder(), dimension);
+          }
+          sortOrder.add(dimension);
+        }
+      }
 
       for (String dimension : Iterables.concat(sortOrder, index.getAvailableDimensions())) {
         uniqueDims.computeIfAbsent(dimension, ignored -> uniqueDims.size());

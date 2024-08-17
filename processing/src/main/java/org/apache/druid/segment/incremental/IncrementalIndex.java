@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.java.util.common.parsers.UnparseableColumnsParseException;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -93,6 +94,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * In-memory, row-based data structure used to hold data during ingestion. Realtime tasks query this index using
@@ -222,7 +224,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   }
 
   private final long minTimestamp;
-  private final Granularity gran;
+  private final Granularity queryGranularity;
   private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
@@ -272,7 +274,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
-    this.gran = incrementalIndexSchema.getGran();
+    this.queryGranularity = incrementalIndexSchema.getQueryGranularity();
     this.rollup = incrementalIndexSchema.isRollup();
     this.virtualColumns = incrementalIndexSchema.getVirtualColumns();
     this.metrics = incrementalIndexSchema.getMetrics();
@@ -354,9 +356,9 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
         null,
         getCombiningAggregators(metrics),
         incrementalIndexSchema.getTimestampSpec(),
-        this.gran,
+        this.queryGranularity,
         this.rollup,
-        getDimensionOrder()
+        getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList())
     );
   }
 
@@ -682,7 +684,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
 
     long truncated = 0;
     if (row.getTimestamp() != null) {
-      truncated = gran.bucketStart(row.getTimestampFromEpoch());
+      truncated = queryGranularity.bucketStart(row.getTimestampFromEpoch());
     }
     IncrementalIndexRow incrementalIndexRow = IncrementalIndexRow.createTimeAndDimswithDimsKeySize(
         Math.max(truncated, minTimestamp),
@@ -889,7 +891,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   public Interval getInterval()
   {
     DateTime min = DateTimes.utc(minTimestamp);
-    return new Interval(min, isEmpty() ? min : gran.increment(DateTimes.utc(getMaxTimeMillis())));
+    return new Interval(min, isEmpty() ? min : queryGranularity.increment(DateTimes.utc(getMaxTimeMillis())));
   }
 
   @Nullable
@@ -912,7 +914,7 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   }
 
   /**
-   * Returns names of time and dimension columns, in sort order. Includes {@link ColumnHolder#TIME_COLUMN_NAME}.
+   * Returns names of time and dimension columns, in persist sort order. Includes {@link ColumnHolder#TIME_COLUMN_NAME}.
    */
   public List<String> getDimensionOrder()
   {

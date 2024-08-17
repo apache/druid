@@ -118,6 +118,11 @@ public class FilterBundle
     return matcherBundle != null;
   }
 
+  public boolean canVectorizeMatcher()
+  {
+    return matcherBundle == null || matcherBundle.canVectorize();
+  }
+
   public interface IndexBundle
   {
     IndexBundleInfo getIndexInfo();
@@ -142,6 +147,8 @@ public class FilterBundle
     ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
 
     VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset);
+
+    boolean canVectorize();
   }
 
   public static class SimpleIndexBundle implements IndexBundle
@@ -182,15 +189,19 @@ public class FilterBundle
     private final Function<ColumnSelectorFactory, ValueMatcher> matcherFn;
     private final Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn;
 
+    private final boolean canVectorize;
+
     public SimpleMatcherBundle(
         MatcherBundleInfo matcherInfo,
         Function<ColumnSelectorFactory, ValueMatcher> matcherFn,
-        Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn
+        Function<VectorColumnSelectorFactory, VectorValueMatcher> vectorMatcherFn,
+        boolean canVectorize
     )
     {
       this.matcherInfo = Preconditions.checkNotNull(matcherInfo);
       this.matcherFn = Preconditions.checkNotNull(matcherFn);
       this.vectorMatcherFn = Preconditions.checkNotNull(vectorMatcherFn);
+      this.canVectorize = canVectorize;
     }
 
     @Override
@@ -216,6 +227,12 @@ public class FilterBundle
     )
     {
       return vectorMatcherFn.apply(selectorFactory);
+    }
+
+    @Override
+    public boolean canVectorize()
+    {
+      return canVectorize;
     }
   }
 

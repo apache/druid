@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -335,7 +336,7 @@ public class TaskDataSegmentProviderTest
     }
 
     @Override
-    public List<String> getSortOrder()
+    public List<OrderBy> getOrdering()
     {
       return Collections.emptyList();
     }

@@ -326,7 +326,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
       closer.register(theColumn);
       final BaseObjectColumnValueSelector<?> selector = theColumn.makeColumnValueSelector(offset);
 
-      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, false, closer);
+      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, closer);
       final BaseObjectColumnValueSelector<?> tableSelector = tableFactory.makeColumnValueSelector(columnName);
 
       // compare with base segment selector to make sure tables selector can read correct values

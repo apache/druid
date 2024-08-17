@@ -21,36 +21,30 @@ package org.apache.druid.query.topn;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.List;
 
 public class TopNMetricSpecOptimizationsTest
@@ -255,19 +249,6 @@ public class TopNMetricSpecOptimizationsTest
         return cardinality;
       }
 
-      @Override
-      public DateTime getMinTime()
-      {
-        return DateTimes.of(start);
-      }
-
-
-      @Override
-      public DateTime getMaxTime()
-      {
-        return DateTimes.of(end);
-      }
-
       // stubs below this line not important for tests
 
       @Override
@@ -310,34 +291,23 @@ public class TopNMetricSpecOptimizationsTest
       }
 
       @Override
-      public DateTime getMaxIngestedEventTime()
-      {
-        return null;
-      }
-
-      @Override
       public Metadata getMetadata()
       {
         return null;
       }
 
       @Override
-      public List<String> getSortOrder()
+      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
-        return Collections.emptyList();
-      }
-
-      @Override
-      public Sequence<Cursor> makeCursors(
-          @Nullable Filter filter,
-          Interval interval,
-          VirtualColumns virtualColumns,
-          Granularity gran,
-          boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics
-      )
-      {
-        return null;
+        return new CursorHolder()
+        {
+          @Nullable
+          @Override
+          public Cursor asCursor()
+          {
+            return null;
+          }
+        };
       }
     };
 

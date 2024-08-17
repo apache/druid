@@ -25,13 +25,12 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,11 +42,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @PublicApi
 public class Metadata
 {
-  /**
-   * Return value for {@link #getSortOrder()} when a segment is sorted by {@link ColumnHolder#TIME_COLUMN_NAME} only.
-   */
-  public static final List<String> SORTED_BY_TIME_ONLY = Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME);
-
   // container is used for arbitrary key-value pairs in segment metadata e.g.
   // kafka input reader uses it to store commit offset
   private final Map<String, Object> container;
@@ -60,7 +54,7 @@ public class Metadata
   @Nullable
   private final Boolean rollup;
   @Nullable
-  private final List<String> sortOrder;
+  private final List<OrderBy> ordering;
 
   public Metadata(
       @JsonProperty("container") @Nullable Map<String, Object> container,
@@ -68,7 +62,7 @@ public class Metadata
       @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
       @JsonProperty("rollup") @Nullable Boolean rollup,
-      @JsonProperty("sortOrder") @Nullable List<String> sortOrder
+      @JsonProperty("ordering") @Nullable List<OrderBy> ordering
   )
   {
     this.container = container == null ? new ConcurrentHashMap<>() : container;
@@ -76,7 +70,7 @@ public class Metadata
     this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
-    this.sortOrder = sortOrder;
+    this.ordering = ordering;
   }
 
   @JsonProperty
@@ -116,9 +110,9 @@ public class Metadata
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<String> getSortOrder()
+  public List<OrderBy> getOrdering()
   {
-    return sortOrder;
+    return ordering;
   }
 
   public Metadata putAll(@Nullable Map<String, Object> other)
@@ -151,7 +145,7 @@ public class Metadata
     List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
     List<Granularity> gransToMerge = new ArrayList<>();
     List<Boolean> rollupToMerge = new ArrayList<>();
-    List<List<String>> sortOrdersToMerge = new ArrayList<>();
+    List<List<OrderBy>> orderingsToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
@@ -172,7 +166,7 @@ public class Metadata
           rollupToMerge.add(metadata.isRollup());
         }
 
-        sortOrdersToMerge.add(metadata.getSortOrder());
+        orderingsToMerge.add(metadata.getOrdering());
         mergedContainer.putAll(metadata.container);
       } else {
         //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
@@ -200,7 +194,7 @@ public class Metadata
                                           null :
                                           Granularity.mergeGranularities(gransToMerge);
 
-    final List<String> mergedSortOrder = mergeSortOrders(sortOrdersToMerge);
+    final List<OrderBy> mergedOrdering = mergeOrderings(orderingsToMerge);
 
     Boolean rollup = null;
     if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
@@ -224,7 +218,7 @@ public class Metadata
         mergedTimestampSpec,
         mergedGranularity,
         rollup,
-        mergedSortOrder
+        mergedOrdering
     );
   }
 
@@ -243,7 +237,7 @@ public class Metadata
            Objects.equals(timestampSpec, metadata.timestampSpec) &&
            Objects.equals(queryGranularity, metadata.queryGranularity) &&
            Objects.equals(rollup, metadata.rollup) &&
-           Objects.equals(sortOrder, metadata.sortOrder);
+           Objects.equals(ordering, metadata.ordering);
   }
 
   @Override
@@ -261,48 +255,48 @@ public class Metadata
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
-           ", sortOrder=" + sortOrder +
+           ", ordering=" + ordering +
            '}';
   }
 
   /**
-   * Merge {@link #getSortOrder()} from different metadatas.
+   * Merge {@link #getOrdering()} from different metadatas.
    *
-   * When an input sort order is null, we assume it is {@link Metadata#SORTED_BY_TIME_ONLY}, as this was the only
-   * sort order possible prior to the introduction of the "sortOrder" field.
+   * When an input sort order is null, we assume it is {@link Cursors#ascendingTimeOrder()}, as this was the only
+   * sort order possible prior to the introduction of the "ordering" field.
    */
-  public static List<String> mergeSortOrders(List<List<String>> sortOrdersToMerge)
+  public static List<OrderBy> mergeOrderings(List<List<OrderBy>> orderingsToMerge)
   {
-    if (sortOrdersToMerge.isEmpty()) {
-      throw new IAE("sortOrdersToMerge is empty");
+    if (orderingsToMerge.isEmpty()) {
+      throw new IAE("orderingsToMerge is empty");
     }
 
-    final List<String> mergedSortOrder = new ArrayList<>();
+    final List<OrderBy> mergedOrdering = new ArrayList<>();
 
     while (true) {
-      final int position = mergedSortOrder.size();
-      String column = null;
+      final int position = mergedOrdering.size();
+      OrderBy orderBy = null;
 
       // Iterate through each sort order, check that the columns at "position" are all the same. If not, return
-      // the mergedSortOrder as-is.
-      for (List<String> sortOrder : sortOrdersToMerge) {
-        if (sortOrder == null) {
-          // null sortOrder is treated as [__time].
-          sortOrder = SORTED_BY_TIME_ONLY;
+      // the mergedOrdering as-is.
+      for (List<OrderBy> ordering : orderingsToMerge) {
+        if (ordering == null) {
+          // null ordering is treated as [__time].
+          ordering = Cursors.ascendingTimeOrder();
         }
 
-        if (position < sortOrder.size()) {
-          if (column == null) {
-            column = sortOrder.get(position);
-          } else if (!column.equals(sortOrder.get(position))) {
-            return mergedSortOrder;
+        if (position < ordering.size()) {
+          if (orderBy == null) {
+            orderBy = ordering.get(position);
+          } else if (!orderBy.equals(ordering.get(position))) {
+            return mergedOrdering;
           }
         } else {
-          return mergedSortOrder;
+          return mergedOrdering;
         }
       }
 
-      mergedSortOrder.add(column);
+      mergedOrdering.add(orderBy);
     }
   }
 }

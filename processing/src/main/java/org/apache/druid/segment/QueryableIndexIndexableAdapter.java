@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -73,14 +75,20 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     }
     this.metadata = input.getMetadata();
 
-    if (metadata != null && metadata.getSortOrder() != null) {
+    if (metadata != null && metadata.getOrdering() != null) {
       int foundTimePosition = -1;
       int i = 0;
 
       // Some sort columns may not exist in the index, for example if they are omitted due to being 100% nulls.
       // Locate the __time column in the sort order, skipping any nonexistent columns. This will be the position of
       // the __time column within the dimension handlers.
-      for (final String columnName : metadata.getSortOrder()) {
+      for (final OrderBy orderBy : metadata.getOrdering()) {
+        final String columnName = orderBy.getColumnName();
+
+        if (orderBy.getOrder() != Order.ASCENDING) {
+          throw DruidException.defensive("Order[%s] for column[%s] is not supported", orderBy.getOrder(), columnName);
+        }
+
         if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
           foundTimePosition = i;
           break;
@@ -95,7 +103,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         // Sort order is set, but does not contain __time. Indexable adapters involve all columns in TimeAndDimsPointer
         // comparators, so we need to put the __time column somewhere. Put it immediately after the ones in the
         // sort order.
-        this.timePositionForComparator = metadata.getSortOrder().size();
+        this.timePositionForComparator = metadata.getOrdering().size();
       }
     } else {
       this.timePositionForComparator = 0;
@@ -302,8 +310,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
       final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
           VirtualColumns.EMPTY,
-          false,
-          timePositionForComparator == 0,
+          timePositionForComparator == 0 ? Order.ASCENDING : Order.NONE,
           offset,
           columnCache
       );

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -34,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -116,7 +118,7 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
-        Metadata.SORTED_BY_TIME_ONLY
+        Cursors.ascendingTimeOrder()
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -127,7 +129,7 @@ public class MetadataTest
     metadataToBeMerged.add(null);
 
     final Metadata merged2 =
-        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Metadata.SORTED_BY_TIME_ONLY);
+        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Cursors.ascendingTimeOrder());
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
@@ -137,7 +139,7 @@ public class MetadataTest
     };
 
     final Metadata merged3 =
-        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Metadata.SORTED_BY_TIME_ONLY);
+        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Cursors.ascendingTimeOrder());
 
     Assert.assertEquals(
         merged3,
@@ -150,7 +152,7 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         null,
-        Metadata.SORTED_BY_TIME_ONLY
+        Cursors.ascendingTimeOrder()
     );
     Assert.assertEquals(
         merged4,
@@ -159,61 +161,66 @@ public class MetadataTest
   }
 
   @Test
-  public void testMergeSortOrders()
+  public void testMergeOrderings()
   {
     Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> Metadata.mergeSortOrders(Collections.emptyList())
+        () -> Metadata.mergeOrderings(Collections.emptyList())
     );
 
     Assert.assertEquals(
-        Metadata.SORTED_BY_TIME_ONLY,
-        Metadata.mergeSortOrders(Collections.singletonList(null))
-    );
-
-    Assert.assertEquals(
-        Collections.emptyList(),
-        Metadata.mergeSortOrders(Arrays.asList(null, Arrays.asList("foo", "bar")))
+        Cursors.ascendingTimeOrder(),
+        Metadata.mergeOrderings(Collections.singletonList(null))
     );
 
     Assert.assertEquals(
         Collections.emptyList(),
-        Metadata.mergeSortOrders(Arrays.asList(Arrays.asList("foo", "bar"), null))
-    );
-
-    Assert.assertEquals(
-        Metadata.SORTED_BY_TIME_ONLY,
-        Metadata.mergeSortOrders(Arrays.asList(Arrays.asList("__time", "foo", "bar"), null))
+        Metadata.mergeOrderings(Arrays.asList(null, makeOrderBy("foo", "bar")))
     );
 
     Assert.assertEquals(
         Collections.emptyList(),
-        Metadata.mergeSortOrders(
+        Metadata.mergeOrderings(Arrays.asList(makeOrderBy("foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Cursors.ascendingTimeOrder(),
+        Metadata.mergeOrderings(Arrays.asList(makeOrderBy("__time", "foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeOrderings(
             Arrays.asList(
-                Arrays.asList("foo", "bar"),
-                Arrays.asList("bar", "foo")
+                makeOrderBy("foo", "bar"),
+                makeOrderBy("bar", "foo")
             )
         )
     );
 
     Assert.assertEquals(
         Collections.singletonList("bar"),
-        Metadata.mergeSortOrders(
+        Metadata.mergeOrderings(
             Arrays.asList(
-                Arrays.asList("bar", "baz"),
-                Arrays.asList("bar", "foo")
+                makeOrderBy("bar", "baz"),
+                makeOrderBy("bar", "foo")
             )
         )
     );
 
     Assert.assertEquals(
         ImmutableList.of("bar", "foo"),
-        Metadata.mergeSortOrders(
+        Metadata.mergeOrderings(
             Arrays.asList(
-                Arrays.asList("bar", "foo"),
-                Arrays.asList("bar", "foo")
+                makeOrderBy("bar", "foo"),
+                makeOrderBy("bar", "foo")
             )
         )
     );
+  }
+
+  private static List<OrderBy> makeOrderBy(final String... columnNames)
+  {
+    return Arrays.stream(columnNames).map(OrderBy::ascending).collect(Collectors.toList());
   }
 }

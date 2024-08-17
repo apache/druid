@@ -186,7 +186,10 @@ ace.define(
       this.$id = 'ace/mode/dsql';
 
       this.lineCommentStart = '--';
-      this.getCompletions = () => completions;
+      this.getCompletions = (_state: any, _session: any, _pos: any, prefix: string) => {
+        if (/^\d+$/.test(prefix)) return; // Don't start completing if the user is typing a number
+        return completions;
+      };
     };
     oop.inherits(Mode, TextMode);
 

@@ -37,6 +37,8 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -119,11 +121,11 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
     // Add regular orderBys.
-    for (final ScanQuery.OrderBy orderBy : queryToRun.getOrderBys()) {
+    for (final OrderBy orderBy : queryToRun.getOrderBys()) {
       clusterByColumns.add(
           new KeyColumn(
               orderBy.getColumnName(),
-              orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
+              orderBy.getOrder() == Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
           )
       );
     }

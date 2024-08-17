@@ -87,9 +87,11 @@ public class QueryableIndexSegment implements Segment
     final Function<QueryableIndexSegment, ?> fn = AS_MAP.get(clazz);
     if (fn != null) {
       return (T) fn.apply(this);
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) QueryableIndexTimeBoundaryInspector.create(index);
+    } else {
+      return Segment.super.as(clazz);
     }
-
-    return Segment.super.as(clazz);
   }
 
   @SemanticCreator

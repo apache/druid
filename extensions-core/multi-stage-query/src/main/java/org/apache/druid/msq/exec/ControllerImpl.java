@@ -1954,7 +1954,8 @@ public class ControllerImpl implements Controller
             useExplicitSegmentSortOrder,
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery()
+            querySpec.getQuery(),
+            destination.getDimensionToSchemaMap()
         );
 
     return new DataSchema(
@@ -2146,6 +2147,27 @@ public class ControllerImpl implements Controller
     return new StringTuple(array);
   }
 
+  private static DimensionSchema getDimensionSchema(
+      final String outputColumnName,
+      @Nullable final ColumnType queryType,
+      QueryContext context,
+      @Nullable Map<String, DimensionSchema> dimensionToSchemaMap
+  )
+  {
+    if (dimensionToSchemaMap != null && dimensionToSchemaMap.containsKey(outputColumnName)) {
+      return dimensionToSchemaMap.get(outputColumnName);
+    }
+    // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollu
+
+    // we won't have an entry in the map. For those cases, use the default config.
+    return DimensionSchemaUtils.createDimensionSchema(
+        outputColumnName,
+        queryType,
+        MultiStageQueryContext.useAutoColumnSchemas(context),
+        MultiStageQueryContext.getArrayIngestMode(context)
+    );
+  }
+
   private static Pair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
@@ -2153,7 +2175,8 @@ public class ControllerImpl implements Controller
       final boolean useExplicitSegmentSortOrder,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
-      final Query<?> query
+      final Query<?> query,
+      @Nullable final Map<String, DimensionSchema> dimensionToSchemaMap
   )
   {
     // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
@@ -2242,7 +2265,8 @@ public class ControllerImpl implements Controller
             outputColumnAggregatorFactories,
             outputColumnName,
             type,
-            query.context()
+            query.context(),
+            dimensionToSchemaMap
         );
       } else {
         // complex columns only
@@ -2264,7 +2288,8 @@ public class ControllerImpl implements Controller
               outputColumnAggregatorFactories,
               outputColumnName,
               type,
-              query.context()
+              query.context(),
+              dimensionToSchemaMap
           );
         }
       }
@@ -2299,7 +2324,8 @@ public class ControllerImpl implements Controller
       Map<String, AggregatorFactory> outputColumnAggregatorFactories,
       String outputColumn,
       ColumnType type,
-      QueryContext context
+      QueryContext context,
+      Map<String, DimensionSchema> dimensionToSchemaMap
   )
   {
     if (ColumnHolder.TIME_COLUMN_NAME.equals(outputColumn)) {
@@ -2311,12 +2337,7 @@ public class ControllerImpl implements Controller
       aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
     } else {
       dimensions.add(
-          DimensionSchemaUtils.createDimensionSchema(
-              outputColumn,
-              type,
-              MultiStageQueryContext.useAutoColumnSchemas(context),
-              MultiStageQueryContext.getArrayIngestMode(context)
-          )
+          getDimensionSchema(outputColumn, type, context, dimensionToSchemaMap)
       );
     }
   }

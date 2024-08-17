@@ -66,11 +66,10 @@ public abstract class BaseQuery<T> implements Query<T>
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context
   )
   {
-    this(dataSource, querySegmentSpec, descending, context, Granularities.ALL);
+    this(dataSource, querySegmentSpec, false, context, Granularities.ALL);
   }
 
   public BaseQuery(

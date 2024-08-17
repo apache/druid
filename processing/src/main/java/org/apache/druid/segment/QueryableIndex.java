@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
@@ -72,9 +73,9 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   }
 
   /**
-   * Returns column names that this index is sorted by.
+   * Returns the ordering of rows in this index.
    */
-  List<String> getSortOrder();
+  List<OrderBy> getOrdering();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

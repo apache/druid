@@ -246,7 +246,8 @@ public class MSQTaskQueryMaker implements QueryMaker
           targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
-          replaceTimeChunks
+          replaceTimeChunks,
+          null
       );
       MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext, dataSourceDestination.isReplaceTimeChunks());
       destination = dataSourceDestination;

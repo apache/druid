@@ -172,9 +172,15 @@ public class IndexMergerV9 implements IndexMerger
     }
 
     if (segmentMetadata != null
-        && segmentMetadata.getSortOrder() != null
-        && !segmentMetadata.getSortOrder().contains(ColumnHolder.TIME_COLUMN_NAME)) {
-      throw DruidException.defensive("sortOrder must include[%s]", ColumnHolder.TIME_COLUMN_NAME);
+        && segmentMetadata.getOrdering() != null
+        && segmentMetadata.getOrdering()
+                          .stream()
+                          .noneMatch(orderBy -> ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()))) {
+      throw DruidException.defensive(
+          "sortOrder[%s] must include[%s]",
+          segmentMetadata.getOrdering(),
+          ColumnHolder.TIME_COLUMN_NAME
+      );
     }
 
     Closer closer = Closer.create();
