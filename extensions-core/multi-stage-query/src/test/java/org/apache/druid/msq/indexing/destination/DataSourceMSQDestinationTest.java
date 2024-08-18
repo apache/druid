@@ -21,11 +21,16 @@ package org.apache.druid.msq.indexing.destination;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Map;
 
 public class DataSourceMSQDestinationTest
 {
@@ -34,7 +39,26 @@ public class DataSourceMSQDestinationTest
   public void testEquals()
   {
     EqualsVerifier.forClass(DataSourceMSQDestination.class)
-                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
+                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder", "dimensionToSchemaMap")
+                  .withPrefabValues(
+                      Map.class,
+                      ImmutableMap.of(
+                          "language",
+                          new StringDimensionSchema(
+                              "language",
+                              DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+                              false
+                          )
+                      ),
+                      ImmutableMap.of(
+                          "region",
+                          new StringDimensionSchema(
+                              "region",
+                              DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+                              false
+                          )
+                      )
+                  )
                   .usingGetClass()
                   .verify();
   }
@@ -42,7 +66,7 @@ public class DataSourceMSQDestinationTest
   @Test
   public void testBackwardCompatibility() throws JsonProcessingException
   {
-    DataSourceMSQDestination destination = new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null);
+    DataSourceMSQDestination destination = new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null);
     Assert.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
 
     DataSourceMSQDestination dataSourceMSQDestination = new DefaultObjectMapper().readValue(

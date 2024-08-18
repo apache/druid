@@ -50,6 +50,11 @@ public abstract class NumericFieldReader implements FieldReader
     }
   }
 
+  public byte getNullIndicatorByte()
+  {
+    return nullIndicatorByte;
+  }
+
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
   {
@@ -94,7 +99,7 @@ public abstract class NumericFieldReader implements FieldReader
   /**
    * Helper class which allows the inheritors to fetch the nullity of the field located at fieldPointer's position in
    * the dataRegion.
-   *
+   * <p>
    * The implementations of the column value selectors returned by the {@link #getColumnValueSelector} can inherit this
    * class and call {@link #_isNull()} in their {@link ColumnValueSelector#isNull()} to offload the responsibility of
    * detecting null elements to this Selector, instead of reworking the null handling

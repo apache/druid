@@ -56,6 +56,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -86,7 +87,8 @@ public final class SegmentGenerationUtils
             destination.getSegmentSortOrder(),
             columnMappings,
             isRollupQuery,
-            querySpec.getQuery()
+            querySpec.getQuery(),
+            destination.getDimensionToSchemaMap()
         );
 
     return new DataSchema(
@@ -150,13 +152,54 @@ public final class SegmentGenerationUtils
     }
   }
 
+  /**
+   * Whether a native query represents an ingestion with rollup.
+   * <p>
+   * Checks for three things:
+   * <p>
+   * - The query must be a {@link GroupByQuery}, because rollup requires columns to be split into dimensions and
+   * aggregations.
+   * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
+   * complex aggregations, not the finalized type. (So further rollup is possible.)
+   * - The query must explicitly disable {@link GroupByQueryConfig#CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING}, because
+   * groupBy on multi-value dimensions implicitly unnests, which is not desired behavior for rollup at ingestion time
+   * (rollup expects multi-value dimensions to be treated as arrays).
+   */
+  private static boolean isRollupQuery(Query<?> query)
+  {
+    return query instanceof GroupByQuery
+           && !MultiStageQueryContext.isFinalizeAggregations(query.context())
+           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+  }
+
+  private static DimensionSchema getDimensionSchema(
+      final String outputColumnName,
+      @Nullable final ColumnType queryType,
+      QueryContext context,
+      @Nullable Map<String, DimensionSchema> dimensionToSchemaMap
+  )
+  {
+    if (dimensionToSchemaMap != null && dimensionToSchemaMap.containsKey(outputColumnName)) {
+      return dimensionToSchemaMap.get(outputColumnName);
+    }
+    // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollup,
+    // we won't have an entry in the map. For those cases, use the default config.
+    return DimensionSchemaUtils.createDimensionSchema(
+        outputColumnName,
+        queryType,
+        MultiStageQueryContext.useAutoColumnSchemas(context),
+        MultiStageQueryContext.getArrayIngestMode(context)
+    );
+  }
+
   private static Pair<List<DimensionSchema>, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
       final List<String> segmentSortOrder,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
-      final Query<?> query
+      final Query<?> query,
+      @Nullable final Map<String, DimensionSchema> dimensionToSchemaMap
   )
   {
     // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
@@ -242,18 +285,14 @@ public final class SegmentGenerationUtils
               outputColumnAggregatorFactories,
               outputColumnName,
               type,
-              query.context()
+              query.context(),
+              dimensionToSchemaMap
           );
         } else {
           // complex columns only
           if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
             dimensions.add(
-                DimensionSchemaUtils.createDimensionSchema(
-                    outputColumnName,
-                    type,
-                    MultiStageQueryContext.useAutoColumnSchemas(query.context()),
-                    MultiStageQueryContext.getArrayIngestMode(query.context())
-                )
+                getDimensionSchema(outputColumnName, type, query.context(), dimensionToSchemaMap)
             );
           } else if (!isRollupQuery) {
             aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
@@ -264,7 +303,8 @@ public final class SegmentGenerationUtils
                 outputColumnAggregatorFactories,
                 outputColumnName,
                 type,
-                query.context()
+                query.context(),
+                dimensionToSchemaMap
             );
           }
         }
@@ -273,6 +313,7 @@ public final class SegmentGenerationUtils
 
     return Pair.of(dimensions, aggregators);
   }
+
 
   /**
    * If the output column is present in the outputColumnAggregatorFactories that means we already have the aggregator information for this column.
@@ -290,41 +331,17 @@ public final class SegmentGenerationUtils
       Map<String, AggregatorFactory> outputColumnAggregatorFactories,
       String outputColumn,
       ColumnType type,
-      QueryContext context
+      QueryContext context,
+      Map<String, DimensionSchema> dimensionToSchemaMap
   )
   {
     if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
       aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
     } else {
       dimensions.add(
-          DimensionSchemaUtils.createDimensionSchema(
-              outputColumn,
-              type,
-              MultiStageQueryContext.useAutoColumnSchemas(context),
-              MultiStageQueryContext.getArrayIngestMode(context)
-          )
+          getDimensionSchema(outputColumn, type, context, dimensionToSchemaMap)
       );
     }
-  }
-
-  /**
-   * Whether a native query represents an ingestion with rollup.
-   * <p>
-   * Checks for three things:
-   * <p>
-   * - The query must be a {@link GroupByQuery}, because rollup requires columns to be split into dimensions and
-   * aggregations.
-   * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
-   * complex aggregations, not the finalized type. (So further rollup is possible.)
-   * - The query must explicitly disable {@link GroupByQueryConfig#CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING}, because
-   * groupBy on multi-value dimensions implicitly unnests, which is not desired behavior for rollup at ingestion time
-   * (rollup expects multi-value dimensions to be treated as arrays).
-   */
-  private static boolean isRollupQuery(Query<?> query)
-  {
-    return query instanceof GroupByQuery
-           && !MultiStageQueryContext.isFinalizeAggregations(query.context())
-           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
   }
 
   private SegmentGenerationUtils()

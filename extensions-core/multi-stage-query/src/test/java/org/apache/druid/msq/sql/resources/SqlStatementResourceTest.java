@@ -200,6 +200,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                  Granularities.DAY,
                  null,
                  null,
+                 null,
                  null
              ))
              .tuningConfig(

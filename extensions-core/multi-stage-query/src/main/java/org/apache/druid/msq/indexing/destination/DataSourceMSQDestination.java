@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -35,6 +36,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -51,12 +53,16 @@ public class DataSourceMSQDestination implements MSQDestination
 
   private final TerminalStageSpec terminalStageSpec;
 
+  @Nullable
+  private final Map<String, DimensionSchema> dimensionToSchemaMap;
+
   @JsonCreator
   public DataSourceMSQDestination(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
       @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
+      @JsonProperty("dimensionToSchemaMap") @Nullable Map<String, DimensionSchema> dimensionToSchemaMap,
       @JsonProperty("terminalStageSpec") @Nullable TerminalStageSpec terminalStageSpec
   )
   {
@@ -65,6 +71,7 @@ public class DataSourceMSQDestination implements MSQDestination
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
     this.terminalStageSpec = terminalStageSpec != null ? terminalStageSpec : SegmentGenerationStageSpec.instance();
+    this.dimensionToSchemaMap = dimensionToSchemaMap;
 
     if (replaceTimeChunks != null) {
       // Verify that if replaceTimeChunks is provided, it is nonempty.
@@ -141,6 +148,17 @@ public class DataSourceMSQDestination implements MSQDestination
   }
 
   /**
+   * Returns the map of dimension name to its schema.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, DimensionSchema> getDimensionToSchemaMap()
+  {
+    return dimensionToSchemaMap;
+  }
+
+  /**
    * Whether this object is in replace-existing-time-chunks mode.
    */
   public boolean isReplaceTimeChunks()
@@ -174,13 +192,14 @@ public class DataSourceMSQDestination implements MSQDestination
            && Objects.equals(segmentGranularity, that.segmentGranularity)
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
            && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
+           && Objects.equals(dimensionToSchemaMap, that.dimensionToSchemaMap)
            && Objects.equals(terminalStageSpec, that.terminalStageSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, terminalStageSpec);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionToSchemaMap, terminalStageSpec);
   }
 
   @Override
@@ -191,6 +210,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentGranularity=" + segmentGranularity +
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
+           ", dimensionToSchemaMap=" + dimensionToSchemaMap +
            ", terminalStageSpec=" + terminalStageSpec +
            '}';
   }

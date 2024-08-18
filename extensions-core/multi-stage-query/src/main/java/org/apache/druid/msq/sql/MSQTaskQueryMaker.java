@@ -251,6 +251,7 @@ public class MSQTaskQueryMaker implements QueryMaker
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks,
+          null,
           terminalStageSpecFactory.createTerminalStageSpec(
               druidQuery,
               plannerContext
