@@ -46,30 +46,30 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
   }
 
   @Test
-  public void testMaterializeVirtualColumns()
+  public void testMaterializeColumns()
   {
     Object[][] vals = new Object[][] {
-        {1L, "a", 123L, 0L, new Object[]{"xyz", "x"}},
-        {2L, "a", 456L, 1L, new Object[]{"xyz", "abc"}},
-        {3L, "b", 789L, 2L, new Object[]{"xyz", "abc"}},
-        {4L, "b", 123L, 3L, new Object[]{"xyz"}},
+        {1L, "a", 123L, new Object[]{"xyz", "x"}, 0L},
+        {2L, "a", 456L, new Object[]{"xyz", "x"}, 1L},
+        {3L, "b", 789L, new Object[]{null}, 2L},
+        {4L, null, 123L, null, 3L},
     };
 
     RowSignature siggy = RowSignature.builder()
         .add("__time", ColumnType.LONG)
         .add("dim", ColumnType.STRING)
         .add("val", ColumnType.LONG)
-        .add("arrayIndex", ColumnType.LONG)
         .add("array", ColumnType.STRING_ARRAY)
+        .add("arrayIndex", ColumnType.LONG)
         .build();
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
 
     Object[] expectedArr = new Object[][] {
         {"xyz", "x"},
-        {"xyz", "abc"},
-        {"xyz", "abc"},
-        {"xyz"}
+        {"xyz", "x"},
+        {null},
+        null
     };
 
     new RowsAndColumnsHelper()
@@ -94,10 +94,14 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
     // do the materialziation
     ras.numRows();
 
-    assertEquals(Lists.newArrayList("__time", "dim", "val", "arrayIndex", "array", "expr"), ras.getColumnNames());
+    assertEquals(Lists.newArrayList("__time", "dim", "val", "array", "arrayIndex", "expr"), ras.getColumnNames());
 
     new RowsAndColumnsHelper()
         .expectColumn("expr", new long[] {123 * 2, 456L * 2, 789 * 2, 123 * 2})
+        .validate(ras);
+
+    new RowsAndColumnsHelper()
+        .expectColumn("dim", new String[] {"a", "a", "b", null}, ColumnType.STRING)
         .validate(ras);
 
     new RowsAndColumnsHelper()

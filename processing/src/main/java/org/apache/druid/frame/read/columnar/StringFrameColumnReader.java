@@ -210,7 +210,7 @@ public class StringFrameColumnReader implements FrameColumnReader
      */
     private final boolean asArray;
 
-    StringFrameColumn(
+    protected StringFrameColumn(
         Frame frame,
         boolean multiValue,
         Memory memory,
