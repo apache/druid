@@ -52,6 +52,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -1721,7 +1722,8 @@ public class ClientQuerySegmentWalkerTest
                     .put(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true)
                     .put(GroupingEngine.CTX_KEY_OUTERMOST, true)
                     .put(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP, "1979")
-                    .put(QueryContexts.QUERY_RESOURCE_ID, "dummy");
+                    .put(QueryContexts.QUERY_RESOURCE_ID, "dummy")
+                    .put(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "blast");
 
       modifiedQuery = query.withOverriddenContext(contextBuilder.build());
 

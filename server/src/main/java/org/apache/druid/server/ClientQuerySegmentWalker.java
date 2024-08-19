@@ -56,6 +56,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultLevelCachingQueryRunner;
+import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.RetryQueryRunner;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
@@ -80,6 +81,8 @@ import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -359,7 +362,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * @param dryRun                      if true, does not actually execute any subqueries, but will inline empty result sets.
    */
   @SuppressWarnings({"rawtypes", "unchecked"}) // Subquery, toolchest, runner handling all use raw types
-  private DataSource inlineIfNecessary(
+  private <T> DataSource inlineIfNecessary(
       final DataSource dataSource,
       @Nullable final QueryToolChest toolChestIfOutermost,
       final AtomicInteger subqueryRowLimitAccumulator,
@@ -429,22 +432,18 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
 
-        final Sequence<?> queryResults;
+        final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier;
 
         if (dryRun) {
-          queryResults = Sequences.empty();
+          queryRunnerSupplier = query -> (queryPlus, responseContext) -> Sequences.empty();
         } else {
-          final QueryRunner subqueryRunner = subQuery.getRunner(this);
-          queryResults = subqueryRunner.run(
-              QueryPlus.wrap(subQuery),
-              DirectDruidClient.makeResponseContextForQuery()
-          );
+          queryRunnerSupplier = query -> query.getRunner(this);
         }
 
         return toInlineDataSource(
             subQuery,
-            queryResults,
             warehouse.getToolChest(subQuery),
+            queryRunnerSupplier,
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,
@@ -648,13 +647,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   */
-  /**
    *
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
    *
    * @param query            the query
-   * @param results          query results
    * @param toolChest        toolchest for the query
    * @param limitAccumulator an accumulator for tracking the number of accumulated rows in all subqueries for a
    *                         particular master query
@@ -671,8 +667,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
-      final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
+      final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final AtomicBoolean cannotMaterializeToFrames,
@@ -697,8 +693,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
             query,
-            results,
             toolChest,
+            queryRunnerSupplier,
             limitAccumulator,
             limit,
             subqueryStatsProvider,
@@ -711,10 +707,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           subqueryStatsProvider.incrementQueriesExceedingByteLimit();
           throw ResourceLimitExceededException.withMessage(byteLimitExceededMessage(memoryLimit));
         }
+        AtomicReference<Sequence<T>> fallbackSequence = new AtomicReference<>(null);
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
-            results,
             toolChest,
+            queryRunnerSupplier,
+            fallbackSequence,
             limitAccumulator,
             memoryLimitAccumulator,
             memoryLimit,
@@ -734,7 +732,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           subqueryStatsProvider.incrementSubqueriesFallingBackToRowLimit();
           dataSource = materializeResultsAsArray(
               query,
-              results,
+              fallbackSequence.get(),
               toolChest,
               limitAccumulator,
               limit,
@@ -759,8 +757,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
-      final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
+      final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier,
+      final AtomicReference<Sequence<T>> resultSequence,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final long memoryLimit,
@@ -770,11 +769,20 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final ServiceEmitter emitter
   )
   {
-    Optional<Sequence<FrameSignaturePair>> framesOptional;
+    Query<T> queryWithSerializationParameter = query.withOverriddenContext(
+        Collections.singletonMap(
+            ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
+            ResultSerializationMode.FRAMES.toString()
+        )
+    );
+    Sequence<T> results =
+        queryRunnerSupplier
+            .apply(queryWithSerializationParameter)
+            .run(QueryPlus.wrap(queryWithSerializationParameter), DirectDruidClient.makeResponseContextForQuery());
 
     boolean startedAccumulating = false;
     try {
-      framesOptional = toolChest.resultsAsFrames(
+      Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
           query,
           results,
           new ArenaMemoryAllocatorFactory(FRAME_SIZE),
@@ -840,9 +848,47 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                 + "from the query context and/or the server config."
                             );
       } else {
+        resultSequence.set(results);
         return Optional.empty();
       }
     }
+  }
+
+  /**
+   * This method materializes the query results as {@code List<Objects[]>}
+   */
+  private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
+      final QueryType query,
+      final QueryToolChest<T, QueryType> toolChest,
+      final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier,
+      final AtomicInteger limitAccumulator,
+      final int limit,
+      final SubqueryCountStatsProvider subqueryStatsProvider,
+      boolean emitMetrics,
+      final ServiceEmitter emitter
+  )
+  {
+    //noinspection unchecked
+    QueryType queryWithSerializationParameter = (QueryType) query.withOverriddenContext(
+        Collections.singletonMap(
+            ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
+            ResultSerializationMode.ROWS.toString()
+        )
+    );
+    Sequence<T> results = queryRunnerSupplier
+        .apply(queryWithSerializationParameter)
+        .run(QueryPlus.wrap(queryWithSerializationParameter), DirectDruidClient.makeResponseContextForQuery());
+
+    return materializeResultsAsArray(
+        queryWithSerializationParameter,
+        results,
+        toolChest,
+        limitAccumulator,
+        limit,
+        subqueryStatsProvider,
+        emitMetrics,
+        emitter
+    );
   }
 
   /**
@@ -912,5 +958,4 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         QueryContexts.MAX_SUBQUERY_ROWS_KEY
     );
   }
-
 }

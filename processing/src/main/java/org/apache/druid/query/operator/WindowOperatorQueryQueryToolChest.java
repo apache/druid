@@ -23,33 +23,28 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.frame.Frame;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
-import org.apache.druid.frame.segment.FrameCursorUtils;
-import org.apache.druid.frame.write.FrameWriterFactory;
-import org.apache.druid.frame.write.FrameWriterUtils;
-import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
-import org.apache.druid.query.IterableRowsCursorHelper;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.NullColumn;
-import org.apache.druid.segment.Cursor;
+import org.apache.druid.query.rowsandcols.semantic.FrameMaker;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
-import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -62,30 +57,45 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
   @SuppressWarnings("unchecked")
   public QueryRunner<RowsAndColumns> mergeResults(QueryRunner<RowsAndColumns> runner)
   {
-    return new RowsAndColumnsUnravelingQueryRunner(
-        (queryPlus, responseContext) -> {
-          final WindowOperatorQuery query = (WindowOperatorQuery) queryPlus.getQuery();
-          final List<OperatorFactory> opFactories = query.getOperators();
-          if (opFactories.isEmpty()) {
-            return runner.run(queryPlus, responseContext);
-          }
+    QueryRunner<RowsAndColumns> baseRunner = (queryPlus, responseContext) -> {
+      final WindowOperatorQuery query = (WindowOperatorQuery) queryPlus.getQuery();
+      final List<OperatorFactory> opFactories = query.getOperators();
+      if (opFactories.isEmpty()) {
+        return runner.run(queryPlus, responseContext);
+      }
 
-          Supplier<Operator> opSupplier = () -> {
-            Operator retVal = new SequenceOperator(
-                runner.run(
-                    queryPlus.withQuery(query.withOperators(new ArrayList<OperatorFactory>())),
-                    responseContext
-                )
-            );
-            for (OperatorFactory operatorFactory : opFactories) {
-              retVal = operatorFactory.wrap(retVal);
-            }
-            return retVal;
-          };
-
-          return new OperatorSequence(opSupplier);
+      Supplier<Operator> opSupplier = () -> {
+        Operator retVal = new SequenceOperator(
+            runner.run(
+                queryPlus.withQuery(query.withOperators(new ArrayList<OperatorFactory>())),
+                responseContext
+            )
+        );
+        for (OperatorFactory operatorFactory : opFactories) {
+          retVal = operatorFactory.wrap(retVal);
         }
-    );
+        return retVal;
+      };
+
+      return new OperatorSequence(opSupplier);
+    };
+
+    return (queryPlus, responseContext) -> {
+      final Query<RowsAndColumns> query = queryPlus.getQuery();
+      final ResultSerializationMode serializationMode = query.context().getEnum(
+          ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
+          ResultSerializationMode.class,
+          ResultSerializationMode.ROWS
+      );
+      switch (serializationMode) {
+        case FRAMES:
+          return baseRunner.run(queryPlus, responseContext);
+        case ROWS:
+          return new RowsAndColumnsUnravelingQueryRunner(baseRunner).run(queryPlus, responseContext);
+        default:
+          throw DruidException.defensive("Serialization mode[%s] not supported", serializationMode);
+      }
+    };
   }
 
   @Override
@@ -136,26 +146,17 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
       boolean useNestedForUnknownTypes
   )
   {
-    RowSignature rowSignature = resultArraySignature(query);
-    RowSignature modifiedRowSignature = useNestedForUnknownTypes
-                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
-                                        : rowSignature;
-    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
-        memoryAllocatorFactory,
-        modifiedRowSignature,
-        new ArrayList<>()
+    return Optional.of(
+        resultSequence.map(
+            rac -> {
+              FrameMaker frameMaker = FrameMaker.fromRAC(rac);
+              return new FrameSignaturePair(
+                  frameMaker.toColumnBasedFrame(),
+                  frameMaker.computeSignature()
+              );
+            }
+        )
     );
-    Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
-        resultsAsArrays(query, resultSequence),
-        rowSignature
-    );
-    Cursor cursor = cursorAndCloseable.lhs;
-    Closeable closeble = cursorAndCloseable.rhs;
-
-    Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeble);
-
-    return Optional.of(frames.map(frame -> new FrameSignaturePair(frame, modifiedRowSignature)));
   }
 
   /**
