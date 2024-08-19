@@ -31,43 +31,15 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 
 /**
- * Class that helps vectorized query engines handle "granularity" parameters. Nonvectorized engines have it handled
- * for them by the StorageAdapter. Vectorized engines don't, because they can get efficiency gains by pushing
- * granularity handling into the engine layer.
+ * Class that helps vectorized query engines handle "granularity" parameters. Given a set of intervals, this class
+ * provides mechansims to advance a cursor to the start of an interval ({@link #setCurrentOffsets(Interval)}),
+ * advance a cursor within a bucket interval ({@link #advanceCursorWithinBucket()}), and check the offsets of the
+ * current vector that are within the bucket ({@link #getStartOffset()}, {@link #getEndOffset()}).
+ *
+ * @see org.apache.druid.query.CursorGranularizer for non-vectorized query engines.
  */
 public class VectorCursorGranularizer
 {
-  // And a cursor that has been made from it.
-  private final VectorCursor cursor;
-
-  // Iterable that iterates over time buckets.
-  private final Iterable<Interval> bucketIterable;
-
-  // Vector selector for the "__time" column.
-  @Nullable
-  private final VectorValueSelector timeSelector;
-
-  // Current time vector.
-  @Nullable
-  private long[] timestamps = null;
-
-  // Offset into the vector that we should start reading from.
-  private int startOffset = 0;
-
-  // Offset into the vector that is one past the last one we should read.
-  private int endOffset = 0;
-
-  private VectorCursorGranularizer(
-      VectorCursor cursor,
-      Iterable<Interval> bucketIterable,
-      @Nullable VectorValueSelector timeSelector
-  )
-  {
-    this.cursor = cursor;
-    this.bucketIterable = bucketIterable;
-    this.timeSelector = timeSelector;
-  }
-
   @Nullable
   public static VectorCursorGranularizer create(
       final StorageAdapter storageAdapter,
@@ -100,6 +72,36 @@ public class VectorCursorGranularizer
     }
 
     return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector);
+  }
+
+  private final VectorCursor cursor;
+
+  // Iterable that iterates over time buckets.
+  private final Iterable<Interval> bucketIterable;
+
+  // Vector selector for the "__time" column.
+  @Nullable
+  private final VectorValueSelector timeSelector;
+
+  // Current time vector.
+  @Nullable
+  private long[] timestamps = null;
+
+  // Offset into the vector that we should start reading from.
+  private int startOffset = 0;
+
+  // Offset into the vector that is one past the last one we should read.
+  private int endOffset = 0;
+
+  private VectorCursorGranularizer(
+      VectorCursor cursor,
+      Iterable<Interval> bucketIterable,
+      @Nullable VectorValueSelector timeSelector
+  )
+  {
+    this.cursor = cursor;
+    this.bucketIterable = bucketIterable;
+    this.timeSelector = timeSelector;
   }
 
   public void setCurrentOffsets(final Interval bucketInterval)

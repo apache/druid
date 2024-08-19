@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -116,7 +117,7 @@ public class ScanBenchmark
   private int limit;
 
   @Param({"NONE", "DESCENDING", "ASCENDING"})
-  private static ScanQuery.Order ordering;
+  private static Order ordering;
 
   private static final Logger log = new Logger(ScanBenchmark.class);
   private static final int RNG_SEED = 9999;
