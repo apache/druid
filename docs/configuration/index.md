@@ -1527,7 +1527,7 @@ The following types of medium exist for the buffers:
 This type of medium may do unnecessary disk I/O and requires some disk space to be available.
 
 * **Off-heap memory** (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
-This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing `-XX:MaxDirectMemorySize` configuration. It is not yet understood how the required off-heap memory size relates to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory, than the configured maximum _heap_ size (`-Xmx`) for the same JVM.
+This type of medium is preferred, but it may require you to allow the JVM to have more off-heap memory by changing the `-XX:MaxDirectMemorySize` configuration. It's not understood yet how the required off-heap memory size relates to the size of the segments being created. But you shouldn't add more extra off-heap memory than the configured maximum _heap_ size (`-Xmx`) for the same JVM.
 
 * **On-heap memory** (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task. Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory effectively.
 
