@@ -2296,7 +2296,7 @@ Returns a union of Theta sketches.
 
 ## TIME_CEIL
 
-Rounds up a timestamp to a given ISO 8601 time period. Specify a timestamp, `origin`, to provide a reference time from which to start. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Rounds up a timestamp to a given ISO 8601 time period. Specify a timestamp, `origin`, to provide a reference time from which to start. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`
 * **Function type:** Scalar, date and time
