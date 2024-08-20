@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -1310,7 +1311,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .offset(6L)
                                 .limit(1L)
-                                .order(ScanQuery.Order.DESCENDING)
+                                .order(Order.DESCENDING)
                                 .columns("__time", "channel")
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()

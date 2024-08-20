@@ -172,9 +172,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        Collections.singletonList(dimensionSpec),
-        aggregatorSpecs,
-        Collections.emptyList()
+        Collections.singletonList(dimensionSpec.getDimension()),
+        aggregatorSpecs
     );
   }
 

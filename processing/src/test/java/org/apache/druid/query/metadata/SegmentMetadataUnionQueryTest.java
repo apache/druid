@@ -109,7 +109,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                     ValueType.STRING.toString(),
                     false,
                     false,
-                    mmap ? 43524 : 43056,
+                    43524,
                     1,
                     "preferred",
                     "preferred",
@@ -117,7 +117,7 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
                 )
             )
         ),
-        mmap ? 805380 : 803324,
+        805380,
         4836,
         null,
         null,

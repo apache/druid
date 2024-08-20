@@ -191,8 +191,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         virtualColumns,
         dimFilter,
         Collections.emptyList(),
-        aggregatorSpecs,
-        Collections.emptyList()
+        aggregatorSpecs
     );
   }
 

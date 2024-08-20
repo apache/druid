@@ -123,9 +123,6 @@ export interface WorkbenchViewState {
 
   details?: { id: string; initTab?: ExecutionDetailsTab; initExecution?: Execution };
 
-  defaultSchema?: string;
-  defaultTable?: string;
-
   connectExternalDataDialogOpen: boolean;
   explainDialogOpen: boolean;
   historyDialogOpen: boolean;
@@ -818,12 +815,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();
 
-    let defaultSchema;
-    let defaultTable;
+    let defaultSchema: string | undefined;
+    let defaultTables: string[] | undefined;
     const parsedQuery = query.getParsedQuery();
     if (parsedQuery) {
       defaultSchema = parsedQuery.getFirstSchema();
-      defaultTable = parsedQuery.getFirstTableName();
+      defaultTables = parsedQuery.getUsedTableNames();
     }
 
     return (
@@ -840,8 +837,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+            defaultTables={defaultTables}
             defaultWhere={LAST_DAY}
-            defaultTable={defaultTable}
             highlightTable={undefined}
           />
         )}
