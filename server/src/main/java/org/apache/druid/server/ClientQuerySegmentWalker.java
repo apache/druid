@@ -82,7 +82,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -432,18 +431,28 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
 
-        final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier;
+        final Sequence<?> queryResults;
 
         if (dryRun) {
-          queryRunnerSupplier = query -> (queryPlus, responseContext) -> Sequences.empty();
+          queryResults = Sequences.empty();
         } else {
-          queryRunnerSupplier = query -> query.getRunner(this);
+          Query subQueryWithSerialization = subQuery.withOverriddenContext(
+              Collections.singletonMap(
+                  ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
+                  ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
+                                               .serializationMode()
+                                               .toString()
+              )
+          );
+          queryResults = subQueryWithSerialization
+              .getRunner(this)
+              .run(QueryPlus.wrap(subQueryWithSerialization), DirectDruidClient.makeResponseContextForQuery());
         }
 
         return toInlineDataSource(
             subQuery,
+            queryResults,
             warehouse.getToolChest(subQuery),
-            queryRunnerSupplier,
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,
@@ -667,8 +676,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
+      final Sequence<T> queryResults,
       final QueryToolChest<T, QueryType> toolChest,
-      final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final AtomicBoolean cannotMaterializeToFrames,
@@ -693,8 +702,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         subqueryStatsProvider.incrementSubqueriesWithRowLimit();
         dataSource = materializeResultsAsArray(
             query,
+            queryResults,
             toolChest,
-            queryRunnerSupplier,
             limitAccumulator,
             limit,
             subqueryStatsProvider,
@@ -710,8 +719,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         AtomicReference<Sequence<T>> fallbackSequence = new AtomicReference<>(null);
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
+            queryResults,
             toolChest,
-            queryRunnerSupplier,
             fallbackSequence,
             limitAccumulator,
             memoryLimitAccumulator,
@@ -757,8 +766,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
+      final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
-      final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier,
       final AtomicReference<Sequence<T>> resultSequence,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
@@ -769,17 +778,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final ServiceEmitter emitter
   )
   {
-    Query<T> queryWithSerializationParameter = query.withOverriddenContext(
-        Collections.singletonMap(
-            ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-            ResultSerializationMode.FRAMES.toString()
-        )
-    );
-    Sequence<T> results =
-        queryRunnerSupplier
-            .apply(queryWithSerializationParameter)
-            .run(QueryPlus.wrap(queryWithSerializationParameter), DirectDruidClient.makeResponseContextForQuery());
-
     boolean startedAccumulating = false;
     try {
       Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
@@ -852,43 +850,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return Optional.empty();
       }
     }
-  }
-
-  /**
-   * This method materializes the query results as {@code List<Objects[]>}
-   */
-  private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
-      final QueryType query,
-      final QueryToolChest<T, QueryType> toolChest,
-      final Function<Query<T>, QueryRunner<T>> queryRunnerSupplier,
-      final AtomicInteger limitAccumulator,
-      final int limit,
-      final SubqueryCountStatsProvider subqueryStatsProvider,
-      boolean emitMetrics,
-      final ServiceEmitter emitter
-  )
-  {
-    //noinspection unchecked
-    QueryType queryWithSerializationParameter = (QueryType) query.withOverriddenContext(
-        Collections.singletonMap(
-            ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-            ResultSerializationMode.ROWS.toString()
-        )
-    );
-    Sequence<T> results = queryRunnerSupplier
-        .apply(queryWithSerializationParameter)
-        .run(QueryPlus.wrap(queryWithSerializationParameter), DirectDruidClient.makeResponseContextForQuery());
-
-    return materializeResultsAsArray(
-        queryWithSerializationParameter,
-        results,
-        toolChest,
-        limitAccumulator,
-        limit,
-        subqueryStatsProvider,
-        emitMetrics,
-        emitter
-    );
   }
 
   /**
