@@ -2325,7 +2325,7 @@ Returns the following:
 
 ## TIME_EXTRACT
 
-Extracts the value of some `unit` of the timestamp and returns the value. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Extracts the value of `unit` from the timestamp and returns it as a number. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_EXTRACT(timestamp_expr[, unit[, timezone]])`
 * **Function type:** Scalar, date and time
