@@ -36,10 +36,10 @@ It will also be helpful to have finished [Load a file](../tutorials/tutorial-bat
 We've included sample data for this tutorial at `quickstart/tutorial/transform-data.json`, reproduced here for convenience:
 
 ```json
-{"timestamp":"2018-01-01T07:01:35Z","animal":"octopus",  "location":1, "number":100}
-{"timestamp":"2018-01-01T05:01:35Z","animal":"mongoose", "location":2,"number":200}
-{"timestamp":"2018-01-01T06:01:35Z","animal":"snake", "location":3, "number":300}
-{"timestamp":"2018-01-01T01:01:35Z","animal":"lion", "location":4, "number":300}
+{"timestamp": "2018-01-01T07:01:35Z","animal": "octopus","location": 1,"number": 100}
+{"timestamp": "2018-01-01T05:01:35Z","animal": "mongoose","location": 2,"number": 200}
+{"timestamp": "2018-01-01T06:01:35Z","animal": "snake","location": 3,"number": 300}
+{"timestamp": "2018-01-01T01:01:35Z","animal": "lion","location": 4,"number": 300}
 ```
 
 ## Load data with transform specs
