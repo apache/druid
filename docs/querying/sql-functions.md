@@ -1154,11 +1154,29 @@ Returns the following:
 
 ## GREATEST
 
-`GREATEST([expr1, ...])`
+Returns the maximum value from the provided expressions. The expressions must all be convertible to a common data type. 
 
-**Function type:** [Scalar, reduction](sql-scalar.md#reduction-functions)
+* **Syntax:** `GREATEST([expr1, ...])`
+* **Function type:** Scalar, reduction
 
-Returns the maximum value from the provided arguments.
+<details><summary>Example</summary>
+
+The following example returns the greatest value between the numeric constant `PI`, the integer number `4` and the double `-5.0`, which are all interpreted as doubles. 
+
+```sql
+SELECT GREATEST(PI, 4, -5.0) AS "greatest"
+```
+
+Returns the following:
+
+| `greatest` |
+| -- | 
+| `4` |
+
+</details>
+
+[Learn more](sql-scalar.md#reduction-functions)
+
 
 ## GROUPING
 
@@ -1426,11 +1444,29 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 ## LEAST
 
-`LEAST([expr1, ...])`
+Returns the minimum value from the provided arguments. The expressions must all be convertible to a common data type. 
 
-**Function type:** [Scalar, reduction](sql-scalar.md#reduction-functions)
+* **Syntax** `LEAST([expr1, ...])`
+* **Function type:** Scalar, reduction
 
-Returns the minimum value from the provided arguments.
+<details><summary>Example</summary>
+
+The following example returns the least value between the strings `apple`, `orange` and `pear` , which already share a common datatype.
+
+```sql
+SELECT LEAST( 'apple', 'orange', 'pear') AS "least"
+```
+
+Returns the following:
+
+| `least` |
+| -- |
+| `apple` |
+
+</details>
+
+[Learn more](sql-scalar.md#reduction-functions)
+
 
 ## LEFT
 
