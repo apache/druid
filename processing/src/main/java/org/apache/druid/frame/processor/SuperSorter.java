@@ -403,11 +403,10 @@ public class SuperSorter
       } else if (rowLimit == 0 && activeProcessors == 0) {
         // We had a row limit, and got it all the way down to zero.
         // Generate empty output channels for any partitions that we haven't written yet.
-        superSorterProgressTracker.markTriviallyComplete();
-
         for (int partitionNum = 0; partitionNum < outputChannels.size(); partitionNum++) {
           if (outputChannels.get(partitionNum) == null) {
             outputChannels.set(partitionNum, outputChannelFactory.openNilChannel(partitionNum));
+            superSorterProgressTracker.addMergedBatchesForLevel(totalMergingLevels - 1, 1);
           }
         }
 
