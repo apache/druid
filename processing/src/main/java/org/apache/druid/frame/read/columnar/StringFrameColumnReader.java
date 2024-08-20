@@ -151,7 +151,7 @@ public class StringFrameColumnReader implements FrameColumnReader
 
   private static boolean isMultiValue(final Memory memory)
   {
-    return memory.getByte(1) == 1;
+    return memory.getByte(StringFrameColumnWriter.MULTI_VALUE_POSITION) == StringFrameColumnWriter.MULTI_VALUE_BYTE;
   }
 
   private static long getStartOfCumulativeLengthSection()

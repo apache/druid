@@ -119,7 +119,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
 
   static boolean isMultiValue(final Memory memory)
   {
-    return memory.getByte(1) == 1;
+    return memory.getByte(StringFrameColumnWriter.MULTI_VALUE_POSITION) == StringFrameColumnWriter.MULTI_VALUE_BYTE;
   }
 
   private static long getStartOfCumulativeLengthSection()
@@ -137,7 +137,9 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
       final int numRows
   )
   {
-    assert numRows >= 0;
+    if (numRows < 0) {
+      throw DruidException.defensive("Encountered -ve numRows [%s] while reading frame", numRows);
+    }
     final int totalNumValues = FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
         memory,
         getStartOfCumulativeLengthSection(),
