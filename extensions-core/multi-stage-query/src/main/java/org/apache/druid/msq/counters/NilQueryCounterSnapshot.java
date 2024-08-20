@@ -41,8 +41,11 @@ public class NilQueryCounterSnapshot implements QueryCounterSnapshot
   }
 
   @Override
-  public boolean equals(Object obj)
+  public boolean equals(Object o)
   {
-    return obj != null && obj.getClass().equals(NilQueryCounterSnapshot.class);
+    if (this == o) {
+      return true;
+    }
+    return o != null && getClass() == o.getClass();
   }
 }
