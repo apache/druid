@@ -364,6 +364,13 @@ public class ForkingTaskRunner
                         command.addSystemProperty("druid.indexer.task.baseTaskDir", storageSlot.getDirectory().getAbsolutePath());
                         command.addSystemProperty("druid.indexer.task.tmpStorageBytesPerTask", storageSlot.getNumBytes());
 
+                        if (!task.supportsQueries()) {
+                          // Processing threads, processing buffers and merging buffers are not required on tasks which
+                          // do not support querying
+                          command.addSystemProperty("druid.processing.numMergeBuffers", 0);
+                          command.addSystemProperty("druid.processing.numThreads", 0);
+                        }
+
                         command.add("org.apache.druid.cli.Main");
                         command.add("internal");
                         command.add("peon");
