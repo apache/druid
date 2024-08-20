@@ -52,7 +52,7 @@ public class DataSourceMSQDestination implements MSQDestination
   private final List<Interval> replaceTimeChunks;
 
   @Nullable
-  private final Map<String, DimensionSchema> dimensionToSchemaMap;
+  private final Map<String, DimensionSchema> dimensionSchemas;
 
   @JsonCreator
   public DataSourceMSQDestination(
@@ -60,14 +60,14 @@ public class DataSourceMSQDestination implements MSQDestination
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
       @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
-      @JsonProperty("dimensionToSchemaMap") @Nullable Map<String, DimensionSchema> dimensionToSchemaMap
+      @JsonProperty("dimensionSchemas") @Nullable Map<String, DimensionSchema> dimensionSchemas
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.segmentGranularity = Preconditions.checkNotNull(segmentGranularity, "segmentGranularity");
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
-    this.dimensionToSchemaMap = dimensionToSchemaMap;
+    this.dimensionSchemas = dimensionSchemas;
 
     if (replaceTimeChunks != null) {
       // Verify that if replaceTimeChunks is provided, it is nonempty.
@@ -138,9 +138,9 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<String, DimensionSchema> getDimensionToSchemaMap()
+  public Map<String, DimensionSchema> getDimensionSchemas()
   {
-    return dimensionToSchemaMap;
+    return dimensionSchemas;
   }
 
   /**
@@ -177,13 +177,13 @@ public class DataSourceMSQDestination implements MSQDestination
            && Objects.equals(segmentGranularity, that.segmentGranularity)
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
            && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
-           && Objects.equals(dimensionToSchemaMap, that.dimensionToSchemaMap);
+           && Objects.equals(dimensionSchemas, that.dimensionSchemas);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionToSchemaMap);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas);
   }
 
   @Override
@@ -194,7 +194,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentGranularity=" + segmentGranularity +
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
-           ", dimensionToSchemaMap=" + dimensionToSchemaMap +
+           ", dimensionSchemas=" + dimensionSchemas +
            '}';
   }
 
