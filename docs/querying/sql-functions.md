@@ -640,7 +640,7 @@ Converts a value into the specified data type.
 
 ## CEIL (date and time)
 
-Rounds up a timestamp by a given time unit. Units must be provided unquoted.
+Rounds up a timestamp by a given time unit.
 
 * **Syntax:** `CEIL(timestamp_expr TO unit>)`
 * **Function type:** Scalar, date and time
@@ -1124,7 +1124,7 @@ Returns the following:
 
 ## EXTRACT
 
-Extracts the value of some unit of the timestamp. Units must be provided unquoted. 
+Extracts the value of some unit of the timestamp. 
 
 * **Syntax:** `EXTRACT(unit FROM timestamp_expr)`
 * **Function type:** Scalar, date and time
@@ -1161,7 +1161,7 @@ Returns the value evaluated for the expression for the first row within the wind
 
 ## FLOOR (date and time)
 
-Rounds down a timestamp by a given time unit. Units must be provided unquoted.
+Rounds down a timestamp by a given time unit. 
 
 * **Syntax:** `FLOOR(timestamp_expr TO unit>)`
 * **Function type:** Scalar, date and time
@@ -1676,12 +1676,12 @@ Converts a number of milliseconds since epoch into a timestamp.
 The following example converts `1375344877000` milliseconds from epoch into a timestamp. 
 
 ```sql
-SELECT MILLIS_TO_TIMESTAMP(1375344877000) AS "millis_to_time"
+SELECT MILLIS_TO_TIMESTAMP(1375344877000) AS "timestamp"
 ```
 
 Returns the following:
 
-| `millis_to_time` |
+| `timestamp` |
 | -- |
 | `2013-08-01T08:14:37.000Z` |
 
@@ -2536,7 +2536,7 @@ Returns whether a timestamp is contained within a particular interval. Intervals
 
 <details><summary>Example</summary>
 
-The following example returns `true` when a timestamp in the `__time` column from the `taxi-trips` datasource is in a one hour interval starting from `2013-08-01T08:00:00`. 
+The following example returns `true` when a timestamp in the `__time` column from the `taxi-trips` datasource is in an one hour interval starting from `2013-08-01T08:00:00`. 
 ```sql
 SELECT 
   "__time" AS "original_time",
@@ -2605,14 +2605,14 @@ Returns the following:
 
 ## TIMESTAMPADD
 
-Adds `count` number of `unit` to a given timestamp.
+Adds `count` number of a `unit` to a given timestamp.
 
 * **Syntax:** `TIMESTAMPADD(unit, count, timestamp)`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example adds five months to the timestamp `000-01-01 00:00:00`
+The following example adds five months to the timestamp `2000-01-01 00:00:00`
 
 ```sql
 SELECT
