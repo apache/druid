@@ -22,7 +22,7 @@ title: "Apache Kafka Lookups"
   ~ under the License.
   -->
 
-To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` in the extensions load list.
+To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-kafka-extraction-namespace` in the extensions load list.
 
 This extension provides all the functionality of `druid-lookups-cached-global`. You should only load one of the two extensions.
 (load `druid-lookups-cached-global` if you only want global cached lookup functionality, load `druid-kafka-extraction-namespace` if you also want kafka lookup functionality)
