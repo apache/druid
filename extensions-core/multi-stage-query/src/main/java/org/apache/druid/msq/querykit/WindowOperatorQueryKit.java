@@ -24,7 +24,6 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Limits;
@@ -51,7 +50,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
@@ -356,31 +354,24 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
   }
 
   /**
-   * Computes the ClusterBy for the final window stage which may or may not have the partition boosted column,
-   * depending on the {@code segmentGranularity} parameter passed. We don't have to take the CLUSTERED BY
-   * columns into account, as they are handled as {@link org.apache.druid.query.scan.ScanQuery#orderBys}.
+   * Computes the ClusterBy for the final window stage. We don't have to take the CLUSTERED BY columns into account,
+   * as they are handled as {@link org.apache.druid.query.scan.ScanQuery#orderBys}.
    */
   private static ClusterBy computeClusterByForFinalWindowStage(Granularity segmentGranularity)
   {
-    if (Objects.equals(segmentGranularity, Granularities.ALL)) {
-      final List<KeyColumn> clusterByColumns = Collections.singletonList(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
-      return new ClusterBy(clusterByColumns, 0);
-    } else {
-      return QueryKitUtils.clusterByWithSegmentGranularity(ClusterBy.none(), segmentGranularity);
-    }
+    final List<KeyColumn> clusterByColumns = Collections.singletonList(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+    return QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
   }
 
   /**
-   * Computes the signature for the final window stage which may or may not have the partition boosted column depending on the
-   * {@code segmentGranularity} passed. It expects that the finalWindowClusterBy already has the partition boost column
-   * if the parameter {@code segmentGranularity} is set as ALL.
+   * Computes the signature for the final window stage. The finalWindowClusterBy will always have the
+   * partition boost column as computed in {@link #computeClusterByForFinalWindowStage(Granularity)}.
    */
   private static RowSignature computeSignatureForFinalWindowStage(RowSignature rowSignature, ClusterBy finalWindowClusterBy, Granularity segmentGranularity)
   {
-    final RowSignature.Builder finalWindowStageRowSignatureBuilder = RowSignature.builder().addAll(rowSignature);
-    if (Objects.equals(segmentGranularity, Granularities.ALL)) {
-      finalWindowStageRowSignatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
-    }
+    final RowSignature.Builder finalWindowStageRowSignatureBuilder = RowSignature.builder()
+                                                                                 .addAll(rowSignature)
+                                                                                 .add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
     return QueryKitUtils.sortableSignature(
         QueryKitUtils.signatureWithSegmentGranularity(finalWindowStageRowSignatureBuilder.build(), segmentGranularity),
         finalWindowClusterBy.getColumns()
