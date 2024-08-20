@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn.types;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.topn.HeapBasedTopNAlgorithm;
@@ -96,6 +97,7 @@ public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends Column
       TopNQuery query,
       ValueSelectorType selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   );
 

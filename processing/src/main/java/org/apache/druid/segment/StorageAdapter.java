@@ -21,20 +21,99 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Optional;
 
 /**
  */
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnInspector
+public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHolderFactory
 {
+
+  /**
+   * Build a {@link CursorHolder} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
+   * scanning segments and creating {@link ColumnSelectorFactory} and
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values at the cursor
+   * position.
+   */
+  @Override
+  default CursorHolder makeCursorHolder(CursorBuildSpec spec)
+  {
+    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
+    return new CursorHolder()
+    {
+      @Override
+      public boolean canVectorize()
+      {
+        return StorageAdapter.this.canVectorize(
+            spec.getFilter(),
+            spec.getVirtualColumns(),
+            Cursors.preferDescendingTimeOrdering(spec)
+        );
+      }
+
+      @Override
+      public Cursor asCursor()
+      {
+        return Iterables.getOnlyElement(
+            StorageAdapter.this.makeCursors(
+                spec.getFilter(),
+                spec.getInterval(),
+                spec.getVirtualColumns(),
+                Granularities.ALL,
+                descending,
+                spec.getQueryMetrics()
+            ).toList()
+        );
+      }
+
+      @Override
+      public VectorCursor asVectorCursor()
+      {
+        return StorageAdapter.this.makeVectorCursor(
+            spec.getFilter(),
+            spec.getInterval(),
+            spec.getVirtualColumns(),
+            descending,
+            spec.getQueryContext().getVectorSize(),
+            spec.getQueryMetrics()
+        );
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
+      }
+
+      @Override
+      public void close()
+      {
+        // consuming sequences of CursorFactory are expected to close themselves.
+      }
+    };
+  }
+
   Interval getInterval();
   Indexed<String> getAvailableDimensions();
   Iterable<String> getAvailableMetrics();
