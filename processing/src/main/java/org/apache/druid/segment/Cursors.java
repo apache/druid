@@ -54,8 +54,6 @@ public class Cursors
   /**
    * Return the {@link Order} of the {@link ColumnHolder#TIME_COLUMN_NAME}, based on a
    * {@link CursorHolder#getOrdering()} or {@link Metadata#getOrdering()}.
-   * @param ordering
-   * @return
    */
   public static Order getTimeOrdering(final List<OrderBy> ordering)
   {

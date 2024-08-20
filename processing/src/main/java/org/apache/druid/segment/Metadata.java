@@ -38,6 +38,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ *
  */
 @PublicApi
 public class Metadata
@@ -107,6 +108,14 @@ public class Metadata
     return rollup;
   }
 
+  /**
+   * Ordering for the segment associated with this object. Nonnull for segments written in current versions of Druid,
+   * but would null for older segments. Null may be interpreted as {@link Cursors#ascendingTimeOrder()}, since prior
+   * to this field being added, segments were always time-ordered.
+   *
+   * When dealing with {@link QueryableIndex}, it is generally better to use {@link QueryableIndex#getOrdering()}, since
+   * that method never returns null.
+   */
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)

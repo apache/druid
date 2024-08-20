@@ -75,38 +75,36 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     }
     this.metadata = input.getMetadata();
 
-    if (metadata != null && metadata.getOrdering() != null) {
-      int foundTimePosition = -1;
-      int i = 0;
+    final List<OrderBy> inputOrdering = input.getOrdering();
 
-      // Some sort columns may not exist in the index, for example if they are omitted due to being 100% nulls.
-      // Locate the __time column in the sort order, skipping any nonexistent columns. This will be the position of
-      // the __time column within the dimension handlers.
-      for (final OrderBy orderBy : metadata.getOrdering()) {
-        final String columnName = orderBy.getColumnName();
+    int foundTimePosition = -1;
+    int i = 0;
 
-        if (orderBy.getOrder() != Order.ASCENDING) {
-          throw DruidException.defensive("Order[%s] for column[%s] is not supported", orderBy.getOrder(), columnName);
-        }
+    // Some sort columns may not exist in the index, for example if they are omitted due to being 100% nulls.
+    // Locate the __time column in the sort order, skipping any nonexistent columns. This will be the position of
+    // the __time column within the dimension handlers.
+    for (final OrderBy orderBy : inputOrdering) {
+      final String columnName = orderBy.getColumnName();
 
-        if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
-          foundTimePosition = i;
-          break;
-        } else if (input.getDimensionHandlers().containsKey(columnName)) {
-          i++;
-        }
+      if (orderBy.getOrder() != Order.ASCENDING) {
+        throw DruidException.defensive("Order[%s] for column[%s] is not supported", orderBy.getOrder(), columnName);
       }
 
-      if (foundTimePosition >= 0) {
-        this.timePositionForComparator = foundTimePosition;
-      } else {
-        // Sort order is set, but does not contain __time. Indexable adapters involve all columns in TimeAndDimsPointer
-        // comparators, so we need to put the __time column somewhere. Put it immediately after the ones in the
-        // sort order.
-        this.timePositionForComparator = metadata.getOrdering().size();
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+        foundTimePosition = i;
+        break;
+      } else if (input.getDimensionHandlers().containsKey(columnName)) {
+        i++;
       }
+    }
+
+    if (foundTimePosition >= 0) {
+      this.timePositionForComparator = foundTimePosition;
     } else {
-      this.timePositionForComparator = 0;
+      // Sort order is set, but does not contain __time. Indexable adapters involve all columns in TimeAndDimsPointer
+      // comparators, so we need to put the __time column somewhere. Put it immediately after the ones in the
+      // sort order.
+      this.timePositionForComparator = inputOrdering.size();
     }
   }
 

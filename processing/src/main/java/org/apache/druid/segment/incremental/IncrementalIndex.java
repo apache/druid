@@ -229,6 +229,9 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final VirtualColumns virtualColumns;
   private final AggregatorFactory[] metrics;
+  /**
+   * Metadata to be persisted along with this index, when it is eventually persisted.
+   */
   private final Metadata metadata;
   protected final boolean preserveExistingMetrics;
 

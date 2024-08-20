@@ -90,14 +90,17 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.virtualColumns = cursorBuildSpec.getVirtualColumns();
     this.aggregatorFactories = cursorBuildSpec.getAggregators();
     this.filter = cursorBuildSpec.getFilter();
+
+    final List<OrderBy> indexOrdering = index.getOrdering();
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
-        && Cursors.getTimeOrdering(index.getMetadata().getOrdering()) == Order.ASCENDING) {
+        && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();
       this.descending = true;
     } else {
-      this.ordering = index.getMetadata().getOrdering();
+      this.ordering = indexOrdering;
       this.descending = false;
     }
+
     this.queryContext = cursorBuildSpec.getQueryContext();
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();

@@ -76,7 +76,6 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -940,17 +939,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         return;
       }
 
-      final Metadata metadata = index.getMetadata();
       final List<String> sortOrder = new ArrayList<>();
 
-      if (metadata != null && metadata.getOrdering() != null) {
-        for (final OrderBy orderBy : metadata.getOrdering()) {
-          final String dimension = orderBy.getColumnName();
-          if (orderBy.getOrder() != Order.ASCENDING) {
-            throw DruidException.defensive("Order[%s] for dimension[%s] not supported", orderBy.getOrder(), dimension);
-          }
-          sortOrder.add(dimension);
+      for (final OrderBy orderBy : index.getOrdering()) {
+        final String dimension = orderBy.getColumnName();
+        if (orderBy.getOrder() != Order.ASCENDING) {
+          throw DruidException.defensive("Order[%s] for dimension[%s] not supported", orderBy.getOrder(), dimension);
         }
+        sortOrder.add(dimension);
       }
 
       for (String dimension : Iterables.concat(sortOrder, index.getAvailableDimensions())) {
