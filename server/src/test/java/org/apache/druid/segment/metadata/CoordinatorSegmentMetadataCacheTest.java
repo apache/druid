@@ -81,6 +81,7 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
@@ -2212,6 +2213,77 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     latch.await(1, TimeUnit.SECONDS);
     Assert.assertEquals(0, latch.getCount());
+  }
+
+  @Test
+  public void testTombstoneSegmentIsNotAdded() throws InterruptedException
+  {
+    String datasource = "newSegmentAddTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+
+    CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        segmentSchemaCache,
+        backFillQueue,
+        sqlSegmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    )
+    {
+      @Override
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+    };
+
+    schema.onLeaderStart();
+    schema.awaitInitialization();
+
+    DataSegment segment = new DataSegment(
+        datasource,
+        Intervals.of("2001/2002"),
+        "1",
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
+        TombstoneShardSpec.INSTANCE,
+        null,
+        null,
+        0
+    );
+
+    Assert.assertEquals(6, schema.getTotalSegments());
+
+    serverView.addSegment(segment, ServerType.HISTORICAL);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assert.assertEquals(0, addSegmentLatch.getCount());
+
+    Assert.assertEquals(6, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(0, metadatas.size());
+
+    serverView.removeSegment(segment, ServerType.HISTORICAL);
+    Assert.assertEquals(6, schema.getTotalSegments());
+    metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(0, metadatas.size());
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
