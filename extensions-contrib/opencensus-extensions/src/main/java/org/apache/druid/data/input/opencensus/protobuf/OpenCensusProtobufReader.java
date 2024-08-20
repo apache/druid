@@ -102,16 +102,19 @@ public class OpenCensusProtobufReader implements InputEntityReader
 
   List<InputRow> readAsList()
   {
+    ByteBuffer buffer = source.getEntity().getBuffer();
     try {
-      ByteBuffer buffer = source.getEntity().getBuffer();
       List<InputRow> rows = parseMetric(Metric.parseFrom(buffer));
-      // Explicitly move the position assuming that all the remaining bytes have been consumed because the protobuf
-      // parser does not update the position itself
-      buffer.position(buffer.limit());
       return rows;
     }
     catch (InvalidProtocolBufferException e) {
       throw new ParseException(null, e, "Protobuf message could not be parsed");
+    }
+    finally {
+      // Explicitly move the position assuming that all the remaining bytes have been consumed because the protobuf
+      // parser does not update the position itself
+      // In case of an exception, the buffer is moved to the end to avoid parsing it in a loop.
+      buffer.position(buffer.limit());
     }
   }
 

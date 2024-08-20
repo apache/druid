@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
 public class OpenTelemetryMetricsProtobufReaderTest
@@ -371,7 +372,7 @@ public class OpenTelemetryMetricsProtobufReaderTest
         "custom."
     ).read()) {
       Assert.assertThrows(ParseException.class, () -> rows.hasNext());
-      Assert.assertThrows(ParseException.class, () -> rows.next());
+      Assert.assertThrows(NoSuchElementException.class, () -> rows.next());
     }
     catch (IOException e) {
       // Comes from the implicit call to close. Ignore
