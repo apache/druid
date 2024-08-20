@@ -24,8 +24,7 @@ sidebar_label: "Indexer"
   -->
 
 :::info
- The Indexer is an optional and [experimental](../development/experimental.md) feature.
- Its memory management system is still under development and will be significantly enhanced in later releases.
+ Instead of the Indexer service, we recommend you use either the MiddleManager and Peon task execution system or [MiddleManager-less ingestion by using Kubernetes](../development/extensions-contrib/k8s-jobs.md).
 :::
 
 The Apache Druid Indexer service is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
