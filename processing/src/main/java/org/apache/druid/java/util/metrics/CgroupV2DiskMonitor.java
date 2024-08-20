@@ -92,6 +92,13 @@ public class CgroupV2DiskMonitor extends FeedDefiningMonitor
     return true;
   }
 
+  /*
+  file: io.stat
+
+  sample content:
+  8:0 rbytes=933898 wbytes=110870538 rios=238 wios=7132 dbytes=0 dios=0
+  15:0 rbytes=34566 wbytes=3466756 rios=23 wios=71 dbytes=0 dios=0
+  */
   public List<Disk.Metrics> snapshot()
   {
     List<Disk.Metrics> diskStats = new ArrayList<>();

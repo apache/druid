@@ -95,6 +95,17 @@ public class CgroupV2CpuMonitor extends FeedDefiningMonitor
     return true;
   }
 
+  /*
+  file: cpu.stat
+
+  sample content:
+  usage_usec 2379951538
+  user_usec 1802023024
+  system_usec 577928513
+  nr_periods 1581231
+  nr_throttled 59
+  throttled_usec 3095133
+  */
   public Snapshot snapshot()
   {
     Map<String, Long> entries = new HashMap<>();
