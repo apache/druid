@@ -137,6 +137,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
       final int numRows
   )
   {
+    assert numRows >= 0;
     final int totalNumValues = FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
         memory,
         getStartOfCumulativeLengthSection(),
