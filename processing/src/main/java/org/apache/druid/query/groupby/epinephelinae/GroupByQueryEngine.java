@@ -39,7 +39,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryMetrics;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.column.GroupByColumnSelectorPlus;
@@ -78,8 +77,7 @@ import java.util.stream.Stream;
  * <p>
  * This code runs on anything that processes {@link StorageAdapter} directly, typically data servers like Historicals.
  * <p>
- * Used for non-vectorized processing by
- * {@link GroupingEngine#process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)}.
+ * Used for non-vectorized processing by {@link GroupingEngine#process}.
  *
  * This code runs on data servers, like Historicals and Peons, and also Brokers, if they operate on local datasources like
  * inlined data wherein the broker needs to process some portion of data like the data server
