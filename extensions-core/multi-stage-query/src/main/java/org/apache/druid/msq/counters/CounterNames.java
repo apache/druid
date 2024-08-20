@@ -72,7 +72,8 @@ public class CounterNames
   /**
    * Standard name for CPU counters created by {@link CounterTracker#cpu}.
    */
-  public static String cpu() {
+  public static String cpu()
+  {
     return CPU;
   }
 

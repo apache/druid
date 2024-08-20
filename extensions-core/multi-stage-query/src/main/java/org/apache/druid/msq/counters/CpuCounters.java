@@ -48,7 +48,7 @@ public class CpuCounters implements QueryCounter
 
   @Nullable
   @Override
-  public QueryCounterSnapshot snapshot()
+  public CpuCounters.Snapshot snapshot()
   {
     final Map<String, CpuCounter.Snapshot> snapshotMap = new HashMap<>();
     for (Map.Entry<String, CpuCounter> entry : counters.entrySet()) {
