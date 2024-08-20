@@ -1951,7 +1951,7 @@ public class ControllerImpl implements Controller
             columnMappings,
             isRollupQuery,
             querySpec.getQuery(),
-            destination.getDimensionToSchemaMap()
+            destination.getDimensionSchemas()
         );
 
     return new DataSchema(
@@ -2127,11 +2127,11 @@ public class ControllerImpl implements Controller
       final String outputColumnName,
       @Nullable final ColumnType queryType,
       QueryContext context,
-      @Nullable Map<String, DimensionSchema> dimensionToSchemaMap
+      @Nullable Map<String, DimensionSchema> dimensionSchemas
   )
   {
-    if (dimensionToSchemaMap != null && dimensionToSchemaMap.containsKey(outputColumnName)) {
-      return dimensionToSchemaMap.get(outputColumnName);
+    if (dimensionSchemas != null && dimensionSchemas.containsKey(outputColumnName)) {
+      return dimensionSchemas.get(outputColumnName);
     }
     // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollup,
     // we won't have an entry in the map. For those cases, use the default config.
@@ -2150,7 +2150,7 @@ public class ControllerImpl implements Controller
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
       final Query<?> query,
-      @Nullable final Map<String, DimensionSchema> dimensionToSchemaMap
+      @Nullable final Map<String, DimensionSchema> dimensionSchemas
   )
   {
     // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
@@ -2237,13 +2237,13 @@ public class ControllerImpl implements Controller
               outputColumnName,
               type,
               query.context(),
-              dimensionToSchemaMap
+              dimensionSchemas
           );
         } else {
           // complex columns only
           if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
             dimensions.add(
-                getDimensionSchema(outputColumnName, type, query.context(), dimensionToSchemaMap)
+                getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas)
             );
           } else if (!isRollupQuery) {
             aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
@@ -2255,7 +2255,7 @@ public class ControllerImpl implements Controller
                 outputColumnName,
                 type,
                 query.context(),
-                dimensionToSchemaMap
+                dimensionSchemas
             );
           }
         }
@@ -2283,14 +2283,14 @@ public class ControllerImpl implements Controller
       String outputColumn,
       ColumnType type,
       QueryContext context,
-      Map<String, DimensionSchema> dimensionToSchemaMap
+      Map<String, DimensionSchema> dimensionSchemas
   )
   {
     if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
       aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
     } else {
       dimensions.add(
-          getDimensionSchema(outputColumn, type, context, dimensionToSchemaMap)
+          getDimensionSchema(outputColumn, type, context, dimensionSchemas)
       );
     }
   }
