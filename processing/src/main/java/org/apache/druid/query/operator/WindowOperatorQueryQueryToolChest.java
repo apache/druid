@@ -195,6 +195,9 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
       return baseQueryRunner.run(queryPlus, responseContext);
     }
 
+    /**
+     * Translates Sequence of RACs to a Sequence of Object[]
+     */
     private static Sequence asRows(final Sequence<RowsAndColumns> baseSequence, final WindowOperatorQuery query)
     {
       final RowSignature rowSignature = query.getRowSignature();
@@ -231,6 +234,9 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
       );
     }
 
+    /**
+     * Translates a sequence of RACs to a Sequence of Frames
+     */
     private static Sequence asFrames(final Sequence<RowsAndColumns> baseSequence)
     {
       return baseSequence.map(
