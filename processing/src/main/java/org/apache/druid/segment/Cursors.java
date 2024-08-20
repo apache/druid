@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -51,27 +49,6 @@ public class Cursors
       return ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()) && Order.DESCENDING == orderBy.getOrder();
     }
     return false;
-  }
-
-  /**
-   * Require the first {@link OrderBy} of {@link CursorHolder#getOrdering()} is {@link ColumnHolder#TIME_COLUMN_NAME}.
-   * Throws {@link DruidException} if the order does not match expectations.
-   */
-  public static void requireTimeOrdering(CursorHolder holder, Order expectedOrder)
-  {
-    if (holder.getTimeOrder() != expectedOrder) {
-      final String failureReason = StringUtils.format(
-          "Cannot order by[%s] with direction[%s] on cursor with order[%s].",
-          ColumnHolder.TIME_COLUMN_NAME,
-          expectedOrder,
-          holder.getOrdering()
-      );
-      holder.close();
-
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.UNSUPPORTED)
-                          .build("%s", failureReason);
-    }
   }
 
   /**

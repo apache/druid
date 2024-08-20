@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.CursorGranularizer;
-import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -102,9 +101,7 @@ public class TimeseriesQueryEngine
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
 
-
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
-    Cursors.requireTimeOrdering(cursorHolder, query.isDescending() ? Order.DESCENDING : Order.ASCENDING);
     try {
       final Sequence<Result<TimeseriesResultValue>> result;
 
