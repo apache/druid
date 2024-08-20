@@ -263,7 +263,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
             baseFilter
         );
 
-
         if (joinFilterSplit.getBaseTableFilter().isPresent()) {
           cursorBuildSpecBuilder.setFilter(joinFilterSplit.getBaseTableFilter().get());
         }

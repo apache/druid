@@ -331,7 +331,7 @@ public class TimeBoundaryQueryRunnerFactory
     long minTime = Long.MAX_VALUE, maxTime = Long.MIN_VALUE;
     while (!cursor.isDone()) {
       final long[] timeVector = timeSelector.getLongVector();
-      for (int i = 0 ; i < cursor.getCurrentVectorSize(); i++) {
+      for (int i = 0; i < cursor.getCurrentVectorSize(); i++) {
         final long timestamp = timeVector[i];
         minTime = Math.min(minTime, timestamp);
         maxTime = Math.max(maxTime, timestamp);
