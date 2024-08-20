@@ -329,7 +329,7 @@ public class MSQCompactionRunner implements CompactionRunner
       // The changed granularity would result in a new virtual column that needs to be aggregated upon.
       dimensionSpecs.add(new DefaultDimensionSpec(TIME_VIRTUAL_COLUMN, TIME_VIRTUAL_COLUMN, ColumnType.LONG));
     }
-
+    // If virtual columns are created from dimensions, replace dimension columns names with virtual column names.
     dimensionSpecs.addAll(
         dataSchema.getDimensionsSpec().getDimensions().stream()
                   .map(dim -> {

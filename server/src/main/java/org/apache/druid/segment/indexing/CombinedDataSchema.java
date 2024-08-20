@@ -28,6 +28,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -76,7 +77,7 @@ public class CombinedDataSchema extends DataSchema
     public MultiValuedColumnsInfo(boolean processed, Set<String> multiValuedColumns)
     {
       this.processed = processed;
-      this.multiValuedColumns = multiValuedColumns == null ? Collections.emptySet() : multiValuedColumns;
+      this.multiValuedColumns = multiValuedColumns;
     }
 
     public static MultiValuedColumnsInfo notProcessed()
@@ -86,7 +87,7 @@ public class CombinedDataSchema extends DataSchema
 
     public static MultiValuedColumnsInfo processed()
     {
-      return new MultiValuedColumnsInfo(true, Collections.emptySet());
+      return new MultiValuedColumnsInfo(true, new HashSet<>());
     }
 
     public void addMultiValuedColumn(String col)

@@ -992,8 +992,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       if (!needMultiValuedColumns) {
         return;
       }
-      // Process both dimensions and metrics since user-specified dimensions in compaction config may contain metric
-      // columns.
+      // Process both dimensions and metrics since user-specified dimensions in compaction config may contain columns
+      // that were originally part of metrics.
       for (String dimension: index.getAvailableDimensions()){
         if (isMultiValueColumn(index, dimension)){
           multiValuedColumnsInfo.addMultiValuedColumn(dimension);
