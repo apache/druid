@@ -670,7 +670,7 @@ public class SuperSorter
         final OutputChannel outputChannel = outputChannelFactory.openChannel(intRank);
         writableChannel = outputChannel.getWritableChannel();
         frameAllocatorFactory = new SingleMemoryAllocatorFactory(outputChannel.getFrameMemoryAllocator());
-        outputChannels.set(intRank, outputChannel);
+        outputChannels.set(intRank, outputChannel.readOnly());
 
         if (totalMergingLevels == 1) {
           // Reading from the inputBuffer. (i.e. "direct mode"; see class-level javadoc for more details.)
