@@ -2537,6 +2537,7 @@ Returns whether a timestamp is contained within a particular interval. Intervals
 <details><summary>Example</summary>
 
 The following example returns `true` when a timestamp in the `__time` column from the `taxi-trips` datasource is in an one hour interval starting from `2013-08-01T08:00:00`. 
+
 ```sql
 SELECT 
   "__time" AS "original_time",
