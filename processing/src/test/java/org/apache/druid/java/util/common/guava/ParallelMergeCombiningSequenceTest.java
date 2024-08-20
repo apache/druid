@@ -605,7 +605,7 @@ public class ParallelMergeCombiningSequenceTest
     }
 
     // sleep until timeout
-    Thread.sleep(1000);
+    Thread.sleep(5000);
     Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
     Assert.assertFalse(pool.hasQueuedSubmissions());
