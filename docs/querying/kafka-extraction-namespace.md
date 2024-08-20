@@ -24,6 +24,9 @@ title: "Apache Kafka Lookups"
 
 To use this Apache Druid extension, [include](../configuration/extensions.md#loading-extensions) `druid-lookups-cached-global` and `druid-kafka-extraction-namespace` in the extensions load list.
 
+This extension provides all the functionality of `druid-lookups-cached-global`. You should only load one of the two extensions.
+(load `druid-lookups-cached-global` if you only want global cached lookup functionality, load `druid-kafka-extraction-namespace` if you also want kafka lookup functionality)
+
 If you need updates to populate as promptly as possible, it is possible to plug into a Kafka topic whose key is the old value and message is the desired new value (both in UTF-8) as a LookupExtractorFactory.
 
 ```json
