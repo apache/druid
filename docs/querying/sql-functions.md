@@ -1124,7 +1124,7 @@ Returns the following:
 
 ## EXTRACT
 
-Extracts the value of some unit of the timestamp. 
+Extracts the value of some unit from the timestamp.
 
 * **Syntax:** `EXTRACT(unit FROM timestamp_expr)`
 * **Function type:** Scalar, date and time
@@ -2536,7 +2536,7 @@ Returns whether a timestamp is contained within a particular interval. Intervals
 
 <details><summary>Example</summary>
 
-The following example returns `true` when a timestamp in the `__time` column from the `taxi-trips` datasource is in an one hour interval starting from `2013-08-01T08:00:00`. 
+The following example returns `true` when a timestamp in the `__time` column of the `taxi-trips` datasource is within a hour interval starting from `2013-08-01T08:00:00`.
 
 ```sql
 SELECT 
@@ -2600,13 +2600,11 @@ Returns the following:
 
 </details>
 
-
 [Learn more](sql-scalar.md#date-and-time-functions)
-
 
 ## TIMESTAMPADD
 
-Adds `count` number of a `unit` to a given timestamp.
+Adds a `unit` of time to `timestamp` a total of `count` times.
 
 * **Syntax:** `TIMESTAMPADD(unit, count, timestamp)`
 * **Function type:** Scalar, date and time
