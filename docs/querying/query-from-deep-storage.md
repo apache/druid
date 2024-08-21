@@ -31,15 +31,15 @@ Query from deep storage requires the Multi-stage query (MSQ) task engine. Load t
 To be queryable, your datasource must meet one of the following conditions:
 
 - At least one segment from the datasource is loaded onto a Historical service for Druid to plan the query. This segment can be any segment from the datasource. You can verify that a datasource has at least one segment on a Historical service if it's visible in the Druid console.
-- You have the centralized data source schema feature enabled. For more information, see [Centralized datasource schema](../configuration/index.md#centralized-datasource-schema).
+- You have the centralized datasource schema feature enabled. For more information, see [Centralized datasource schema](../configuration/index.md#centralized-datasource-schema).
 
-If you use centralized data source schemas, there's an additional step for any datasource created prior to enabling it to make the datasource queryable from deep storage. You need to load the cold segments onto a Historical so that the schema can be backfilled in the metadata database. You can load some or all of the segments that are only in deep storage. If you don't load all the segments, any dimensions that are only in the segments you didn't load will not be in the queryable datasource schema and won't be queryable from deep storage. That is, only the dimensions that are in the metadata database and the schema are queryable. Once that process is complete, you can unload all the segments from the Historical and only keep the data in deep storage.
+If you use centralized data source schema, there's an additional step for any datasource created prior to enabling it to make the datasource queryable from deep storage. You need to load the segments from deep storage onto a Historical so that the schema can be backfilled in the metadata database. You can load some or all of the segments that are only in deep storage. If you don't load all the segments, any dimensions that are only in the segments you didn't load will not be in the queryable datasource schema and won't be queryable from deep storage. That is, only the dimensions that are present in the segment schema in metadata database are queryable. Once that process is complete, you can unload all the segments from the Historical and only keep the data in deep storage.
 
 ## Keep segments in deep storage only
 
-Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes. If you use centralized data source schemas, a datasource can be kept only in deep storage but remain queryable.
+Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes. If you use centralized datasource schema, a datasource can be kept only in deep storage but remain queryable.
 
-To manage the which segments are kept only in deep storage and which get loaded onto Historical processes., configure [load rules](../operations/rule-configuration.md#load-rules) 
+To manage which segments are kept only in deep storage and which get loaded onto Historical processes, configure [load rules](../operations/rule-configuration.md#load-rules) 
 
 The easiest way to keep segments only in deep storage is to explicitly configure the segments that don't get loaded onto Historical processes. Set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`. For example, if you configure the following rule for a datasource:
 
