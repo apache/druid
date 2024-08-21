@@ -788,7 +788,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.needMultiValuedColumns = needMultiValuedColumns;
     }
 
-    private boolean fetchSegments(){
+    private boolean fetchSegments()
+    {
       // Don't fetch segments just for needMultiValueDimensions
       return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec;
     }
@@ -998,8 +999,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
       // Process both dimensions and metrics since user-specified dimensions in compaction config may contain columns
       // that were originally part of metrics.
-      for (String dimension: index.getAvailableDimensions()){
-        if (isMultiValueColumn(index, dimension)){
+      for (String dimension : index.getAvailableDimensions()) {
+        if (isMultiValueColumn(index, dimension)) {
           multiValuedColumnsInfo.addMultiValuedColumn(dimension);
         }
       }

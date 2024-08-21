@@ -22,7 +22,6 @@ package org.apache.druid.segment.indexing;
 import javax.annotation.Nonnull;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 public class MultiValuedColumnsInfo
