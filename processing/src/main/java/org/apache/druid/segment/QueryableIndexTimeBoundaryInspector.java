@@ -23,9 +23,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Order;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.NumericColumn;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
-
-import javax.annotation.Nullable;
 
 /**
  * {@link TimeBoundaryInspector} for {@link QueryableIndex} that are sorted by {@link ColumnHolder#TIME_COLUMN_NAME}.
@@ -33,26 +32,26 @@ import javax.annotation.Nullable;
 public class QueryableIndexTimeBoundaryInspector implements TimeBoundaryInspector
 {
   private final QueryableIndex index;
+  private final boolean timeOrdered;
 
-  private QueryableIndexTimeBoundaryInspector(final QueryableIndex index)
+  private QueryableIndexTimeBoundaryInspector(final QueryableIndex index, final boolean timeOrdered)
   {
     this.index = index;
+    this.timeOrdered = timeOrdered;
   }
 
-  @Nullable
   public static QueryableIndexTimeBoundaryInspector create(final QueryableIndex index)
   {
-    if (Cursors.getTimeOrdering(index.getOrdering()) == Order.ASCENDING) {
-      return new QueryableIndexTimeBoundaryInspector(index);
-    } else {
-      return null;
-    }
+    return new QueryableIndexTimeBoundaryInspector(
+        index,
+        Cursors.getTimeOrdering(index.getOrdering()) == Order.ASCENDING
+    );
   }
 
-  @Nullable
+  @MonotonicNonNull
   private volatile DateTime minTime;
 
-  @Nullable
+  @MonotonicNonNull
   private volatile DateTime maxTime;
 
   @Override
@@ -80,16 +79,22 @@ public class QueryableIndexTimeBoundaryInspector implements TimeBoundaryInspecto
   @Override
   public boolean isMinMaxExact()
   {
-    return true;
+    return timeOrdered;
   }
 
   private void populateMinMaxTime()
   {
-    // Compute and cache minTime, maxTime.
-    final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-    try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
-      this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
-      this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
+    if (timeOrdered) {
+      // Compute and cache minTime, maxTime.
+      final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
+      try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
+        this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
+        this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
+      }
+    } else {
+      // Use metadata. (Will be inexact.)
+      this.minTime = index.getDataInterval().getStart();
+      this.maxTime = index.getDataInterval().getEnd();
     }
   }
 }

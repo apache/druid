@@ -6268,6 +6268,9 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTopNAggregateTopnMetricFirstWithGranularity()
   {
+    // Granularity != ALL requires time-ordering.
+    assumeTimeOrdered();
+
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.MONTH_GRAN)

@@ -37,13 +37,16 @@ import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterBundle;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.vector.BitmapVectorOffset;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
@@ -58,6 +61,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -75,7 +79,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Nullable
   private final QueryMetrics<? extends Query> metrics;
   private final List<OrderBy> ordering;
-  private final boolean descending;
   private final QueryContext queryContext;
   private final int vectorSize;
   private final Supplier<CursorResources> resourcesSupplier;
@@ -95,16 +98,23 @@ public class QueryableIndexCursorHolder implements CursorHolder
     if (Cursors.preferDescendingTimeOrdering(cursorBuildSpec)
         && Cursors.getTimeOrdering(indexOrdering) == Order.ASCENDING) {
       this.ordering = Cursors.descendingTimeOrder();
-      this.descending = true;
     } else {
       this.ordering = indexOrdering;
-      this.descending = false;
     }
 
     this.queryContext = cursorBuildSpec.getQueryContext();
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();
-    this.resourcesSupplier = Suppliers.memoize(() -> new CursorResources(index, virtualColumns, filter, metrics));
+    this.resourcesSupplier = Suppliers.memoize(
+        () -> new CursorResources(
+            index,
+            virtualColumns,
+            Cursors.getTimeOrdering(ordering),
+            interval,
+            filter,
+            metrics
+        )
+    );
   }
 
   @Override
@@ -133,7 +143,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
     }
 
     // vector cursors can't iterate backwards yet
-    return !descending;
+    return Cursors.getTimeOrdering(ordering) != Order.DESCENDING;
   }
 
   @Override
@@ -151,45 +161,55 @@ public class QueryableIndexCursorHolder implements CursorHolder
     final long maxDataTimestamp = resources.maxDataTimestamp;
     final NumericColumn timestamps = resources.timestamps;
     final ColumnCache columnCache = resources.columnCache;
+    final Order timeOrder = resources.timeOrder;
 
-    // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
+    // if filterBundle is null, the filter itself is also null. otherwise check to see if the filter
     // can use an index
     if (filterBundle == null || filterBundle.getIndex() == null) {
-      baseOffset = descending ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
+      baseOffset =
+          timeOrder == Order.DESCENDING ? new SimpleDescendingOffset(numRows) : new SimpleAscendingOffset(numRows);
     } else {
-      baseOffset = BitmapOffset.of(filterBundle.getIndex().getBitmap(), descending, index.getNumRows());
+      baseOffset =
+          BitmapOffset.of(filterBundle.getIndex().getBitmap(), timeOrder == Order.DESCENDING, index.getNumRows());
     }
 
     final long timeStart = Math.max(interval.getStartMillis(), minDataTimestamp);
     final long timeEnd = interval.getEndMillis();
 
-    if (descending) {
-      for (; baseOffset.withinBounds(); baseOffset.increment()) {
-        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
-          break;
-        }
-      }
-    } else {
+    if (timeOrder == Order.ASCENDING) {
       for (; baseOffset.withinBounds(); baseOffset.increment()) {
         if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) >= timeStart) {
           break;
         }
       }
+    } else if (timeOrder == Order.DESCENDING) {
+      for (; baseOffset.withinBounds(); baseOffset.increment()) {
+        if (timestamps.getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
+          break;
+        }
+      }
     }
 
-    final Offset offset = descending ?
-                          new DescendingTimestampCheckingOffset(
-                              baseOffset,
-                              timestamps,
-                              timeStart,
-                              minDataTimestamp >= timeStart
-                          ) :
-                          new AscendingTimestampCheckingOffset(
-                              baseOffset,
-                              timestamps,
-                              timeEnd,
-                              maxDataTimestamp < timeEnd
-                          );
+    final Offset offset;
+
+    if (timeOrder == Order.ASCENDING) {
+      offset = new AscendingTimestampCheckingOffset(
+          baseOffset,
+          timestamps,
+          timeEnd,
+          maxDataTimestamp < timeEnd
+      );
+    } else if (timeOrder == Order.DESCENDING) {
+      offset = new DescendingTimestampCheckingOffset(
+          baseOffset,
+          timestamps,
+          timeStart,
+          minDataTimestamp >= timeStart
+      );
+    } else {
+      // Time filter is moved into filterBundle in the non-time-ordered case.
+      offset = baseOffset;
+    }
 
     final Offset baseCursorOffset = offset.clone();
     final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
@@ -205,7 +225,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
                                                .valueMatcher(
                                                    columnSelectorFactory,
                                                    baseCursorOffset,
-                                                   descending
+                                                   timeOrder == Order.DESCENDING
                                                );
       final FilteredOffset filteredOffset = new FilteredOffset(baseCursorOffset, matcher);
       return new QueryableIndexCursor(filteredOffset, columnSelectorFactory);
@@ -228,6 +248,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
     final long maxDataTimestamp = resources.maxDataTimestamp;
     final NumericColumn timestamps = resources.timestamps;
     final ColumnCache columnCache = resources.columnCache;
+    final Order timeOrder = resources.timeOrder;
     // Wrap the remainder of cursor setup in a try, so if an error is encountered while setting it up, we don't
     // leak columns in the ColumnCache.
 
@@ -240,17 +261,18 @@ public class QueryableIndexCursorHolder implements CursorHolder
       metrics.vectorized(true);
     }
 
-
+    // startOffset, endOffset must match the "interval" if timeOrdered. Otherwise, the "interval" filtering is embedded
+    // within the filterBundle.
     final int startOffset;
     final int endOffset;
 
-    if (interval.getStartMillis() > minDataTimestamp) {
+    if (timeOrder != Order.NONE && interval.getStartMillis() > minDataTimestamp) {
       startOffset = timeSearch(timestamps, interval.getStartMillis(), 0, index.getNumRows());
     } else {
       startOffset = 0;
     }
 
-    if (interval.getEndMillis() <= maxDataTimestamp) {
+    if (timeOrder != Order.NONE && interval.getEndMillis() <= maxDataTimestamp) {
       endOffset = timeSearch(timestamps, interval.getEndMillis(), startOffset, index.getNumRows());
     } else {
       endOffset = index.getNumRows();
@@ -631,24 +653,21 @@ public class QueryableIndexCursorHolder implements CursorHolder
     private final long maxDataTimestamp;
     private final int numRows;
     @Nullable
-    private final Filter filter;
-    @Nullable
     private final FilterBundle filterBundle;
     private final NumericColumn timestamps;
+    private final Order timeOrder;
     private final ColumnCache columnCache;
-    @Nullable
-    private final QueryMetrics<? extends Query<?>> metrics;
 
     private CursorResources(
         QueryableIndex index,
         VirtualColumns virtualColumns,
+        Order timeOrder,
+        Interval interval,
         @Nullable Filter filter,
         @Nullable QueryMetrics<? extends Query<?>> metrics
     )
     {
       this.closer = Closer.create();
-      this.filter = filter;
-      this.metrics = metrics;
       this.columnCache = new ColumnCache(index, closer);
       final ColumnSelectorColumnIndexSelector bitmapIndexSelector = new ColumnSelectorColumnIndexSelector(
           index.getBitmapFactoryForDimensions(),
@@ -657,10 +676,22 @@ public class QueryableIndexCursorHolder implements CursorHolder
       );
       try {
         this.numRows = index.getNumRows();
-        this.filterBundle = makeFilterBundle(bitmapIndexSelector, numRows);
         this.timestamps = (NumericColumn) columnCache.getColumn(ColumnHolder.TIME_COLUMN_NAME);
         this.minDataTimestamp = DateTimes.utc(timestamps.getLongSingleValueRow(0)).getMillis();
         this.maxDataTimestamp = DateTimes.utc(timestamps.getLongSingleValueRow(timestamps.length() - 1)).getMillis();
+        this.filterBundle = makeFilterBundle(
+            computeFilterWithIntervalIfNeeded(
+                timeOrder,
+                this.minDataTimestamp,
+                this.maxDataTimestamp,
+                interval,
+                filter
+            ),
+            bitmapIndexSelector,
+            numRows,
+            metrics
+        );
+        this.timeOrder = timeOrder;
       }
       catch (Throwable t) {
         throw CloseableUtils.closeAndWrapInCatch(t, closer);
@@ -672,49 +703,87 @@ public class QueryableIndexCursorHolder implements CursorHolder
     {
       closer.close();
     }
+  }
 
-    @Nullable
-    private FilterBundle makeFilterBundle(
-        ColumnSelectorColumnIndexSelector bitmapIndexSelector,
-        int numRows
-    )
-    {
-      final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
-      final BitmapResultFactory<?> bitmapResultFactory;
-      if (metrics != null) {
-        bitmapResultFactory = metrics.makeBitmapResultFactory(bitmapFactory);
-        metrics.reportSegmentRows(numRows);
+  /**
+   * TODO(gianm) javadoc
+   */
+  @Nullable
+  private static FilterBundle makeFilterBundle(
+      @Nullable final Filter filter,
+      final ColumnSelectorColumnIndexSelector bitmapIndexSelector,
+      final int numRows,
+      @Nullable final QueryMetrics<?> metrics
+  )
+  {
+    final BitmapFactory bitmapFactory = bitmapIndexSelector.getBitmapFactory();
+    final BitmapResultFactory<?> bitmapResultFactory;
+    if (metrics != null) {
+      bitmapResultFactory = metrics.makeBitmapResultFactory(bitmapFactory);
+      metrics.reportSegmentRows(numRows);
+    } else {
+      bitmapResultFactory = new DefaultBitmapResultFactory(bitmapFactory);
+    }
+    if (filter == null) {
+      return null;
+    }
+    final long bitmapConstructionStartNs = System.nanoTime();
+    final FilterBundle filterBundle = filter.makeFilterBundle(
+        bitmapIndexSelector,
+        bitmapResultFactory,
+        numRows,
+        numRows,
+        false
+    );
+    if (metrics != null) {
+      final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
+      metrics.reportBitmapConstructionTime(buildTime);
+      final FilterBundle.BundleInfo info = filterBundle.getInfo();
+      metrics.filterBundle(info);
+      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
+      if (filterBundle.getIndex() != null) {
+        metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
       } else {
-        bitmapResultFactory = new DefaultBitmapResultFactory(bitmapFactory);
+        metrics.reportPreFilteredRows(0);
       }
-      if (filter == null) {
-        return null;
-      }
-      final long bitmapConstructionStartNs = System.nanoTime();
-      final FilterBundle filterBundle = filter.makeFilterBundle(
-          bitmapIndexSelector,
-          bitmapResultFactory,
-          numRows,
-          numRows,
-          false
+    } else if (log.isDebugEnabled()) {
+      final FilterBundle.BundleInfo info = filterBundle.getInfo();
+      final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
+      log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
+    }
+    return filterBundle;
+  }
+
+  /**
+   * TODO(gianm) javadoc
+   */
+  @Nullable
+  private static Filter computeFilterWithIntervalIfNeeded(
+      final Order timeOrder,
+      final long minDataTimestamp,
+      final long maxDataTimestamp,
+      final Interval interval,
+      @Nullable final Filter filter
+  )
+  {
+    if (timeOrder == Order.NONE
+        && (minDataTimestamp < interval.getStartMillis() || maxDataTimestamp >= interval.getEndMillis())) {
+      return Filters.and(
+          Arrays.asList(
+              new RangeFilter(
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  ColumnType.LONG,
+                  minDataTimestamp < interval.getStartMillis() ? interval.getStartMillis() : null,
+                  maxDataTimestamp >= interval.getEndMillis() ? interval.getEndMillis() : null,
+                  false,
+                  true,
+                  null
+              ),
+              filter
+          )
       );
-      if (metrics != null) {
-        final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
-        metrics.reportBitmapConstructionTime(buildTime);
-        final FilterBundle.BundleInfo info = filterBundle.getInfo();
-        metrics.filterBundle(info);
-        log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
-        if (filterBundle.getIndex() != null) {
-          metrics.reportPreFilteredRows(filterBundle.getIndex().getBitmap().size());
-        } else {
-          metrics.reportPreFilteredRows(0);
-        }
-      } else if (log.isDebugEnabled()) {
-        final FilterBundle.BundleInfo info = filterBundle.getInfo();
-        final long buildTime = System.nanoTime() - bitmapConstructionStartNs;
-        log.debug("Filter partitioning (%sms):%s", TimeUnit.NANOSECONDS.toMillis(buildTime), info);
-      }
-      return filterBundle;
+    } else {
+      return filter;
     }
   }
 }
