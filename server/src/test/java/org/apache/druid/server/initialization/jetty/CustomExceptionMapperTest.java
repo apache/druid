@@ -22,13 +22,11 @@ package org.apache.druid.server.initialization.jetty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.ws.rs.core.Response;
@@ -37,9 +35,6 @@ import javax.ws.rs.core.Response;
 public class CustomExceptionMapperTest
 {
   @Mock
-  private ServerConfig serverConfig;
-
-  @Mock
   private JsonParser jsonParser;
 
   private CustomExceptionMapper customExceptionMapper;
@@ -47,40 +42,34 @@ public class CustomExceptionMapperTest
   @Before
   public void setUp()
   {
-    customExceptionMapper = new CustomExceptionMapper(serverConfig);
+    customExceptionMapper = new CustomExceptionMapper();
   }
 
   @Test
-  public void testResponseWithoutDetail()
+  public void testResponseWithSimpleMessage()
   {
-    Mockito.when(serverConfig.isShowDetailedJsonMappingError()).thenReturn(false);
-
     final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
     final Response response = customExceptionMapper.toResponse(exception);
 
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity() instanceof ImmutableMap);
 
-    final ImmutableMap<Object, Object> map = (ImmutableMap) response.getEntity();
+    final ImmutableMap<Object, Object> map = (ImmutableMap<Object, Object>) response.getEntity();
     Assert.assertEquals(1, map.size());
-    Assert.assertEquals(CustomExceptionMapper.UNABLE_TO_PROCESS_ERROR, map.get(CustomExceptionMapper.ERROR_KEY));
-    Assert.assertNull(map.get(CustomExceptionMapper.ERR_MSG_KEY));
+    Assert.assertEquals("Test exception", map.get(CustomExceptionMapper.ERROR_KEY));
   }
 
   @Test
-  public void testResponseWithDetail()
+  public void testResponseWithLongMessage()
   {
-    Mockito.when(serverConfig.isShowDetailedJsonMappingError()).thenReturn(true);
-
-    final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
+    final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception\nStack trace\nMisc details");
     final Response response = customExceptionMapper.toResponse(exception);
 
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     Assert.assertTrue(response.getEntity() instanceof ImmutableMap);
 
-    final ImmutableMap<Object, Object> map = (ImmutableMap) response.getEntity();
-    Assert.assertEquals(2, map.size());
-    Assert.assertEquals(CustomExceptionMapper.UNABLE_TO_PROCESS_ERROR, map.get(CustomExceptionMapper.ERROR_KEY));
-    Assert.assertEquals("Test exception", map.get(CustomExceptionMapper.ERR_MSG_KEY));
+    final ImmutableMap<Object, Object> map = (ImmutableMap<Object, Object>) response.getEntity();
+    Assert.assertEquals(1, map.size());
+    Assert.assertEquals("Test exception", map.get(CustomExceptionMapper.ERROR_KEY));
   }
 }

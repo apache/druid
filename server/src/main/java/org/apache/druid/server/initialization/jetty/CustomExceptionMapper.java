@@ -22,8 +22,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Inject;
-import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -32,30 +31,21 @@ import javax.ws.rs.ext.Provider;
 @Provider
 public class CustomExceptionMapper implements ExceptionMapper<JsonMappingException>
 {
+  private static final Logger log = new Logger(CustomExceptionMapper.class);
   public static final String ERROR_KEY = "error";
-  public static final String ERR_MSG_KEY = "errorMessage";
-  public static final String UNABLE_TO_PROCESS_ERROR = "unable to process json input";
-
-  private final ServerConfig config;
-
-  @Inject
-  public CustomExceptionMapper(ServerConfig config)
-  {
-    this.config = config;
-  }
+  public static final String UNABLE_TO_PROCESS_ERROR = "unknown json mapping exception";
 
   @Override
   public Response toResponse(JsonMappingException exception)
   {
-    final ImmutableMap.Builder<Object, Object> builder = ImmutableMap.builder()
-                                                                     .put(ERROR_KEY, UNABLE_TO_PROCESS_ERROR);
-
-    if (config.isShowDetailedJsonMappingError()) {
-      builder.put(ERR_MSG_KEY, exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage());
-    }
-
+    log.warn(exception.getMessage() == null ? UNABLE_TO_PROCESS_ERROR : exception.getMessage());
     return Response.status(Response.Status.BAD_REQUEST)
-                   .entity(builder.build())
+                   .entity(ImmutableMap.of(
+                       ERROR_KEY,
+                       exception.getMessage() == null
+                       ? UNABLE_TO_PROCESS_ERROR
+                       : exception.getMessage().split(System.lineSeparator())[0]
+                   ))
                    .build();
   }
 }

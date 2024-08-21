@@ -65,7 +65,6 @@ public class ServerConfigTest
         true,
         new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
         "my-cool-policy",
-        true,
         true
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
@@ -80,7 +79,6 @@ public class ServerConfigTest
     Assert.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
     Assert.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
     Assert.assertTrue(modifiedConfig2.isEnableHSTS());
-    Assert.assertTrue(modifiedConfig2.isShowDetailedJsonMappingError());
   }
 
   @Test
