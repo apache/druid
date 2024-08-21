@@ -2644,7 +2644,7 @@ The following example calculates the taxi trip length in minutes by subtracting 
 SELECT
   "__time" AS "pickup_time",
   "dropoff_datetime" AS "dropoff_time",
-  TIMESTAMPDIFF (MINUTE, "__time", TIME_PARSE("dropoff_datetime"))
+  TIMESTAMPDIFF (MINUTE, "__time", TIME_PARSE("dropoff_datetime")) AS "trip_length"
 FROM "taxi-trips"
 LIMIT 1
 ```
