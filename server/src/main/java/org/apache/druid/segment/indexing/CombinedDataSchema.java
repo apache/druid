@@ -27,9 +27,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Class representing the combined DataSchema of a set of segments, currently used only by Compaction.
@@ -37,7 +34,6 @@ import java.util.Set;
 public class CombinedDataSchema extends DataSchema
 {
   private final MultiValuedColumnsInfo multiValuedColumnsInfo;
-  private static final MultiValuedColumnsInfo NOT_PROCESSED = new MultiValuedColumnsInfo(false, Collections.emptySet());
 
   public CombinedDataSchema(
       String dataSource,
@@ -68,42 +64,4 @@ public class CombinedDataSchema extends DataSchema
     return multiValuedColumnsInfo;
   }
 
-
-  public static class MultiValuedColumnsInfo
-  {
-    final boolean processed;
-    final Set<String> multiValuedColumns;
-
-    public MultiValuedColumnsInfo(boolean processed, Set<String> multiValuedColumns)
-    {
-      this.processed = processed;
-      this.multiValuedColumns = multiValuedColumns;
-    }
-
-    public static MultiValuedColumnsInfo notProcessed()
-    {
-      return NOT_PROCESSED;
-    }
-
-    public static MultiValuedColumnsInfo processed()
-    {
-      return new MultiValuedColumnsInfo(true, new HashSet<>());
-    }
-
-    public void addMultiValuedColumn(String col)
-    {
-      multiValuedColumns.add(col);
-    }
-
-    public boolean isProcessed()
-    {
-      return processed;
-    }
-
-    @Nonnull
-    public Set<String> getMultiValuedColumns()
-    {
-      return multiValuedColumns;
-    }
-  }
 }

@@ -68,6 +68,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.MultiValuedColumnsInfo;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -338,8 +339,8 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    CombinedDataSchema.MultiValuedColumnsInfo multiValuedColumnsInfo =
-        CombinedDataSchema.MultiValuedColumnsInfo.processed();
+    MultiValuedColumnsInfo multiValuedColumnsInfo =
+        MultiValuedColumnsInfo.processed();
     multiValuedColumnsInfo.addMultiValuedColumn(MV_STRING_DIMENSION.getName());
 
     CombinedDataSchema dataSchema = new CombinedDataSchema(

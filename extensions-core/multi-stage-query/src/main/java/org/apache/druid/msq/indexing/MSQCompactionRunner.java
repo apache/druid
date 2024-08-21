@@ -197,14 +197,13 @@ public class MSQCompactionRunner implements CompactionRunner
       Interval interval = intervalDataSchema.getKey();
       DataSchema dataSchema = intervalDataSchema.getValue();
       Map<String, VirtualColumn> inputToVirtualColMap = getVirtualColumns(dataSchema, interval);
-      VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
 
       if (isGroupBy(dataSchema)) {
-        // Convert MVD columns converted to arrays back to MVD, with the same name as the input column.
+        // Convert MVDs converted to arrays back to MVDs, with the same name as the input column.
         // This is safe since input column names no longer exist at post-aggregation stage.
         query = buildGroupByQuery(compactionTask, interval, dataSchema, inputToVirtualColMap);
       } else {
-        query = buildScanQuery(compactionTask, interval, dataSchema, virtualColumns);
+        query = buildScanQuery(compactionTask, interval, dataSchema, inputToVirtualColMap);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
@@ -317,7 +316,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static List<DimensionSpec> getAggregateDimensions(
       DataSchema dataSchema,
-      Map<String, VirtualColumn> inputToVirtualColumnMap
+      Map<String, VirtualColumn> inputToVirtualColMap
   )
   {
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
@@ -335,18 +334,14 @@ public class MSQCompactionRunner implements CompactionRunner
                   .map(dim -> {
                     String dimension = dim.getName();
                     ColumnType colType = dim.getColumnType();
-                    if (inputToVirtualColumnMap.containsKey(dim.getName())) {
-                      VirtualColumn virtualColumn = inputToVirtualColumnMap.get(dimension);
+                    if (inputToVirtualColMap.containsKey(dim.getName())) {
+                      VirtualColumn virtualColumn = inputToVirtualColMap.get(dimension);
                       dimension = virtualColumn.getOutputName();
                       if (virtualColumn instanceof ExpressionVirtualColumn) {
-                        colType = ((ExpressionVirtualColumn) inputToVirtualColumnMap.get(dim.getName())).getOutputType();
+                        colType = ((ExpressionVirtualColumn) virtualColumn).getOutputType();
                       }
                     }
-                    return new DefaultDimensionSpec(
-                        dimension,
-                        dimension,
-                        colType
-                    );
+                    return new DefaultDimensionSpec(dimension, dimension, colType);
                   })
                   .collect(Collectors.toList()));
     return dimensionSpecs;
@@ -387,9 +382,10 @@ public class MSQCompactionRunner implements CompactionRunner
     return Collections.emptyList();
   }
 
-  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema, VirtualColumns virtualColumns)
+  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema, Map<String, VirtualColumn> inputToVirtualColMap)
   {
     RowSignature rowSignature = getRowSignature(dataSchema);
+    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
         .dataSource(dataSchema.getDataSource())
         .columns(rowSignature.getColumnNames())
@@ -438,13 +434,13 @@ public class MSQCompactionRunner implements CompactionRunner
   }
 
   /**
-   * Creates below virtual columns
+   * Conditionally creates below virtual columns
    * <ul>
-   * <li>virtual timestamp column (for custom query_granularity): to create a new __time field according to the
-   * provided queryGranularity, as queryGranularity field itself is mandated to be ALL in MSQControllerTask.</li>
-   * <li>array columns (for group-by queries): converts MVD columns to array to group them without unnesting.</li>
+   * <li>timestamp column (for custom queryGranularity): converts __time field in line with the provided
+   * queryGranularity, since the queryGranularity field itself in MSQControllerTask is mandated to be ALL.</li>
+   * <li>mv_to_array columns (for group-by queries): temporary columns that convert MVD columns to array to enable
+   * grouping on them without unnesting.</li>
    * </ul>
-   *
    */
   private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval)
   {
@@ -476,7 +472,7 @@ public class MSQCompactionRunner implements CompactionRunner
       ));
     }
     if (isGroupBy(dataSchema)) {
-      // Convert MVD cols to arrays for grouping to avoid unnest, assuming all string cols to be MVDs.
+      // Convert MVDs to arrays for grouping to avoid unnest, assuming all string cols to be MVDs.
       Set<String> multiValuedColumns = dataSchema.getDimensionsSpec()
                                                  .getDimensions()
                                                  .stream()
@@ -485,12 +481,12 @@ public class MSQCompactionRunner implements CompactionRunner
                                                  .collect(Collectors.toSet());
       if (dataSchema instanceof CombinedDataSchema &&
           ((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().isProcessed()) {
-        // Filter actual MVD columns from schema info.
+        // Filter actual MVDs from schema info.
         Set<String> multiValuedColumnsFromSchema =
             ((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().getMultiValuedColumns();
-        multiValuedColumns = multiValuedColumnsFromSchema.stream()
-                                                         .filter(multiValuedColumnsFromSchema::contains)
-                                                         .collect(Collectors.toSet());
+        multiValuedColumns = multiValuedColumns.stream()
+                                               .filter(multiValuedColumnsFromSchema::contains)
+                                               .collect(Collectors.toSet());
       }
 
       for (String dim : multiValuedColumns) {
@@ -520,6 +516,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
     VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
 
+    // Convert MVDs converted to arrays back to MVDs.
     List<PostAggregator> postAggregators =
         inputToVirtualColMap.entrySet()
                             .stream()
@@ -535,7 +532,6 @@ public class MSQCompactionRunner implements CompactionRunner
                                     )
                             )
                             .collect(Collectors.toList());
-
 
     GroupByQuery.Builder builder = new GroupByQuery.Builder()
         .setDataSource(new TableDataSource(compactionTask.getDataSource()))

@@ -80,6 +80,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.MultiValuedColumnsInfo;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -461,7 +462,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         transformSpec,
         metricsSpec,
         granularitySpec,
-        getMetricBuilder()
+        getMetricBuilder(),
+        !(compactionRunner instanceof NativeCompactionRunner)
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
@@ -487,7 +489,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable final ClientCompactionTaskTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
-      final ServiceMetricEvent.Builder metricBuilder
+      final ServiceMetricEvent.Builder metricBuilder,
+      boolean needMultiValuedColumns
   ) throws IOException
   {
     final Iterable<DataSegment> timelineSegments = retrieveRelevantTimelineHolders(
@@ -551,7 +554,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricsSpec,
             granularitySpec == null
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
-            : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
+            : granularitySpec.withSegmentGranularity(segmentGranularityToUse),
+            needMultiValuedColumns
         );
         intervalDataSchemaMap.put(interval, dataSchema);
       }
@@ -576,7 +580,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           dimensionsSpec,
           transformSpec,
           metricsSpec,
-          granularitySpec
+          granularitySpec,
+          needMultiValuedColumns
       );
       return Collections.singletonMap(segmentProvider.interval, dataSchema);
     }
@@ -606,7 +611,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec
+      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
+      boolean needMultiValuedColumns
   )
   {
     // Check index metadata & decide which values to propagate (i.e. carry over) for rollup & queryGranularity
@@ -616,8 +622,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         granularitySpec.getQueryGranularity() == null,
         dimensionsSpec == null,
         metricsSpec == null,
-        true         // TODO vishesh: make it conditional on only the native engine
-
+        needMultiValuedColumns
     );
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -676,7 +681,6 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         finalMetricsSpec,
         uniformGranularitySpec,
         transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
-        // TODO vishesh: make it conditional on only the native engine
         existingSegmentAnalyzer.getMultiValuedColumnsInfo()
     );
   }
@@ -765,7 +769,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     // For processMetricsSpec:
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
-    private CombinedDataSchema.MultiValuedColumnsInfo multiValuedColumnsInfo = CombinedDataSchema.MultiValuedColumnsInfo.notProcessed();
+    private MultiValuedColumnsInfo multiValuedColumnsInfo = MultiValuedColumnsInfo.notProcessed();
 
     ExistingSegmentAnalyzer(
         final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable,
@@ -797,7 +801,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
 
       if (needMultiValuedColumns) {
-        multiValuedColumnsInfo = CombinedDataSchema.MultiValuedColumnsInfo.processed();
+        multiValuedColumnsInfo = MultiValuedColumnsInfo.processed();
       }
 
       final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments = sortSegmentsListNewestFirst();
@@ -892,7 +896,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return mergedAggregators;
     }
 
-    public CombinedDataSchema.MultiValuedColumnsInfo getMultiValuedColumnsInfo()
+    public MultiValuedColumnsInfo getMultiValuedColumnsInfo()
     {
       return multiValuedColumnsInfo;
     }
