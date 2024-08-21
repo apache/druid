@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
@@ -46,7 +47,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.vector.BitmapVectorOffset;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
@@ -61,7 +62,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -774,20 +774,21 @@ public class QueryableIndexCursorHolder implements CursorHolder
   {
     if (timeOrder == Order.NONE
         && (minDataTimestamp < interval.getStartMillis() || maxDataTimestamp >= interval.getEndMillis())) {
-      return Filters.and(
-          Arrays.asList(
-              new RangeFilter(
-                  ColumnHolder.TIME_COLUMN_NAME,
-                  ColumnType.LONG,
-                  minDataTimestamp < interval.getStartMillis() ? interval.getStartMillis() : null,
-                  maxDataTimestamp >= interval.getEndMillis() ? interval.getEndMillis() : null,
-                  false,
-                  true,
-                  null
-              ),
-              filter
-          )
+      final RangeFilter timeFilter = new RangeFilter(
+          ColumnHolder.TIME_COLUMN_NAME,
+          ColumnType.LONG,
+          minDataTimestamp < interval.getStartMillis() ? interval.getStartMillis() : null,
+          maxDataTimestamp >= interval.getEndMillis() ? interval.getEndMillis() : null,
+          false,
+          true,
+          null
       );
+
+      if (filter == null) {
+        return timeFilter;
+      } else {
+        return new AndFilter(ImmutableList.of(filter, timeFilter));
+      }
     } else {
       return filter;
     }
