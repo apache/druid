@@ -1532,7 +1532,7 @@ Searches for `expr` in a registered [query-time lookup table](lookups.md) named 
 
 <details><summary>Example</summary>
 
-The following example uses a `map` type lookup table named `airportcode_to_name`, which contains the following key-value pairs:
+The following example uses a `map` type lookup table named `code_to_name`, which contains the following key-value pairs:
 
 ```json
 {
@@ -1541,12 +1541,12 @@ The following example uses a `map` type lookup table named `airportcode_to_name`
 }
 ```
 
-The example uses `airportcode_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `key not found` if no matching key exists in the lookup table.
+The example uses `code_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `key not found` if no matching key exists in the lookup table.
 
 ```sql
 SELECT 
   "Origin" AS "origin_airport",
-  LOOKUP("Origin", 'airportcode_to_name','key not found') AS "full_airport_name"
+  LOOKUP("Origin", 'code_to_name','key not found') AS "full_airport_name"
 FROM "flight-carriers"
 LIMIT 2
 ```
