@@ -2582,7 +2582,7 @@ Returns the number of milliseconds since epoch for the given timestamp.
 
 <details><summary>Example</summary>
 
-The following example converts the `__time` timestamp column from the `taxi-trips` datasource into milliseconds since epoch.
+The following example converts the `__time` column from the `taxi-trips` datasource into milliseconds since epoch.
 
 ```sql
 SELECT 
@@ -2613,7 +2613,7 @@ Adds `count` number of a `unit` to a given timestamp.
 
 <details><summary>Example</summary>
 
-The following example adds five months to the timestamp `2000-01-01 00:00:00`
+The following example adds five months to the timestamp `2000-01-01 00:00:00`.
 
 ```sql
 SELECT
@@ -2633,14 +2633,14 @@ Returns the following:
 
 ## TIMESTAMPDIFF
 
-Takes the difference between two timestamps, returning the results in the given units.
+Returns the difference between two timestamps in the given `unit`.
 
 * **Syntax:** `TIMESTAMPDIFF(unit, timestamp1, timestamp2)`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example takes the difference between the `__time` and `dropoff_datetime` columns from the `taxi-trips` datasource to find the length of the taxi trip in minutes.
+The following example calculates the taxi trip length in minutes by subtracting the `__time` column from the `dropoff_datetime` column in the `taxi-trips` datasource.
 
 ```sql
 SELECT
