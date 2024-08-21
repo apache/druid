@@ -182,7 +182,7 @@ public class ImmutableFloatNode implements ImmutableNode<float[]>
                   numDims,
                   initialOffset,
                   data.getInt(childrenOffset + (count++) * Integer.BYTES),
-                  data,
+                  data.duplicate(),
                   bitmapFactory
               );
             }
@@ -190,7 +190,7 @@ public class ImmutableFloatNode implements ImmutableNode<float[]>
                 numDims,
                 initialOffset,
                 data.getInt(childrenOffset + (count++) * Integer.BYTES),
-                data,
+                data.duplicate(),
                 bitmapFactory
             );
           }
