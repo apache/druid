@@ -24,7 +24,7 @@ sidebar_label: "Indexer"
   -->
 
 :::info
- Instead of the Indexer service, we recommend you use either the MiddleManager and Peon task execution system or [MiddleManager-less ingestion by using Kubernetes](../development/extensions-contrib/k8s-jobs.md).
+ The Indexer is an optional and experimental feature. If you're primarily performing batch ingestion, we recommend you use either the MiddleManager and Peon task execution system or [MiddleManager-less ingestion using Kubernetes](../development/extensions-contrib/k8s-jobs.md). If you're primarily doing streaming ingestion, you may want to try either [MiddleManager-less ingestion using Kubernetes](../development/extensions-contrib/k8s-jobs.md) or the Indexer service.
 :::
 
 The Apache Druid Indexer service is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
