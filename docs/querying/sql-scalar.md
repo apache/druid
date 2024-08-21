@@ -112,12 +112,12 @@ String functions accept strings and return a type appropriate to the function.
 |`REGEXP_EXTRACT(expr, pattern[, index])`|Apply regular expression `pattern` to `expr` and extract a capture group or `NULL` if there is no match. If `index` is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`. To match the entire string, use the `^` and `$` markers at the start and end of your pattern. When `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
-|`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
+|`REPLACE(expr, substring, replacement)`|Replaces instances of `substring` in `expr` with `replacement` and returns the result.|
 |`REPEAT(expr, N)`|Repeats `expr` `N` times.|
 |`REVERSE(expr)`|Reverses `expr`.|
 |`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
-|`STRPOS(haystack, needle)`|Returns the index of `needle` within `haystack`, with indexes starting from 1. If `needle` is not found, returns 0.|
-|`SUBSTRING(expr, index[, length])`|Returns a substring of `expr` starting at `index`, with a max `length`, both measured in UTF-16 code units.|
+|`STRPOS(expr, substring)`|Returns the index of `substring` within `expr`, with indexes starting from 1. If `substring` is not found, returns 0.|
+|`SUBSTRING(expr, index[, length])`|Returns a substring of `expr` starting at a given one-based index. If `length` is omitted, extracts characters to the end of the string, otherwise returns a substring of `length` UTF-16 characters.|
 |`SUBSTR(expr, index[, length])`|Alias for `SUBSTRING`.|
 |`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [chars FROM] expr)`|Returns `expr` with characters removed from the leading, trailing, or both ends of `expr` if they are in `chars`. If `chars` is not provided, it defaults to `''` (a space). If the directional argument is not provided, it defaults to `BOTH`.|
 |`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH chars FROM expr)`.|

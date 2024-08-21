@@ -57,7 +57,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String SUB_QUERY_ID = "subQueryId";
   public static final String SQL_QUERY_ID = "sqlQueryId";
   private final DataSource dataSource;
-  private final boolean descending;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
@@ -66,17 +65,15 @@ public abstract class BaseQuery<T> implements Query<T>
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context
   )
   {
-    this(dataSource, querySegmentSpec, descending, context, Granularities.ALL);
+    this(dataSource, querySegmentSpec, context, Granularities.ALL);
   }
 
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context,
       Granularity granularity
   )
@@ -88,7 +85,6 @@ public abstract class BaseQuery<T> implements Query<T>
     this.dataSource = dataSource;
     this.context = QueryContext.of(context);
     this.querySegmentSpec = querySegmentSpec;
-    this.descending = descending;
     this.granularity = granularity;
   }
 
@@ -97,14 +93,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public DataSource getDataSource()
   {
     return dataSource;
-  }
-
-  @JsonProperty
-  @Override
-  @JsonInclude(Include.NON_DEFAULT)
-  public boolean isDescending()
-  {
-    return descending;
   }
 
   @JsonProperty("intervals")
@@ -206,8 +194,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @SuppressWarnings("unchecked") // assumes T is Comparable; see method javadoc
   public Ordering<T> getResultOrdering()
   {
-    Ordering retVal = Ordering.natural();
-    return descending ? retVal.reverse() : retVal;
+    return (Ordering<T>) Ordering.natural();
   }
 
   @Nullable
@@ -254,8 +241,7 @@ public abstract class BaseQuery<T> implements Query<T>
     BaseQuery<?> baseQuery = (BaseQuery<?>) o;
 
     // Must use getDuration() instead of "duration" because duration is lazily computed.
-    return descending == baseQuery.descending &&
-           Objects.equals(dataSource, baseQuery.dataSource) &&
+    return Objects.equals(dataSource, baseQuery.dataSource) &&
            Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
            Objects.equals(getDuration(), baseQuery.getDuration()) &&
@@ -266,6 +252,6 @@ public abstract class BaseQuery<T> implements Query<T>
   public int hashCode()
   {
     // Must use getDuration() instead of "duration" because duration is lazily computed.
-    return Objects.hash(dataSource, descending, context, querySegmentSpec, getDuration(), granularity);
+    return Objects.hash(dataSource, context, querySegmentSpec, getDuration(), granularity);
   }
 }

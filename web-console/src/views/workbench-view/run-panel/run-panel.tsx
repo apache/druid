@@ -103,7 +103,6 @@ export interface RunPanelProps
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
   running: boolean;
-  small?: boolean;
   onRun(preview: boolean): void | Promise<void>;
   queryEngines: DruidEngine[];
   clusterCapacity: number | undefined;
@@ -120,7 +119,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     onRun,
     moreMenu,
     running,
-    small,
     queryEngines,
     clusterCapacity,
     defaultQueryContext,
@@ -166,6 +164,11 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     queryContext,
     defaultQueryContext,
   );
+  const useConcurrentLocks = getQueryContextKey(
+    'useConcurrentLocks',
+    queryContext,
+    defaultQueryContext,
+  );
   const finalizeAggregations = queryContext.finalizeAggregations;
   const waitUntilSegmentsLoad = queryContext.waitUntilSegmentsLoad;
   const groupByEnableMultiValueUnnesting = queryContext.groupByEnableMultiValueUnnesting;
@@ -198,7 +201,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   }, [onRun]);
 
   const hotkeys = useMemo(() => {
-    if (small) return [];
     return [
       {
         allowInInput: true,
@@ -217,7 +219,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
         onKeyDown: handlePreview,
       },
     ];
-  }, [small, handleRun, handlePreview]);
+  }, [handleRun, handlePreview]);
 
   useHotkeys(hotkeys);
 
@@ -264,9 +266,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
         icon={IconNames.CARET_RIGHT}
         onClick={() => void onRun(false)}
         text="Run"
-        intent={!emptyQuery && !small ? Intent.PRIMARY : undefined}
-        small={small}
-        minimal={small}
+        intent={!emptyQuery ? Intent.PRIMARY : undefined}
       />
       {ingestMode && (
         <Button
@@ -274,11 +274,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           icon={IconNames.EYE_OPEN}
           onClick={() => void onRun(true)}
           text="Preview"
-          small={small}
-          minimal={small}
         />
       )}
-      {!small && onQueryChange && (
+      {onQueryChange && (
         <ButtonGroup>
           <Popover
             position={Position.BOTTOM_LEFT}
@@ -366,6 +364,45 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 )}
                 {effectiveEngine === 'sql-msq-task' ? (
                   <>
+                    <MenuItem icon={IconNames.BRING_DATA} text="INSERT / REPLACE specific context">
+                      <MenuCheckbox
+                        checked={useConcurrentLocks}
+                        text="Use concurrent locks"
+                        onChange={() =>
+                          changeQueryContext({
+                            ...queryContext,
+                            useConcurrentLocks: !useConcurrentLocks,
+                          })
+                        }
+                      />
+                      <MenuTristate
+                        icon={IconNames.DISABLE}
+                        text="Fail on empty insert"
+                        value={failOnEmptyInsert}
+                        undefinedEffectiveValue={false}
+                        onValueChange={failOnEmptyInsert =>
+                          changeQueryContext({ ...queryContext, failOnEmptyInsert })
+                        }
+                      />
+                      <MenuTristate
+                        icon={IconNames.STOPWATCH}
+                        text="Wait until segments have loaded"
+                        value={waitUntilSegmentsLoad}
+                        undefinedEffectiveValue={ingestMode}
+                        onValueChange={waitUntilSegmentsLoad =>
+                          changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
+                        }
+                      />
+                      <MenuItem
+                        icon={IconNames.TH_DERIVED}
+                        text="Edit index spec"
+                        label={summarizeIndexSpec(indexSpec)}
+                        shouldDismissPopover={false}
+                        onClick={() => {
+                          setIndexSpecDialogSpec(indexSpec || {});
+                        }}
+                      />
+                    </MenuItem>
                     <MenuItem
                       icon={IconNames.ERROR}
                       text="Max parse exceptions"
@@ -384,30 +421,12 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       ))}
                     </MenuItem>
                     <MenuTristate
-                      icon={IconNames.DISABLE}
-                      text="Fail on empty insert"
-                      value={failOnEmptyInsert}
-                      undefinedEffectiveValue={false}
-                      onValueChange={failOnEmptyInsert =>
-                        changeQueryContext({ ...queryContext, failOnEmptyInsert })
-                      }
-                    />
-                    <MenuTristate
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
                       value={finalizeAggregations}
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={finalizeAggregations =>
                         changeQueryContext({ ...queryContext, finalizeAggregations })
-                      }
-                    />
-                    <MenuTristate
-                      icon={IconNames.STOPWATCH}
-                      text="Wait until segments have loaded"
-                      value={waitUntilSegmentsLoad}
-                      undefinedEffectiveValue={ingestMode}
-                      onValueChange={waitUntilSegmentsLoad =>
-                        changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
                       }
                     />
                     <MenuTristate
@@ -476,15 +495,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           durableShuffleStorage: !durableShuffleStorage,
                         })
                       }
-                    />
-                    <MenuItem
-                      icon={IconNames.TH_DERIVED}
-                      text="Edit index spec"
-                      label={summarizeIndexSpec(indexSpec)}
-                      shouldDismissPopover={false}
-                      onClick={() => {
-                        setIndexSpecDialogSpec(indexSpec || {});
-                      }}
                     />
                   </>
                 ) : (
@@ -602,7 +612,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {moreMenu && (
         <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
-          <Button small={small} minimal={small} rightIcon={IconNames.MORE} />
+          <Button rightIcon={IconNames.MORE} />
         </Popover>
       )}
       {editContextDialogOpen && (
