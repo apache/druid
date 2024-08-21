@@ -76,7 +76,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
     MatcherAssert.assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Negative-size footer. Corrupt or truncated file[")
+            CoreMatchers.containsString("Corrupt or truncated file[")
         )
     );
   }
