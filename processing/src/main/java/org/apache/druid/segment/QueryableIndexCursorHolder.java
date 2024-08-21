@@ -346,6 +346,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
    * @param timestamp  the timestamp to search for
    * @param startIndex first index to search, inclusive
    * @param endIndex   last index to search, exclusive
+   *
    * @return first index that has a timestamp equal to, or greater, than "timestamp"
    */
   @VisibleForTesting
@@ -706,7 +707,10 @@ public class QueryableIndexCursorHolder implements CursorHolder
   }
 
   /**
-   * TODO(gianm) javadoc
+   * Create a {@link FilterBundle} for a cursor hold instance.
+   *
+   * The provided filter must include the query-level interface if needed. To compute this properly, use
+   * {@link #computeFilterWithIntervalIfNeeded}.
    */
   @Nullable
   private static FilterBundle makeFilterBundle(
@@ -755,7 +759,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
   }
 
   /**
-   * TODO(gianm) javadoc
+   * Returns the query-level {@link Filter} plus, if needed, a {@link RangeFilter} for
+   * {@link ColumnHolder#TIME_COLUMN_NAME}. The time filter is added if time order is {@link Order#NONE} and
+   * the provided {@link Interval} is not contained entirely within [minDataTimestamp, maxDataTimestamp].
    */
   @Nullable
   private static Filter computeFilterWithIntervalIfNeeded(
