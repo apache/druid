@@ -39,6 +39,7 @@ This page provides a reference of Apache Druid&circledR; SQL functions in alphab
 The examples on this page use the following example datasources:
 * `flight-carriers` using `FlightCarrierOnTime (1 month)` 
 * `taxi-trips` using `NYC Taxi cabs (3 files)`
+* `kttm` using `KoalasToTheMax one day`
 
 ## ABS
 
