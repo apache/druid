@@ -2303,7 +2303,7 @@ Rounds up a timestamp to a given ISO 8601 time period. You can specify `origin` 
 
 <details><summary>Example</summary>
 
-The following example rounds up the `__time` column from the `taxi-trips` datasource to nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
+The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
 
 ```sql
 SELECT 
@@ -2355,7 +2355,7 @@ Returns the following:
 
 ## TIME_FLOOR
 
-Rounds down a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Rounds down a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`
 * **Function type:** Scalar, date and time
@@ -2422,14 +2422,14 @@ Returns whether a timestamp is contained within a particular interval, formatted
 
 ## TIME_PARSE
 
-Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html) or ISO 8601 if the pattern is not provided. Returns NULL if string cannot be parsed. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, `pattern` defaults to ISO 8601. Returns NULL if string cannot be parsed. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_PARSE(string_expr[, pattern[, timezone]])`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example parses the `FlightDate` column from the `flight-carriers` datasource, which is stored as a `string`, into a valid timestamp with an offset of `-05:00` hours.
+The following example parses the `FlightDate` STRING column from the `flight-carriers` datasource into a valid timestamp with an offset of `-05:00` hours.
 
 ```sql
 SELECT
@@ -2451,7 +2451,7 @@ Returns the following:
 
 ## TIME_SHIFT
 
-Shifts a timestamp by a given number of time units. The `period` parameter can be any ISO 8601 period. T `step` parameter can be negative. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Shifts a timestamp by a given number of time units. The `period` parameter can be any ISO 8601 period. The `step` parameter can be negative. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_SHIFT(timestamp_expr, period, step[, timezone])`
 * **Function type:** Scalar, date and time
