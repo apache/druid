@@ -30,17 +30,14 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -77,13 +74,13 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
           @Override
           public int getNumRows()
           {
-            return 0;
+            throw new UnsupportedOperationException();
           }
 
           @Override
           public Indexed<String> getAvailableDimensions()
           {
-            return Indexed.empty();
+            throw new UnsupportedOperationException();
           }
 
           @Override
@@ -96,13 +93,13 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
           @Override
           public Metadata getMetadata()
           {
-            return null;
+            throw new UnsupportedOperationException();
           }
 
           @Override
           public Map<String, DimensionHandler> getDimensionHandlers()
           {
-            return new HashMap<>();
+            throw new UnsupportedOperationException();
           }
 
           @Override
@@ -114,7 +111,7 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
           @Override
           public List<String> getColumnNames()
           {
-            return new ArrayList<>();
+            throw new UnsupportedOperationException();
           }
 
           @Nullable
@@ -123,6 +120,7 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
           {
             throw new UnsupportedOperationException();
           }
+
         };
 
     final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex)
@@ -131,24 +129,6 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
       public boolean isFromTombstone()
       {
         return true;
-      }
-
-      @Override
-      public DateTime getMinTime()
-      {
-        return tombstone.getInterval().getStart();
-      }
-
-      @Override
-      public DateTime getMaxTime()
-      {
-        return tombstone.getInterval().getEnd();
-      }
-
-      @Override
-      public RowSignature getRowSignature()
-      {
-        return RowSignature.builder().build();
       }
     };
 
