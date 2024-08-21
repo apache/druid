@@ -2296,7 +2296,7 @@ Returns a union of Theta sketches.
 
 ## TIME_CEIL
 
-Rounds up a timestamp to a given ISO 8601 time period. Specify a timestamp, `origin`, to provide a reference time from which to start. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Rounds up a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`
 * **Function type:** Scalar, date and time
@@ -2355,7 +2355,7 @@ Returns the following:
 
 ## TIME_FLOOR
 
-Rounds down a timestamp to a given ISO 8601 time period. Specify a timestamp, `origin`, to provide a reference time from which to start. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Rounds down a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`
 * **Function type:** Scalar, date and time
@@ -2392,7 +2392,7 @@ Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http
 
 <details><summary>Example</summary>
 
-  The following example formats the `__time` column from the `flight-carriers` datasource into a string format and includes an offset of `-05:00`
+The following example formats the `__time` column from the `flight-carriers` datasource into a string format and offsets the result's timezone by `-05:00` hours.
 
 ```sql
 SELECT
@@ -2451,7 +2451,7 @@ Returns the following:
 
 ## TIME_SHIFT
 
-Shifts a timestamp by a given number of time units. Period can be any ISO 8601 period. Step may be negative. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
+Shifts a timestamp by a given number of time units. The `period` parameter can be any ISO 8601 period. T `step` parameter can be negative. If provided, `timezone`, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
 * **Syntax:** `TIME_SHIFT(timestamp_expr, period, step[, timezone])`
 * **Function type:** Scalar, date and time
