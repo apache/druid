@@ -56,7 +56,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assume;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -134,7 +133,9 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
   @Test(dataProvider = "getKafkaTransactionStatesForTest")
   public void testConcurrentStreamAppendReplace(boolean transactionEnabled) throws Exception
   {
-    Assume.assumeFalse(shouldSkipTest(transactionEnabled));
+    if (shouldSkipTest(transactionEnabled)) {
+      return;
+    }
 
     try (
         final Closeable closer = createResourceCloser(generatedTestConfig);
@@ -222,7 +223,9 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
   @Test(dataProvider = "getKafkaTransactionStatesForTest")
   public void testConcurrentMSQAppendReplace(boolean transactionEnabled) throws Exception
   {
-    Assume.assumeFalse(shouldSkipTest(transactionEnabled));
+    if (shouldSkipTest(transactionEnabled)) {
+      return;
+    }
 
     final String datasource = "dst";
 
@@ -255,8 +258,9 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
     for (int i = 1; i <= 5; i++) {
       // Submit the task and wait for the datasource to get loaded
       msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
-
+      compactionResource.forceTriggerAutoCompaction();
       ensureRowCount(datasource, i * 3 + 3, function);
+      checkAndSetConcurrentLocks(datasource);
     }
 
     ensureRowCount(datasource, 18, function);
@@ -275,9 +279,9 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
   {
     ITRetryUtil.retryUntilTrue(
         () -> {
+          compactionResource.forceTriggerAutoCompaction();
           printTaskStatuses(datasource);
           checkAndSetConcurrentLocks(datasource);
-          compactionResource.forceTriggerAutoCompaction();
           List<DataSegment> segments = coordinator.getFullSegmentsMetadata(datasource);
           StringBuilder sb = new StringBuilder();
           segments.forEach(
@@ -470,8 +474,8 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
     LOG.info("Verifying Row Count. Expected: %s", totalRows);
     ITRetryUtil.retryUntilTrue(
         () -> {
-          printTaskStatuses(datasource);
           compactionResource.forceTriggerAutoCompaction();
+          printTaskStatuses(datasource);
           checkAndSetConcurrentLocks(datasource);
           int newRowCount = this.queryHelper.countRows(
               datasource,
