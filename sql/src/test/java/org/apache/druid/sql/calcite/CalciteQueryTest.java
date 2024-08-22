@@ -16133,6 +16133,30 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testIpv4ParseWithBigintOutput()
+  {
+    testQuery(
+        "select ipv4_parse('192.168.0.1') from (values(1)) as t(col)",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(InlineDataSource.fromIterable(
+                      ImmutableList.of(new Object[]{1L}),
+                      RowSignature.builder()
+                                  .add("col", ColumnType.LONG)
+                                  .build()
+                  ))
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .columns("v0")
+                  .virtualColumns(expressionVirtualColumn("v0", "3232235521", ColumnType.LONG))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{3232235521L})
+    );
+  }
+
+  @Test
   public void testBitwiseXor()
   {
     cannotVectorize();
