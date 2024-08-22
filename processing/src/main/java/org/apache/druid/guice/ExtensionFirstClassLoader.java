@@ -35,11 +35,13 @@ import java.util.List;
 public class ExtensionFirstClassLoader extends URLClassLoader
 {
   private final ClassLoader druidLoader;
+  private List<ClassLoader> extensionDependencyClassLoaders;
 
-  public ExtensionFirstClassLoader(final URL[] urls, final ClassLoader druidLoader)
+  public ExtensionFirstClassLoader(final URL[] urls, final ClassLoader druidLoader, final List<ClassLoader> extensionDependencyClassLoaders)
   {
     super(urls, null);
     this.druidLoader = Preconditions.checkNotNull(druidLoader, "druidLoader");
+    this.extensionDependencyClassLoaders = Preconditions.checkNotNull(extensionDependencyClassLoaders, "extensionDependencyClassLoaders");
   }
 
   @Override
@@ -60,8 +62,13 @@ public class ExtensionFirstClassLoader extends URLClassLoader
           clazz = findClass(name);
         }
         catch (ClassNotFoundException e) {
-          // Try the Druid classloader. Will throw ClassNotFoundException if the class can't be loaded.
-          return druidLoader.loadClass(name);
+          try {
+            return loadClassFromExtensionDependencies(name);
+          }
+          catch (ClassNotFoundException e2) {
+            // Try the Druid classloader. Will throw ClassNotFoundException if the class can't be loaded.
+            return druidLoader.loadClass(name);
+          }
         }
       }
 
@@ -73,17 +80,47 @@ public class ExtensionFirstClassLoader extends URLClassLoader
     }
   }
 
+  protected Class<?> loadClassFromExtensionDependencies(final String name) throws ClassNotFoundException
+    {
+      for (ClassLoader classLoader : extensionDependencyClassLoaders) {
+        try {
+          return classLoader.loadClass(name);
+        }
+        catch (ClassNotFoundException ignored) {
+        }
+      }
+      throw new ClassNotFoundException();
+    }
+
+
   @Override
   public URL getResource(final String name)
   {
-    final URL resourceFromExtension = super.getResource(name);
+    URL resourceFromExtension = super.getResource(name);
 
     if (resourceFromExtension != null) {
       return resourceFromExtension;
-    } else {
-      return druidLoader.getResource(name);
     }
+
+    resourceFromExtension = getResourceFromExtensionsDependencies(name);
+    if (resourceFromExtension != null) {
+      return resourceFromExtension;
+    }
+
+    return druidLoader.getResource(name);
   }
+  protected URL getResourceFromExtensionsDependencies(final String name)
+  {
+    URL resourceFromExtension = null;
+    for (ClassLoader classLoader : extensionDependencyClassLoaders) {
+      resourceFromExtension = classLoader.getResource(name);
+      if (resourceFromExtension != null) {
+        break;
+      }
+    }
+    return resourceFromExtension;
+  }
+
 
   @Override
   public Enumeration<URL> getResources(final String name) throws IOException
@@ -91,6 +128,13 @@ public class ExtensionFirstClassLoader extends URLClassLoader
     final List<URL> urls = new ArrayList<>();
     Iterators.addAll(urls, Iterators.forEnumeration(super.getResources(name)));
     Iterators.addAll(urls, Iterators.forEnumeration(druidLoader.getResources(name)));
+    for (ClassLoader classLoader : extensionDependencyClassLoaders) {
+      Iterators.addAll(urls, Iterators.forEnumeration(classLoader.getResources(name)));
+    }
     return Iterators.asEnumeration(urls.iterator());
+  }
+
+  public void setExtensionDependencyClassLoaders(List<ClassLoader> extensionDependencyClassLoaders) {
+    this.extensionDependencyClassLoaders = Preconditions.checkNotNull(extensionDependencyClassLoaders, "extensionDependencyClassLoaders");
   }
 }
