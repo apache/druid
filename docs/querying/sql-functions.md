@@ -807,7 +807,7 @@ Returns the cumulative distribution of the current row within the window calcula
 
 ## CURRENT_DATE
 
-Returns the current date in the connection's time zone.
+Returns the current date in UTC time, unless you specify a different timezone in the query context.
 
 * **Syntax:** `CURRENT_DATE`
 * **Function type:** Scalar, date and time
@@ -832,7 +832,7 @@ Returns the following:
 
 ## CURRENT_TIMESTAMP
 
-Returns the current timestamp in the connection's time zone.
+Returns the current timestamp in UTC time, unless you specify a different timezone in the query context.
 
 
 * **Syntax:** `CURRENT_TIMESTAMP`

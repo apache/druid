@@ -160,8 +160,8 @@ overhead.
 
 |Function|Notes|
 |--------|-----|
-|`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
-|`CURRENT_DATE`|Current date in the connection's time zone.|
+|`CURRENT_TIMESTAMP`|Current timestamp in UTC time, unless you specify a different timezone in the query context.|
+|`CURRENT_DATE`|Current date in UTC time, unless you specify a different timezone in the query context.|
 |`DATE_TRUNC(unit, timestamp_expr)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
 |`TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO 8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. This function is similar to `CEIL` but is more flexible.|
 |`TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO 8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. This function is similar to `FLOOR` but is more flexible.|
