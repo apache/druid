@@ -1446,7 +1446,7 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 Returns the minimum value from the provided arguments. The expressions must all be convertible to a common data type. 
 
-* **Syntax** `LEAST([expr1, ...])`
+* **Syntax:** `LEAST([expr1, ...])`
 * **Function type:** Scalar, reduction
 
 <details><summary>Example</summary>
