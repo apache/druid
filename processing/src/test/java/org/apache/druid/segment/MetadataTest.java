@@ -199,7 +199,7 @@ public class MetadataTest
     );
 
     Assert.assertEquals(
-        Collections.singletonList("bar"),
+        Collections.singletonList(OrderBy.ascending("bar")),
         Metadata.mergeOrderings(
             Arrays.asList(
                 makeOrderBy("bar", "baz"),
@@ -209,7 +209,7 @@ public class MetadataTest
     );
 
     Assert.assertEquals(
-        ImmutableList.of("bar", "foo"),
+        ImmutableList.of(OrderBy.ascending("bar"), OrderBy.ascending("foo")),
         Metadata.mergeOrderings(
             Arrays.asList(
                 makeOrderBy("bar", "foo"),

@@ -208,18 +208,6 @@ public class FrameStorageAdapterTest
     }
 
     @Test
-    public void test_getMinTime()
-    {
-      Assert.assertEquals(queryableAdapter.getInterval().getStart(), frameAdapter.getMinTime());
-    }
-
-    @Test
-    public void test_getMaxTime()
-    {
-      Assert.assertEquals(queryableAdapter.getInterval().getEnd().minus(1), frameAdapter.getMaxTime());
-    }
-
-    @Test
     public void test_getNumRows()
     {
       Assert.assertEquals(queryableAdapter.getNumRows(), frameAdapter.getNumRows());
