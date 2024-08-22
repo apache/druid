@@ -1295,7 +1295,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
 
-
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
         includeOffsets
