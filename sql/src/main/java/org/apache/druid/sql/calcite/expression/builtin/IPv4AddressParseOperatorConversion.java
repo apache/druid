@@ -39,7 +39,7 @@ public class IPv4AddressParseOperatorConversion extends DirectOperatorConversion
               OperandTypes.family(SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.INTEGER)
           ))
-      .returnTypeNullable(SqlTypeName.INTEGER)
+      .returnTypeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();
 
