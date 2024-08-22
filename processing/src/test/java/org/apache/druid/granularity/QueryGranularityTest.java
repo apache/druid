@@ -33,6 +33,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Days;
@@ -1019,6 +1021,39 @@ public class QueryGranularityTest
         date,
         new DateTime("2011-03-15T20:00:00.000+06:00", tz)
     );
+  }
+
+  @Test
+  public void testToVirtualColumn()
+  {
+    final Granularity hour = new PeriodGranularity(new Period("PT1H"), null, null);
+    final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
+    final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
+    final Granularity hourWithOrigin = new PeriodGranularity(new Period("PT1H"), origin, tz);
+    final PeriodGranularity hourWithTz = new PeriodGranularity(new Period("PT1H"), null, tz);
+    final Granularity duration = new DurationGranularity(
+        new Period("PT12H5M").toStandardDuration().getMillis(),
+        origin
+    );
+
+    ExpressionVirtualColumn column = Granularities.toVirtualColumn(hour, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
+    column = Granularities.toVirtualColumn(hourWithOrigin, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    column = Granularities.toVirtualColumn(hourWithTz, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    column = Granularities.toVirtualColumn(duration, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    column = Granularities.toVirtualColumn(Granularities.NONE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    column = Granularities.toVirtualColumn(Granularities.ALL, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertNull(column);
+    column = Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals("timestamp_floor(__time,'PT1H')", column.getExpression());
+    column = Granularities.toVirtualColumn(Granularities.MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals("timestamp_floor(__time,'PT1M')", column.getExpression());
+    column = Granularities.toVirtualColumn(Granularities.FIFTEEN_MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
+    Assert.assertEquals("timestamp_floor(__time,'PT15M')", column.getExpression());
   }
 
   private void assertBucketStart(final Granularity granularity, final DateTime in, final DateTime expectedInProperTz)

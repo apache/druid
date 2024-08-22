@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -138,67 +139,65 @@ public class FrameSequenceBuilder
       throw DruidException.defensive("Unrecognized frame type");
     }
 
-    final Sequence<Cursor> cursors = FrameTestUtil.makeCursorsForAdapter(adapter, populateRowNumber);
+    final CursorHolder cursorHolder = FrameTestUtil.makeCursorForAdapter(adapter, populateRowNumber);
+    final Cursor cursor = cursorHolder.asCursor();
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<Frame, Iterator<Frame>>()
+        {
+          @Override
+          public Iterator<Frame> make()
+          {
+            final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    return cursors.flatMap(
-        cursor -> new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Frame, Iterator<Frame>>()
+            return new Iterator<Frame>()
             {
               @Override
-              public Iterator<Frame> make()
+              public boolean hasNext()
               {
-                final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+                return !cursor.isDone();
+              }
 
-                return new Iterator<Frame>()
-                {
-                  @Override
-                  public boolean hasNext()
-                  {
-                    return !cursor.isDone();
-                  }
+              @Override
+              public Frame next()
+              {
+                if (cursor.isDone()) {
+                  throw new NoSuchElementException();
+                }
 
-                  @Override
-                  public Frame next()
-                  {
-                    if (cursor.isDone()) {
-                      throw new NoSuchElementException();
-                    }
-
-                    try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
-                      while (!cursor.isDone()) {
-                        if (!writer.addSelection()) {
-                          if (writer.getNumRows() == 0) {
-                            throw new FrameRowTooLargeException(allocator.capacity());
-                          }
-
-                          return makeFrame(writer);
-                        }
-
-                        cursor.advance();
-
-                        if (writer.getNumRows() >= maxRowsPerFrame) {
-                          return makeFrame(writer);
-                        }
+                try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+                  while (!cursor.isDone()) {
+                    if (!writer.addSelection()) {
+                      if (writer.getNumRows() == 0) {
+                        throw new FrameRowTooLargeException(allocator.capacity());
                       }
 
                       return makeFrame(writer);
                     }
+
+                    cursor.advance();
+
+                    if (writer.getNumRows() >= maxRowsPerFrame) {
+                      return makeFrame(writer);
+                    }
                   }
 
-                  private Frame makeFrame(final FrameWriter writer)
-                  {
-                    return Frame.wrap(writer.toByteArray());
-                  }
-                };
+                  return makeFrame(writer);
+                }
               }
 
-              @Override
-              public void cleanup(Iterator<Frame> iterFromMake)
+              private Frame makeFrame(final FrameWriter writer)
               {
-                // Nothing to do.
+                return Frame.wrap(writer.toByteArray());
               }
-            }
-        )
-    );
+            };
+          }
+
+          @Override
+          public void cleanup(Iterator<Frame> iterFromMake)
+          {
+            // Nothing to do.
+          }
+        }
+    ).withBaggage(cursorHolder);
   }
 }

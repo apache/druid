@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -727,9 +728,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .orderBy(
             ImmutableList.of(
-                new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                OrderBy.ascending("v0"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("v1")
             )
         )
         .context(
@@ -930,9 +931,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1"),
+                        OrderBy.ascending("v1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -971,9 +972,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1"),
+                        OrderBy.ascending("v1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -1021,8 +1022,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -1210,9 +1211,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .orderBy(
             ImmutableList.of(
-                new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                OrderBy.ascending("v0"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("v1")
             )
         )
         .context(
@@ -1325,8 +1326,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .columns("v0", "z")
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("z", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("z")
                     )
                 )
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
