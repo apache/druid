@@ -1451,7 +1451,7 @@ Returns the minimum value from the provided arguments. The expressions must all 
 
 <details><summary>Example</summary>
 
-The following example returns the least value between the strings `apple`, `orange` and `pear` , which already share a common datatype.
+The following example returns the least value between the strings `apple`, `orange` and `pear`, which already share a common datatype.
 
 ```sql
 SELECT LEAST( 'apple', 'orange', 'pear') AS "least"
