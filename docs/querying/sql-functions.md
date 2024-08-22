@@ -1154,7 +1154,7 @@ Returns the following:
 
 ## GREATEST
 
-Returns the maximum value from the provided expressions. The expressions must all be convertible to a common data type. 
+Returns the maximum value from the provided expressions. The expressions must all be convertible to a common data type.
 
 * **Syntax:** `GREATEST([expr1, ...])`
 * **Function type:** Scalar, reduction
