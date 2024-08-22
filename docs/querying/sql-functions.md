@@ -1550,11 +1550,42 @@ Returns the following:
 
 ## LOOKUP
 
-`LOOKUP(<CHARACTER>, <CHARACTER>[, <CHARACTER>])`
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `defaultValue` if supplied, otherwise returns null.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LOOKUP(expr, lookupName[, defaultValue])`
+* **Function type:** Scalar, string
 
-Looks up the expression in a registered query-time lookup table.
+<details><summary>Example</summary>
+
+The following example uses a `map` type lookup table named `code_to_name`, which contains the following key-value pairs:
+
+```json
+{
+  "SJU": "Luis Munoz Marin International Airport",
+  "IAD": "Dulles International Airport"
+}
+```
+
+The example uses `code_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `key not found` if no matching key exists in the lookup table.
+
+```sql
+SELECT 
+  "Origin" AS "origin_airport",
+  LOOKUP("Origin", 'code_to_name','key not found') AS "full_airport_name"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_airport` | `full_airport_name` | 
+| -- | -- |
+| `SJU` | `Luis Munoz Marin International Airport` |
+| `BOS` | `key not found` |
+
+</details> 
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## LOWER
 
