@@ -34,7 +34,6 @@ public final class CompressedComplexColumn implements ComplexColumn
   private final CompressedVariableSizedBlobColumn compressedColumn;
   private final ImmutableBitmap nullValues;
   private final ObjectStrategy<?> objectStrategy;
-  private final boolean mustCopy;
 
   public CompressedComplexColumn(
       String typeName,
@@ -47,7 +46,6 @@ public final class CompressedComplexColumn implements ComplexColumn
     this.compressedColumn = compressedColumn;
     this.nullValues = nullValues;
     this.objectStrategy = objectStrategy;
-    this.mustCopy = objectStrategy.readRetainsBufferReference();
   }
 
   @Override
@@ -71,12 +69,6 @@ public final class CompressedComplexColumn implements ComplexColumn
     }
 
     final ByteBuffer valueBuffer = compressedColumn.get(rowNum);
-    if (mustCopy) {
-      final ByteBuffer dataCopyBuffer = ByteBuffer.allocate(valueBuffer.remaining());
-      dataCopyBuffer.put(valueBuffer);
-      dataCopyBuffer.rewind();
-      return objectStrategy.fromByteBuffer(dataCopyBuffer, dataCopyBuffer.remaining());
-    }
     return objectStrategy.fromByteBuffer(valueBuffer, valueBuffer.remaining());
   }
 

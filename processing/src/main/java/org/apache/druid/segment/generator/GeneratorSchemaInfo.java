@@ -84,6 +84,16 @@ public class GeneratorSchemaInfo
     return withRollup;
   }
 
+  public GeneratorSchemaInfo withAggregators(List<AggregatorFactory> aggs)
+  {
+    return new GeneratorSchemaInfo(columnSchemas, aggs, dataInterval, withRollup);
+  }
+
+  public GeneratorSchemaInfo withRollup(boolean withRollup)
+  {
+    return new GeneratorSchemaInfo(columnSchemas, aggs, dataInterval, withRollup);
+  }
+
   public DataSegment makeSegmentDescriptor(final String dataSource)
   {
     return DataSegment.builder()
