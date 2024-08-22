@@ -2735,7 +2735,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     Integer taskCount = spec.getIoConfig().getTaskCount();
     if (spec.getIoConfig().getTaskCount() > partitionIdsFromSupplier.size()) {
-      log.warn("Configured task count [%s] is greater than the [%d] of partitions.", taskCount, partitionIdsFromSupplier.size());
+      log.warn("Configured task count [%s] is greater than the [%d] of partitions for [%s].", taskCount, partitionIdsFromSupplier.size(), supervisorId);
     }
     Map<PartitionIdType, SequenceOffsetType> storedMetadata = getOffsetsFromMetadataStorage();
     Set<PartitionIdType> storedPartitions = storedMetadata.keySet();
