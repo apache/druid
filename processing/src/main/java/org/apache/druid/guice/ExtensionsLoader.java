@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
@@ -225,7 +224,7 @@ public class ExtensionsLoader
     }
 
     if (useExtensionClassloaderFirst) {
-      return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
+      return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader());
     } else {
       return new URLClassLoader(urls, ExtensionsLoader.class.getClassLoader());
     }
@@ -279,7 +278,6 @@ public class ExtensionsLoader
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
       }
-
       addAllFromFileSystem();
     }
 
@@ -293,41 +291,13 @@ public class ExtensionsLoader
     private void addAllFromFileSystem()
     {
       for (File extension : getExtensionFilesToLoad()) {
+        log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
-          getClassLoaderForExtension(
+          final URLClassLoader loader = getClassLoaderForExtension(
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
 
-      ExtensionFirstClassLoader kafkaLoader = null;
-      ExtensionFirstClassLoader globalLoader = null;
-      for (Pair<File, Boolean> extension : loaders.keySet()) {
-        String extensionName = extension.lhs.getName();
-        log.info("Extension name %s", extensionName);
-        if (extensionName.equals("druid-kafka-extraction-namespace")) {
-          kafkaLoader = (ExtensionFirstClassLoader) loaders.get(extension);
-        }
-
-        if (extensionName.equals("druid-lookups-cached-global")) {
-          globalLoader = (ExtensionFirstClassLoader) loaders.get(extension);
-        }
-      }
-
-      if (kafkaLoader != null && globalLoader != null) {
-        log.info("Setting extension dependency %s %s", kafkaLoader.getURLs(), globalLoader.getURLs());
-        kafkaLoader.setExtensionDependencyClassLoaders(ImmutableList.of(globalLoader));
-      }
-
-      for (File extension : getExtensionFilesToLoad()) {
-        try {
-          URLClassLoader loader = getClassLoaderForExtension(
-              extension,
-              extensionsConfig.isUseExtensionClassloaderFirst()
-          );
           log.info(
               "Loading extension [%s], jars: %s",
               extension.getName(),
