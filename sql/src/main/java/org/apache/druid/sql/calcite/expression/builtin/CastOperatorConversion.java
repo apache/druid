@@ -92,9 +92,12 @@ public class CastOperatorConversion implements SqlOperatorConversion
                                               ? ExpressionType.fromColumnType(fromDruidType)
                                               : ExpressionType.fromColumnType(toDruidType);
 
-      if (fromExpressionType == null || toExpressionType == null) {
+      if (toExpressionType == null) {
         // We have no runtime type for these SQL types.
         return null;
+      }
+      if (fromExpressionType == null) {
+        return DruidExpression.ofLiteral(toDruidType, DruidExpression.nullLiteral());
       }
 
       final DruidExpression typeCastExpression;
