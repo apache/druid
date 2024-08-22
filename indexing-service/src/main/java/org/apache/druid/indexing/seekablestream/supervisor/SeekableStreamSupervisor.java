@@ -1295,6 +1295,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
 
+
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
         includeOffsets
@@ -2733,6 +2734,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     log.debug("Found [%d] partitions for stream [%s]", partitionIdsFromSupplier.size(), ioConfig.getStream());
 
+    Integer taskCount = spec.getIoConfig().getTaskCount();
+    if (partitionIdsFromSupplier.size() > spec.getIoConfig().getTaskCount()) {
+      log.warn("Configured task count [%s] is greater than the [%d] of partitions.", taskCount, partitionIdsFromSupplier.size());
+    }
     Map<PartitionIdType, SequenceOffsetType> storedMetadata = getOffsetsFromMetadataStorage();
     Set<PartitionIdType> storedPartitions = storedMetadata.keySet();
     Set<PartitionIdType> closedPartitions = storedMetadata
