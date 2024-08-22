@@ -36,7 +36,7 @@ Imagine you are interested in the number of visitors that watched episodes of a 
 
 There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take a very long time, meaning that an interactive data exploration is not possible.
 
-An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval[^1], show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
+An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval<super>[^1]</super>, show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
 
 [^1]: Why 15 minutes and not just 1 hour? Intervals of 15 minutes work better with international timezones because those are not always aligned by hour. India, for instance, is 30 minutes off, and Nepal is even 45 minutes off. With 15 minute aggregates, you can get hourly sums for any of those timezones, too!
 
@@ -60,9 +60,11 @@ In this tutorial, you will learn how to do the following:
 
 ## Prerequisites
 
-For this tutorial, you should have already downloaded Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine.
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+Before proceeding, download Druid as described in the [single-machine quickstart](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+
+It's helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+
+## Sample Data
 
 This tutorial works with the following data:
 - **date**: a timestamp. In this case it's just dates but as mentioned earlier, a finer granularity makes sense in real life.
@@ -95,12 +97,12 @@ date,uid,show,episode
 
 ## Ingest data using Theta sketches
 
-1. Navigate to the **Load data** wizard in the web console.
-2. Select `Paste data` as the data source and paste the given data:
+1. Navigate to the **Load data > Batch-SQL** wizard in the web console.
+2. Select `Paste data` as the data source and paste the [sample data](#sample-data):
 
-![Load data view with pasted data](../assets/tutorial-theta-01.png)
+![Load data view with pasted data](../assets/tutorial-theta-v2_01.png)
 
-3. Leave the source type as `inline` and click **Apply** and **Next: Parse data**.
+3. Select **Connect data**.
 4. Parse the data as CSV, with included headers:
 
 ![Parse raw data](../assets/tutorial-theta-02.png)
