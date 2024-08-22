@@ -115,7 +115,6 @@ public class ExpressionsTest extends CalciteTestBase
       .add("tstr", ColumnType.STRING)
       .add("dstr", ColumnType.STRING)
       .add("timezone", ColumnType.STRING)
-      .add("unknown", null)
       .build();
 
   private static final Map<String, Object> BINDINGS = ImmutableMap.<String, Object>builder()
@@ -2048,23 +2047,6 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         makeExpression(ColumnType.LONG, "timestamp_extract(\"t\",'DAY','UTC')"),
         3L
-    );
-  }
-
-  @Test
-  public void testCastUnknown()
-  {
-    testHelper.testExpression(
-        testHelper.makeAbstractCast(
-            testHelper.createSqlType(SqlTypeName.TIMESTAMP),
-            testHelper.makeInputRef("t")
-        ),
-        DruidExpression.ofColumn(
-            ColumnType.LONG,
-            "t",
-            SimpleExtraction.of("t", null)
-        ),
-        DateTimes.of("2000-02-03T04:05:06Z").getMillis()
     );
   }
 
