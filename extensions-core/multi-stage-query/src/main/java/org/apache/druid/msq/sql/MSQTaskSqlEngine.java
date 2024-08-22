@@ -428,7 +428,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   /**
    * Validate that the sort order given by CLUSTERED BY or {@link MultiStageQueryContext#getSortOrder(QueryContext)}
-   * begins with {@link ColumnHolder#TIME_COLUMN_NAME}, unless {@link MultiStageQueryContext#CTX_EXPLICIT_SORT_ORDER}
+   * begins with {@link ColumnHolder#TIME_COLUMN_NAME}, unless {@link MultiStageQueryContext#CTX_FORCE_TIME_SORT}
    * is set.
    *
    * @param fieldMappings  field mappings from {@link #validateInsert(RelRoot, Table, PlannerContext)}
@@ -446,7 +446,7 @@ public class MSQTaskSqlEngine implements SqlEngine
 
     final QueryContext context = plannerContext.queryContext();
 
-    if (MultiStageQueryContext.isUseExplicitSegmentSortOrder(context)) {
+    if (!MultiStageQueryContext.isForceSegmentSortByTime(context)) {
       // Any sort order is allowed. Skip check.
       return;
     }
@@ -458,10 +458,10 @@ public class MSQTaskSqlEngine implements SqlEngine
 
       if (!timeIsFirst) {
         throw InvalidSqlInput.exception(
-            "Context parameter[%s] must start with[%s] unless context parameter[%s] is set to[true]. %s",
+            "Context parameter[%s] must start with[%s] unless context parameter[%s] is set to[false]. %s",
             MultiStageQueryContext.CTX_SORT_ORDER,
             ColumnHolder.TIME_COLUMN_NAME,
-            MultiStageQueryContext.CTX_EXPLICIT_SORT_ORDER,
+            MultiStageQueryContext.CTX_FORCE_TIME_SORT,
             DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
         );
       }
@@ -479,10 +479,10 @@ public class MSQTaskSqlEngine implements SqlEngine
       if (timePosition > 0) {
         throw InvalidSqlInput.exception(
             "Sort order (CLUSTERED BY) cannot include[%s] in position[%d] unless context parameter[%s] "
-            + "is set to[true]. %s",
+            + "is set to[false]. %s",
             ColumnHolder.TIME_COLUMN_NAME,
             timePosition,
-            MultiStageQueryContext.CTX_EXPLICIT_SORT_ORDER,
+            MultiStageQueryContext.CTX_FORCE_TIME_SORT,
             DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
         );
       }

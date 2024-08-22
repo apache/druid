@@ -123,7 +123,7 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
                             DimensionsSpec.builder()
                                 .setDimensions(DimensionsSpec.getDefaultSchemas(Collections.singletonList("joe")))
                                 .useSchemaDiscovery(true)
-                                .setUseExplicitSegmentSortOrder(true)
+                                .setForceSegmentSortByTime(false)
                                 .build()
                         )
                         .withMetrics(new CountAggregatorFactory("cnt"))

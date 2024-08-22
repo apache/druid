@@ -234,16 +234,16 @@ public class DataSchema
         }
 
         if (ColumnHolder.TIME_COLUMN_NAME.equals(field)) {
-          if (i > 0 && !dimensionsSpec.isUseExplicitSegmentSortOrder()) {
+          if (i > 0 && dimensionsSpec.isForceSegmentSortByTime()) {
             throw DruidException
                 .forPersona(DruidException.Persona.USER)
                 .ofCategory(DruidException.Category.INVALID_INPUT)
                 .build(
                     "Encountered dimension[%s] at position[%d]. This is only supported when the dimensionsSpec "
-                    + "parameter[%s] is set to[true]. %s",
+                    + "parameter[%s] is set to[false]. %s",
                     field,
                     i,
-                    DimensionsSpec.PARAMETER_EXPLICIT_SORT_ORDER,
+                    DimensionsSpec.PARAMETER_FORCE_TIME_SORT,
                     DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
                 );
           } else if (!dimSchema.getColumnType().is(ValueType.LONG)) {

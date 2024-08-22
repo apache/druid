@@ -122,7 +122,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                 dimensionsSpec =
                     DimensionsSpec.builder()
                                   .setDimensions(Collections.singletonList(new StringDimensionSchema("billy")))
-                                  .setUseExplicitSegmentSortOrder(true)
+                                  .setForceSegmentSortByTime(false)
                                   .setIncludeAllDimensions(true)
                                   .build();
               } else {

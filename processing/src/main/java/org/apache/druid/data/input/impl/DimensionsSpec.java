@@ -51,10 +51,10 @@ public class DimensionsSpec
    * Parameter name for allowing any sort order. Also used as an MSQ context parameter, for some consistency between
    * MSQ and native ingest configuration.
    */
-  public static final String PARAMETER_EXPLICIT_SORT_ORDER = "useExplicitSegmentSortOrder";
+  public static final String PARAMETER_FORCE_TIME_SORT = "forceSegmentSortByTime";
 
   /**
-   * Warning about non-time ordering to include in error messages when {@link #PARAMETER_EXPLICIT_SORT_ORDER} is
+   * Warning about non-time ordering to include in error messages when {@link #PARAMETER_FORCE_TIME_SORT} is
    * not set.
    */
   public static final String WARNING_NON_TIME_SORT_ORDER = StringUtils.format(
@@ -64,11 +64,13 @@ public class DimensionsSpec
       ColumnHolder.TIME_COLUMN_NAME
   );
 
+  public static final boolean DEFAULT_FORCE_TIME_SORT = true;
+
   private final List<DimensionSchema> dimensions;
   private final Set<String> dimensionExclusions;
   private final Map<String, DimensionSchema> dimensionSchemaMap;
   private final boolean includeAllDimensions;
-  private final boolean useExplicitSegmentSortOrder;
+  private final Boolean forceSegmentSortByTime;
 
   private final boolean useSchemaDiscovery;
 
@@ -101,7 +103,7 @@ public class DimensionsSpec
 
   public DimensionsSpec(List<DimensionSchema> dimensions)
   {
-    this(dimensions, null, null, false, null, false);
+    this(dimensions, null, null, false, null, null);
   }
 
   @JsonCreator
@@ -111,7 +113,7 @@ public class DimensionsSpec
       @Deprecated @JsonProperty("spatialDimensions") List<SpatialDimensionSchema> spatialDimensions,
       @JsonProperty("includeAllDimensions") boolean includeAllDimensions,
       @JsonProperty("useSchemaDiscovery") Boolean useSchemaDiscovery,
-      @JsonProperty(PARAMETER_EXPLICIT_SORT_ORDER) boolean useExplicitSegmentSortOrder
+      @JsonProperty(PARAMETER_FORCE_TIME_SORT) Boolean forceSegmentSortByTime
   )
   {
     this.dimensions = dimensions == null
@@ -142,7 +144,7 @@ public class DimensionsSpec
     this.includeAllDimensions = includeAllDimensions;
     this.useSchemaDiscovery =
         useSchemaDiscovery != null && useSchemaDiscovery;
-    this.useExplicitSegmentSortOrder = useExplicitSegmentSortOrder;
+    this.forceSegmentSortByTime = forceSegmentSortByTime;
   }
 
   @JsonProperty
@@ -169,11 +171,24 @@ public class DimensionsSpec
     return useSchemaDiscovery;
   }
 
-  @JsonProperty(PARAMETER_EXPLICIT_SORT_ORDER)
-  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean isUseExplicitSegmentSortOrder()
+  @JsonProperty(PARAMETER_FORCE_TIME_SORT)
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Boolean isForceSegmentSortByTimeConfigured()
   {
-    return useExplicitSegmentSortOrder;
+    return forceSegmentSortByTime;
+  }
+
+  /**
+   * Returns {@link #isForceSegmentSortByTimeConfigured()} if nonnull, otherwise
+   * {@link #DEFAULT_FORCE_TIME_SORT}.
+   */
+  public boolean isForceSegmentSortByTime()
+  {
+    if (forceSegmentSortByTime != null) {
+      return forceSegmentSortByTime;
+    } else {
+      return DEFAULT_FORCE_TIME_SORT;
+    }
   }
 
   @Deprecated
@@ -239,7 +254,7 @@ public class DimensionsSpec
         null,
         includeAllDimensions,
         useSchemaDiscovery,
-        useExplicitSegmentSortOrder
+        forceSegmentSortByTime
     );
   }
 
@@ -251,7 +266,7 @@ public class DimensionsSpec
         null,
         includeAllDimensions,
         useSchemaDiscovery,
-        useExplicitSegmentSortOrder
+        forceSegmentSortByTime
     );
   }
 
@@ -264,7 +279,7 @@ public class DimensionsSpec
         spatials,
         includeAllDimensions,
         useSchemaDiscovery,
-        useExplicitSegmentSortOrder
+        forceSegmentSortByTime
     );
   }
 
@@ -304,11 +319,11 @@ public class DimensionsSpec
     }
     DimensionsSpec that = (DimensionsSpec) o;
     return includeAllDimensions == that.includeAllDimensions
-           && useExplicitSegmentSortOrder == that.useExplicitSegmentSortOrder
            && useSchemaDiscovery == that.useSchemaDiscovery
            && Objects.equals(dimensions, that.dimensions)
            && Objects.equals(dimensionExclusions, that.dimensionExclusions)
-           && Objects.equals(dimensionSchemaMap, that.dimensionSchemaMap);
+           && Objects.equals(dimensionSchemaMap, that.dimensionSchemaMap)
+           && Objects.equals(forceSegmentSortByTime, that.forceSegmentSortByTime);
   }
 
   @Override
@@ -319,7 +334,7 @@ public class DimensionsSpec
         dimensionExclusions,
         dimensionSchemaMap,
         includeAllDimensions,
-        useExplicitSegmentSortOrder,
+        forceSegmentSortByTime,
         useSchemaDiscovery
     );
   }
@@ -332,7 +347,9 @@ public class DimensionsSpec
            ", dimensionExclusions=" + dimensionExclusions +
            ", includeAllDimensions=" + includeAllDimensions +
            ", useSchemaDiscovery=" + useSchemaDiscovery +
-           (useExplicitSegmentSortOrder ? ", useExplicitSegmentSortOrder=" + useExplicitSegmentSortOrder : "") +
+           (forceSegmentSortByTime != null
+            ? ", forceSegmentSortByTime=" + forceSegmentSortByTime
+            : "") +
            '}';
   }
 
@@ -343,7 +360,7 @@ public class DimensionsSpec
     private List<SpatialDimensionSchema> spatialDimensions;
     private boolean includeAllDimensions;
     private boolean useSchemaDiscovery;
-    private boolean useExplicitSegmentSortOrder;
+    private Boolean forceSegmentSortByTime;
 
     public Builder setDimensions(List<DimensionSchema> dimensions)
     {
@@ -382,9 +399,9 @@ public class DimensionsSpec
       return this;
     }
 
-    public Builder setUseExplicitSegmentSortOrder(boolean useExplicitSegmentSortOrder)
+    public Builder setForceSegmentSortByTime(Boolean forceSegmentSortByTime)
     {
-      this.useExplicitSegmentSortOrder = useExplicitSegmentSortOrder;
+      this.forceSegmentSortByTime = forceSegmentSortByTime;
       return this;
     }
 
@@ -396,7 +413,7 @@ public class DimensionsSpec
           spatialDimensions,
           includeAllDimensions,
           useSchemaDiscovery,
-          useExplicitSegmentSortOrder
+          forceSegmentSortByTime
       );
     }
   }

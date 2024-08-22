@@ -168,8 +168,8 @@ public class MultiStageQueryContext
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
   public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.ARRAY;
 
-  public static final String CTX_EXPLICIT_SORT_ORDER = DimensionsSpec.PARAMETER_EXPLICIT_SORT_ORDER;
-  private static final boolean DEFAULT_EXPLICIT_SORT_ORDER = false;
+  public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
+  private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
@@ -365,9 +365,9 @@ public class MultiStageQueryContext
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
   }
 
-  public static boolean isUseExplicitSegmentSortOrder(final QueryContext queryContext)
+  public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
   {
-    return queryContext.getBoolean(CTX_EXPLICIT_SORT_ORDER, DEFAULT_EXPLICIT_SORT_ORDER);
+    return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)

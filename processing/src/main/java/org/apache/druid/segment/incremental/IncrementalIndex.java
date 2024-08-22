@@ -336,8 +336,9 @@ public abstract class IncrementalIndex implements Iterable<Row>, Closeable, Colu
     }
 
     if (foundTimePosition == -1) {
-      // __time not found: that means it either goes at the end, or the beginning, based on useExplicitSegmentSortOrder.
-      this.timePosition = dimensionsSpec.isUseExplicitSegmentSortOrder() ? dimensionDescsList.size() : 0;
+      // __time not found: that means it either goes at the end, or the beginning, based on
+      // forceSegmentSortByTime.
+      this.timePosition = dimensionsSpec.isForceSegmentSortByTime() ? 0 : dimensionDescsList.size();
     } else {
       this.timePosition = foundTimePosition;
     }

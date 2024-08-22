@@ -197,7 +197,7 @@ public class MSQReplaceTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByDim(String contextName, Map<String, Object> context)
   {
-    // Tests [CLUSTERED BY dim1] with the default useExplicitSegmentSortOrder (false). In this case,
+    // Tests [CLUSTERED BY dim1] with the default forceSegmentSortByTime (true). In this case,
     // partitioning uses [dim1] but segment sort uses [__time, dim1].
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -299,7 +299,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(DimensionsSpec.PARAMETER_EXPLICIT_SORT_ORDER, true);
+    queryContext.put(DimensionsSpec.PARAMETER_FORCE_TIME_SORT, false);
 
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
@@ -348,7 +348,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                    new FloatDimensionSchema("m1")
                                                )
                                            )
-                                           .setUseExplicitSegmentSortOrder(true)
+                                           .setForceSegmentSortByTime(false)
                                            .build(),
                              GranularityType.ALL,
                              Intervals.ETERNITY
@@ -361,8 +361,9 @@ public class MSQReplaceTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByDimThenTimeExplicitSort(String contextName, Map<String, Object> context)
   {
-    // Tests that [CLUSTERED BY dim1, __time] and [CLUSTERED BY dim1] are same when useExplicitSegmentSortOrder = true.
-    // (Same expectations as the prior test, testReplaceOnFooWithAllClusteredByDimExplicitSort.)
+    // Tests that [CLUSTERED BY dim1, __time] and [CLUSTERED BY dim1] are same when
+    // forceSegmentSortByTime = false. (Same expectations as the prior test,
+    // testReplaceOnFooWithAllClusteredByDimExplicitSort.)
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -384,7 +385,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(DimensionsSpec.PARAMETER_EXPLICIT_SORT_ORDER, true);
+    queryContext.put(DimensionsSpec.PARAMETER_FORCE_TIME_SORT, false);
 
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
@@ -433,7 +434,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                    new FloatDimensionSchema("m1")
                                                )
                                            )
-                                           .setUseExplicitSegmentSortOrder(true)
+                                           .setForceSegmentSortByTime(false)
                                            .build(),
                              GranularityType.ALL,
                              Intervals.ETERNITY
@@ -446,7 +447,7 @@ public class MSQReplaceTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByDimThenTimeError(String contextName, Map<String, Object> context)
   {
-    // Tests that [CLUSTERED BY dim1, __time] is an error when useExplicitSegmentSortOrder = false (the default).
+    // Tests that [CLUSTERED BY dim1, __time] is an error when forceSegmentSortByTime = true (the default).
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, dim1, m1 "
                              + "FROM foo "
@@ -456,7 +457,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedValidationErrorMatcher(invalidSqlContains(
                          "Sort order (CLUSTERED BY) cannot include[__time] in position[1] unless context "
-                         + "parameter[useExplicitSegmentSortOrder] is set to[true]."
+                         + "parameter[forceSegmentSortByTime] is set to[false]."
                      ))
                      .verifyPlanningErrors();
   }
@@ -466,7 +467,7 @@ public class MSQReplaceTest extends MSQTestBase
   public void testReplaceOnFooWithAllClusteredByDimThenTimeError2(String contextName, Map<String, Object> context)
   {
     // Tests that setting segmentSortOrder = [dim1, __time] is an error when
-    // useExplicitSegmentSortOrder = false (the default).
+    // forceSegmentSortByTime = false (the default).
     Map<String, Object> queryContext = new HashMap<>(context);
     queryContext.put(MultiStageQueryContext.CTX_SORT_ORDER, "dim1, __time");
 
@@ -479,7 +480,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(queryContext)
                      .setExpectedValidationErrorMatcher(invalidSqlContains(
                          "Context parameter[segmentSortOrder] must start with[__time] unless context "
-                         + "parameter[useExplicitSegmentSortOrder] is set to[true]."
+                         + "parameter[forceSegmentSortByTime] is set to[false]."
                      ))
                      .verifyPlanningErrors();
   }
@@ -488,7 +489,7 @@ public class MSQReplaceTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAllClusteredByTimeThenDimExplicitSort(String contextName, Map<String, Object> context)
   {
-    // Tests [CLUSTERED BY __time, dim1] with useExplicitSegmentSortOrder = true.
+    // Tests [CLUSTERED BY __time, dim1] with forceSegmentSortByTime = false.
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
@@ -510,7 +511,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                   .build();
 
     Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(DimensionsSpec.PARAMETER_EXPLICIT_SORT_ORDER, true);
+    queryContext.put(DimensionsSpec.PARAMETER_FORCE_TIME_SORT, false);
 
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
@@ -552,7 +553,7 @@ public class MSQReplaceTest extends MSQTestBase
                              context,
                              Collections.emptyList(),
                              // For backwards-compatibility, compaction state is stored as if
-                             // useExplicitSegmentSortOrder = false.
+                             // forceSegmentSortByTime = true.
                              ImmutableList.of(
                                  new StringDimensionSchema("dim1"),
                                  new FloatDimensionSchema("m1")

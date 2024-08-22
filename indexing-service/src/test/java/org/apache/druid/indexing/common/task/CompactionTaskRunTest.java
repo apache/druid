@@ -1891,7 +1891,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                           new AutoTypeColumnSchema("dim", null),
                           new AutoTypeColumnSchema("y", ColumnType.LONG)
                       ))
-                      .setUseExplicitSegmentSortOrder(true)
+                      .setForceSegmentSortByTime(false)
                       .build(),
         "|",
         Arrays.asList("ts", "dim", "x", "y", "val"),
@@ -1942,7 +1942,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
                               new AutoTypeColumnSchema("dim", null),
                               new AutoTypeColumnSchema("y", ColumnType.LONG)
                           ))
-                          .setUseExplicitSegmentSortOrder(true)
+                          .setForceSegmentSortByTime(false)
                           .build(),
             expectedLongSumMetric
         ),

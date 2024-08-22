@@ -1943,15 +1943,15 @@ public class ControllerImpl implements Controller
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
     final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
-    final boolean useExplicitSegmentSortOrder =
-        MultiStageQueryContext.isUseExplicitSegmentSortOrder(querySpec.getQuery().context());
+    final boolean forceSegmentSortByTime =
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
 
     final Pair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
             querySignature,
             queryClusterBy,
             destination.getSegmentSortOrder(),
-            useExplicitSegmentSortOrder,
+            forceSegmentSortByTime,
             columnMappings,
             isRollupQuery,
             querySpec.getQuery(),
@@ -2172,7 +2172,7 @@ public class ControllerImpl implements Controller
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
       final List<String> contextSegmentSortOrder,
-      final boolean useExplicitSegmentSortOrder,
+      final boolean forceSegmentSortByTime,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
       final Query<?> query,
@@ -2204,8 +2204,8 @@ public class ControllerImpl implements Controller
     // Start with segmentSortOrder.
     final Set<String> outputColumnsInOrder = new LinkedHashSet<>(contextSegmentSortOrder);
 
-    // Then __time, if it's an output column and useExplicitSegmentSortOrder is not set.
-    if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME) && !useExplicitSegmentSortOrder) {
+    // Then __time, if it's an output column and forceSegmentSortByTime is set.
+    if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME) && forceSegmentSortByTime) {
       outputColumnsInOrder.add(ColumnHolder.TIME_COLUMN_NAME);
     }
 
@@ -2295,9 +2295,10 @@ public class ControllerImpl implements Controller
     if (!dimensions.isEmpty() && dimensions.get(0).getName().equals(ColumnHolder.TIME_COLUMN_NAME)) {
       // Skip __time if it's in the first position, for compatibility with legacy dimensionSpecs.
       dimensions.remove(0);
-      dimensionsSpecBuilder.setUseExplicitSegmentSortOrder(false);
+      dimensionsSpecBuilder.setForceSegmentSortByTime(null);
     } else {
-      dimensionsSpecBuilder.setUseExplicitSegmentSortOrder(useExplicitSegmentSortOrder);
+      // Store explicit forceSegmentSortByTime only if false, for compatibility with legacy dimensionSpecs.
+      dimensionsSpecBuilder.setForceSegmentSortByTime(forceSegmentSortByTime ? null : false);
     }
 
     return Pair.of(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);

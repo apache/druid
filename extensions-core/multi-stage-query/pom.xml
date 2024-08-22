@@ -218,11 +218,11 @@
             <artifactId>quidem</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-             <groupId>org.apache.calcite.avatica</groupId>
-             <artifactId>avatica-core</artifactId>
-             <scope>test</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--             <groupId>org.apache.calcite.avatica</groupId>-->
+<!--             <artifactId>avatica-core</artifactId>-->
+<!--             <scope>test</scope>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-testkit</artifactId>

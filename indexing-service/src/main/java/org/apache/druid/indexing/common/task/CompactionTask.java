@@ -856,9 +856,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                    .filter(Objects::nonNull)
                    .collect(Collectors.toList());
 
+      // Store forceSegmentSortByTime only if false, for compatibility with legacy compaction states.
+      final Boolean forceSegmentSortByTime = includeTimeAsDimension ? false : null;
       return DimensionsSpec.builder()
           .setDimensions(dimensionSchemas)
-          .setUseExplicitSegmentSortOrder(includeTimeAsDimension)
+          .setForceSegmentSortByTime(forceSegmentSortByTime)
           .build();
     }
 

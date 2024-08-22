@@ -86,13 +86,13 @@ The following table describes how to configure sorting.
 
 :::info
 Druid implicitly sorts rows within a segment by `__time` first before any `dimensions` or `CLUSTERED BY` fields, unless
-you set `useExplicitSegmentSortOrder` to `true` in your
+you set `forceSegmentSortByTime` to `false` in your
 [query context](../multi-stage-query/reference.md#context-parameters) (for SQL) or in your
 [`dimensionsSpec`](ingestion-spec.md#dimensionsspec) (for other ingestion forms).
 
-Setting `useExplicitSegmentSortOrder` is an experimental feature. Segments created with sort orders that do not start
-with `__time` can only be read by Druid 31 or later. Additionally, at this time, certain queries are not supported on
-such segments:
+Setting `forceSegmentSortByTime` to `false` is an experimental feature. Segments created with sort orders that
+do not start with `__time` can only be read by Druid 31 or later. Additionally, at this time, certain queries are not
+supported on such segments, including:
 
 - Native queries with `granularity` other than `all`.
 - Native `scan` query with ascending or descending time order.

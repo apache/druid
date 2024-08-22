@@ -281,7 +281,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         schema.getDimensionsSpec().getDimensionNames()
     );
 
-    Assert.assertFalse(schema.getDimensionsSpec().isUseExplicitSegmentSortOrder());
+    Assert.assertTrue(schema.getDimensionsSpec().isForceSegmentSortByTime());
   }
 
   @Test
@@ -317,7 +317,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     expectedException.expect(DruidException.class);
     expectedException.expectMessage(
         "Encountered dimension[__time] at position[1]. This is only supported when the dimensionsSpec "
-        + "parameter[useExplicitSegmentSortOrder] is set to[true]. "
+        + "parameter[forceSegmentSortByTime] is set to[false]. "
         + DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
     );
 
@@ -357,7 +357,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                           )
                       )
                       .setDimensionExclusions(ImmutableList.of("dimC"))
-                      .setUseExplicitSegmentSortOrder(true)
+                      .setForceSegmentSortByTime(false)
                       .build(),
         null,
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
@@ -371,7 +371,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         schema.getDimensionsSpec().getDimensionNames()
     );
 
-    Assert.assertTrue(schema.getDimensionsSpec().isUseExplicitSegmentSortOrder());
+    Assert.assertFalse(schema.getDimensionsSpec().isForceSegmentSortByTime());
   }
 
   @Test
