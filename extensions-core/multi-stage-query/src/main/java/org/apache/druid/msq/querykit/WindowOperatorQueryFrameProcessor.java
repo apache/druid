@@ -31,6 +31,7 @@ import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
@@ -51,6 +52,8 @@ import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -84,6 +87,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
   private FrameWriter frameWriter = null;
+
+  private final VirtualColumns frameWriterVirtualColumns;
+  private final SettableLongVirtualColumn partitionBoostVirtualColumn;
 
   // List of type strategies to compare the partition columns across rows.
   // Type strategies are pushed in the same order as column types in frameReader.signature()
@@ -119,6 +125,16 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     for (int i = 0; i < frameReader.signature().size(); i++) {
       typeStrategies[i] = frameReader.signature().getColumnType(i).get().getNullableStrategy();
     }
+
+    // Get virtual columns to be added to the frame writer.
+    this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
+    final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
+    final VirtualColumn segmentGranularityVirtualColumn =
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
+    if (segmentGranularityVirtualColumn != null) {
+      frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
+    }
+    this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
   }
 
   @Override
@@ -404,7 +420,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     if (frameWriter == null) {
       final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
       final ColumnSelectorFactory frameWriterColumnSelectorFactory = csfm.make(rowId);
-      frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactory);
+      final ColumnSelectorFactory frameWriterColumnSelectorFactoryWithVirtualColumns =
+          frameWriterVirtualColumns.wrap(frameWriterColumnSelectorFactory);
+      frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactoryWithVirtualColumns);
       currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
   }
@@ -422,6 +440,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       final boolean didAddToFrame = frameWriter.addSelection();
       if (didAddToFrame) {
         rowId.incrementAndGet();
+        partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
       } else if (frameWriter.getNumRows() == 0) {
         throw new FrameRowTooLargeException(currentAllocatorCapacity);
       } else {

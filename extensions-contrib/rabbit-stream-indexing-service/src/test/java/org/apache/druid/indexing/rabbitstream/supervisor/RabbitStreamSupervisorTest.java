@@ -74,7 +74,6 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
       false,
       false);
   private static final String DATASOURCE = "testDS";
-  private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
@@ -148,8 +147,6 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads, // worker threads
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,

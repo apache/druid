@@ -25,7 +25,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -88,18 +87,6 @@ public class FilteredStorageAdapter implements StorageAdapter
     return baseStorageAdapter.getDimensionCardinality(column);
   }
 
-  @Override
-  public DateTime getMinTime()
-  {
-    return baseStorageAdapter.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return baseStorageAdapter.getMaxTime();
-  }
-
   @Nullable
   @Override
   public Comparable getMinValue(String column)
@@ -125,12 +112,6 @@ public class FilteredStorageAdapter implements StorageAdapter
   public int getNumRows()
   {
     return 0;
-  }
-
-  @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return baseStorageAdapter.getMaxIngestedEventTime();
   }
 
   @Nullable

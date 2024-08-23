@@ -232,7 +232,7 @@ A `dimensionsSpec` can have the following components:
 | `spatialDimensions`    | An array of [spatial dimensions](../querying/geo.md).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `[]`    |
 | `includeAllDimensions` | Note that this field only applies to string-based schema discovery where Druid ingests dimensions it discovers as strings. This is different from schema auto-discovery where Druid infers the type for data. You can set `includeAllDimensions` to true to ingest both explicit dimensions in the `dimensions` field and other dimensions that the ingestion task discovers from input data. In this case, the explicit dimensions will appear first in the order that you specify them, and the dimensions dynamically discovered will come after. This flag can be useful especially with auto schema discovery using [`flattenSpec`](./data-formats.md#flattenspec). If this is not set and the `dimensions` field is not empty, Druid will ingest only explicit dimensions. If this is not set and the `dimensions` field is empty, all discovered dimensions will be ingested. | false   |
 | `useSchemaDiscovery` | Configure Druid to use schema auto-discovery to discover some or all of the dimensions and types for your data. For any dimensions that aren't a uniform type, Druid ingests them as JSON. You can use this for native batch or streaming ingestion.  | false  | 
-
+| `forceSegmentSortByTime` | When set to true (the default), segments created by the ingestion job are sorted by `{__time, dimensions[0], dimensions[1], ...}`. When set to false, segments created by the ingestion job are sorted by `{dimensions[0], dimensions[1], ...}`. To include `__time` in the sort order when this parameter is set to `false`, you must include a dimension named `__time` with type `long` explicitly in the `dimensions` list.<br /><br />Setting this to `false` is an experimental feature; see [Sorting](partitioning.md#sorting) for details. | `true` |
 
 #### Dimension objects
 
@@ -301,15 +301,15 @@ An example `metricsSpec` is:
 
 ### `granularitySpec`
 
-The `granularitySpec` is located in `dataSchema` → `granularitySpec` and is responsible for configuring
-the following operations:
+The `granularitySpec`, located in `dataSchema` → `granularitySpec`, specifies the following:
 
-1. Partitioning a datasource into [time chunks](../design/storage.md) (via `segmentGranularity`).
-2. Truncating the timestamp, if desired (via `queryGranularity`).
-3. Specifying which time chunks of segments should be created, for batch ingestion (via `intervals`).
-4. Specifying whether ingestion-time [rollup](./rollup.md) should be used or not (via `rollup`).
+1. `segmentGranularity` to partitioning a datasource into [time chunks](../design/storage.md).
+2. `queryGranularity` to optionally truncate the timestamp.
+3. `intervals` to define the time chunks of segments to create for batch ingestion.
+4.  `rollup` to enable ingestion-time [rollup](./rollup.md) or not.
 
 Other than `rollup`, these operations are all based on the [primary timestamp](./schema-model.md#primary-timestamp).
+Use the format from [Query granularities] to specify both `segmentGranualarity` and `queryGranularity`.
 
 An example `granularitySpec` is:
 

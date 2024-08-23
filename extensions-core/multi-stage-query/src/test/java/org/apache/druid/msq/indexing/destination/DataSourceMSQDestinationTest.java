@@ -35,7 +35,7 @@ public class DataSourceMSQDestinationTest
   public void testEquals()
   {
     EqualsVerifier.forClass(DataSourceMSQDestination.class)
-                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder", "dimensionToSchemaMap")
+                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder", "dimensionSchemas")
                   .withPrefabValues(
                       Map.class,
                       ImmutableMap.of(

@@ -23,6 +23,7 @@ import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -77,6 +78,17 @@ public class WrappedSegmentReference implements SegmentReference
   public StorageAdapter asStorageAdapter()
   {
     return storageAdapterWrapperFunction.apply(delegate.asStorageAdapter());
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(@Nonnull Class<T> clazz)
+  {
+    if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) WrappedTimeBoundaryInspector.create(delegate.as(TimeBoundaryInspector.class));
+    } else {
+      return SegmentReference.super.as(clazz);
+    }
   }
 
   @Override

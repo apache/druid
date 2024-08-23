@@ -42,6 +42,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
@@ -70,8 +71,9 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -109,6 +111,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Supplier;
@@ -753,8 +756,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private Granularity queryGranularity;
 
     // For processDimensionsSpec:
-    private final BiMap<String, Integer> uniqueDims = HashBiMap.create();
-    private final Map<String, DimensionSchema> dimensionSchemaMap = new HashMap<>();
+    private final BiMap<String, Integer> uniqueDims = HashBiMap.create(); // dimension name -> position in sort order
+    private final Map<String, DimensionSchema> dimensionSchemaMap = new HashMap<>(); // dimension name -> schema
 
     // For processMetricsSpec:
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
@@ -831,19 +834,34 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       }
 
       final BiMap<Integer, String> orderedDims = uniqueDims.inverse();
+
+      // Include __time as a dimension only if required, i.e., if it appears in the sort order after position 0.
+      final Integer timePosition = uniqueDims.get(ColumnHolder.TIME_COLUMN_NAME);
+      final boolean includeTimeAsDimension = timePosition != null && timePosition > 0;
+
       final List<DimensionSchema> dimensionSchemas =
           IntStream.range(0, orderedDims.size())
                    .mapToObj(i -> {
                      final String dimName = orderedDims.get(i);
-                     return Preconditions.checkNotNull(
-                         dimensionSchemaMap.get(dimName),
-                         "Cannot find dimension[%s] from dimensionSchemaMap",
-                         dimName
-                     );
+                     if (ColumnHolder.TIME_COLUMN_NAME.equals(dimName) && !includeTimeAsDimension) {
+                       return null;
+                     } else {
+                       return Preconditions.checkNotNull(
+                           dimensionSchemaMap.get(dimName),
+                           "Cannot find dimension[%s] from dimensionSchemaMap",
+                           dimName
+                       );
+                     }
                    })
+                   .filter(Objects::nonNull)
                    .collect(Collectors.toList());
 
-      return new DimensionsSpec(dimensionSchemas);
+      // Store forceSegmentSortByTime only if false, for compatibility with legacy compaction states.
+      final Boolean forceSegmentSortByTime = includeTimeAsDimension ? false : null;
+      return DimensionsSpec.builder()
+          .setDimensions(dimensionSchemas)
+          .setForceSegmentSortByTime(forceSegmentSortByTime)
+          .build();
     }
 
     public AggregatorFactory[] getMetricsSpec()
@@ -923,27 +941,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         return;
       }
 
-      final Map<String, DimensionHandler> dimensionHandlerMap = index.getDimensionHandlers();
+      final List<String> sortOrder = new ArrayList<>();
 
-      for (String dimension : index.getAvailableDimensions()) {
-        final ColumnHolder columnHolder = Preconditions.checkNotNull(
-            index.getColumnHolder(dimension),
-            "Cannot find column for dimension[%s]",
-            dimension
-        );
+      for (final OrderBy orderBy : index.getOrdering()) {
+        final String dimension = orderBy.getColumnName();
+        if (orderBy.getOrder() != Order.ASCENDING) {
+          throw DruidException.defensive("Order[%s] for dimension[%s] not supported", orderBy.getOrder(), dimension);
+        }
+        sortOrder.add(dimension);
+      }
 
-        if (!uniqueDims.containsKey(dimension)) {
-          Preconditions.checkNotNull(
-              dimensionHandlerMap.get(dimension),
-              "Cannot find dimensionHandler for dimension[%s]",
-              dimension
-          );
+      for (String dimension : Iterables.concat(sortOrder, index.getAvailableDimensions())) {
+        uniqueDims.computeIfAbsent(dimension, ignored -> uniqueDims.size());
 
-          uniqueDims.put(dimension, uniqueDims.size());
-          dimensionSchemaMap.put(
-              dimension,
-              columnHolder.getColumnFormat().getColumnSchema(dimension)
-          );
+        if (!dimensionSchemaMap.containsKey(dimension)) {
+          // Possible for sortOrder to contain a dimension that doesn't exist (i.e. if it's 100% nulls).
+          // In this case, omit it from dimensionSchemaMap for now. We'll skip it later if *no* segment has an existing
+          // column for it.
+          final ColumnHolder columnHolder = index.getColumnHolder(dimension);
+          if (columnHolder != null) {
+            dimensionSchemaMap.put(
+                dimension,
+                columnHolder.getColumnFormat().getColumnSchema(dimension)
+            );
+          }
         }
       }
     }

@@ -30,6 +30,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
@@ -222,11 +223,11 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
 
   @Nullable
   @Override
-  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
+  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, Closer closer)
   {
     return new QueryableIndexColumnSelectorFactory(
         VirtualColumns.EMPTY,
-        descending,
+        Cursors.getTimeOrdering(queryableIndex.getOrdering()),
         offset,
         new ColumnCache(queryableIndex, closer)
     );

@@ -219,7 +219,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertEquals("false", map.get("isNested"));
     Assert.assertNull(map.get("foo"));
   }
@@ -235,7 +234,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertEquals("false", map.get("isNested"));
     Assert.assertEquals("bar", map.get("foo"));
   }
@@ -256,7 +254,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertEquals("true", map.get("isNested"));
     Assert.assertNull(map.get("foo"));
   }
@@ -278,7 +275,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
     Assert.assertEquals("true", map.get("isNested"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertNull(map.get("foo"));
   }
 
@@ -299,7 +295,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertNull(map.get("foo"));
   }
 

@@ -33,6 +33,7 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
+import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -130,7 +131,12 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
                           .build();
 
     final Iterable<Result<TopNResultValue>> results =
-        engine.query(query, new IncrementalIndexStorageAdapter(index), null).toList();
+        engine.query(
+            query,
+            new IncrementalIndexStorageAdapter(index),
+            new IncrementalIndexTimeBoundaryInspector(index),
+            null
+        ).toList();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
         new Result<>(
