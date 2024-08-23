@@ -56,6 +56,7 @@ import java.util.Map;
 public abstract class QueryResultPusher
 {
   private static final Logger log = new Logger(QueryResultPusher.class);
+  protected static final String RESULT_TRAILER_HEADERS = QueryResource.ERROR_MESSAGE_TRAILER_HEADER + "," + QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER;
 
   private final HttpServletRequest request;
   private final String queryId;
@@ -65,7 +66,6 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
-  private final boolean includeTrailerHeader;
   private final HttpFields trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
@@ -80,8 +80,7 @@ public abstract class QueryResultPusher
       QueryResource.QueryMetricCounter counter,
       String queryId,
       MediaType contentType,
-      Map<String, String> extraHeaders,
-      boolean includeTrailerHeader
+      Map<String, String> extraHeaders
   )
   {
     this.request = request;
@@ -92,7 +91,6 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
-    this.includeTrailerHeader = includeTrailerHeader;
     this.trailerFields = new HttpFields();
   }
 
@@ -127,11 +125,8 @@ public abstract class QueryResultPusher
 
       final Response.ResponseBuilder startResponse = resultsWriter.start();
       if (startResponse != null) {
-        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
-
-        if (includeTrailerHeader) {
-          startResponse.header(HttpHeader.TRAILER.toString(), QueryResource.ERROR_MESSAGE_TRAILER_HEADER);
-        }
+        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId)
+                     .header(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
 
         for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
           startResponse.header(entry.getKey(), entry.getValue());
@@ -155,11 +150,15 @@ public abstract class QueryResultPusher
         response.setHeader(entry.getKey(), entry.getValue());
       }
 
-      if (includeTrailerHeader && response instanceof org.eclipse.jetty.server.Response) {
+      if (response instanceof org.eclipse.jetty.server.Response) {
         org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
 
-        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), QueryResource.ERROR_MESSAGE_TRAILER_HEADER);
+        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
         jettyResponse.setTrailers(() -> trailerFields);
+
+        // Start with complete status
+
+        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
       }
 
       accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
@@ -242,10 +241,8 @@ public abstract class QueryResultPusher
         // also throwing the exception body into the response to make it easier for the client to choke if it manages
         // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
         // the future.
-
-        if (includeTrailerHeader) {
-          trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
-        }
+        trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
+        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
         return null;
       }
     }
@@ -441,7 +438,7 @@ public abstract class QueryResultPusher
         response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
         response.setContentType(contentType.toString());
 
-        if (includeTrailerHeader && response instanceof org.eclipse.jetty.server.Response) {
+        if (response instanceof org.eclipse.jetty.server.Response) {
           org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
           jettyResponse.setTrailers(() -> trailerFields);
         }
