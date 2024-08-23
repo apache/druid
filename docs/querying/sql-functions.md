@@ -826,27 +826,84 @@ Returns the cumulative distribution of the current row within the window calcula
 
 ## CURRENT_DATE
 
-`CURRENT_DATE`
+Returns the current date in UTC time, unless you specify a different timezone in the query context.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `CURRENT_DATE`
+* **Function type:** Scalar, date and time
 
-Returns the current date in the connection's time zone.
+<details><summary>Example</summary>
+
+The following example returns the current date.
+
+```sql
+SELECT CURRENT_DATE AS "current_date"
+```
+
+Returns the following:
+
+| `current_date` | 
+| -- |
+| `2024-08-14T00:00:00.000Z `|
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## CURRENT_TIMESTAMP
 
-`CURRENT_TIMESTAMP`
+Returns the current timestamp in UTC time, unless you specify a different timezone in the query context.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-Returns the current timestamp in the connection's time zone.
+* **Syntax:** `CURRENT_TIMESTAMP`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example returns the current timestamp.
+
+```sql
+SELECT CURRENT_TIMESTAMP AS "current_timestamp"
+```
+
+Returns the following:
+
+| `current_timestamp` |
+| -- |
+| `2024-08-14T21:30:13.793Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## DATE_TRUNC
 
-`DATE_TRUNC(<CHARACTER>, <TIMESTAMP>)`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Rounds down a timestamp by a given time unit.
+
+* **Syntax:** `DATE_TRUNC(unit, timestamp_expr)` 
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example truncates a timestamp from the `__time` column from the `taxi-trips` datasource to the most recent `decade`.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  DATE_TRUNC('decade', "__time") AS "truncate_timestamp"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_timestamp` | `truncate_time` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2010-01-01T00:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
+
 
 ## DECODE_BASE64_COMPLEX
 
@@ -2627,35 +2684,121 @@ Returns a union of Theta sketches.
 
 ## TIME_CEIL
 
-`TIME_CEIL(<TIMESTAMP>, <period>, [<origin>, [<timezone>]])`
+Rounds up a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Rounds up a timestamp by a given time period, optionally from some reference time or timezone.
+<details><summary>Example</summary>
+
+The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  TIME_CEIL("__time", 'PT45M', TIMESTAMP '2013-08-01 08:0:00') AS "time_ceiling"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_timestamp` | `time_ceiling` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-08-01T08:45:00.000Z` |
+| `2013-08-01T09:13:00.000Z` | `2013-08-01T09:30:00.000Z` |
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_EXTRACT
 
-`TIME_EXTRACT(<TIMESTAMP>, [<unit>, [<timezone>]])`
+Extracts the value of `unit` from the timestamp and returns it as a number. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_EXTRACT(timestamp_expr[, unit[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Extracts the value of some unit of the timestamp and returns the number.
+<details><summary>Example</summary>
+
+The following example extracts the hour from the `__time` column in the `taxi-trips` datasource and offsets its timezone by `-04:00` hours.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  TIME_EXTRACT("__time", 'hour', '-04:00') AS "extract_hour"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_timestamp` | `extract_hour` | 
+| -- | -- | 
+| `2013-08-01T08:14:37.000Z` | `4` |
+| `2013-08-01T09:13:00.000Z` | `5` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_FLOOR
 
-`TIME_FLOOR(<TIMESTAMP>, <period>, [<origin>, [<timezone>]])`
+Rounds down a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Rounds down a timestamp by a given time period, optionally from some reference time or timezone.
+<details><summary>Example</summary>
+
+The following example rounds down the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  TIME_FLOOR("__time", 'PT45M', TIMESTAMP '2013-08-01 08:0:00') AS "time_floor"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_timestamp` | `time_floor` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-08-01T08:00:00.000Z` |
+| `2013-08-01T09:13:00.000Z` | `2013-08-01T08:45:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_FORMAT
 
-`TIME_FORMAT(<TIMESTAMP>, [<pattern>, [<timezone>]])`
+Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, `pattern` defaults to ISO 8601. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_FORMAT(timestamp_expr[, pattern[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Formats a timestamp as a string.
+<details><summary>Example</summary>
+
+The following example formats the `__time` column from the `flight-carriers` datasource into a string format and offsets the result's timezone by `-05:00` hours.
+
+```sql
+SELECT
+  "__time" AS "original_time",
+TIME_FORMAT( "__time", 'dd-MM-YYYY hh:mm aa zzz', '-05:00') AS "string"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `string` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `01-08-2013 03:14 AM -05:00` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_IN_INTERVAL
 
@@ -2667,19 +2810,62 @@ Returns whether a timestamp is contained within a particular interval, formatted
 
 ## TIME_PARSE
 
-`TIME_PARSE(<string_expr>, [<pattern>, [<timezone>]])`
+Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, `pattern` defaults to ISO 8601. Returns NULL if string cannot be parsed. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_PARSE(string_expr[, pattern[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Parses a string into a timestamp.
+<details><summary>Example</summary>
+
+The following example parses the `FlightDate` STRING column from the `flight-carriers` datasource into a valid timestamp with an offset of `-05:00` hours.
+
+```sql
+SELECT
+  "FlightDate" AS "original_string",
+  TIME_PARSE("FlightDate", 'YYYY-MM-dd', '-05:00') AS "timestamp"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_string` | `timestamp` | 
+| -- | -- |
+| `2005-11-01` | `2005-11-01T05:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_SHIFT
 
-`TIME_SHIFT(<TIMESTAMP>, <period>, <step>, [<timezone>])`
+Shifts a timestamp by a given number of time units. The `period` parameter can be any ISO 8601 period. The `step` parameter can be negative. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_SHIFT(timestamp_expr, period, step[, timezone])`
+* **Function type:** Scalar, date and time
 
-Shifts a timestamp forwards or backwards by a given number of time units.
+<details><summary>Example</summary>
+
+The following example shifts the `__time` column from the `taxi-trips` datasource back by 24 hours.
+
+```sql
+SELECT
+  "__time" AS "original_timestamp",
+  TIME_SHIFT("__time", 'PT1H', -24) AS "shift_back"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_timestamp` | `shift_back` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-07-31T08:14:37.000Z` | 
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
+
 
 ## TIMESTAMP_TO_MILLIS
 
