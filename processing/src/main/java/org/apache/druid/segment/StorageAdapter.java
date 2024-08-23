@@ -140,10 +140,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHo
     builder.addTimeColumn();
 
     for (final String column : Iterables.concat(getAvailableDimensions(), getAvailableMetrics())) {
-      builder.add(
-          column,
-          Optional.ofNullable(getColumnCapabilities(column)).map(ColumnCapabilities::toColumnType).orElse(null)
-      );
+      builder.add(column, getColumnCapabilities(column));
     }
 
     return builder.build();

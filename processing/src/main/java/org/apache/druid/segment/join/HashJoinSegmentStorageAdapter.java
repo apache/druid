@@ -33,6 +33,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.Filters;
@@ -97,6 +98,24 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return baseAdapter.getInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    // Use a Set since we may encounter duplicates, if a field from a Joinable shadows one of the base fields.
+    final LinkedHashSet<String> columns = new LinkedHashSet<>(baseAdapter.getRowSignature().getColumnNames());
+
+    for (final JoinableClause clause : clauses) {
+      columns.addAll(clause.getAvailableColumnsPrefixed());
+    }
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      builder.add(column, getColumnCapabilities(column));
+    }
+
+    return builder.build();
   }
 
   @Override

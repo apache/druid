@@ -98,13 +98,11 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
+              adapter.getRowSignature().getColumnNames(),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
-              ),
-              adapter.getAvailableDimensions(),
-              adapter.getAvailableMetrics()
+              )
           )
       );
 
@@ -152,11 +150,7 @@ public class ScanQueryEngine
             for (String column : allColumns) {
               final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
               ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
-              rowSignatureBuilder.add(
-                  column,
-                  columnCapabilities == null ? null : columnCapabilities.toColumnType()
-              );
-
+              rowSignatureBuilder.add(column, columnCapabilities);
               columnSelectors.add(selector);
             }
 

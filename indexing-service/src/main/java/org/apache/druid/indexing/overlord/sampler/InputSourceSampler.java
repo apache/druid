@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -241,14 +240,12 @@ public class InputSourceSampler
         List<DimensionSchema> physicalDimensionSchemas = new ArrayList<>();
 
         RowSignature.Builder signatureBuilder = RowSignature.builder();
-        signatureBuilder.add(
-            ColumnHolder.TIME_COLUMN_NAME,
-            index.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME).toColumnType()
-        );
-        for (IncrementalIndex.DimensionDesc dimensionDesc : index.getDimensions()) {
-          if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionDesc.getName())) {
-            final ColumnType columnType = dimensionDesc.getCapabilities().toColumnType();
-            signatureBuilder.add(dimensionDesc.getName(), columnType);
+        for (final String dimensionName : index.getDimensionNames(true)) {
+          if (ColumnHolder.TIME_COLUMN_NAME.equals(dimensionName)) {
+            signatureBuilder.addTimeColumn();
+          } else if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionName)) {
+            final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionName);
+            signatureBuilder.add(dimensionDesc.getName(), dimensionDesc.getCapabilities());
             // use explicitly specified dimension schema if it exists
             if (dataSchema != null &&
                 dataSchema.getDimensionsSpec() != null &&
@@ -271,7 +268,7 @@ public class InputSourceSampler
           if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(aggregatorFactory.getName())) {
             signatureBuilder.add(
                 aggregatorFactory.getName(),
-                index.getColumnCapabilities(aggregatorFactory.getName()).toColumnType()
+                index.getColumnCapabilities(aggregatorFactory.getName())
             );
           }
         }
