@@ -21,10 +21,8 @@ package org.apache.druid.collections.spatial;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.nio.ByteBuffer;
-import java.util.Base64;
 import java.util.Iterator;
 
 /**
@@ -36,20 +34,23 @@ import java.util.Iterator;
  * 2 + numDims * Float.BYTES to 2 + 2 * numDims * Float.BYTES : maxCoordinates
  * concise set
  * rest (children) : Every 4 bytes is storing an offset representing the position of a child.
- * <p>
+ *
  * The child offset is an offset from the initialOffset
  */
 public class ImmutableFloatNode implements ImmutableNode<float[]>
 {
   public static final int HEADER_NUM_BYTES = 2;
-  private static final Logger log = new Logger(ImmutableFloatNode.class);
+
   private final int numDims;
   private final int initialOffset;
   private final int offsetFromInitial;
+
   private final short numChildren;
   private final boolean isLeaf;
   private final int childrenOffset;
+
   private final ByteBuffer data;
+
   private final BitmapFactory bitmapFactory;
 
   public ImmutableFloatNode(
@@ -149,23 +150,9 @@ public class ImmutableFloatNode implements ImmutableNode<float[]>
     final int sizePosition = initialOffset + offsetFromInitial + HEADER_NUM_BYTES + 2 * numDims * Float.BYTES;
     int numBytes = data.getInt(sizePosition);
     final ByteBuffer readOnlyBuffer = data.asReadOnlyBuffer();
-    int newPosition = sizePosition + Integer.BYTES;
-    readOnlyBuffer.position(newPosition);
-    int newLimit = readOnlyBuffer.position() + numBytes;
-    readOnlyBuffer.limit(newLimit);
-    try {
-      return bitmapFactory.mapImmutableBitmap(readOnlyBuffer);
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to read bitmap from buffer '%s',"
-                   + "current pos: %d, set pos: %d, set limit: %d",
-                Base64.getEncoder().encodeToString(readOnlyBuffer.array()),
-                readOnlyBuffer.position(),
-                newPosition,
-                newLimit
-      );
-      throw e;
-    }
+    readOnlyBuffer.position(sizePosition + Integer.BYTES);
+    readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
+    return bitmapFactory.mapImmutableBitmap(readOnlyBuffer);
   }
 
   @Override
