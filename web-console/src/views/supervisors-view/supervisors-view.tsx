@@ -64,6 +64,7 @@ import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, TableState } from '../../utils';
 import {
   assemble,
+  changeByIndex,
   checkedCircleIcon,
   deepGet,
   filterMap,
@@ -120,14 +121,14 @@ interface SupervisorQuery extends TableState {
 }
 
 interface SupervisorQueryResultRow {
-  supervisor_id: string;
-  type: string;
-  source: string;
-  detailed_state: string;
-  spec?: IngestionSpec;
-  suspended: boolean;
-  status?: SupervisorStatus;
-  stats?: any;
+  readonly supervisor_id: string;
+  readonly type: string;
+  readonly source: string;
+  readonly detailed_state: string;
+  readonly spec?: IngestionSpec;
+  readonly suspended: boolean;
+  readonly status?: SupervisorStatus;
+  readonly stats?: any;
 }
 
 export interface SupervisorsViewProps {
@@ -255,19 +256,18 @@ export class SupervisorsView extends React.PureComponent<
             page ? `OFFSET ${page * pageSize}` : undefined,
           ).join('\n');
           setIntermediateQuery(sqlQuery);
-          supervisors = await queryDruidSql<SupervisorQueryResultRow>(
-            {
-              query: sqlQuery,
-            },
-            cancelToken,
-          );
-
-          for (const supervisor of supervisors) {
+          supervisors = (
+            await queryDruidSql<SupervisorQueryResultRow>(
+              {
+                query: sqlQuery,
+              },
+              cancelToken,
+            )
+          ).map(supervisor => {
             const spec: any = supervisor.spec;
-            if (typeof spec === 'string') {
-              supervisor.spec = JSONBig.parse(spec);
-            }
-          }
+            if (typeof spec !== 'string') return supervisor;
+            return { ...supervisor, spec: JSONBig.parse(spec) };
+          });
         } else if (capabilities.hasOverlordAccess()) {
           const supervisorList = (
             await Api.instance.get('/druid/indexer/v1/supervisor?full', { cancelToken })
@@ -311,7 +311,7 @@ export class SupervisorsView extends React.PureComponent<
               ...supervisors.map(
                 (supervisor, i): AuxiliaryQueryFn<SupervisorQueryResultRow[]> =>
                   async (rows, cancelToken) => {
-                    rows[i].status = (
+                    const status = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
                           supervisor.supervisor_id,
@@ -319,7 +319,7 @@ export class SupervisorsView extends React.PureComponent<
                         { cancelToken, timeout: STATUS_API_TIMEOUT },
                       )
                     ).data;
-                    return rows;
+                    return changeByIndex(rows, i, row => ({ ...row, status }));
                   },
               ),
             );
@@ -330,7 +330,7 @@ export class SupervisorsView extends React.PureComponent<
               ...supervisors.map(
                 (supervisor, i): AuxiliaryQueryFn<SupervisorQueryResultRow[]> =>
                   async (rows, cancelToken) => {
-                    rows[i].stats = (
+                    const stats = (
                       await Api.instance.get(
                         `/druid/indexer/v1/supervisor/${Api.encodePath(
                           supervisor.supervisor_id,
@@ -338,18 +338,14 @@ export class SupervisorsView extends React.PureComponent<
                         { cancelToken, timeout: STATS_API_TIMEOUT },
                       )
                     ).data;
-                    return rows;
+                    return changeByIndex(rows, i, row => ({ ...row, stats }));
                   },
               ),
             );
           }
         }
 
-        if (auxiliaryQueries.length) {
-          return new ResultWithAuxiliaryWork(supervisors, auxiliaryQueries);
-        } else {
-          return supervisors;
-        }
+        return new ResultWithAuxiliaryWork(supervisors, auxiliaryQueries);
       },
       onStateChange: supervisorsState => {
         this.setState({
