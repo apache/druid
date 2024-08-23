@@ -808,7 +808,7 @@ export class SupervisorsView extends React.PureComponent<
             sortable: false,
             className: 'padded',
             show: visibleColumns.shown('Aggregate lag'),
-            Cell: ({ value }) => (isNumberLike(value) ? formatInteger(value) : ''),
+            Cell: ({ value }) => (isNumberLike(value) ? formatInteger(value) : null),
           },
           {
             Header: twoLines(

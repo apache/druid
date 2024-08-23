@@ -1312,7 +1312,7 @@ GROUP BY 1, 2`;
             width: 200,
             Cell: ({ original }) => {
               const { runningTasks } = original;
-              if (!runningTasks) return null;
+              if (!runningTasks) return;
               return (
                 <TableClickableCell
                   onClick={() => goToTasks(original.datasource)}
@@ -1494,7 +1494,7 @@ GROUP BY 1, 2`;
             width: 180,
             Cell: ({ original }) => {
               const { datasource, compaction } = original as Datasource;
-              if (!compaction) return null;
+              if (!compaction) return;
               return (
                 <TableClickableCell
                   disabled={!compaction}
@@ -1529,7 +1529,7 @@ GROUP BY 1, 2`;
             className: 'padded',
             Cell: ({ original }) => {
               const { compaction } = original as Datasource;
-              if (!compaction) return null;
+              if (!compaction) return;
 
               const { status } = compaction;
               if (!status || zeroCompactionStatus(status)) {
@@ -1585,7 +1585,7 @@ GROUP BY 1, 2`;
             className: 'padded',
             Cell: ({ original }) => {
               const { compaction } = original as Datasource;
-              if (!compaction) return null;
+              if (!compaction) return;
 
               const { status } = compaction;
               if (!status) {
@@ -1609,7 +1609,7 @@ GROUP BY 1, 2`;
             width: 200,
             Cell: ({ original }) => {
               const { datasource, rules } = original as Datasource;
-              if (!rules) return null;
+              if (!rules) return;
 
               return (
                 <TableClickableCell
