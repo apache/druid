@@ -309,7 +309,7 @@ The `granularitySpec`, located in `dataSchema` → `granularitySpec`, specifies 
 4.  `rollup` to enable ingestion-time [rollup](./rollup.md) or not.
 
 Other than `rollup`, these operations are all based on the [primary timestamp](./schema-model.md#primary-timestamp).
-Use the format in [Query granularities] to specify both `segmentGranualarity` and `queryGranularity`.
+Use the format from [Query granularities] to specify both `segmentGranualarity` and `queryGranularity`.
 
 An example `granularitySpec` is:
 
