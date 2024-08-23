@@ -181,7 +181,6 @@ public class IndexedTableJoinableTest
         dummyColumnSelectorFactory,
         condition,
         false,
-        false,
         Closer.create()
     );
 

@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -169,21 +168,9 @@ public class UnnestStorageAdapterTest extends InitializedNullHandlingTest
   {
     String colName = "multi-string1";
     for (StorageAdapter adapter : ADAPTERS) {
-      Assert.assertEquals(
-          DateTimes.of("2000-01-01T23:00:00.000Z"),
-          adapter.getMaxTime()
-      );
-      Assert.assertEquals(
-          DateTimes.of("2000-01-01T12:00:00.000Z"),
-          adapter.getMinTime()
-      );
       adapter.getColumnCapabilities(colName);
       Assert.assertEquals(adapter.getNumRows(), 0);
       Assert.assertNotNull(adapter.getMetadata());
-      Assert.assertEquals(
-          DateTimes.of("2000-01-01T23:59:59.999Z"),
-          adapter.getMaxIngestedEventTime()
-      );
       Assert.assertEquals(
           adapter.getColumnCapabilities(colName).toColumnType(),
           INCREMENTAL_INDEX_STORAGE_ADAPTER.getColumnCapabilities(colName).toColumnType()

@@ -32,12 +32,12 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
 /**
+ *
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
@@ -125,7 +125,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<>(index.getDimensionNames());
+    return new ListIndexed<>(index.getDimensionNames(false));
   }
 
   @Override
@@ -153,18 +153,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public int getNumRows()
   {
     return index.size();
-  }
-
-  @Override
-  public DateTime getMinTime()
-  {
-    return index.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return index.getMaxTime();
   }
 
   @Nullable
@@ -234,12 +222,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         index.getColumnCapabilities(column),
         SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
     );
-  }
-
-  @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return index.getMaxIngestedEventTime();
   }
 
   @Override

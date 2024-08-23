@@ -29,7 +29,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -42,7 +41,6 @@ import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -135,18 +133,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     }
   }
 
-  @Override
-  public DateTime getMinTime()
-  {
-    return baseAdapter.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return baseAdapter.getMaxTime();
-  }
-
   @Nullable
   @Override
   public Comparable getMinValue(String column)
@@ -193,12 +179,6 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return baseAdapter.getMaxIngestedEventTime();
-  }
-
-  @Override
   public Metadata getMetadata()
   {
     // Cannot get meaningful Metadata for this segment, since it isn't real. At the time of this writing, this method
@@ -232,23 +212,27 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       return baseAdapter.makeCursorHolder(newSpec);
     }
 
-    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
-    final List<OrderBy> ordering;
-    final boolean descending;
-    if (Cursors.preferDescendingTimeOrdering(spec)) {
-      ordering = Cursors.descendingTimeOrder();
-      descending = true;
-    } else {
-      ordering = Cursors.ascendingTimeOrder();
-      descending = false;
-    }
-
     return new CursorHolder()
     {
       final Closer joinablesCloser = Closer.create();
 
-      @Override
-      public Cursor asCursor()
+      /**
+       * Typically the same as {@link HashJoinSegmentStorageAdapter#joinFilterPreAnalysis}, but may differ when
+       * an unnest datasource is layered on top of a join datasource.
+       */
+      final JoinFilterPreAnalysis actualPreAnalysis;
+
+      /**
+       * Result of {@link JoinFilterAnalyzer#splitFilter} on {@link #actualPreAnalysis} and
+       * {@link HashJoinSegmentStorageAdapter#baseFilter}.
+       */
+      final JoinFilterSplit joinFilterSplit;
+
+      /**
+       * Cursor holder for {@link HashJoinSegmentStorageAdapter#baseAdapter}.
+       */
+      final CursorHolder baseCursorHolder;
+
       {
         // Filter pre-analysis key implied by the call to "makeCursorHolder". We need to sanity-check that it matches
         // the actual pre-analysis that was done. Note: we could now infer a rewrite config from the "makeCursorHolder"
@@ -264,22 +248,20 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
             );
 
         final JoinFilterPreAnalysisKey keyCached = joinFilterPreAnalysis.getKey();
-        final JoinFilterPreAnalysis preAnalysis;
         if (keyIn.equals(keyCached)) {
           // Common case: key used during filter pre-analysis (keyCached) matches key implied by makeCursorHolder call
           // (keyIn).
-          preAnalysis = joinFilterPreAnalysis;
+          actualPreAnalysis = joinFilterPreAnalysis;
         } else {
           // Less common case: key differs. Re-analyze the filter. This case can happen when an unnest datasource is
           // layered on top of a join datasource.
-          preAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn);
+          actualPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(keyIn);
         }
 
-        final JoinFilterSplit joinFilterSplit = JoinFilterAnalyzer.splitFilter(
-            preAnalysis,
+        joinFilterSplit = JoinFilterAnalyzer.splitFilter(
+            actualPreAnalysis,
             baseFilter
         );
-
 
         if (joinFilterSplit.getBaseTableFilter().isPresent()) {
           cursorBuildSpecBuilder.setFilter(joinFilterSplit.getBaseTableFilter().get());
@@ -295,8 +277,14 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
         cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
 
-        final Cursor baseCursor = joinablesCloser.register(baseAdapter.makeCursorHolder(cursorBuildSpecBuilder.build()))
-                                                 .asCursor();
+        baseCursorHolder =
+            joinablesCloser.register(baseAdapter.makeCursorHolder(cursorBuildSpecBuilder.build()));
+      }
+
+      @Override
+      public Cursor asCursor()
+      {
+        final Cursor baseCursor = baseCursorHolder.asCursor();
 
         if (baseCursor == null) {
           return null;
@@ -305,21 +293,20 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         Cursor retVal = baseCursor;
 
         for (JoinableClause clause : clauses) {
-          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, descending, joinablesCloser);
+          retVal = HashJoinEngine.makeJoinCursor(retVal, clause, joinablesCloser);
         }
 
         return PostJoinCursor.wrap(
             retVal,
-            VirtualColumns.fromIterable(preAnalysis.getPostJoinVirtualColumns()),
+            VirtualColumns.fromIterable(actualPreAnalysis.getPostJoinVirtualColumns()),
             joinFilterSplit.getJoinTableFilter().orElse(null)
         );
       }
 
-      @Nullable
       @Override
       public List<OrderBy> getOrdering()
       {
-        return ordering;
+        return computeOrdering(baseCursorHolder.getOrdering());
       }
 
       @Override
@@ -366,5 +353,21 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   private Filter baseFilterAnd(@Nullable final Filter other)
   {
     return Filters.maybeAnd(Arrays.asList(baseFilter, other)).orElse(null);
+  }
+
+  /**
+   * Computes ordering of a join {@link CursorHolder} based on the ordering of an underlying {@link CursorHolder}.
+   */
+  private List<OrderBy> computeOrdering(final List<OrderBy> baseOrdering)
+  {
+    // Sorted the same way as the base segment, unless a joined-in column shadows one of the base columns.
+    int limit = 0;
+    for (; limit < baseOrdering.size(); limit++) {
+      if (!isBaseColumn(baseOrdering.get(limit).getColumnName())) {
+        break;
+      }
+    }
+
+    return limit == baseOrdering.size() ? baseOrdering : baseOrdering.subList(0, limit);
   }
 }
