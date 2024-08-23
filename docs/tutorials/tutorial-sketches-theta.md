@@ -139,7 +139,7 @@ date,uid,show,episode
 
 13. Select **Start loading data** to begin the ingestion job.
  
-14. When the ingestion job finishes, select **Query:ts_tutorial**.
+14. When the ingestion job finishes, select **`Query:ts_tutorial`**.
 
 ![Begin querying with theta sketches](../assets/tutorial-theta-v2_09.png)
 
