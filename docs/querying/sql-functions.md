@@ -1318,7 +1318,7 @@ The following example returns true if the IP address in the `forward_for` column
 
 ```sql
 SELECT 
-  "forwarded_for" as "ipv4_address",
+  "forwarded_for" AS "ipv4_address",
   IPV4_MATCH("forwarded_for", '181.13.41.0/24') AS "belongs_in_subnet"
 FROM "kttm"
 LIMIT 2
