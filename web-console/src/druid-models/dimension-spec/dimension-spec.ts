@@ -28,6 +28,7 @@ export interface DimensionsSpec {
   readonly spatialDimensions?: any[];
   readonly includeAllDimensions?: boolean;
   readonly useSchemaDiscovery?: boolean;
+  readonly forceSegmentSortByTime?: boolean;
 }
 
 export interface DimensionSpec {

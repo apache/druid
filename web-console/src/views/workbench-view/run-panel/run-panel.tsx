@@ -98,6 +98,8 @@ const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
   };
 };
 
+const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
+
 export interface RunPanelProps
   extends Pick<MaxTasksButtonProps, 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'> {
   query: WorkbenchQuery;
@@ -166,6 +168,11 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   );
   const useConcurrentLocks = getQueryContextKey(
     'useConcurrentLocks',
+    queryContext,
+    defaultQueryContext,
+  );
+  const forceSegmentSortByTime = getQueryContextKey(
+    'forceSegmentSortByTime',
     queryContext,
     defaultQueryContext,
   );
@@ -366,8 +373,20 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   <>
                     <MenuItem icon={IconNames.BRING_DATA} text="INSERT / REPLACE specific context">
                       <MenuCheckbox
+                        checked={forceSegmentSortByTime}
+                        text="Force segment sort by time"
+                        labelElement={EXPERIMENTAL_ICON}
+                        onChange={() =>
+                          changeQueryContext({
+                            ...queryContext,
+                            forceSegmentSortByTime: !forceSegmentSortByTime,
+                          })
+                        }
+                      />
+                      <MenuCheckbox
                         checked={useConcurrentLocks}
                         text="Use concurrent locks"
+                        labelElement={EXPERIMENTAL_ICON}
                         onChange={() =>
                           changeQueryContext({
                             ...queryContext,
