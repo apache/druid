@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterators;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -34,6 +35,7 @@ import org.apache.druid.segment.filter.ValueMatchers;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -43,7 +45,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
   private final IncrementalIndex index;
   private final CursorBuildSpec spec;
   private final List<OrderBy> ordering;
-  private final boolean descending;
 
   public IncrementalIndexCursorHolder(
       IncrementalIndexStorageAdapter storageAdapter,
@@ -54,13 +55,16 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     this.storageAdapter = storageAdapter;
     this.index = index;
     this.spec = spec;
-    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
-    if (Cursors.preferDescendingTimeOrdering(spec)) {
-      this.ordering = Cursors.descendingTimeOrder();
-      this.descending = true;
+    if (index.timePosition == 0) {
+      if (Cursors.preferDescendingTimeOrdering(spec)) {
+        this.ordering = Cursors.descendingTimeOrder();
+      } else {
+        this.ordering = Cursors.ascendingTimeOrder();
+      }
     } else {
-      this.ordering = Cursors.ascendingTimeOrder();
-      this.descending = false;
+      // In principle, we could report a sort order here for certain types of fact holders; for example the
+      // RollupFactsHolder would be sorted by dimensions. However, this is left for future work.
+      this.ordering = Collections.emptyList();
     }
   }
 
@@ -80,7 +84,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         storageAdapter,
         index,
         spec.getVirtualColumns(),
-        descending,
+        Cursors.getTimeOrdering(ordering),
         spec.getFilter(),
         spec.getInterval()
     );
@@ -109,7 +113,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         IncrementalIndexStorageAdapter storageAdapter,
         IncrementalIndex index,
         VirtualColumns virtualColumns,
-        boolean descending,
+        Order timeOrder,
         @Nullable Filter filter,
         Interval actualInterval
     )
@@ -118,7 +122,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
           storageAdapter,
           virtualColumns,
-          descending,
+          timeOrder,
           currEntry
       );
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
@@ -127,7 +131,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       numAdvanced = -1;
       facts = index.getFacts();
       cursorIterable = facts.timeRangeIterable(
-          descending,
+          timeOrder == Order.DESCENDING,
           actualInterval.getStartMillis(),
           actualInterval.getEndMillis()
       );

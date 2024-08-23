@@ -19,13 +19,11 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.joda.time.DateTime;
@@ -45,12 +43,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public static final int DEFAULT_VECTOR_SIZE = 512;
 
   private final QueryableIndex index;
-
-  @Nullable
-  private volatile DateTime minTime;
-
-  @Nullable
-  private volatile DateTime maxTime;
 
   public QueryableIndexStorageAdapter(QueryableIndex index)
   {
@@ -108,28 +100,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public DateTime getMinTime()
-  {
-    if (minTime == null) {
-      // May be called a few times in parallel when first populating minTime, but this is benign, so allow it.
-      populateMinMaxTime();
-    }
-
-    return minTime;
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    if (maxTime == null) {
-      // May be called a few times in parallel when first populating maxTime, but this is benign, so allow it.
-      populateMinMaxTime();
-    }
-
-    return maxTime;
-  }
-
-  @Override
   @Nullable
   public Comparable getMinValue(String dimension)
   {
@@ -182,15 +152,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
-  }
-
-  private void populateMinMaxTime()
-  {
-    // Compute and cache minTime, maxTime.
-    final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-    try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
-      this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
-      this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
-    }
   }
 }

@@ -90,7 +90,6 @@ public class LookupJoinable implements Joinable
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
       final boolean remainderNeeded,
-      boolean descending,
       Closer closer
   )
   {

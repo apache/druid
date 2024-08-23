@@ -151,9 +151,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
-        QueryRunnerTestHelper.makeQueryRunners(
-            FACTORY
-        ),
+        QueryRunnerTestHelper.makeQueryRunners(FACTORY, false),
         (runner) -> new Object[]{runner}
     );
   }
