@@ -103,97 +103,45 @@ date,uid,show,episode
 ![Load data view with pasted data](../assets/tutorial-theta-v2_01.png)
 
 3. Select **Connect data**.
-4. Parse the data as CSV, with included headers:
+4. Keep the default values and select **Next** to parse the data as a CSV, with included headers:
 
-![Parse raw data](../assets/tutorial-theta-02.png)
+![Parse raw data](../assets/tutorial-theta-v2_02.png)
 
-5. Accept the default values in the **Parse time**, **Transform**, and **Filter** stages.
-6. In the **Configure schema** stage, enable rollup and confirm your choice in the dialog. Then set the query granularity to `day`.
+5. Select **Datasource:inline_data** to open a the Destination dialog.
 
-![Configure schema for rollup and query granularity](../assets/tutorial-theta-03.png)
+![Open destination dialog to change table name](../assets/tutorial-theta-v2_03.png)
 
-7. Add the Theta sketch during this stage. Select **Add metric**.
-8. Define the new metric as a Theta sketch with the following details:
+6. Navigate to the **New table** tab and replace the current name with `ts_tutorial`.
+
+![Change table name](../assets/tutorial-theta-v2_04.png)
+
+7. Select **Save**
+
+8. Toggle **Rollup** and confirm your choice in the dialog box so that the adjacent label displays `on`. 
+
+![Configure schema for rollup](../assets/tutorial-theta-v2_05.png)
+
+9. Select **Add column > Custom metric** to open up a dialog on the right hand side.
+
+![Open dialog for new metrics](../assets/tutorial-theta-v2_06.png)
+
+10. Define the new metric as a theta sketch with the following details:
    * **Name**: `theta_uid`
-   * **Type**: `thetaSketch`
-   * **Field name**: `uid`
-   * **Size**: Accept the default value, `16384`.
-   * **Is input theta sketch**: Accept the default value, `False`.
+   * **SQL expression**: `DS_THETA(uid)`
 
-![Create Theta sketch metric](../assets/tutorial-theta-04.png)
+![Add theta sketch metric](../assets/tutorial-theta-v2_07.png)
 
-9. Click **Apply** to add the new metric to the data model.
+11. Click **Apply** to add the new metric to the data model.
 
+12. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. To remove it, click on the `uid` column in the data model and delete it using the red trashcan icon on the right:
 
-10. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. To remove it, click on the `uid` column in the data model and delete it using the trashcan icon on the right:
+![Delete uid column](../assets/tutorial-theta-v2_08.png)
 
-![Delete uid column](../assets/tutorial-theta-05.png)
+13. Select **Start loading data** to begin the ingestion job.
+ 
+14. When the ingestion job finishes, select **Query:ts_tutorial**.
 
-11. For the remaining stages of the **Load data** wizard, set the following options:
-    * **Partition**: Set **Segment granularity** to `day`.
-    * **Tune**: Leave the default options.
-    * **Publish**: Set the datasource name to `ts_tutorial`.
-
-On the **Edit spec** page, your final input spec should match the following:
-
-```json
-{
-  "type": "index_parallel",
-  "spec": {
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "inline",
-        "data": "date,uid,show,episode\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,alice,Game of Thrones,S1E2\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,bob,Bridgerton,S1E1\n2022-05-20,alice,Game of Thrones,S1E1\n2022-05-20,carol,Bridgerton,S1E2\n2022-05-20,dan,Bridgerton,S1E1\n2022-05-21,alice,Game of Thrones,S1E1\n2022-05-21,carol,Bridgerton,S1E1\n2022-05-21,erin,Game of Thrones,S1E1\n2022-05-21,alice,Bridgerton,S1E1\n2022-05-22,bob,Game of Thrones,S1E1\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,carol,Bridgerton,S1E2\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,erin,Game of Thrones,S1E1\n2022-05-22,erin,Bridgerton,S1E2\n2022-05-23,erin,Game of Thrones,S1E1\n2022-05-23,alice,Game of Thrones,S1E1"
-      },
-      "inputFormat": {
-        "type": "csv",
-        "findColumnsFromHeader": true
-      }
-    },
-    "tuningConfig": {
-      "type": "index_parallel",
-      "partitionsSpec": {
-        "type": "hashed"
-      },
-      "forceGuaranteedRollup": true
-    },
-    "dataSchema": {
-      "dataSource": "ts_tutorial",
-      "timestampSpec": {
-        "column": "date",
-        "format": "auto"
-      },
-      "dimensionsSpec": {
-        "dimensions": [
-          "show",
-          "episode"
-        ]
-      },
-      "granularitySpec": {
-        "queryGranularity": "day",
-        "rollup": true,
-        "segmentGranularity": "day"
-      },
-      "metricsSpec": [
-        {
-          "name": "count",
-          "type": "count"
-        },
-        {
-          "type": "thetaSketch",
-          "name": "theta_uid",
-          "fieldName": "uid"
-        }
-      ]
-    }
-  }
-}
-```
-
-Notice the `theta_uid` object in the `metricsSpec` list, that defines the `thetaSketch` aggregator on the `uid` column during ingestion.
-
-Click **Submit** to start the ingestion.
+![Begin querying with theta sketches](../assets/tutorial-theta-v2_09.png)
 
 ## Query the Theta sketch column
 
