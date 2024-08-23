@@ -4264,7 +4264,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_83()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6155,7 +6154,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_84()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6163,7 +6161,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_85()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6549,7 +6546,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_avg_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6557,7 +6553,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_count_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6565,7 +6560,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_fval_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6573,7 +6567,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_lval_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6581,7 +6574,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_08()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6589,7 +6581,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_09()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6597,7 +6588,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_sum_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7370,7 +7360,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm01()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7378,7 +7367,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm02()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7386,7 +7374,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm03()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7394,7 +7381,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm04()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7402,7 +7388,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm05()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7410,7 +7395,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm06()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7523,7 +7507,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_multiWin_6()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7618,6 +7601,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("druid_queries/empty_over_clause/single_empty_over_2")
   @Test
   public void test_empty_over_single_empty_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_3")
+  @Test
+  public void test_empty_over_single_empty_over_3()
   {
     windowQueryTest();
   }

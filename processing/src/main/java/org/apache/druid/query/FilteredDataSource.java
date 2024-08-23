@@ -30,6 +30,7 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.WrappedSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -67,7 +68,7 @@ public class FilteredDataSource implements DataSource
     return filter;
   }
 
-  private FilteredDataSource(DataSource base, DimFilter filter)
+  private FilteredDataSource(DataSource base, @Nullable DimFilter filter)
   {
     this.base = base;
     this.filter = filter;
@@ -76,7 +77,7 @@ public class FilteredDataSource implements DataSource
   @JsonCreator
   public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("filter") DimFilter f
+      @JsonProperty("filter") @Nullable DimFilter f
   )
   {
     return new FilteredDataSource(base, f);

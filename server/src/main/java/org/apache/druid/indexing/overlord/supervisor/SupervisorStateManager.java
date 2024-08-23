@@ -155,11 +155,10 @@ public class SupervisorStateManager
       return;
     }
 
-    // if we're trying to switch to a healthy steady state (i.e. RUNNING or SUSPENDED) or IDLE state but haven't had a successful run
+    // if we're trying to switch to a healthy steady state (i.e. RUNNING or SUSPENDED) but haven't had a successful run
     // yet, refuse to switch and prefer the more specific states used for first run (CONNECTING_TO_STREAM,
     // DISCOVERING_INITIAL_TASKS, CREATING_TASKS, etc.)
-    if ((healthySteadyState.equals(proposedState) || BasicState.IDLE.equals(proposedState))
-        && !atLeastOneSuccessfulRun) {
+    if (healthySteadyState.equals(proposedState) && !atLeastOneSuccessfulRun) {
       return;
     }
 

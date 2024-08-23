@@ -309,11 +309,22 @@ public class WorkerTaskCountStatsMonitorTest
             89L
     );
   }
+
   @Test
   public void testMonitorWithNulls()
   {
     final WorkerTaskCountStatsMonitor monitor =
         new WorkerTaskCountStatsMonitor(injectorForMiddleManagerNullStats, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
+    final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
+    monitor.doMonitor(emitter);
+    Assert.assertEquals(0, emitter.getEvents().size());
+  }
+
+  @Test
+  public void testMonitorWithPeon()
+  {
+    final WorkerTaskCountStatsMonitor monitor =
+            new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());

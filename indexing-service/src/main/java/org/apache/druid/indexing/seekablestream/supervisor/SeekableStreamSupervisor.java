@@ -3640,12 +3640,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return;
     }
 
-    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final long nowTime = DateTimes.nowUtc().getMillis();
+    // if it is the first run and there is no lag observed when compared to the offsets from metadata storage stay idle
+    if (!stateManager.isAtLeastOneSuccessfulRun()) {
+      // Set previous sequences to the current offsets in metadata store
+      previousSequencesFromStream.clear();
+      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorage());
+
+      // Force update partition lag since the reporting thread might not have run yet
+      updatePartitionLagFromStream();
+    }
+
+    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final boolean idle;
     final long idleTime;
-    if (lastActiveTimeMillis > 0
-        && previousSequencesFromStream.equals(latestSequencesFromStream)
+    if (previousSequencesFromStream.equals(latestSequencesFromStream)
         && computeTotalLag() == 0) {
       idleTime = nowTime - lastActiveTimeMillis;
       idle = true;
