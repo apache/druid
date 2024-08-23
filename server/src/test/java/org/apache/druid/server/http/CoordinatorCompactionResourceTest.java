@@ -37,8 +37,8 @@ public class CoordinatorCompactionResourceTest
 {
   private DruidCoordinator mock;
   private final CompactionSupervisorsConfig schedulerConfig = new CompactionSupervisorsConfig(false);
-  private String dataSourceName = "datasource_1";
-  private AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
+  private final String dataSourceName = "datasource_1";
+  private final AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
       dataSourceName,
       AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
       1,
@@ -124,6 +124,20 @@ public class CoordinatorCompactionResourceTest
     final Response response = new CoordinatorCompactionResource(mock, schedulerConfig)
         .getCompactionSnapshotForDataSource(dataSourceName);
     Assert.assertEquals(404, response.getStatus());
+  }
+
+  @Test
+  public void testGetProgressForNullDatasourceReturnsBadRequest()
+  {
+    EasyMock.replay(mock);
+
+    final Response response = new CoordinatorCompactionResource(mock, schedulerConfig)
+        .getCompactionProgress(null);
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "No DataSource specified"),
+        response.getEntity()
+    );
   }
 
   @Test
