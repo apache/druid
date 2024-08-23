@@ -644,16 +644,6 @@ public class CompactSegments implements CoordinatorCustomDuty
   }
 
   @Nullable
-  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
-  {
-    AutoCompactionSnapshot autoCompactionSnapshot = autoCompactionSnapshotPerDataSource.get().get(dataSource);
-    if (autoCompactionSnapshot == null) {
-      return null;
-    }
-    return autoCompactionSnapshot.getBytesAwaitingCompaction();
-  }
-
-  @Nullable
   public AutoCompactionSnapshot getAutoCompactionSnapshot(String dataSource)
   {
     return autoCompactionSnapshotPerDataSource.get().get(dataSource);

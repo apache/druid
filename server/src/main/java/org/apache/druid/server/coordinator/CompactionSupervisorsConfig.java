@@ -36,6 +36,7 @@ import java.util.Objects;
  */
 public class CompactionSupervisorsConfig
 {
+  public static final String PROPERTY_PREFIX = "druid.compaction.supervisors";
   private static final CompactionSupervisorsConfig DEFAULT = new CompactionSupervisorsConfig(null);
 
   @JsonProperty

@@ -42,13 +42,13 @@ import javax.ws.rs.core.Response;
 import java.util.Collection;
 
 @Path("/druid/coordinator/v1/compaction")
-public class CompactionResource
+public class CoordinatorCompactionResource
 {
   private final DruidCoordinator coordinator;
   private final CompactionSupervisorsConfig compactionSupervisorsConfig;
 
   @Inject
-  public CompactionResource(
+  public CoordinatorCompactionResource(
       DruidCoordinator coordinator,
       CompactionSupervisorsConfig compactionSupervisorsConfig
   )
@@ -82,11 +82,17 @@ public class CompactionResource
       buildErrorResponseWhenRunningAsSupervisor();
     }
 
-    final Long notCompactedSegmentSizeBytes = coordinator.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
-    if (notCompactedSegmentSizeBytes == null) {
+    if (dataSource == null || dataSource.isEmpty()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", "No DataSource specified"))
+                     .build();
+    }
+
+    final AutoCompactionSnapshot snapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
+    if (snapshot == null) {
       return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
     } else {
-      return Response.ok(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes)).build();
+      return Response.ok(ImmutableMap.of("remainingSegmentSize", snapshot.getBytesAwaitingCompaction())).build();
     }
   }
 
@@ -118,6 +124,7 @@ public class CompactionResource
   @POST
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response simulateClusterCompactionConfigUpdate(
       ClusterCompactionConfig updatePayload
   )

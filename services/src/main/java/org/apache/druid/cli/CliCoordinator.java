@@ -113,7 +113,7 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
-import org.apache.druid.server.http.CompactionResource;
+import org.apache.druid.server.http.CoordinatorCompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
@@ -223,7 +223,11 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segment", CoordinatorSegmentWatcherConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
-            JsonConfigProvider.bind(binder, "druid.compaction.supervisors", CompactionSupervisorsConfig.class);
+            JsonConfigProvider.bind(
+                binder,
+                CompactionSupervisorsConfig.PROPERTY_PREFIX,
+                CompactionSupervisorsConfig.class
+            );
             binder.bind(DruidCoordinatorConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
@@ -262,7 +266,7 @@ public class CliCoordinator extends ServerRunnable
                   .to(CoordinatorJettyServerInitializer.class);
 
             Jerseys.addResource(binder, CoordinatorResource.class);
-            Jerseys.addResource(binder, CompactionResource.class);
+            Jerseys.addResource(binder, CoordinatorCompactionResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);

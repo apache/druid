@@ -349,12 +349,6 @@ public class DruidCoordinator
   }
 
   @Nullable
-  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
-  {
-    return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
-  }
-
-  @Nullable
   public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
   {
     return compactSegments.getAutoCompactionSnapshot(dataSource);

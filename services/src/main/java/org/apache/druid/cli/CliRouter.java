@@ -102,7 +102,11 @@ public class CliRouter extends ServerRunnable
           JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
           JsonConfigProvider.bind(binder, "druid.router.avatica.balancer", AvaticaConnectionBalancer.class);
           JsonConfigProvider.bind(binder, "druid.router.managementProxy", ManagementProxyConfig.class);
-          JsonConfigProvider.bind(binder, "druid.compaction.supervisors", CompactionSupervisorsConfig.class);
+          JsonConfigProvider.bind(
+              binder,
+              CompactionSupervisorsConfig.PROPERTY_PREFIX,
+              CompactionSupervisorsConfig.class
+          );
 
           binder.bind(QuerySegmentWalker.class).to(NoopQuerySegmentWalker.class).in(LazySingleton.class);
 

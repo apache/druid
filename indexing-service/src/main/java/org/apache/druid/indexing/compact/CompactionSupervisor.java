@@ -35,6 +35,7 @@ public class CompactionSupervisor implements Supervisor
 {
   private static final Logger log = new Logger(CompactionSupervisor.class);
 
+  private final String dataSource;
   private final CompactionScheduler scheduler;
   private final CompactionSupervisorSpec supervisorSpec;
 
@@ -45,12 +46,12 @@ public class CompactionSupervisor implements Supervisor
   {
     this.supervisorSpec = supervisorSpec;
     this.scheduler = scheduler;
+    this.dataSource = supervisorSpec.getSpec().getDataSource();
   }
 
   @Override
   public void start()
   {
-    final String dataSource = getDataSource();
     if (supervisorSpec.isSuspended()) {
       log.info("Suspending compaction for dataSource[%s].", dataSource);
       scheduler.stopCompaction(dataSource);
@@ -63,7 +64,6 @@ public class CompactionSupervisor implements Supervisor
   @Override
   public void stop(boolean stopGracefully)
   {
-    final String dataSource = getDataSource();
     log.info("Stopping compaction for dataSource[%s].", dataSource);
     scheduler.stopCompaction(dataSource);
   }
@@ -73,11 +73,11 @@ public class CompactionSupervisor implements Supervisor
   {
     final AutoCompactionSnapshot snapshot;
     if (supervisorSpec.isSuspended()) {
-      snapshot = AutoCompactionSnapshot.builder(getDataSource())
+      snapshot = AutoCompactionSnapshot.builder(dataSource)
                                        .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED)
                                        .build();
     } else {
-      snapshot = scheduler.getCompactionSnapshot(getDataSource());
+      snapshot = scheduler.getCompactionSnapshot(dataSource);
     }
 
     return new SupervisorReport<>(supervisorSpec.getId(), DateTimes.nowUtc(), snapshot);
@@ -95,41 +95,36 @@ public class CompactionSupervisor implements Supervisor
     }
   }
 
-  private String getDataSource()
-  {
-    return supervisorSpec.getSpec().getDataSource();
-  }
-
   // Un-implemented methods used only by streaming supervisors
 
   @Override
   public void reset(DataSourceMetadata dataSourceMetadata)
   {
-    // Do nothing
+    throw new UnsupportedOperationException("Resetting not supported for 'autocompact' supervisors.");
   }
 
   @Override
   public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
   {
-    // Do nothing
+    throw new UnsupportedOperationException("Resetting offsets not supported for 'autocompact' supervisors.");
   }
 
   @Override
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
-    // Do nothing
+    throw new UnsupportedOperationException("Checkpointing not supported for 'autocompact' supervisors.");
   }
 
   @Override
   public LagStats computeLagStats()
   {
-    return new LagStats(0L, 0L, 0L);
+    throw new UnsupportedOperationException("Lag stats not supported for 'autocompact' supervisors.");
   }
 
   @Override
   public int getActiveTaskGroupsCount()
   {
-    return 0;
+    throw new UnsupportedOperationException("Task groups not supported for 'autocompact' supervisors.");
   }
 
   public enum State implements SupervisorStateManager.State

@@ -218,7 +218,11 @@ public class CliOverlord extends ServerRunnable
               binder.bind(SegmentsMetadataManager.class)
                     .toProvider(SegmentsMetadataManagerProvider.class)
                     .in(ManageLifecycle.class);
-              JsonConfigProvider.bind(binder, "druid.compaction.supervisors", CompactionSupervisorsConfig.class);
+              JsonConfigProvider.bind(
+                  binder,
+                  CompactionSupervisorsConfig.PROPERTY_PREFIX,
+                  CompactionSupervisorsConfig.class
+              );
             }
 
             JsonConfigProvider.bind(binder, "druid.coordinator.asOverlord", CoordinatorOverlordServiceConfig.class);

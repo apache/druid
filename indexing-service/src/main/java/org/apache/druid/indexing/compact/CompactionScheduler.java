@@ -22,10 +22,25 @@ package org.apache.druid.indexing.compact;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import java.util.Map;
 
+/**
+ * Compaction scheduler that runs on the Overlord if {@link CompactionSupervisorsConfig}
+ * is enabled.
+ * <p>
+ * Usage:
+ * <ul>
+ * <li>When an active {@link CompactionSupervisor} starts, it should register
+ * itself by calling {@link #startCompaction}.</li>
+ * <li>When a suspended {@link CompactionSupervisor} starts, it should stop
+ * compaction by calling {@link #stopCompaction}.</li>
+ * <li>When stopping, any {@link CompactionSupervisor} (active or suspended)
+ * should call {@link #stopCompaction}.</li>
+ * </ul>
+ */
 public interface CompactionScheduler
 {
   void start();
@@ -41,8 +56,6 @@ public interface CompactionScheduler
   Map<String, AutoCompactionSnapshot> getAllCompactionSnapshots();
 
   AutoCompactionSnapshot getCompactionSnapshot(String dataSource);
-
-  Long getSegmentBytesAwaitingCompaction(String dataSource);
 
   CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);
 

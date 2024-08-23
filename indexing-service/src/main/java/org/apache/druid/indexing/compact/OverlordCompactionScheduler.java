@@ -56,18 +56,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Compaction scheduler that runs on the Overlord if {@link CompactionSupervisorsConfig}
- * is enabled.
+ * Implementation of {@link CompactionScheduler}.
  * <p>
- * Usage:
+ * When {@link CompactionSupervisorsConfig} is enabled, this class performs the
+ * following responsibilities on the leader Overlord:
  * <ul>
- * <li>When an active {@link CompactionSupervisor} starts, it should register
- * itself by calling {@link #startCompaction}.</li>
- * <li>When a suspended {@link CompactionSupervisor} starts, it should stop
- * compaction by calling {@link #stopCompaction}.</li>
- * <li>When stopping, any {@link CompactionSupervisor} (active or suspended)
- * should call {@link #stopCompaction}.</li>
+ * <li>Poll segments from metadata</li>
+ * <li>Check compaction status every 5 seconds</li>
+ * <li>Submit compaction tasks for active datasources</li>
+ * <li>Track status of submitted compaction tasks</li>
  * </ul>
+ * Internally, this class uses an instance of {@link CompactSegments} duty.
  */
 public class OverlordCompactionScheduler implements CompactionScheduler
 {
@@ -158,7 +157,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public void startCompaction(String dataSourceName, DataSourceCompactionConfig config)
   {
-    activeDatasourceConfigs.put(dataSourceName, config);
+    if (isRunning()) {
+      activeDatasourceConfigs.put(dataSourceName, config);
+    }
   }
 
   @Override
@@ -192,7 +193,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private synchronized void checkSchedulingStatus()
   {
-    if (started.get() && isEnabled()) {
+    if (isRunning()) {
       try {
         runCompactionDuty();
       }
@@ -227,12 +228,6 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public AutoCompactionSnapshot getCompactionSnapshot(String dataSource)
   {
     return duty.getAutoCompactionSnapshot(dataSource);
-  }
-
-  @Override
-  public Long getSegmentBytesAwaitingCompaction(String dataSource)
-  {
-    return duty.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
   }
 
   @Override

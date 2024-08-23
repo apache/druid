@@ -52,7 +52,6 @@ import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorSer
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Period;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -136,12 +135,6 @@ public class OverlordCompactionSchedulerTest
     );
   }
 
-  @After
-  public void tearDown()
-  {
-
-  }
-
   @Test
   public void testStartStopWhenSchedulerIsEnabled()
   {
@@ -215,14 +208,14 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testStartCompactionForDatasource()
   {
-    final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(DS.WIKI).eachOfSizeInMb(100);
+    final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
     wikiSegments.forEach(segmentsMetadataManager::addSegment);
 
     scheduler.start();
     scheduler.startCompaction(
-        DS.WIKI,
+        TestDataSource.WIKI,
         DataSourceCompactionConfig.builder()
-                                  .forDataSource(DS.WIKI)
+                                  .forDataSource(TestDataSource.WIKI)
                                   .withSkipOffsetFromLatest(Period.seconds(0))
                                   .build()
     );
@@ -237,22 +230,18 @@ public class OverlordCompactionSchedulerTest
     Assert.assertTrue(submittedTask instanceof CompactionTask);
 
     final CompactionTask compactionTask = (CompactionTask) submittedTask;
-    Assert.assertEquals(DS.WIKI, compactionTask.getDataSource());
+    Assert.assertEquals(TestDataSource.WIKI, compactionTask.getDataSource());
 
-    final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(DS.WIKI);
+    final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(TestDataSource.WIKI);
     expectedSnapshot.incrementCompactedStats(CompactionStatistics.create(100_000_000, 1, 1));
 
     Assert.assertEquals(
         expectedSnapshot.build(),
-        scheduler.getCompactionSnapshot(DS.WIKI)
+        scheduler.getCompactionSnapshot(TestDataSource.WIKI)
     );
     Assert.assertEquals(
-        Collections.singletonMap(DS.WIKI, expectedSnapshot.build()),
+        Collections.singletonMap(TestDataSource.WIKI, expectedSnapshot.build()),
         scheduler.getAllCompactionSnapshots()
-    );
-    Assert.assertEquals(
-        0L,
-        scheduler.getSegmentBytesAwaitingCompaction(DS.WIKI).longValue()
     );
 
     serviceEmitter.verifyValue(Stats.Compaction.SUBMITTED_TASKS.getMetricName(), 1L);
@@ -264,36 +253,30 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testStopCompactionForDatasource()
   {
-    final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(DS.WIKI).eachOfSizeInMb(100);
+    final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
     wikiSegments.forEach(segmentsMetadataManager::addSegment);
 
     scheduler.start();
     scheduler.startCompaction(
-        DS.WIKI,
+        TestDataSource.WIKI,
         DataSourceCompactionConfig.builder()
-                                  .forDataSource(DS.WIKI)
+                                  .forDataSource(TestDataSource.WIKI)
                                   .withSkipOffsetFromLatest(Period.seconds(0))
                                   .build()
     );
-    scheduler.stopCompaction(DS.WIKI);
+    scheduler.stopCompaction(TestDataSource.WIKI);
 
     executor.finishNextPendingTask();
 
     Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
 
-    Assert.assertNull(scheduler.getCompactionSnapshot(DS.WIKI));
+    Assert.assertNull(scheduler.getCompactionSnapshot(TestDataSource.WIKI));
     Assert.assertTrue(scheduler.getAllCompactionSnapshots().isEmpty());
-    Assert.assertNull(scheduler.getSegmentBytesAwaitingCompaction(DS.WIKI));
 
     serviceEmitter.verifyNotEmitted(Stats.Compaction.SUBMITTED_TASKS.getMetricName());
     serviceEmitter.verifyNotEmitted(Stats.Compaction.COMPACTED_BYTES.getMetricName());
 
     scheduler.stop();
-  }
-
-  private static class DS
-  {
-    static final String WIKI = "wiki";
   }
 
 }

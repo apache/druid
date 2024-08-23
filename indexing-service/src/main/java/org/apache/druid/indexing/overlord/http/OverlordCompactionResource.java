@@ -62,13 +62,19 @@ public class OverlordCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    final Long notCompactedSegmentSizeBytes = scheduler.getSegmentBytesAwaitingCompaction(dataSource);
-    if (notCompactedSegmentSizeBytes == null) {
+    if (dataSource == null || dataSource.isEmpty()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(Collections.singletonMap("error", "No DataSource specified"))
+                     .build();
+    }
+
+    final AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    if (snapshot == null) {
       return Response.status(Response.Status.NOT_FOUND)
                      .entity(Collections.singletonMap("error", "Unknown DataSource"))
                      .build();
     } else {
-      return Response.ok(Collections.singletonMap("remainingSegmentSize", notCompactedSegmentSizeBytes))
+      return Response.ok(Collections.singletonMap("remainingSegmentSize", snapshot.getBytesAwaitingCompaction()))
                      .build();
     }
   }
@@ -99,6 +105,7 @@ public class OverlordCompactionResource
   @POST
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response simulateClusterCompactionConfigUpdate(
       ClusterCompactionConfig updatePayload
   )
