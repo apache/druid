@@ -94,7 +94,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
   }
 
   @Test
-  public void testBatchingOfPartitionByKeys_TooManyRowsInAWindowFault() throws Exception
+  public void testBatchingOfPartitionByKeys_TooManyRowsInAWindowFault()
   {
     final RuntimeException e = Assert.assertThrows(
         RuntimeException.class,
