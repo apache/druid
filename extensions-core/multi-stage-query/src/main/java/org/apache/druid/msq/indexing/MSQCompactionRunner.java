@@ -199,8 +199,6 @@ public class MSQCompactionRunner implements CompactionRunner
       Map<String, VirtualColumn> inputToVirtualColMap = getVirtualColumns(dataSchema, interval);
 
       if (isGroupBy(dataSchema)) {
-        // Convert MVDs converted to arrays back to MVDs, with the same name as the input column.
-        // This is safe since input column names no longer exist at post-aggregation stage.
         query = buildGroupByQuery(compactionTask, interval, dataSchema, inputToVirtualColMap);
       } else {
         query = buildScanQuery(compactionTask, interval, dataSchema, inputToVirtualColMap);
@@ -456,7 +454,7 @@ public class MSQCompactionRunner implements CompactionRunner
       } else {
         PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
                                                                                  .getQueryGranularity();
-        // Round of the __time column according to the required granularity.
+        // Round off the __time column according to the required granularity.
         virtualColumnExpr =
             StringUtils.format(
                 "timestamp_floor(\"%s\", '%s')",
@@ -516,7 +514,8 @@ public class MSQCompactionRunner implements CompactionRunner
 
     VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
 
-    // Convert MVDs converted to arrays back to MVDs.
+    // Convert MVDs converted to arrays back to MVDs, with the same name as the input column.
+    // This is safe since input column names no longer exist at post-aggregation stage.
     List<PostAggregator> postAggregators =
         inputToVirtualColMap.entrySet()
                             .stream()

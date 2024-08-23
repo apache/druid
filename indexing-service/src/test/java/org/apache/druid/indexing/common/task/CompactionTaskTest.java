@@ -116,6 +116,7 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.BatchIOConfig;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -1508,6 +1509,30 @@ public class CompactionTaskTest
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
       //Expect false since rollup value in metadata of existing segments are null
       Assert.assertFalse(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
+    }
+  }
+
+  @Test
+  public void testMultiValuedColumnsInfoProcessing()
+      throws IOException
+  {
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, null, null),
+        METRIC_BUILDER,
+        true
+    );
+    for (DataSchema dataSchema : dataSchemasForIntervals.values()) {
+      Assert.assertTrue(dataSchema instanceof CombinedDataSchema);
+      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().isProcessed());
+      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo()
+                                                         .getMultiValuedColumns()
+                                                         .isEmpty());
     }
   }
 

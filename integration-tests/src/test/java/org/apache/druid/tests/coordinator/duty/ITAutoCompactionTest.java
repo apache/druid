@@ -686,7 +686,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         // (numShards guarantees max shards but not exact number of final shards, since some shards may end up empty.)
         forceTriggerAutoCompaction(5);
         verifyQuery(INDEX_QUERIES_RESOURCE);
-        verifySegmentsCompacted(hashedPartitionsSpec, 4);
+        verifySegmentsCompacted(hashedPartitionsSpec, 5);
         checkCompactionIntervals(intervalsBeforeCompaction);
       }
 
