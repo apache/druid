@@ -259,8 +259,8 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
       // Submit the task and wait for the datasource to get loaded
       msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
       compactionResource.forceTriggerAutoCompaction();
-      ensureRowCount(datasource, i * 3 + 3, function);
       checkAndSetConcurrentLocks(datasource);
+      ensureRowCount(datasource, i * 3 + 3, function);
     }
 
     ensureRowCount(datasource, 18, function);
