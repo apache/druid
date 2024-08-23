@@ -107,7 +107,7 @@ date,uid,show,episode
 
 ![Parse raw data](../assets/tutorial-theta-v2_02.png)
 
-5. Select **Datasource:inline_data** to open a the Destination dialog.
+5. Select **`Datasource:inline_data`** to open the Destination dialog.
 
 ![Open destination dialog to change table name](../assets/tutorial-theta-v2_03.png)
 
