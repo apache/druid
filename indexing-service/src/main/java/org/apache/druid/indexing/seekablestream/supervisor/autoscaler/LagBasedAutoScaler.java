@@ -214,7 +214,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         withinProportion, dataSource
     );
 
-    int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
+    int currentActiveTaskCount = supervisor.getIoConfig().getTaskCount();
     int desiredActiveTaskCount;
 
     if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
