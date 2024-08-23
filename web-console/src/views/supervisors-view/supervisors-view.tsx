@@ -61,7 +61,7 @@ import {
   sqlQueryCustomTableFilter,
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
-import type { TableState } from '../../utils';
+import type { AuxiliaryQueryFn, TableState } from '../../utils';
 import {
   assemble,
   checkedCircleIcon,
@@ -73,6 +73,7 @@ import {
   formatRate,
   getDruidErrorMessage,
   hasPopoverOpen,
+  isNumberLike,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   nonEmptyArray,
@@ -81,6 +82,7 @@ import {
   queryDruidSql,
   QueryManager,
   QueryState,
+  ResultWithAuxiliaryWork,
   sortedToOrderByClause,
   twoLines,
 } from '../../utils';
@@ -96,8 +98,8 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Configured tasks',
   { text: 'Running tasks', label: 'status API' },
   { text: 'Aggregate lag', label: 'status API' },
-  { text: 'Recent errors', label: 'status API' },
   { text: 'Stats', label: 'stats API' },
+  { text: 'Recent errors', label: 'status API' },
 ];
 
 const ROW_STATS_KEYS: RowStatsKey[] = ['1m', '5m', '15m'];
@@ -302,54 +304,52 @@ export class SupervisorsView extends React.PureComponent<
           throw new Error(`must have SQL or overlord access`);
         }
 
+        const auxiliaryQueries: AuxiliaryQueryFn<SupervisorQueryResultRow[]>[] = [];
         if (capabilities.hasOverlordAccess()) {
-          let showIssue = (message: string) => {
-            showIssue = () => {}; // Only show once
-            AppToaster.show({
-              icon: IconNames.ERROR,
-              intent: Intent.DANGER,
-              message,
-            });
-          };
-
           if (visibleColumns.shown('Running tasks', 'Aggregate lag', 'Recent errors')) {
-            try {
-              for (const supervisor of supervisors) {
-                cancelToken.throwIfRequested();
-                supervisor.status = (
-                  await Api.instance.get(
-                    `/druid/indexer/v1/supervisor/${Api.encodePath(
-                      supervisor.supervisor_id,
-                    )}/status`,
-                    { cancelToken, timeout: STATUS_API_TIMEOUT },
-                  )
-                ).data;
-              }
-            } catch (e) {
-              showIssue('Could not get status');
-            }
+            auxiliaryQueries.push(
+              ...supervisors.map(
+                (supervisor, i): AuxiliaryQueryFn<SupervisorQueryResultRow[]> =>
+                  async (rows, cancelToken) => {
+                    rows[i].status = (
+                      await Api.instance.get(
+                        `/druid/indexer/v1/supervisor/${Api.encodePath(
+                          supervisor.supervisor_id,
+                        )}/status`,
+                        { cancelToken, timeout: STATUS_API_TIMEOUT },
+                      )
+                    ).data;
+                    return rows;
+                  },
+              ),
+            );
           }
 
           if (visibleColumns.shown('Stats')) {
-            try {
-              for (const supervisor of supervisors) {
-                cancelToken.throwIfRequested();
-                supervisor.stats = (
-                  await Api.instance.get(
-                    `/druid/indexer/v1/supervisor/${Api.encodePath(
-                      supervisor.supervisor_id,
-                    )}/stats`,
-                    { cancelToken, timeout: STATS_API_TIMEOUT },
-                  )
-                ).data;
-              }
-            } catch (e) {
-              showIssue('Could not get stats');
-            }
+            auxiliaryQueries.push(
+              ...supervisors.map(
+                (supervisor, i): AuxiliaryQueryFn<SupervisorQueryResultRow[]> =>
+                  async (rows, cancelToken) => {
+                    rows[i].stats = (
+                      await Api.instance.get(
+                        `/druid/indexer/v1/supervisor/${Api.encodePath(
+                          supervisor.supervisor_id,
+                        )}/stats`,
+                        { cancelToken, timeout: STATS_API_TIMEOUT },
+                      )
+                    ).data;
+                    return rows;
+                  },
+              ),
+            );
           }
         }
 
-        return supervisors;
+        if (auxiliaryQueries.length) {
+          return new ResultWithAuxiliaryWork(supervisors, auxiliaryQueries);
+        } else {
+          return supervisors;
+        }
       },
       onStateChange: supervisorsState => {
         this.setState({
@@ -790,7 +790,7 @@ export class SupervisorsView extends React.PureComponent<
                   );
                 }
               } else {
-                label = 'n/a';
+                label = '';
               }
               return (
                 <TableClickableCell
@@ -812,7 +812,7 @@ export class SupervisorsView extends React.PureComponent<
             sortable: false,
             className: 'padded',
             show: visibleColumns.shown('Aggregate lag'),
-            Cell: ({ value }) => formatInteger(value),
+            Cell: ({ value }) => (isNumberLike(value) ? formatInteger(value) : ''),
           },
           {
             Header: twoLines(
@@ -899,13 +899,14 @@ export class SupervisorsView extends React.PureComponent<
             sortable: false,
             show: visibleColumns.shown('Recent errors'),
             Cell: ({ value, original }) => {
+              if (!value) return null;
               return (
                 <TableClickableCell
                   onClick={() => this.onSupervisorDetail(original)}
                   hoverIcon={IconNames.SEARCH_TEMPLATE}
                   title="See errors"
                 >
-                  {pluralIfNeeded(value?.length, 'error')}
+                  {pluralIfNeeded(value.length, 'error')}
                 </TableClickableCell>
               );
             },

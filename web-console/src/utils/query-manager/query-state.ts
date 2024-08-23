@@ -20,6 +20,7 @@ export type QueryStateState = 'init' | 'loading' | 'data' | 'error';
 
 export interface QueryStateOptions<T, E extends Error = Error, I = never> {
   loading?: boolean;
+  auxiliaryLoading?: boolean;
   intermediate?: I;
   intermediateError?: Error;
   error?: E;
@@ -37,20 +38,19 @@ export class QueryState<T, E extends Error = Error, I = never> {
   public error?: E;
   public data?: T;
   public lastData?: T;
+  public auxiliaryLoading?: boolean;
 
   constructor(opts: QueryStateOptions<T, E, I>) {
     const hasData = typeof opts.data !== 'undefined';
     if (typeof opts.error !== 'undefined') {
-      if (hasData) {
-        throw new Error('can not have both error and data');
-      } else {
-        this.state = 'error';
-        this.error = opts.error;
-      }
+      if (hasData) throw new Error('can not have both error and data');
+      this.state = 'error';
+      this.error = opts.error;
     } else {
       if (hasData) {
         this.state = 'data';
         this.data = opts.data;
+        this.auxiliaryLoading = opts.auxiliaryLoading;
       } else if (opts.loading) {
         this.state = 'loading';
         this.intermediate = opts.intermediate;
@@ -91,5 +91,9 @@ export class QueryState<T, E extends Error = Error, I = never> {
 
   getSomeData(): T | undefined {
     return this.data || this.lastData;
+  }
+
+  isAuxiliaryLoading(): boolean {
+    return Boolean(this.auxiliaryLoading);
   }
 }
