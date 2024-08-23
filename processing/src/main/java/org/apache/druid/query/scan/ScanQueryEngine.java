@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -119,8 +120,20 @@ public class ScanQueryEngine
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
-    if (Order.NONE != query.getTimeOrder()) {
-      Cursors.requireTimeOrdering(cursorHolder, query.getTimeOrder());
+    if (Order.NONE != query.getTimeOrder()
+        && Cursors.getTimeOrdering(cursorHolder.getOrdering()) != query.getTimeOrder()) {
+      final String failureReason = StringUtils.format(
+          "Cannot order by[%s] with direction[%s] on cursor with order[%s].",
+          ColumnHolder.TIME_COLUMN_NAME,
+          query.getTimeOrder(),
+          cursorHolder.getOrdering()
+      );
+
+      cursorHolder.close();
+
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("%s", failureReason);
     }
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()

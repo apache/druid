@@ -28,6 +28,8 @@ import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
+import org.apache.druid.segment.WrappedTimeBoundaryInspector;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -158,7 +160,10 @@ public class HashJoinSegment implements SegmentReference
   {
     if (CloseableShapeshifter.class.equals(clazz)) {
       return (T) new StorageAdapterRowsAndColumns(this.asStorageAdapter());
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) WrappedTimeBoundaryInspector.create(baseSegment.as(TimeBoundaryInspector.class));
+    } else {
+      return SegmentReference.super.as(clazz);
     }
-    return SegmentReference.super.as(clazz);
   }
 }

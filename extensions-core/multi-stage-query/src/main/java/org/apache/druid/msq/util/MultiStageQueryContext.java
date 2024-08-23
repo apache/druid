@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -166,6 +167,9 @@ public class MultiStageQueryContext
 
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
   public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.ARRAY;
+
+  public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
+  private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
@@ -359,6 +363,11 @@ public class MultiStageQueryContext
   public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
   {
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
+  }
+
+  public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
