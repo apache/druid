@@ -130,7 +130,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     final RowSignature.Builder builder = RowSignature.builder();
 
     for (final String column : Iterables.concat(index.getDimensionNames(true), index.getMetricNames())) {
-      builder.add(column, index.getColumnCapabilities(column));
+      builder.add(column, ColumnType.fromCapabilities(index.getColumnCapabilities(column)));
     }
 
     return builder.build();

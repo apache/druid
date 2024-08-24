@@ -147,7 +147,7 @@ public abstract class FlatTextInputFormat implements InputFormat
     if (useListBasedInputRows()) {
       final RowSignature.Builder builder = RowSignature.builder();
       for (final String column : columns) {
-        builder.addWithoutType(column);
+        builder.add(column, null);
       }
       return new ListBasedInputRowAdapter(builder.build());
     } else {

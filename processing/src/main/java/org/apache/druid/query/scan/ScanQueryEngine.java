@@ -45,6 +45,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
@@ -150,7 +151,7 @@ public class ScanQueryEngine
             for (String column : allColumns) {
               final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
               ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
-              rowSignatureBuilder.add(column, columnCapabilities);
+              rowSignatureBuilder.add(column, ColumnType.fromCapabilities(columnCapabilities));
               columnSelectors.add(selector);
             }
 

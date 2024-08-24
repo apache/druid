@@ -35,6 +35,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -179,11 +180,11 @@ public class UnnestStorageAdapter implements StorageAdapter
     for (int i = 0 ; i < baseSignature.size(); i++) {
       final String column = baseSignature.getColumnName(i);
       if (!outputColumnName.equals(column)) {
-        builder.add(column, getColumnCapabilities(column));
+        builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
       }
     }
 
-    return builder.add(outputColumnName, getColumnCapabilities(outputColumnName)).build();
+    return builder.add(outputColumnName, ColumnType.fromCapabilities(getColumnCapabilities(outputColumnName))).build();
   }
 
   @Override

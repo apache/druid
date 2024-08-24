@@ -33,6 +33,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -112,7 +113,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
 
     final RowSignature.Builder builder = RowSignature.builder();
     for (final String column : columns) {
-      builder.add(column, getColumnCapabilities(column));
+      builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
     }
 
     return builder.build();

@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
@@ -35,7 +36,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashSet;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -80,7 +80,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     final RowSignature.Builder builder = RowSignature.builder();
     for (final String column : columns) {
-      builder.add(column, index.getColumnCapabilities(column));
+      builder.add(column, ColumnType.fromCapabilities(index.getColumnCapabilities(column)));
     }
 
     return builder.build();

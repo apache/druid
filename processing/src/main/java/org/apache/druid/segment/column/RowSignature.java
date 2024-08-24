@@ -266,17 +266,6 @@ public class RowSignature implements ColumnInspector
     }
 
     /**
-     * Add a column to this signature with no type information.
-     *
-     * @param columnName name, must be nonnull
-     */
-    public Builder addWithoutType(final String columnName)
-    {
-      columnTypeList.add(new ColumnSignature(columnName, null));
-      return this;
-    }
-
-    /**
      * Add a column to this signature.
      *
      * @param columnName name, must be nonnull
@@ -285,18 +274,6 @@ public class RowSignature implements ColumnInspector
     public Builder add(final String columnName, @Nullable final ColumnType columnType)
     {
       columnTypeList.add(new ColumnSignature(columnName, columnType));
-      return this;
-    }
-
-    /**
-     * Add a column to this signature.
-     *
-     * @param columnName   name, must be nonnull
-     * @param capabilities column capabilities, may be null if unknown
-     */
-    public Builder add(final String columnName, @Nullable final ColumnCapabilities capabilities)
-    {
-      columnTypeList.add(new ColumnSignature(columnName, capabilities != null ? capabilities.toColumnType() : null));
       return this;
     }
 

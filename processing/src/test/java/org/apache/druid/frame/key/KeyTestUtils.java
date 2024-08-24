@@ -30,6 +30,7 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Collections;
@@ -53,7 +54,10 @@ public class KeyTestUtils
     final RowSignature.Builder builder = RowSignature.builder();
 
     for (final KeyColumn keyColumn : keyColumns) {
-      builder.add(keyColumn.columnName(), inspector.getColumnCapabilities(keyColumn.columnName()));
+      builder.add(
+          keyColumn.columnName(),
+          ColumnType.fromCapabilities(inspector.getColumnCapabilities(keyColumn.columnName()))
+      );
     }
 
     return builder.build();
