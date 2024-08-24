@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
@@ -245,7 +246,7 @@ public class InputSourceSampler
             signatureBuilder.addTimeColumn();
           } else if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(dimensionName)) {
             final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionName);
-            signatureBuilder.add(dimensionDesc.getName(), dimensionDesc.getCapabilities());
+            signatureBuilder.add(dimensionDesc.getName(), ColumnType.fromCapabilities(dimensionDesc.getCapabilities()));
             // use explicitly specified dimension schema if it exists
             if (dataSchema != null &&
                 dataSchema.getDimensionsSpec() != null &&
@@ -268,7 +269,7 @@ public class InputSourceSampler
           if (!SamplerInputRow.SAMPLER_ORDERING_COLUMN.equals(aggregatorFactory.getName())) {
             signatureBuilder.add(
                 aggregatorFactory.getName(),
-                index.getColumnCapabilities(aggregatorFactory.getName())
+                ColumnType.fromCapabilities(index.getColumnCapabilities(aggregatorFactory.getName()))
             );
           }
         }
