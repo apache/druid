@@ -98,7 +98,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final ArrayList<ResultRow> currentBatchOfRacs;
 
   // batchOfRacsPendingProcessing holds the rows read from the frame that are pending processing.
-  // These get processed when we meet the criteria in processBatchOfRacsPendingProcessingIfNeeded() method.
+  // These get processed when we either reach the end of input channel, or when we meet the criteria in shouldProcessPendingBatch() method.
   // Until then, this accumulates rows from currentBatchOfRacs.
   private final ArrayList<ResultRow> batchOfRacsPendingProcessing;
 
@@ -183,7 +183,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
              they belong to the same PARTITION BY group, and gets added to currentBatchOfRacs.
              If the number of total rows materialized exceed maxRowsMaterialized, we process the pending batch via processBatchOfRacsPendingProcessing() method.
         2.2. If they don't match, then we have reached a partition boundary.
-             In this case, we process the rows so far *if needed* via processBatchOfRacsPendingProcessingIfNeeded() method.
+             In this case, we process the rows so far *if needed* via processBatchOfRacsPendingProcessing() method.
              Please refer to the Javadoc of that method for further details.
      3. End of Input: If the input channel is finished, any remaining rows in currentBatchOfRacs are processed.
 
@@ -261,12 +261,15 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         // Add current row to the same batch of rows for processing.
         currentBatchOfRacs.add(currentRow);
         ensureMaxRowsInAWindowConstraint(currentBatchOfRacs.size());
-        if (currentBatchOfRacs.size() + batchOfRacsPendingProcessing.size() > maxRowsMaterialized) {
+        if (shouldProcessPendingBatch()) {
           // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
           processBatchOfRacsPendingProcessing();
         }
       } else {
-        processBatchOfRacsPendingProcessingIfNeeded();
+        if (shouldProcessPendingBatch()) {
+          processBatchOfRacsPendingProcessing();
+        }
+        copyAndClearCurrentBatch();
         outputRow = currentRow.copy();
         return ReturnOrAwait.runAgain();
       }
@@ -484,21 +487,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   }
 
   /**
-   * This method is responsible for the logic of batching the PARTITION BY keys.
-   * If we can add the current rows (currentBatchOfRacs) to the rows pending processing (batchOfRacsPendingProcessing) without violating the maxRowsMaterialized constraint, do it.
-   * If we cannot, we process the rows pending processing (batchOfRacsPendingProcessing), and add the current rows to it which would then be processed in future.
-   */
-  private void processBatchOfRacsPendingProcessingIfNeeded()
-  {
-    if (currentBatchOfRacs.size() + batchOfRacsPendingProcessing.size() > maxRowsMaterialized) {
-      processBatchOfRacsPendingProcessing();
-    }
-
-    batchOfRacsPendingProcessing.addAll(currentBatchOfRacs);
-    currentBatchOfRacs.clear();
-  }
-
-  /**
    * Process {@link #batchOfRacsPendingProcessing}.
    */
   private void processBatchOfRacsPendingProcessing()
@@ -514,6 +502,17 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     rowsAndColumns.add(singleRac);
     runAllOpsOnMultipleRac(rowsAndColumns);
     batchOfRacsPendingProcessing.clear();
+  }
+
+  private boolean shouldProcessPendingBatch()
+  {
+    return currentBatchOfRacs.size() + batchOfRacsPendingProcessing.size() > maxRowsMaterialized;
+  }
+
+  private void copyAndClearCurrentBatch()
+  {
+    batchOfRacsPendingProcessing.addAll(currentBatchOfRacs);
+    currentBatchOfRacs.clear();
   }
 
   private void ensureMaxRowsInAWindowConstraint(int numRowsInWindow)
