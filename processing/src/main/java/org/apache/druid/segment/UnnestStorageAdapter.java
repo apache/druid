@@ -177,7 +177,7 @@ public class UnnestStorageAdapter implements StorageAdapter
     final RowSignature.Builder builder = RowSignature.builder();
 
     final RowSignature baseSignature = baseAdapter.getRowSignature();
-    for (int i = 0 ; i < baseSignature.size(); i++) {
+    for (int i = 0; i < baseSignature.size(); i++) {
       final String column = baseSignature.getColumnName(i);
       if (!outputColumnName.equals(column)) {
         builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
