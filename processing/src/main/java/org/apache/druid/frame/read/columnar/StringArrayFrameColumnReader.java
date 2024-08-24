@@ -64,7 +64,7 @@ import java.util.Comparator;
  */
 public class StringArrayFrameColumnReader implements FrameColumnReader
 {
-  final int columnNumber;
+  private final int columnNumber;
 
   /**
    * Create a new reader.
@@ -300,7 +300,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
         @Override
         public Class<?> classOfObject()
         {
-          return String.class;
+          return String[].class;
         }
 
         @Override

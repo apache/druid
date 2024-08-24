@@ -67,7 +67,7 @@ import java.util.List;
  */
 public class StringFrameColumnReader implements FrameColumnReader
 {
-  final int columnNumber;
+  private final int columnNumber;
 
   /**
    * Create a new reader.
