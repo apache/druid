@@ -21,7 +21,6 @@ package org.apache.druid.frame.read.columnar;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
-import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -30,7 +29,6 @@ import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.frame.write.columnar.StringFrameColumnWriter;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidPredicateFactory;
@@ -96,8 +94,7 @@ public class StringFrameColumnReader implements FrameColumnReader
         multiValue,
         memory,
         positionOfLengths,
-        positionOfPayloads,
-        multiValue // Read MVDs as String arrays
+        positionOfPayloads
     );
 
     return new ColumnAccessorBasedColumn(frameCol);
@@ -118,8 +115,7 @@ public class StringFrameColumnReader implements FrameColumnReader
         multiValue,
         memory,
         startOfStringLengthSection,
-        startOfStringDataSection,
-        false
+        startOfStringDataSection
     );
 
     return new ColumnPlus(
@@ -193,7 +189,7 @@ public class StringFrameColumnReader implements FrameColumnReader
   }
 
   @VisibleForTesting
-  static class StringFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
+  private static class StringFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
   {
     private final Frame frame;
     private final Memory memory;
@@ -205,18 +201,12 @@ public class StringFrameColumnReader implements FrameColumnReader
      */
     private final boolean multiValue;
 
-    /**
-     * Whether the column is being read as {@link ColumnType#STRING_ARRAY} (true) or {@link ColumnType#STRING} (false).
-     */
-    private final boolean asArray;
-
     protected StringFrameColumn(
         Frame frame,
         boolean multiValue,
         Memory memory,
         long startOfStringLengthSection,
-        long startOfStringDataSection,
-        final boolean asArray
+        long startOfStringDataSection
     )
     {
       this.frame = frame;
@@ -224,7 +214,6 @@ public class StringFrameColumnReader implements FrameColumnReader
       this.memory = memory;
       this.startOfStringLengthSection = startOfStringLengthSection;
       this.startOfStringDataSection = startOfStringDataSection;
-      this.asArray = asArray;
     }
 
     @Override
@@ -271,247 +260,6 @@ public class StringFrameColumnReader implements FrameColumnReader
 
     @Override
     public DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn)
-    {
-      if (asArray) {
-        throw new ISE("Cannot call makeDimensionSelector on field of type [%s]", ColumnType.STRING_ARRAY);
-      }
-
-      return makeDimensionSelectorInternal(offset, extractionFn);
-    }
-
-    @Override
-    public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
-    {
-      // Callers should use object selectors, because we have no dictionary.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset)
-    {
-      // Callers should use object selectors, because we have no dictionary.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public VectorObjectSelector makeVectorObjectSelector(final ReadableVectorOffset offset)
-    {
-      class StringFrameVectorObjectSelector implements VectorObjectSelector
-      {
-        private final Object[] vector = new Object[offset.getMaxVectorSize()];
-        private int id = ReadableVectorInspector.NULL_ID;
-
-        @Override
-        public Object[] getObjectVector()
-        {
-          computeVectorIfNeeded();
-          return vector;
-        }
-
-        @Override
-        public int getMaxVectorSize()
-        {
-          return offset.getMaxVectorSize();
-        }
-
-        @Override
-        public int getCurrentVectorSize()
-        {
-          return offset.getCurrentVectorSize();
-        }
-
-        private void computeVectorIfNeeded()
-        {
-          if (id == offset.getId()) {
-            return;
-          }
-
-          if (offset.isContiguous()) {
-            final int start = offset.getStartOffset();
-
-            for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-              final int physicalRow = frame.physicalRow(i + start);
-              vector[i] = getRowAsObject(physicalRow, true);
-            }
-          } else {
-            final int[] offsets = offset.getOffsets();
-
-            for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-              final int physicalRow = frame.physicalRow(offsets[i]);
-              vector[i] = getRowAsObject(physicalRow, true);
-            }
-          }
-
-          id = offset.getId();
-        }
-      }
-
-      return new StringFrameVectorObjectSelector();
-    }
-
-    @Override
-    public int length()
-    {
-      return frame.numRows();
-    }
-
-    @Override
-    public void close()
-    {
-      // Do nothing.
-    }
-
-    @Override
-    public ColumnType getType()
-    {
-      return asArray ? ColumnType.STRING_ARRAY : ColumnType.STRING;
-    }
-
-    @Override
-    public int numRows()
-    {
-      return length();
-    }
-
-    @Override
-    protected Object getVal(int rowNum)
-    {
-      return getRowAsObject(frame.physicalRow(rowNum), true);
-    }
-
-    @Override
-    protected Comparator<Object> getComparator()
-    {
-      return Comparator.nullsFirst(Comparator.comparing(o -> ((String) o)));
-    }
-
-    /**
-     * Returns a ByteBuffer containing UTF-8 encoded string number {@code index}. The ByteBuffer is always newly
-     * created, so it is OK to change its position, limit, etc. However, it may point to shared memory, so it is
-     * not OK to write to its contents.
-     */
-    @Nullable
-    private ByteBuffer getStringUtf8(final int index)
-    {
-      final long dataStart;
-      final long dataEnd =
-          startOfStringDataSection +
-          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index);
-
-      if (index == 0) {
-        dataStart = startOfStringDataSection;
-      } else {
-        dataStart =
-            startOfStringDataSection +
-            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
-      }
-
-      final int dataLength = Ints.checkedCast(dataEnd - dataStart);
-
-      if ((dataLength == 0 && NullHandling.replaceWithDefault()) ||
-          (dataLength == 1 && memory.getByte(dataStart) == FrameWriterUtils.NULL_STRING_MARKER)) {
-        return null;
-      }
-
-      return FrameReaderUtils.readByteBuffer(memory, dataStart, dataLength);
-    }
-
-    @Nullable
-    private String getString(final int index)
-    {
-      final ByteBuffer stringUtf8 = getStringUtf8(index);
-
-      if (stringUtf8 == null) {
-        return null;
-      } else {
-        return StringUtils.fromUtf8(stringUtf8);
-      }
-    }
-
-    /**
-     * Returns the object at the given physical row number.
-     *
-     * When {@link #asArray}, the return value is always of type {@code Object[]}. Otherwise, the return value
-     * is either an empty list (if the row is empty), a single String (if the row has one value), or a List
-     * of Strings (if the row has more than one value).
-     *
-     * @param physicalRow physical row number
-     * @param decode      if true, return java.lang.String. If false, return UTF-8 ByteBuffer.
-     */
-    @Nullable
-    private Object getRowAsObject(final int physicalRow, final boolean decode)
-    {
-      if (multiValue) {
-        final int cumulativeRowLength = FrameColumnReaderUtils.getCumulativeRowLength(
-            memory,
-            getStartOfCumulativeLengthSection(),
-            physicalRow
-        );
-        final int rowLength;
-
-        if (FrameColumnReaderUtils.isNullRow(cumulativeRowLength)) {
-          return null;
-        } else if (physicalRow == 0) {
-          rowLength = cumulativeRowLength;
-        } else {
-          rowLength = cumulativeRowLength - FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
-              memory,
-              getStartOfCumulativeLengthSection(),
-              physicalRow - 1
-          );
-        }
-
-        if (rowLength == 0) {
-          return asArray ? ObjectArrays.EMPTY_ARRAY : Collections.emptyList();
-        } else if (rowLength == 1) {
-          final int index = cumulativeRowLength - 1;
-          final Object o = decode ? getString(index) : getStringUtf8(index);
-          return asArray ? new Object[]{o} : o;
-        } else {
-          final Object[] row = new Object[rowLength];
-
-          for (int i = 0; i < rowLength; i++) {
-            final int index = cumulativeRowLength - rowLength + i;
-            row[i] = decode ? getString(index) : getStringUtf8(index);
-          }
-
-          return asArray ? row : Arrays.asList(row);
-        }
-      } else {
-        final Object o = decode ? getString(physicalRow) : getStringUtf8(physicalRow);
-        return asArray ? new Object[]{o} : o;
-      }
-    }
-
-    /**
-     * Returns the value at the given physical row number as a list of ByteBuffers. Only valid when !asArray, i.e.,
-     * when type is {@link ColumnType#STRING}.
-     *
-     * @param physicalRow physical row number
-     */
-    private List<ByteBuffer> getRowAsListUtf8(final int physicalRow)
-    {
-      if (asArray) {
-        throw DruidException.defensive("Unexpected call for array column");
-      }
-
-      final Object object = getRowAsObject(physicalRow, false);
-
-      if (object == null) {
-        return Collections.singletonList(null);
-      } else if (object instanceof List) {
-        //noinspection unchecked
-        return (List<ByteBuffer>) object;
-      } else {
-        return Collections.singletonList((ByteBuffer) object);
-      }
-    }
-
-    /**
-     * Selector used by this column. It's versatile: it can run as string array (asArray = true) or regular string
-     * column (asArray = false).
-     */
-    protected DimensionSelector makeDimensionSelectorInternal(ReadableOffset offset, @Nullable ExtractionFn extractionFn)
     {
       if (multiValue) {
         class MultiValueSelector implements DimensionSelector
@@ -648,6 +396,225 @@ public class StringFrameColumnReader implements FrameColumnReader
         }
 
         return new SingleValueSelector();
+      }
+    }
+
+    @Override
+    public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
+    {
+      // Callers should use object selectors, because we have no dictionary.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset)
+    {
+      // Callers should use object selectors, because we have no dictionary.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public VectorObjectSelector makeVectorObjectSelector(final ReadableVectorOffset offset)
+    {
+      class StringFrameVectorObjectSelector implements VectorObjectSelector
+      {
+        private final Object[] vector = new Object[offset.getMaxVectorSize()];
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        @Override
+        public Object[] getObjectVector()
+        {
+          computeVectorIfNeeded();
+          return vector;
+        }
+
+        @Override
+        public int getMaxVectorSize()
+        {
+          return offset.getMaxVectorSize();
+        }
+
+        @Override
+        public int getCurrentVectorSize()
+        {
+          return offset.getCurrentVectorSize();
+        }
+
+        private void computeVectorIfNeeded()
+        {
+          if (id == offset.getId()) {
+            return;
+          }
+
+          if (offset.isContiguous()) {
+            final int start = offset.getStartOffset();
+
+            for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+              final int physicalRow = frame.physicalRow(i + start);
+              vector[i] = getRowAsObject(physicalRow, true);
+            }
+          } else {
+            final int[] offsets = offset.getOffsets();
+
+            for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+              final int physicalRow = frame.physicalRow(offsets[i]);
+              vector[i] = getRowAsObject(physicalRow, true);
+            }
+          }
+
+          id = offset.getId();
+        }
+      }
+
+      return new StringFrameVectorObjectSelector();
+    }
+
+    @Override
+    public int length()
+    {
+      return frame.numRows();
+    }
+
+    @Override
+    public void close()
+    {
+      // Do nothing.
+    }
+
+    @Override
+    public ColumnType getType()
+    {
+      return ColumnType.STRING;
+    }
+
+    @Override
+    public int numRows()
+    {
+      return length();
+    }
+
+    @Override
+    protected Object getVal(int rowNum)
+    {
+      return getRowAsObject(frame.physicalRow(rowNum), true);
+    }
+
+    @Override
+    protected Comparator<Object> getComparator()
+    {
+      return Comparator.nullsFirst(Comparator.comparing(o -> ((String) o)));
+    }
+
+    /**
+     * Returns a ByteBuffer containing UTF-8 encoded string number {@code index}. The ByteBuffer is always newly
+     * created, so it is OK to change its position, limit, etc. However, it may point to shared memory, so it is
+     * not OK to write to its contents.
+     */
+    @Nullable
+    private ByteBuffer getStringUtf8(final int index)
+    {
+      final long dataStart;
+      final long dataEnd =
+          startOfStringDataSection +
+          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index);
+
+      if (index == 0) {
+        dataStart = startOfStringDataSection;
+      } else {
+        dataStart =
+            startOfStringDataSection +
+            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
+      }
+
+      final int dataLength = Ints.checkedCast(dataEnd - dataStart);
+
+      if ((dataLength == 0 && NullHandling.replaceWithDefault()) ||
+          (dataLength == 1 && memory.getByte(dataStart) == FrameWriterUtils.NULL_STRING_MARKER)) {
+        return null;
+      }
+
+      return FrameReaderUtils.readByteBuffer(memory, dataStart, dataLength);
+    }
+
+    @Nullable
+    private String getString(final int index)
+    {
+      final ByteBuffer stringUtf8 = getStringUtf8(index);
+
+      if (stringUtf8 == null) {
+        return null;
+      } else {
+        return StringUtils.fromUtf8(stringUtf8);
+      }
+    }
+
+    /**
+     * Returns the object at the given physical row number.
+     *
+     * @param physicalRow physical row number
+     * @param decode      if true, return java.lang.String. If false, return UTF-8 ByteBuffer.
+     */
+    @Nullable
+    private Object getRowAsObject(final int physicalRow, final boolean decode)
+    {
+      if (multiValue) {
+        final int cumulativeRowLength = FrameColumnReaderUtils.getCumulativeRowLength(
+            memory,
+            getStartOfCumulativeLengthSection(),
+            physicalRow
+        );
+        final int rowLength;
+
+        if (FrameColumnReaderUtils.isNullRow(cumulativeRowLength)) {
+          return null;
+        } else if (physicalRow == 0) {
+          rowLength = cumulativeRowLength;
+        } else {
+          rowLength = cumulativeRowLength - FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+              memory,
+              getStartOfCumulativeLengthSection(),
+              physicalRow - 1
+          );
+        }
+
+        if (rowLength == 0) {
+          return Collections.emptyList();
+        } else if (rowLength == 1) {
+          final int index = cumulativeRowLength - 1;
+          final Object o = decode ? getString(index) : getStringUtf8(index);
+          return o;
+        } else {
+          final Object[] row = new Object[rowLength];
+
+          for (int i = 0; i < rowLength; i++) {
+            final int index = cumulativeRowLength - rowLength + i;
+            row[i] = decode ? getString(index) : getStringUtf8(index);
+          }
+
+          return Arrays.asList(row);
+        }
+      } else {
+        final Object o = decode ? getString(physicalRow) : getStringUtf8(physicalRow);
+        return o;
+      }
+    }
+
+    /**
+     * Returns the value at the given physical row number as a list of ByteBuffers.
+     *
+     * @param physicalRow physical row number
+     */
+    private List<ByteBuffer> getRowAsListUtf8(final int physicalRow)
+    {
+      final Object object = getRowAsObject(physicalRow, false);
+
+      if (object == null) {
+        return Collections.singletonList(null);
+      } else if (object instanceof List) {
+        //noinspection unchecked
+        return (List<ByteBuffer>) object;
+      } else {
+        return Collections.singletonList((ByteBuffer) object);
       }
     }
   }

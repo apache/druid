@@ -19,18 +19,45 @@
 
 package org.apache.druid.frame.read.columnar;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.primitives.Ints;
+import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.read.FrameReaderUtils;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.frame.write.columnar.StringFrameColumnWriter;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.ValueMatcher;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
-import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.query.rowsandcols.column.accessor.ObjectColumnAccessorBase;
+import org.apache.druid.segment.DimensionDictionarySelector;
+import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.DimensionSelectorUtils;
+import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.ReadableVectorOffset;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.VectorObjectSelector;
+
+import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.util.Comparator;
 
 /**
  * Reader for {@link ColumnType#STRING_ARRAY}.
@@ -55,18 +82,14 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory);
 
-    // String arrays always store multiple values per row.
-    assert isMultiValue(memory);
     final long positionOfLengths = getStartOfStringLengthSection(frame.numRows());
     final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows());
 
-    StringFrameColumnReader.StringFrameColumn frameCol = new StringFrameColumnReader.StringFrameColumn(
+    StringArrayFrameColumn frameCol = new StringArrayFrameColumn(
         frame,
-        true,
         memory,
         positionOfLengths,
-        positionOfPayloads,
-        true
+        positionOfPayloads
     );
 
     return new ColumnAccessorBasedColumn(frameCol);
@@ -78,8 +101,6 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory);
 
-    // String arrays always store multiple values per row.
-    assert isMultiValue(memory);
     final long startOfStringLengthSection = getStartOfStringLengthSection(frame.numRows());
     final long startOfStringDataSection = getStartOfStringDataSection(memory, frame.numRows());
 
@@ -117,11 +138,6 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     }
   }
 
-  static boolean isMultiValue(final Memory memory)
-  {
-    return memory.getByte(StringFrameColumnWriter.MULTI_VALUE_POSITION) == StringFrameColumnWriter.MULTI_VALUE_BYTE;
-  }
-
   private static long getStartOfCumulativeLengthSection()
   {
     return StringFrameColumnWriter.DATA_OFFSET;
@@ -149,38 +165,347 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     return getStartOfStringLengthSection(numRows) + (long) Integer.BYTES * totalNumValues;
   }
 
-  private static class StringArrayFrameColumn implements BaseColumn
+  @VisibleForTesting
+  private static class StringArrayFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
   {
-    private final StringFrameColumnReader.StringFrameColumn delegate;
+    private final Frame frame;
+    private final Memory memory;
+    private final long startOfStringLengthSection;
+    private final long startOfStringDataSection;
 
-    StringArrayFrameColumn(
+    protected StringArrayFrameColumn(
         Frame frame,
         Memory memory,
         long startOfStringLengthSection,
         long startOfStringDataSection
     )
     {
-      this.delegate = new StringFrameColumnReader.StringFrameColumn(
-          frame,
-          true,
-          memory,
-          startOfStringLengthSection,
-          startOfStringDataSection,
-          true
-      );
+      this.frame = frame;
+      this.memory = memory;
+      this.startOfStringLengthSection = startOfStringLengthSection;
+      this.startOfStringDataSection = startOfStringDataSection;
     }
 
     @Override
-    @SuppressWarnings("rawtypes")
-    public ColumnValueSelector makeColumnValueSelector(ReadableOffset offset)
+    public boolean hasMultipleValues()
     {
-      return delegate.makeDimensionSelectorInternal(offset, null);
+      // Only used in segment tests that don't run on frames.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getSingleValueRow(int rowNum)
+    {
+      // Only used in segment tests that don't run on frames.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public IndexedInts getMultiValueRow(int rowNum)
+    {
+      // Only used in segment tests that don't run on frames.
+      throw new UnsupportedOperationException();
+    }
+
+    @Nullable
+    @Override
+    public String lookupName(int id)
+    {
+      // Only used on columns from segments, not frames.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int lookupId(String name)
+    {
+      // Only used on columns from segments, not frames.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int getCardinality()
+    {
+      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn)
+    {
+      class MultipleValueSelector implements DimensionSelector
+      {
+        @Override
+        public int getValueCardinality()
+        {
+          return CARDINALITY_UNKNOWN;
+        }
+
+        @Nullable
+        @Override
+        public String lookupName(int id)
+        {
+          return null;
+        }
+
+        @Nullable
+        @Override
+        public ByteBuffer lookupNameUtf8(int id)
+        {
+          return null;
+        }
+
+        @Override
+        public boolean supportsLookupNameUtf8()
+        {
+          return extractionFn == null;
+        }
+
+        @Override
+        public boolean nameLookupPossibleInAdvance()
+        {
+          return false;
+        }
+
+        @Nullable
+        @Override
+        public IdLookup idLookup()
+        {
+          return null;
+        }
+
+        @Override
+        public IndexedInts getRow()
+        {
+          return new RangeIndexedInts();
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(@Nullable String value)
+        {
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
+        }
+
+        @Override
+        public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
+        {
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
+        }
+
+        @Nullable
+        @Override
+        public Object getObject()
+        {
+          return getRowAsObject(frame.physicalRow(offset.getOffset()), true);
+        }
+
+        @Override
+        public Class<?> classOfObject()
+        {
+          return String.class;
+        }
+
+        @Override
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+        {
+          // Do nothing.
+        }
+      }
+
+      return new MultipleValueSelector();
+    }
+
+    @Override
+    public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
+    {
+      // Callers should use object selectors, because we have no dictionary.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset)
+    {
+      // Callers should use object selectors, because we have no dictionary.
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public VectorObjectSelector makeVectorObjectSelector(final ReadableVectorOffset offset)
+    {
+      class StringArrayFrameVectorObjectSelector implements VectorObjectSelector
+      {
+        private final Object[] vector = new Object[offset.getMaxVectorSize()];
+        private int id = ReadableVectorInspector.NULL_ID;
+
+        @Override
+        public Object[] getObjectVector()
+        {
+          computeVectorIfNeeded();
+          return vector;
+        }
+
+        @Override
+        public int getMaxVectorSize()
+        {
+          return offset.getMaxVectorSize();
+        }
+
+        @Override
+        public int getCurrentVectorSize()
+        {
+          return offset.getCurrentVectorSize();
+        }
+
+        private void computeVectorIfNeeded()
+        {
+          if (id == offset.getId()) {
+            return;
+          }
+
+          if (offset.isContiguous()) {
+            final int start = offset.getStartOffset();
+
+            for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+              final int physicalRow = frame.physicalRow(i + start);
+              vector[i] = getRowAsObject(physicalRow, true);
+            }
+          } else {
+            final int[] offsets = offset.getOffsets();
+
+            for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
+              final int physicalRow = frame.physicalRow(offsets[i]);
+              vector[i] = getRowAsObject(physicalRow, true);
+            }
+          }
+
+          id = offset.getId();
+        }
+      }
+
+      return new StringArrayFrameVectorObjectSelector();
+    }
+
+    @Override
+    public int length()
+    {
+      return frame.numRows();
     }
 
     @Override
     public void close()
     {
-      delegate.close();
+      // Do nothing.
+    }
+
+    @Override
+    public ColumnType getType()
+    {
+      return ColumnType.STRING_ARRAY;
+    }
+
+    @Override
+    public int numRows()
+    {
+      return length();
+    }
+
+    @Override
+    protected Object getVal(int rowNum)
+    {
+      return getRowAsObject(frame.physicalRow(rowNum), true);
+    }
+
+    @Override
+    protected Comparator<Object> getComparator()
+    {
+      return Comparator.nullsFirst(Comparator.comparing(o -> ((String) o)));
+    }
+
+    /**
+     * Returns a ByteBuffer containing UTF-8 encoded string number {@code index}. The ByteBuffer is always newly
+     * created, so it is OK to change its position, limit, etc. However, it may point to shared memory, so it is
+     * not OK to write to its contents.
+     */
+    @Nullable
+    private ByteBuffer getStringUtf8(final int index)
+    {
+      final long dataStart;
+      final long dataEnd =
+          startOfStringDataSection +
+          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index);
+
+      if (index == 0) {
+        dataStart = startOfStringDataSection;
+      } else {
+        dataStart =
+            startOfStringDataSection +
+            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
+      }
+
+      final int dataLength = Ints.checkedCast(dataEnd - dataStart);
+
+      if ((dataLength == 0 && NullHandling.replaceWithDefault()) ||
+          (dataLength == 1 && memory.getByte(dataStart) == FrameWriterUtils.NULL_STRING_MARKER)) {
+        return null;
+      }
+
+      return FrameReaderUtils.readByteBuffer(memory, dataStart, dataLength);
+    }
+
+    @Nullable
+    private String getString(final int index)
+    {
+      final ByteBuffer stringUtf8 = getStringUtf8(index);
+
+      if (stringUtf8 == null) {
+        return null;
+      } else {
+        return StringUtils.fromUtf8(stringUtf8);
+      }
+    }
+
+    /**
+     * Returns the object at the given physical row number.
+     *
+     * @param physicalRow physical row number
+     * @param decode      if true, return java.lang.String. If false, return UTF-8 ByteBuffer.
+     */
+    @Nullable
+    private Object getRowAsObject(final int physicalRow, final boolean decode)
+    {
+      final int cumulativeRowLength = FrameColumnReaderUtils.getCumulativeRowLength(
+          memory,
+          getStartOfCumulativeLengthSection(),
+          physicalRow
+      );
+      final int rowLength;
+
+      if (FrameColumnReaderUtils.isNullRow(cumulativeRowLength)) {
+        return null;
+      } else if (physicalRow == 0) {
+        rowLength = cumulativeRowLength;
+      } else {
+        rowLength = cumulativeRowLength - FrameColumnReaderUtils.getAdjustedCumulativeRowLength(
+            memory,
+            getStartOfCumulativeLengthSection(),
+            physicalRow - 1
+        );
+      }
+
+      if (rowLength == 0) {
+        return ObjectArrays.EMPTY_ARRAY;
+      } else if (rowLength == 1) {
+        final int index = cumulativeRowLength - 1;
+        final Object o = decode ? getString(index) : getStringUtf8(index);
+        return new Object[]{o};
+      } else {
+        final Object[] row = new Object[rowLength];
+
+        for (int i = 0; i < rowLength; i++) {
+          final int index = cumulativeRowLength - rowLength + i;
+          row[i] = decode ? getString(index) : getStringUtf8(index);
+        }
+
+        return row;
+      }
     }
   }
 }
