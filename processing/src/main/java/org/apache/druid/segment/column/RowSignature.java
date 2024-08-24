@@ -266,6 +266,17 @@ public class RowSignature implements ColumnInspector
     }
 
     /**
+     * Add a column to this signature with no type information.
+     *
+     * @param columnName name, must be nonnull
+     */
+    public Builder addWithoutType(final String columnName)
+    {
+      columnTypeList.add(new ColumnSignature(columnName, null));
+      return this;
+    }
+
+    /**
      * Add a column to this signature.
      *
      * @param columnName name, must be nonnull
