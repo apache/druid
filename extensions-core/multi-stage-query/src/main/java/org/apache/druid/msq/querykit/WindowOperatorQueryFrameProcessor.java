@@ -94,13 +94,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   // Type strategies are pushed in the same order as column types in frameReader.signature()
   private final NullableTypeStrategy[] typeStrategies;
 
-  // currentBatchOfRacs holds the current rows being read from the frame.
-  private final ArrayList<ResultRow> currentBatchOfRacs;
-
-  // batchOfRacsPendingProcessing holds the rows read from the frame that are pending processing.
-  // These get processed when we either reach the end of input channel, or when we meet the criteria in shouldProcessPendingBatch() method.
-  // Until then, this accumulates rows from currentBatchOfRacs.
-  private final ArrayList<ResultRow> batchOfRacsPendingProcessing;
+  private final ArrayList<ResultRow> rowsToProcess;
+  private int lastPartitionIndex = -1;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -123,8 +118,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
-    this.currentBatchOfRacs = new ArrayList<>();
-    this.batchOfRacsPendingProcessing = new ArrayList<>();
+    this.rowsToProcess = new ArrayList<>();
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
     this.partitionColumnNames = partitionColumnNames;
 
@@ -180,12 +174,11 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
                         This is determined by comparePartitionKeys() method.
                         Please refer to the Javadoc of that method for further details and an example illustration.
         2.1. If the PARTITION BY columns of current row matches the PARTITION BY columns of the previous row,
-             they belong to the same PARTITION BY group, and gets added to currentBatchOfRacs.
-             If the number of total rows materialized exceed maxRowsMaterialized, we process the pending batch via processBatchOfRacsPendingProcessing() method.
+             they belong to the same PARTITION BY group, and gets added to rowsToProcess.
+             If the number of total rows materialized exceed maxRowsMaterialized, we process the pending batch via processRowsUpToLastPartition() method.
         2.2. If they don't match, then we have reached a partition boundary.
-             In this case, we process the rows so far *if needed* via processBatchOfRacsPendingProcessing() method.
-             Please refer to the Javadoc of that method for further details.
-     3. End of Input: If the input channel is finished, any remaining rows in currentBatchOfRacs are processed.
+             In this case, we update the value for lastPartitionIndex.
+     3. End of Input: If the input channel is finished, any remaining rows in rowsToProcess are processed.
 
      *Illustration of Row Comparison step*
 
@@ -244,8 +237,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         makeRowSupplierFromFrameCursor();
       } else if (inputChannel.isFinished()) {
         // Handle any remaining data.
-        batchOfRacsPendingProcessing.addAll(currentBatchOfRacs);
-        processBatchOfRacsPendingProcessing();
+        lastPartitionIndex = rowsToProcess.size() - 1;
+        processRowsUpToLastPartition();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.runAgain();
@@ -256,20 +249,17 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       final ResultRow currentRow = rowSupplierFromFrameCursor.get();
       if (outputRow == null) {
         outputRow = currentRow;
-        currentBatchOfRacs.add(currentRow);
+        rowsToProcess.add(currentRow);
       } else if (comparePartitionKeys(outputRow, currentRow, partitionColumnNames)) {
         // Add current row to the same batch of rows for processing.
-        currentBatchOfRacs.add(currentRow);
-        ensureMaxRowsInAWindowConstraint(currentBatchOfRacs.size());
-        if (shouldProcessPendingBatch()) {
+        rowsToProcess.add(currentRow);
+        if (rowsToProcess.size() > maxRowsMaterialized) {
           // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
-          processBatchOfRacsPendingProcessing();
+          processRowsUpToLastPartition();
         }
+        ensureMaxRowsInAWindowConstraint(rowsToProcess.size());
       } else {
-        if (shouldProcessPendingBatch()) {
-          processBatchOfRacsPendingProcessing();
-        }
-        copyAndClearCurrentBatch();
+        lastPartitionIndex = rowsToProcess.size() - 1;
         outputRow = currentRow.copy();
         return ReturnOrAwait.runAgain();
       }
@@ -487,32 +477,28 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   }
 
   /**
-   * Process {@link #batchOfRacsPendingProcessing}.
+   * Process rows from rowsToProcess[0, lastPartitionIndex].
    */
-  private void processBatchOfRacsPendingProcessing()
+  private void processRowsUpToLastPartition()
   {
-    if (batchOfRacsPendingProcessing.isEmpty()) {
+    if (lastPartitionIndex == -1) {
       return;
     }
-    RowsAndColumns singleRac = MapOfColumnsRowsAndColumns.fromResultRow(
-        batchOfRacsPendingProcessing,
-        frameReader.signature()
+
+    RowsAndColumns singleRac = MapOfColumnsRowsAndColumns.fromResultRowTillIndex(
+        rowsToProcess,
+        frameReader.signature(),
+        lastPartitionIndex
     );
     ArrayList<RowsAndColumns> rowsAndColumns = new ArrayList<>();
     rowsAndColumns.add(singleRac);
     runAllOpsOnMultipleRac(rowsAndColumns);
-    batchOfRacsPendingProcessing.clear();
-  }
 
-  private boolean shouldProcessPendingBatch()
-  {
-    return currentBatchOfRacs.size() + batchOfRacsPendingProcessing.size() > maxRowsMaterialized;
-  }
-
-  private void copyAndClearCurrentBatch()
-  {
-    batchOfRacsPendingProcessing.addAll(currentBatchOfRacs);
-    currentBatchOfRacs.clear();
+    // Remove elements in the range [0, lastPartitionIndex] from the list.
+    // The call to list.subList(a, b).clear() deletes the elements in the range [a, b - 1],
+    // causing the remaining elements to shift and start from index 0.
+    rowsToProcess.subList(0, lastPartitionIndex + 1).clear();
+    lastPartitionIndex = -1;
   }
 
   private void ensureMaxRowsInAWindowConstraint(int numRowsInWindow)
