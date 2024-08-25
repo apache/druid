@@ -30,6 +30,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnType;
 
+import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -122,6 +124,7 @@ public class DatasourceFacade extends TableFacade
     return stringProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
   }
 
+  @Nullable
   public Granularity segmentGranularity()
   {
     String definedGranularity = segmentGranularityString();

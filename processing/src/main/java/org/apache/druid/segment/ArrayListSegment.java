@@ -46,8 +46,8 @@ public class ArrayListSegment<RowType> implements Segment
    * Create a list-based segment.
    * <p>
    * The provided List must be in time-order according to the provided {@link RowAdapter#timestampFunction()}.
-   * The cursor returned by {@link RowBasedStorageAdapter#makeCursors} makes no attempt to verify this, and callers
-   * will expect it.
+   * The cursor returned by {@link RowBasedStorageAdapter#makeCursorHolder(CursorBuildSpec)} makes no attempt to verify
+   * this, and callers will expect it.
    * <p>
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
    * {@link #asStorageAdapter()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's

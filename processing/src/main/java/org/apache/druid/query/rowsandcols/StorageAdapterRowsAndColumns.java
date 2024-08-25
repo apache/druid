@@ -20,22 +20,18 @@
 package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
@@ -99,46 +95,36 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   @Nonnull
   private static RowsAndColumns materialize(StorageAdapter as)
   {
-    final Sequence<Cursor> cursors = as.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    try (final CursorHolder cursorHolder = as.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
 
-    RowSignature rowSignature = as.getRowSignature();
-
-    FrameWriter writer = cursors.accumulate(null, (accumulated, in) -> {
-      if (accumulated != null) {
-        // We should not get multiple cursors because we set the granularity to ALL.  So, this should never
-        // actually happen, but it doesn't hurt us to defensive here, so we test against it.
-        throw new ISE("accumulated[%s] non-null, why did we get multiple cursors?", accumulated);
+      if (cursor == null) {
+        return new EmptyRowsAndColumns();
       }
+      
+      final RowSignature rowSignature = as.getRowSignature();
 
-      final ColumnSelectorFactory columnSelectorFactory = in.getColumnSelectorFactory();
+      final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-      final FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-          FrameType.COLUMNAR,
+      final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
           new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
           rowSignature,
           Collections.emptyList()
       );
 
-      final FrameWriter frameWriter = frameWriterFactory.newFrameWriter(columnSelectorFactory);
-      while (!in.isDoneOrInterrupted()) {
-        frameWriter.addSelection();
-        in.advance();
-      }
-      return frameWriter;
-    });
+      try (final FrameWriter writer = frameWriterFactory.newFrameWriter(columnSelectorFactory)) {
+        while (!cursor.isDoneOrInterrupted()) {
+          writer.addSelection();
+          cursor.advance();
+        }
 
-    if (writer == null) {
-      return new EmptyRowsAndColumns();
-    } else {
-      final byte[] bytes = writer.toByteArray();
-      return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
+        if (writer == null) {
+          return new EmptyRowsAndColumns();
+        } else {
+          final byte[] bytes = writer.toByteArray();
+          return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
+        }
+      }
     }
   }
 }

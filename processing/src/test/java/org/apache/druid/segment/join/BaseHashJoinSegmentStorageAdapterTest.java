@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -222,7 +223,7 @@ public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandli
 
   /**
    * Creates a fact-to-country join segment without a {@link JoinFilterPreAnalysis}. This means it cannot
-   * have {@link org.apache.druid.segment.StorageAdapter#makeCursors} called on it.
+   * have {@link org.apache.druid.segment.StorageAdapter#makeCursorHolder(CursorBuildSpec)} called on it.
    */
   protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
   {

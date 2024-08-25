@@ -19,10 +19,11 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
+import org.apache.druid.common.semantic.SemanticCreator;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.SemanticCreator;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.QueryableIndex;
@@ -41,7 +42,7 @@ import java.util.function.Function;
 
 public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
 {
-  private static final Map<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+  private static final Map<Class<?>, Function<QueryableIndexRowsAndColumns, ?>> AS_MAP = SemanticUtils
       .makeAsMap(QueryableIndexRowsAndColumns.class);
 
   private final QueryableIndex index;

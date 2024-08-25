@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -87,7 +86,6 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
-  public static final String WINDOWING_STRICT_VALIDATION = "windowingStrictValidation";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
@@ -126,7 +124,6 @@ public class QueryContexts
   public static final int DEFAULT_IN_FUNCTION_THRESHOLD = 100;
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
-  public static final boolean DEFAULT_WINDOWING_STRICT_VALIDATION = true;
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization

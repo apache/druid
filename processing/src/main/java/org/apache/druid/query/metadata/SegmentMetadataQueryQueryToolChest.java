@@ -20,6 +20,7 @@
 package org.apache.druid.query.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -62,6 +63,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -184,6 +186,15 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
   @Override
   public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(final SegmentMetadataQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
+
+  @Override
+  public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(
+      final SegmentMetadataQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
   {
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {

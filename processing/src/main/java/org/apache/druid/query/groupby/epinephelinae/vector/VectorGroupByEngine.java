@@ -22,15 +22,14 @@ package org.apache.druid.query.groupby.epinephelinae.vector;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetrics;
@@ -45,17 +44,15 @@ import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -83,33 +80,21 @@ public class VectorGroupByEngine
   public static Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
+      final CursorHolder cursorHolder,
       final ByteBuffer processingBuffer,
       @Nullable final DateTime fudgeTimestamp,
-      @Nullable final Filter filter,
       final Interval interval,
       final GroupByQueryConfig config,
-      final DruidProcessingConfig processingConfig,
-      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+      final DruidProcessingConfig processingConfig
   )
   {
-    if (!canVectorize(query, storageAdapter, filter)) {
-      throw new ISE("Cannot vectorize");
-    }
-
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ResultRow, CloseableIterator<ResultRow>>()
         {
           @Override
           public CloseableIterator<ResultRow> make()
           {
-            final VectorCursor cursor = storageAdapter.makeVectorCursor(
-                Filters.toFilter(query.getDimFilter()),
-                interval,
-                query.getVirtualColumns(),
-                false,
-                query.context().getVectorSize(),
-                groupByQueryMetrics
-            );
+            final VectorCursor cursor = cursorHolder.asVectorCursor();
 
             if (cursor == null) {
               // Return empty iterator.
@@ -135,38 +120,37 @@ public class VectorGroupByEngine
               };
             }
 
-            try {
-              final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-              final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
-                  dimensionSpec ->
-                      ColumnProcessors.makeVectorProcessor(
-                          dimensionSpec,
-                          GroupByVectorColumnProcessorFactory.instance(),
-                          columnSelectorFactory
-                      )
-              ).collect(Collectors.toList());
+            final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+            final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
+                dimensionSpec -> {
+                  if (dimensionSpec instanceof DefaultDimensionSpec) {
+                    // Delegate creation of GroupByVectorColumnSelector to the column selector factory, so that
+                    // virtual columns (like ExpressionVirtualColumn) can control their own grouping behavior.
+                    return columnSelectorFactory.makeGroupByVectorColumnSelector(
+                        dimensionSpec.getDimension(),
+                        config.getDeferExpressionDimensions()
+                    );
+                  } else {
+                    return ColumnProcessors.makeVectorProcessor(
+                        dimensionSpec,
+                        GroupByVectorColumnProcessorFactory.instance(),
+                        columnSelectorFactory
+                    );
+                  }
+                }
+            ).collect(Collectors.toList());
 
-              return new VectorGroupByEngineIterator(
-                  query,
-                  config,
-                  processingConfig,
-                  storageAdapter,
-                  cursor,
-                  interval,
-                  dimensions,
-                  processingBuffer,
-                  fudgeTimestamp
-              );
-            }
-            catch (Throwable e) {
-              try {
-                cursor.close();
-              }
-              catch (Throwable e2) {
-                e.addSuppressed(e2);
-              }
-              throw e;
-            }
+            return new VectorGroupByEngineIterator(
+                query,
+                config,
+                processingConfig,
+                storageAdapter,
+                cursor,
+                interval,
+                dimensions,
+                processingBuffer,
+                fudgeTimestamp
+            );
           }
 
           @Override
@@ -183,56 +167,37 @@ public class VectorGroupByEngine
     );
   }
 
-  public static boolean canVectorize(
-      final GroupByQuery query,
-      final StorageAdapter adapter,
-      @Nullable final Filter filter
-  )
-  {
-    final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(adapter);
-
-    return adapter.canVectorize(filter, query.getVirtualColumns(), false)
-           && canVectorizeDimensions(inspector, query.getDimensions())
-           && VirtualColumns.shouldVectorize(query, query.getVirtualColumns(), adapter)
-           && query.getAggregatorSpecs()
-                   .stream()
-                   .allMatch(aggregatorFactory -> aggregatorFactory.canVectorize(inspector));
-  }
-
-  private static boolean canVectorizeDimensions(
+  public static boolean canVectorizeDimensions(
       final ColumnInspector inspector,
       final List<DimensionSpec> dimensions
   )
   {
-    return dimensions
-        .stream()
-        .allMatch(
-            dimension -> {
-              if (!dimension.canVectorize()) {
-                return false;
-              }
+    for (DimensionSpec dimension : dimensions) {
+      if (!dimension.canVectorize()) {
+        return false;
+      }
 
-              if (dimension.mustDecorate()) {
-                // group by on multi value dimensions are not currently supported
-                // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
-                // To be safe, we must return false here.
-                return false;
-              }
+      if (dimension.mustDecorate()) {
+        // group by on multi value dimensions are not currently supported
+        // DimensionSpecs that decorate may turn singly-valued columns into multi-valued selectors.
+        // To be safe, we must return false here.
+        return false;
+      }
 
-              if (!dimension.getOutputType().isPrimitive()) {
-                // group by on arrays and complex types is not currently supported in the vector processing engine
-                return false;
-              }
+      if (!dimension.getOutputType().isPrimitive()) {
+        // group by on arrays and complex types is not currently supported in the vector processing engine
+        return false;
+      }
 
-              // Now check column capabilities.
-              final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
-              // null here currently means the column does not exist, nil columns can be vectorized
-              if (columnCapabilities == null) {
-                return true;
-              }
-              // must be single valued
-              return columnCapabilities.hasMultipleValues().isFalse();
-            });
+      // Now check column capabilities.
+      final ColumnCapabilities columnCapabilities = inspector.getColumnCapabilities(dimension.getDimension());
+      if (columnCapabilities != null && columnCapabilities.hasMultipleValues().isMaybeTrue()) {
+        // null here currently means the column does not exist, nil columns can be vectorized
+        // multi-value columns implicit unnest is not currently supported in the vector processing engine
+        return false;
+      }
+    }
+    return true;
   }
 
   @VisibleForTesting
@@ -347,7 +312,6 @@ public class VectorGroupByEngine
       if (delegate != null) {
         closer.register(delegate);
       }
-      closer.register(cursor);
       closer.close();
     }
 

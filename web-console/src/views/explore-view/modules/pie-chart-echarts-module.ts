@@ -127,9 +127,7 @@ export default typedVisualModule({
           const others = await host.sqlQuery(
             getInitQuery(
               table,
-              where.changeClauseInWhere(
-                C(splitColumn.name).notIn(result.getColumnByIndex(0)!),
-              ) as SqlExpression,
+              where.changeClauseInWhere(C(splitColumn.name).notIn(result.getColumnByIndex(0)!)),
             ).addSelect(metric.expression.as('value')),
           );
 

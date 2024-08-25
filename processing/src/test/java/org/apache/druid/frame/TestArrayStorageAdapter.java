@@ -20,31 +20,28 @@
 package org.apache.druid.frame;
 
 import com.google.common.collect.Iterables;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Storage adapter around {@link QueryableIndex} that transforms all multi-value strings columns into string arrays.
@@ -57,28 +54,33 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
   }
 
   @Override
-  public boolean canVectorize(
-      @Nullable Filter filter,
-      VirtualColumns virtualColumns,
-      boolean descending
-  )
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return false;
+    final CursorHolder delegate = super.makeCursorHolder(spec);
+    return new CursorHolder()
+    {
+      @Nullable
+      @Override
+      public Cursor asCursor()
+      {
+        return new DecoratedCursor(delegate.asCursor());
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return delegate.getOrdering();
+      }
+
+      @Override
+      public void close()
+      {
+        delegate.close();
+      }
+    };
   }
 
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final Granularity gran,
-      final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    return super.makeCursors(filter, interval, virtualColumns, gran, descending, queryMetrics)
-                .map(DecoratedCursor::new);
-  }
 
   @Override
   public RowSignature getRowSignature()
@@ -189,12 +191,6 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
           return TestArrayStorageAdapter.this.getColumnCapabilities(column);
         }
       };
-    }
-
-    @Override
-    public DateTime getTime()
-    {
-      return cursor.getTime();
     }
 
     @Override

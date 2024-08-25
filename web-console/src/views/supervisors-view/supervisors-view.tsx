@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Icon, Intent, Menu, MenuItem, Position, Tag } from '@blueprintjs/core';
+import { Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import { SqlExpression } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
@@ -46,6 +45,7 @@ import {
   SupervisorTableActionDialog,
 } from '../../dialogs';
 import { SupervisorResetOffsetsDialog } from '../../dialogs/supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
+import { TaskGroupHandoffDialog } from '../../dialogs/task-group-handoff-dialog/task-group-handoff-dialog';
 import type {
   IngestionSpec,
   QueryWithContext,
@@ -145,6 +145,7 @@ export interface SupervisorsViewState {
 
   resumeSupervisorId?: string;
   suspendSupervisorId?: string;
+  handoffSupervisorId?: string;
   resetOffsetsSupervisorInfo?: { id: string; type: string };
   resetSupervisorId?: string;
   terminateSupervisorId?: string;
@@ -426,15 +427,25 @@ export class SupervisorsView extends React.PureComponent<
         },
       );
     }
+
+    actions.push({
+      icon: supervisorSuspended ? IconNames.PLAY : IconNames.PAUSE,
+      title: supervisorSuspended ? 'Resume' : 'Suspend',
+      onAction: () =>
+        supervisorSuspended
+          ? this.setState({ resumeSupervisorId: id })
+          : this.setState({ suspendSupervisorId: id }),
+    });
+
+    if (!supervisorSuspended) {
+      actions.push({
+        icon: IconNames.AUTOMATIC_UPDATES,
+        title: 'Handoff early',
+        onAction: () => this.setState({ handoffSupervisorId: id }),
+      });
+    }
+
     actions.push(
-      {
-        icon: supervisorSuspended ? IconNames.PLAY : IconNames.PAUSE,
-        title: supervisorSuspended ? 'Resume' : 'Suspend',
-        onAction: () =>
-          supervisorSuspended
-            ? this.setState({ resumeSupervisorId: id })
-            : this.setState({ suspendSupervisorId: id }),
-      },
       {
         icon: IconNames.STEP_BACKWARD,
         title: `Set ${type === 'kinesis' ? 'sequence numbers' : 'offsets'}`,
@@ -517,6 +528,23 @@ export class SupervisorsView extends React.PureComponent<
           Are you sure you want to suspend supervisor <Tag minimal>{suspendSupervisorId}</Tag>?
         </p>
       </AsyncActionDialog>
+    );
+  }
+
+  renderTaskGroupHandoffAction() {
+    const { handoffSupervisorId } = this.state;
+    if (!handoffSupervisorId) return;
+
+    return (
+      <TaskGroupHandoffDialog
+        supervisorId={handoffSupervisorId}
+        onClose={() => {
+          this.setState({ handoffSupervisorId: undefined });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      />
     );
   }
 
@@ -660,7 +688,7 @@ export class SupervisorsView extends React.PureComponent<
         ofText=""
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination
+        showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
         columns={[
           {
             Header: twoLines('Supervisor ID', <i>(datasource)</i>),
@@ -789,7 +817,7 @@ export class SupervisorsView extends React.PureComponent<
           {
             Header: twoLines(
               'Stats',
-              <Popover2
+              <Popover
                 position={Position.BOTTOM}
                 content={
                   <Menu>
@@ -809,7 +837,7 @@ export class SupervisorsView extends React.PureComponent<
                 <i className="title-button">
                   {getRowStatsKeyTitle(statsKey)} <Icon icon={IconNames.CARET_DOWN} />
                 </i>
-              </Popover2>,
+              </Popover>,
             ),
             id: 'stats',
             width: 300,
@@ -898,6 +926,7 @@ export class SupervisorsView extends React.PureComponent<
                 <ActionCell
                   onDetail={() => this.onSupervisorDetail(row.original)}
                   actions={supervisorActions}
+                  menuTitle={id}
                 />
               );
             },
@@ -1061,6 +1090,7 @@ export class SupervisorsView extends React.PureComponent<
         {this.renderSupervisorTable()}
         {this.renderResumeSupervisorAction()}
         {this.renderSuspendSupervisorAction()}
+        {this.renderTaskGroupHandoffAction()}
         {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
         {this.renderTerminateSupervisorAction()}

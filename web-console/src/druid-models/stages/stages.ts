@@ -22,8 +22,10 @@ import { deleteKeys, filterMap, oneOf, zeroDivide } from '../../utils';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
 
-const SORT_WEIGHT = 0.5;
-const READING_INPUT_WITH_SORT_WEIGHT = 1 - SORT_WEIGHT;
+const SHUFFLE_WEIGHT = 0.5;
+const READING_INPUT_WITH_SHUFFLE_WEIGHT = 1 - SHUFFLE_WEIGHT;
+
+export type InOut = 'in' | 'out';
 
 export type StageInput =
   | {
@@ -72,6 +74,8 @@ export interface StageDefinition {
   startTime?: string;
   duration?: number;
   sort?: boolean;
+  shuffle?: string;
+  output?: string;
 }
 
 export interface ClusterBy {
@@ -167,7 +171,7 @@ export type SegmentGenerationProgressFields =
   | 'rowsPushed';
 
 export interface WarningCounter {
-  type: 'warning';
+  type: 'warnings';
   CannotParseExternalData?: number;
   // More types of warnings might be added later
 }
@@ -190,6 +194,8 @@ function zeroChannelFields(): Record<ChannelFields, number> {
   };
 }
 
+export type Counters = Record<string, Record<string, StageWorkerCounter>>;
+
 export class Stages {
   static readonly QUERY_START_FACTOR = 0.05;
   static readonly QUERY_END_FACTOR = 0.05;
@@ -203,12 +209,9 @@ export class Stages {
   }
 
   public readonly stages: StageDefinition[];
-  private readonly counters?: Record<string, Record<string, StageWorkerCounter>>;
+  private readonly counters?: Counters;
 
-  constructor(
-    stages: StageDefinition[],
-    counters?: Record<string, Record<string, StageWorkerCounter>>,
-  ) {
+  constructor(stages: StageDefinition[], counters?: Counters) {
     this.stages = stages;
     this.counters = counters;
   }
@@ -261,13 +264,13 @@ export class Stages {
     return Stages.stageType(stage) !== 'segmentGenerator';
   }
 
-  stageHasSort(stage: StageDefinition): boolean {
+  stageHasShuffle(stage: StageDefinition): boolean {
     if (!this.stageHasOutput(stage)) return false;
-    return Boolean(stage.sort);
+    return Boolean(stage.sort) || this.hasCounterForStage(stage, 'shuffle');
   }
 
-  stageOutputCounterName(stage: StageDefinition): ChannelCounterName {
-    return this.stageHasSort(stage) ? 'shuffle' : 'output';
+  stageFinalCounterName(stage: StageDefinition): ChannelCounterName {
+    return this.stageHasShuffle(stage) ? 'shuffle' : 'output';
   }
 
   overallProgress(): number {
@@ -286,12 +289,14 @@ export class Stages {
     switch (stage.phase) {
       case 'READING_INPUT':
         return (
-          (this.stageHasSort(stage) ? READING_INPUT_WITH_SORT_WEIGHT : 1) *
+          (this.stageHasShuffle(stage) ? READING_INPUT_WITH_SHUFFLE_WEIGHT : 1) *
           this.readingInputPhaseProgress(stage)
         );
 
       case 'POST_READING':
-        return READING_INPUT_WITH_SORT_WEIGHT + SORT_WEIGHT * this.postReadingPhaseProgress(stage);
+        return (
+          READING_INPUT_WITH_SHUFFLE_WEIGHT + SHUFFLE_WEIGHT * this.postReadingPhaseProgress(stage)
+        );
 
       case 'RESULTS_READY':
       case 'FINISHED':
@@ -415,7 +420,7 @@ export class Stages {
   }
 
   getTotalOutputForStage(stage: StageDefinition, field: 'frames' | 'rows' | 'bytes'): number {
-    return this.getTotalCounterForStage(stage, this.stageOutputCounterName(stage), field);
+    return this.getTotalCounterForStage(stage, this.stageFinalCounterName(stage), field);
   }
 
   getSortProgressForStage(stage: StageDefinition): number {
@@ -445,7 +450,7 @@ export class Stages {
 
     const channelCounters = definition.input.map((_, i) => `input${i}` as ChannelCounterName);
     if (this.stageHasOutput(stage)) channelCounters.push('output');
-    if (this.stageHasSort(stage)) channelCounters.push('shuffle');
+    if (this.stageHasShuffle(stage)) channelCounters.push('shuffle');
     return channelCounters;
   }
 
@@ -479,9 +484,9 @@ export class Stages {
 
   getPartitionChannelCounterNamesForStage(
     stage: StageDefinition,
-    type: 'input' | 'output',
+    inOut: InOut,
   ): ChannelCounterName[] {
-    if (type === 'input') {
+    if (inOut === 'in') {
       const { input, broadcast } = stage.definition;
       return filterMap(input, (input, i) =>
         input.type === 'stage' && !broadcast?.includes(i)
@@ -489,31 +494,28 @@ export class Stages {
           : undefined,
       );
     } else {
-      return [this.stageOutputCounterName(stage)];
+      return [this.stageFinalCounterName(stage)];
     }
   }
 
-  getByPartitionCountersForStage(
-    stage: StageDefinition,
-    type: 'input' | 'output',
-  ): SimpleWideCounter[] {
-    const counterNames = this.getPartitionChannelCounterNamesForStage(stage, type);
+  getByPartitionCountersForStage(stage: StageDefinition, inOut: InOut): SimpleWideCounter[] {
+    const counterNames = this.getPartitionChannelCounterNamesForStage(stage, inOut);
     if (!counterNames.length) return [];
 
     if (!this.hasCounterForStage(stage, counterNames[0])) return [];
     const stageCounters = this.getCountersForStage(stage);
 
-    const { partitionCount } = stage;
-    const partitionNumber =
-      type === 'output'
-        ? partitionCount
-        : max(stageCounters, stageCounter =>
-            max(counterNames, counterName => {
-              const channelCounter = stageCounter[counterName];
-              if (channelCounter?.type !== 'channel') return 0;
-              return channelCounter.rows?.length || 0;
-            }),
-          );
+    let partitionNumber = max(stageCounters, stageCounter =>
+      max(counterNames, counterName => {
+        const channelCounter = stageCounter[counterName];
+        if (channelCounter?.type !== 'channel') return 0;
+        return channelCounter.rows?.length || 0;
+      }),
+    );
+
+    if (inOut === 'out') {
+      partitionNumber = Math.max(partitionNumber || 0, stage.partitionCount || 0);
+    }
 
     if (!partitionNumber) return [];
 

@@ -37,6 +37,7 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexer.report.KillTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -230,51 +231,37 @@ public class ParallelIndexSupervisorTaskTest
       final boolean appendToExisting = true;
       final boolean forceGuaranteedRollup = true;
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new InlineInputSource("test"),
           new JsonInputFormat(null, null, null, null, null),
           appendToExisting,
           null
       );
-      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
-          null,
-          null,
-          null,
-          10,
-          1000L,
-          null,
-          null,
-          null,
-          null,
-          new HashedPartitionsSpec(null, 10, null),
-          IndexSpec.builder()
-                   .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                   .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
-                   .withMetricCompression(CompressionStrategy.LZF)
-                   .withLongEncoding(LongEncodingStrategy.LONGS)
-                   .build(),
-          IndexSpec.DEFAULT,
-          1,
-          forceGuaranteedRollup,
-          true,
-          10000L,
-          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-          null,
-          10,
-          100,
-          20L,
-          new Duration(3600),
-          128,
-          null,
-          null,
-          false,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-      );
+      final ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+          .forParallelIndexTask()
+          .withMaxRowsInMemory(10)
+          .withMaxBytesInMemory(1000L)
+          .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+          .withIndexSpec(
+              IndexSpec.builder()
+                       .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                       .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                       .withMetricCompression(CompressionStrategy.LZF)
+                       .withLongEncoding(LongEncodingStrategy.LONGS)
+                       .build()
+          )
+          .withIndexSpecForIntermediatePersists(IndexSpec.DEFAULT)
+          .withMaxPendingPersists(1)
+          .withForceGuaranteedRollup(forceGuaranteedRollup)
+          .withReportParseExceptions(true)
+          .withPushTimeout(10000L)
+          .withSegmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+          .withMaxNumConcurrentSubTasks(10)
+          .withMaxRetry(100)
+          .withTaskStatusCheckPeriodMs(20L)
+          .withChatHandlerTimeout(new Duration(3600))
+          .withChatHandlerNumRetries(128)
+          .withLogParseExceptions(false)
+          .build();
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
           new DataSchema(
               "datasource",
@@ -303,51 +290,37 @@ public class ParallelIndexSupervisorTaskTest
     {
       final ObjectMapper mapper = new DefaultObjectMapper();
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new InlineInputSource("test"),
           null,
           false,
           null
       );
-      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
-          null,
-          null,
-          null,
-          10,
-          1000L,
-          null,
-          null,
-          null,
-          null,
-          new HashedPartitionsSpec(null, 10, null),
-          IndexSpec.builder()
-                   .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                   .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
-                   .withMetricCompression(CompressionStrategy.LZF)
-                   .withLongEncoding(LongEncodingStrategy.LONGS)
-                   .build(),
-          IndexSpec.DEFAULT,
-          1,
-          true,
-          true,
-          10000L,
-          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-          null,
-          10,
-          100,
-          20L,
-          new Duration(3600),
-          128,
-          null,
-          null,
-          false,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null
-      );
+      final ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+          .forParallelIndexTask()
+          .withMaxRowsInMemory(10)
+          .withMaxBytesInMemory(1000L)
+          .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+          .withIndexSpec(
+              IndexSpec.builder()
+                       .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                       .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                       .withMetricCompression(CompressionStrategy.LZF)
+                       .withLongEncoding(LongEncodingStrategy.LONGS)
+                       .build()
+          )
+          .withIndexSpecForIntermediatePersists(IndexSpec.DEFAULT)
+          .withMaxPendingPersists(1)
+          .withForceGuaranteedRollup(true)
+          .withReportParseExceptions(true)
+          .withPushTimeout(10000L)
+          .withSegmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+          .withMaxNumConcurrentSubTasks(10)
+          .withMaxRetry(100)
+          .withTaskStatusCheckPeriodMs(20L)
+          .withChatHandlerTimeout(new Duration(3600))
+          .withChatHandlerNumRetries(128)
+          .withLogParseExceptions(false)
+          .build();
 
       expectedException.expect(IAE.class);
       expectedException.expectMessage("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
@@ -553,51 +526,38 @@ public class ParallelIndexSupervisorTaskTest
       final boolean appendToExisting = false;
       final boolean forceGuaranteedRollup = true;
       final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-              null,
               new InlineInputSource("test"),
               new JsonInputFormat(null, null, null, null, null),
               appendToExisting,
               null
       );
-      final ParallelIndexTuningConfig tuningConfig = new ParallelIndexTuningConfig(
-              null,
-              null,
-              null,
-              10,
-              1000L,
-              null,
-              null,
-              null,
-              null,
-              new HashedPartitionsSpec(null, 10, null),
+      final ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+          .forParallelIndexTask()
+          .withMaxRowsInMemory(10)
+          .withMaxBytesInMemory(1000L)
+          .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+          .withIndexSpec(
               IndexSpec.builder()
-                      .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
-                      .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
-                      .withMetricCompression(CompressionStrategy.LZF)
-                      .withLongEncoding(LongEncodingStrategy.LONGS)
-                      .build(),
-              IndexSpec.DEFAULT,
-              1,
-              forceGuaranteedRollup,
-              true,
-              10000L,
-              OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-              null,
-              10,
-              100,
-              20L,
-              new Duration(3600),
-              128,
-              null,
-              null,
-              false,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null
-      );
+                       .withBitmapSerdeFactory(RoaringBitmapSerdeFactory.getInstance())
+                       .withDimensionCompression(CompressionStrategy.UNCOMPRESSED)
+                       .withMetricCompression(CompressionStrategy.LZF)
+                       .withLongEncoding(LongEncodingStrategy.LONGS)
+                       .build()
+          )
+          .withIndexSpecForIntermediatePersists(IndexSpec.DEFAULT)
+          .withMaxPendingPersists(1)
+          .withForceGuaranteedRollup(forceGuaranteedRollup)
+          .withReportParseExceptions(true)
+          .withPushTimeout(10000L)
+          .withSegmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+          .withMaxNumConcurrentSubTasks(10)
+          .withMaxRetry(100)
+          .withTaskStatusCheckPeriodMs(20L)
+          .withChatHandlerTimeout(new Duration(3600))
+          .withChatHandlerNumRetries(128)
+          .withLogParseExceptions(false)
+          .build();
+
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
               new DataSchema(
                       "datasource",

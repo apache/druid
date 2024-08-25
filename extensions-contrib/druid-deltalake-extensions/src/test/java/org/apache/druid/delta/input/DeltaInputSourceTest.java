@@ -84,6 +84,11 @@ public class DeltaInputSourceTest
               PartitionedDeltaTable.DELTA_TABLE_PATH,
               PartitionedDeltaTable.FULL_SCHEMA,
               PartitionedDeltaTable.EXPECTED_ROWS
+          },
+          {
+              ComplexTypesDeltaTable.DELTA_TABLE_PATH,
+              ComplexTypesDeltaTable.FULL_SCHEMA,
+              ComplexTypesDeltaTable.EXPECTED_ROWS
           }
       };
     }

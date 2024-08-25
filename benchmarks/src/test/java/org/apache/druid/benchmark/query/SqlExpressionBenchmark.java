@@ -37,6 +37,7 @@ import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -58,6 +59,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -237,6 +239,14 @@ public class SqlExpressionBenchmark
   private String schema;
 
   @Param({
+      "singleString",
+      "fixedWidth",
+      "fixedWidthNonNumeric",
+      "always"
+  })
+  private String deferExpressionDimensions;
+
+  @Param({
       // non-expression reference
       "0",
       "1",
@@ -355,18 +365,22 @@ public class SqlExpressionBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           QUERIES.get(Integer.parseInt(query))
       );
+      log.info("non-vectorized and vectorized results match");
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "non-vectorized and vectorized results do not match");
     }
+
     final String sql = QUERIES.get(Integer.parseInt(query));
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
@@ -378,8 +392,8 @@ public class SqlExpressionBenchmark
                          .writeValueAsString(jsonMapper.readValue((String) planResult[0], List.class))
       );
     }
-    catch (JsonProcessingException ignored) {
-
+    catch (JsonProcessingException ex) {
+      log.warn(ex, "explain failed");
     }
 
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
@@ -393,8 +407,8 @@ public class SqlExpressionBenchmark
       }
       log.info("Total result row count:" + rowCounter);
     }
-    catch (Throwable ignored) {
-
+    catch (Throwable ex) {
+      log.warn(ex, "failed to count rows");
     }
   }
 
@@ -411,7 +425,8 @@ public class SqlExpressionBenchmark
   {
     final Map<String, Object> context = ImmutableMap.of(
         QueryContexts.VECTORIZE_KEY, vectorize,
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize,
+        GroupByQueryConfig.CTX_KEY_DEFER_EXPRESSION_DIMENSIONS, deferExpressionDimensions
     );
     final String sql = QUERIES.get(Integer.parseInt(query));
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {

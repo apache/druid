@@ -25,10 +25,13 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.RetryUtils;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
@@ -36,6 +39,7 @@ import org.apache.druid.utils.RuntimeInfo;
 import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * This class manages uploading files to S3 in chunks, while ensuring that the
@@ -44,18 +48,34 @@ import java.util.concurrent.Future;
 @ManageLifecycle
 public class S3UploadManager
 {
+  // Metric related constants.
+  private static final String METRIC_PREFIX = "s3/upload/part/";
+  private static final String METRIC_PART_QUEUED_TIME = METRIC_PREFIX + "queuedTime";
+  private static final String METRIC_QUEUE_SIZE = METRIC_PREFIX + "queueSize";
+  private static final String METRIC_PART_UPLOAD_TIME = METRIC_PREFIX + "time";
+
   private final ExecutorService uploadExecutor;
+  private final ServiceEmitter emitter;
 
   private static final Logger log = new Logger(S3UploadManager.class);
 
+  // For metrics regarding uploadExecutor.
+  private final AtomicInteger executorQueueSize = new AtomicInteger(0);
+
   @Inject
-  public S3UploadManager(S3OutputConfig s3OutputConfig, S3ExportConfig s3ExportConfig, RuntimeInfo runtimeInfo)
+  public S3UploadManager(
+      S3OutputConfig s3OutputConfig,
+      S3ExportConfig s3ExportConfig,
+      RuntimeInfo runtimeInfo,
+      ServiceEmitter emitter
+  )
   {
     int poolSize = Math.max(4, runtimeInfo.getAvailableProcessors());
     int maxNumChunksOnDisk = computeMaxNumChunksOnDisk(s3OutputConfig, s3ExportConfig);
     this.uploadExecutor = createExecutorService(poolSize, maxNumChunksOnDisk);
     log.info("Initialized executor service for S3 multipart upload with pool size [%d] and work queue capacity [%d]",
              poolSize, maxNumChunksOnDisk);
+    this.emitter = emitter;
   }
 
   /**
@@ -87,25 +107,36 @@ public class S3UploadManager
       S3OutputConfig config
   )
   {
-    return uploadExecutor.submit(() -> RetryUtils.retry(
-        () -> {
-          log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
-          UploadPartResult uploadPartResult = uploadPartIfPossible(
-              s3Client,
-              uploadId,
-              config.getBucket(),
-              key,
-              chunkNumber,
-              chunkFile
-          );
-          if (!chunkFile.delete()) {
-            log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
-          }
-          return uploadPartResult;
-        },
-        S3Utils.S3RETRY,
-        config.getMaxRetry()
-    ));
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    executorQueueSize.incrementAndGet();
+    return uploadExecutor.submit(() -> {
+      final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+      emitMetric(metricBuilder.setMetric(METRIC_QUEUE_SIZE, executorQueueSize.decrementAndGet()));
+      metricBuilder.setDimension("uploadId", uploadId).setDimension("partNumber", chunkNumber);
+      emitMetric(metricBuilder.setMetric(METRIC_PART_QUEUED_TIME, stopwatch.millisElapsed()));
+      stopwatch.restart();
+
+      return RetryUtils.retry(
+          () -> {
+            log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
+            UploadPartResult uploadPartResult = uploadPartIfPossible(
+                s3Client,
+                uploadId,
+                config.getBucket(),
+                key,
+                chunkNumber,
+                chunkFile
+            );
+            if (!chunkFile.delete()) {
+              log.warn("Failed to delete chunk [%s]", chunkFile.getAbsolutePath());
+            }
+            emitMetric(metricBuilder.setMetric(METRIC_PART_UPLOAD_TIME, stopwatch.millisElapsed()));
+            return uploadPartResult;
+          },
+          S3Utils.S3RETRY,
+          config.getMaxRetry()
+      );
+    });
   }
 
   @VisibleForTesting
@@ -149,4 +180,8 @@ public class S3UploadManager
     uploadExecutor.shutdown();
   }
 
+  protected void emitMetric(ServiceMetricEvent.Builder builder)
+  {
+    emitter.emit(builder);
+  }
 }

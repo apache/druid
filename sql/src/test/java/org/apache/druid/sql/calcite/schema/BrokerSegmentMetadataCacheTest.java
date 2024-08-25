@@ -74,11 +74,14 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -332,6 +335,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     ArgumentCaptor<Set<String>> argumentCaptor = ArgumentCaptor.forClass(Set.class);
     CoordinatorClient coordinatorClient = Mockito.mock(CoordinatorClient.class);
     Mockito.when(coordinatorClient.fetchDataSourceInformation(argumentCaptor.capture())).thenReturn(Futures.immediateFuture(null));
+
+    Set<String> datsources = Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz", "coldDS");
+    Mockito.when(coordinatorClient.fetchDataSourcesWithUsedSegments()).thenReturn(Futures.immediateFuture(datsources));
     BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
@@ -347,7 +353,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     schema.start();
     schema.awaitInitialization();
 
-    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE), argumentCaptor.getValue());
+    Assert.assertEquals(datsources, argumentCaptor.getValue());
 
     refreshLatch = new CountDownLatch(1);
     serverView.addSegment(newSegment("xyz", 0), ServerType.HISTORICAL);
@@ -355,7 +361,87 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
 
     // verify that previously refreshed are included in the last coordinator poll
-    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz"), argumentCaptor.getValue());
+    Assert.assertEquals(datsources, argumentCaptor.getValue());
+  }
+
+  @Test
+  public void testRefreshOnEachCycleCentralizedDatasourceSchemaEnabled() throws InterruptedException
+  {
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
+    config.setEnabled(true);
+
+    serverView = new TestTimelineServerView(walker.getSegments(), Collections.emptyList());
+    druidServers = serverView.getDruidServers();
+
+    BrokerSegmentMetadataCacheConfig metadataCacheConfig = BrokerSegmentMetadataCacheConfig.create("PT1S");
+    metadataCacheConfig.setMetadataRefreshPeriod(Period.parse("PT0.001S"));
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        config
+    ) {
+      @Override
+      public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+          throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+        refreshLatch.countDown();
+      }
+    };
+
+    // refresh should be executed more than once, with the feature disabled refresh should be executed only once
+    refreshLatch = new CountDownLatch(3);
+    schema.start();
+    schema.awaitInitialization();
+
+    refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
+
+    Assert.assertEquals(0, refreshLatch.getCount());
+  }
+
+  @Test
+  public void testRefreshOnEachCycleCentralizedDatasourceSchemaDisabled() throws InterruptedException
+  {
+    BrokerSegmentMetadataCacheConfig metadataCacheConfig = BrokerSegmentMetadataCacheConfig.create("PT1S");
+    metadataCacheConfig.setMetadataRefreshPeriod(Period.parse("PT0.001S"));
+
+    serverView = new TestTimelineServerView(walker.getSegments(), Collections.emptyList());
+    druidServers = serverView.getDruidServers();
+
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    ) {
+      @Override
+      public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+          throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+        refreshLatch.countDown();
+      }
+    };
+
+    // refresh should be executed only once
+    refreshLatch = new CountDownLatch(3);
+    schema.start();
+    schema.awaitInitialization();
+
+    refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
+
+    Assert.assertEquals(2, refreshLatch.getCount());
   }
 
   @Test
@@ -1026,5 +1112,98 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   {
     buildSchemaMarkAndTableLatch();
     serverView.invokeSegmentSchemasAnnouncedDummy();
+  }
+
+  @Test
+  public void testNoDatasourceSchemaWhenNoSegmentMetadata() throws InterruptedException, IOException
+  {
+    BrokerSegmentMetadataCacheConfig config = new BrokerSegmentMetadataCacheConfig();
+    config.setDisableSegmentMetadataQueries(true);
+
+    BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
+        config,
+        new NoopCoordinatorClient()
+    );
+
+    schema.start();
+    schema.awaitInitialization();
+
+    List<DataSegment> segments = schema.getSegmentMetadataSnapshot().values()
+                                .stream()
+                                .map(AvailableSegmentMetadata::getSegment)
+                                .collect(Collectors.toList());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Collections.singleton("foo"));
+
+    Assert.assertNull(schema.getDatasource("foo"));
+  }
+
+  @Test
+  public void testTombstoneSegmentIsNotAdded() throws InterruptedException
+  {
+    String datasource = "newSegmentAddTest";
+    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        BrokerSegmentMetadataCacheConfig.create(),
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    )
+    {
+      @Override
+      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
+      {
+        super.addSegment(server, segment);
+        if (datasource.equals(segment.getDataSource())) {
+          addSegmentLatch.countDown();
+        }
+      }
+    };
+
+    schema.start();
+    schema.awaitInitialization();
+
+    DataSegment segment = new DataSegment(
+        datasource,
+        Intervals.of("2001/2002"),
+        "1",
+        Collections.emptyMap(),
+        Collections.emptyList(),
+        Collections.emptyList(),
+        TombstoneShardSpec.INSTANCE,
+        null,
+        null,
+        0
+    );
+
+    Assert.assertEquals(6, schema.getTotalSegments());
+
+    serverView.addSegment(segment, ServerType.HISTORICAL);
+    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assert.assertEquals(0, addSegmentLatch.getCount());
+
+    Assert.assertEquals(6, schema.getTotalSegments());
+    List<AvailableSegmentMetadata> metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(0, metadatas.size());
+
+    serverView.removeSegment(segment, ServerType.HISTORICAL);
+    Assert.assertEquals(6, schema.getTotalSegments());
+    metadatas = schema
+        .getSegmentMetadataSnapshot()
+        .values()
+        .stream()
+        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
+        .collect(Collectors.toList());
+    Assert.assertEquals(0, metadatas.size());
   }
 }

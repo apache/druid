@@ -23,7 +23,7 @@ title: Concurrent append and replace
   -->
 
 :::info
-Concurrent append and replace is an [experimental feature](../development/experimental.md) available for JSON-based batch and streaming. It is not currently available for SQL-based ingestion.
+Concurrent append and replace is an [experimental feature](../development/experimental.md) available for JSON-based batch, streaming, and SQL-based ingestion.
 :::
 
 Concurrent append and replace safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (such as with streaming ingestion) to an interval while compaction of that interval is already in progress. Druid segments the data ingested during this time dynamically. The subsequent compaction run segments the data into the  granularity you specified.

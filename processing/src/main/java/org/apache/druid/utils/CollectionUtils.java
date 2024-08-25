@@ -177,7 +177,7 @@ public final class CollectionUtils
   }
 
   /**
-   * Intersection of two sets: {@code C = A ∪ B}.
+   * Union of two sets: {@code C = A ∪ B}.
    */
   public static <T> Set<T> union(Set<T> left, Set<T> right)
   {

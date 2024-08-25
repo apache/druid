@@ -48,13 +48,13 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -184,6 +184,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -329,16 +330,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   private SegmentCacheManager segmentCacheManager;
 
   private TestGroupByBuffers groupByBuffers;
-  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(
-      WorkerMemoryParameters.createInstance(
-          WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-          2,
-          10,
-          2,
-          1,
-          0
-      )
-  );
+  protected final WorkerMemoryParameters workerMemoryParameters = Mockito.spy(makeTestWorkerMemoryParameters());
 
   protected static class MSQBaseComponentSupplier extends StandardComponentSupplier
   {
@@ -362,8 +354,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
             {
               // We want this module to bring InputSourceModule along for the ride.
               binder.install(new InputSourceModule());
-              binder.install(new NestedDataModule());
-              NestedDataModule.registerHandlersAndSerde();
+              binder.install(new BuiltInTypesModule());
+              BuiltInTypesModule.registerHandlersAndSerde();
               SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
@@ -520,6 +512,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
+    objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
@@ -560,7 +553,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         catalogResolver,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
@@ -742,6 +736,19 @@ public class MSQTestBase extends BaseCalciteQueryTest
     return mapper;
   }
 
+  public static WorkerMemoryParameters makeTestWorkerMemoryParameters()
+  {
+    return WorkerMemoryParameters.createInstance(
+        WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
+        2,
+        10,
+        1,
+        2,
+        1,
+        0
+    );
+  }
+
   private String runMultiStageQuery(String query, Map<String, Object> context)
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
@@ -823,6 +830,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         expectedTuningConfig.getRowsPerSegment(),
         tuningConfig.getRowsPerSegment()
     );
+    Assert.assertEquals(
+        expectedTuningConfig.getMaxNumSegments(),
+        tuningConfig.getMaxNumSegments()
+    );
   }
 
   @Nullable
@@ -885,7 +896,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
+    public Builder setExpectedSegments(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
@@ -1273,6 +1284,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                                                       .stream()
                                                                       .filter(segmentId -> segmentId.getInterval()
                                                                                                     .contains((Long) row[0]))
+                                                                      .filter(segmentId -> {
+                                                                        List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
+                                                                        return lists.contains(Arrays.asList(row));
+                                                                      })
                                                                       .collect(Collectors.toList());
             if (diskSegmentList.size() != 1) {
               throw new IllegalStateException("Single key in multiple partitions");

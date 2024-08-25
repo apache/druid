@@ -30,6 +30,7 @@ import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -123,7 +124,8 @@ public class S3StorageConnectorProviderTest
                 new S3UploadManager(
                     new S3OutputConfig("bucket", "prefix", new HumanReadableBytes("5MiB"), 1),
                     new S3ExportConfig(new HumanReadableBytes("5MiB"), 1, null),
-                    new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0))
+                    new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0),
+                    new StubServiceEmitter())
             )
     );
 

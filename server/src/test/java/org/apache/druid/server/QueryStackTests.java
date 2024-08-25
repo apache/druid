@@ -79,6 +79,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.join.FrameBasedInlineJoinableFactory;
 import org.apache.druid.segment.join.InlineJoinableFactory;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -86,7 +87,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
@@ -97,7 +97,6 @@ import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -117,7 +116,6 @@ public class QueryStackTests
 
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
 
-  private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
   private QueryStackTests()
@@ -131,11 +129,12 @@ public class QueryStackTests
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactory joinableFactory,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final ServiceEmitter emitter
   )
   {
     return new ClientQuerySegmentWalker(
-        EMITTER,
+        emitter,
         clusterWalker,
         localWalker,
         new QueryToolChestWarehouse()
@@ -172,7 +171,8 @@ public class QueryStackTests
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final QueryScheduler scheduler
+      final QueryScheduler scheduler,
+      final ServiceEmitter emitter
   )
   {
     return new LocalQuerySegmentWalker(
@@ -180,7 +180,7 @@ public class QueryStackTests
         segmentWrangler,
         joinableFactoryWrapper,
         scheduler,
-        EMITTER
+        emitter
     );
   }
 
@@ -243,12 +243,22 @@ public class QueryStackTests
       final Supplier<Integer> minTopNThresholdSupplier
   )
   {
+    return createQueryRunnerFactoryConglomerate(closer, minTopNThresholdSupplier, TestHelper.makeJsonMapper());
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final Supplier<Integer> minTopNThresholdSupplier,
+      final ObjectMapper jsonMapper
+  )
+  {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
             DEFAULT_NUM_MERGE_BUFFERS
         ),
-        minTopNThresholdSupplier
+        minTopNThresholdSupplier,
+        jsonMapper
     );
   }
 
@@ -267,7 +277,37 @@ public class QueryStackTests
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
+      final ObjectMapper jsonMapper
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(
+        closer,
+        processingConfig,
+        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
+        jsonMapper
+    );
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig,
       final Supplier<Integer> minTopNThresholdSupplier
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(
+        closer,
+        processingConfig,
+        minTopNThresholdSupplier,
+        TestHelper.makeJsonMapper()
+    );
+  }
+
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig,
+      final Supplier<Integer> minTopNThresholdSupplier,
+      final ObjectMapper jsonMapper
   )
   {
     final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
@@ -281,7 +321,7 @@ public class QueryStackTests
 
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory =
         GroupByQueryRunnerTest.makeQueryRunnerFactory(
-            GroupByQueryRunnerTest.DEFAULT_MAPPER,
+            jsonMapper,
             new GroupByQueryConfig()
             {
             },
@@ -303,10 +343,7 @@ public class QueryStackTests
             .put(
                 ScanQuery.class,
                 new ScanQueryRunnerFactory(
-                    new ScanQueryQueryToolChest(
-                        new ScanQueryConfig(),
-                        new DefaultGenericQueryMetricsFactory()
-                    ),
+                    new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                     new ScanQueryEngine(),
                     new ScanQueryConfig()
                 )

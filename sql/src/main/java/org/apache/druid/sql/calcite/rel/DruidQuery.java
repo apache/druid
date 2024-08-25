@@ -51,6 +51,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -106,7 +108,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -1615,7 +1616,7 @@ public class DruidQuery
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
 
-    final List<ScanQuery.OrderBy> orderByColumns;
+    final List<OrderBy> orderByColumns;
     long scanOffset = 0L;
     long scanLimit = 0L;
 
@@ -1635,11 +1636,11 @@ public class DruidQuery
 
       orderByColumns = sorting.getOrderBys().stream().map(
           orderBy ->
-              new ScanQuery.OrderBy(
+              new OrderBy(
                   orderBy.getDimension(),
                   orderBy.getDirection() == OrderByColumnSpec.Direction.DESCENDING
-                  ? ScanQuery.Order.DESCENDING
-                  : ScanQuery.Order.ASCENDING
+                  ? Order.DESCENDING
+                  : Order.ASCENDING
               )
       ).collect(Collectors.toList());
     } else {
@@ -1679,7 +1680,6 @@ public class DruidQuery
         orderByColumns,
         filtration.getDimFilter(),
         scanColumnsList,
-        false,
         withScanSignatureIfNeeded(
             virtualColumns,
             scanColumnsList,

@@ -224,7 +224,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           <FormGroup>
             <Callout>
               <p>Ensure that your data appears correctly in a row/column orientation.</p>
-              <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
+              <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats`} />
             </Callout>
           </FormGroup>
           <AutoForm

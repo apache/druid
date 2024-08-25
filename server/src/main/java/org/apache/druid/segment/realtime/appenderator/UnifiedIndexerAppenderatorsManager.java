@@ -64,8 +64,8 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -155,7 +155,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -205,11 +205,11 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
-  public Appenderator createOfflineAppenderatorForTask(
+  public Appenderator createBatchAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -226,89 +226,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
           DatasourceBundle::new
       );
 
-      Appenderator appenderator = Appenderators.createOffline(
-          taskId,
-          schema,
-          rewriteAppenderatorConfigMemoryLimits(config),
-          metrics,
-          dataSegmentPusher,
-          objectMapper,
-          indexIO,
-          wrapIndexMerger(indexMerger),
-          rowIngestionMeters,
-          parseExceptionHandler,
-          useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
-      );
-      datasourceBundle.addAppenderator(taskId, appenderator);
-      return appenderator;
-    }
-  }
-
-  @Override
-  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    synchronized (this) {
-      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
-          schema.getDataSource(),
-          DatasourceBundle::new
-      );
-
-      Appenderator appenderator = Appenderators.createOpenSegmentsOffline(
-          taskId,
-          schema,
-          rewriteAppenderatorConfigMemoryLimits(config),
-          metrics,
-          dataSegmentPusher,
-          objectMapper,
-          indexIO,
-          wrapIndexMerger(indexMerger),
-          rowIngestionMeters,
-          parseExceptionHandler,
-          useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
-      );
-      datasourceBundle.addAppenderator(taskId, appenderator);
-      return appenderator;
-    }
-  }
-
-  @Override
-  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    synchronized (this) {
-      DatasourceBundle datasourceBundle = datasourceBundles.computeIfAbsent(
-          schema.getDataSource(),
-          DatasourceBundle::new
-      );
-
-      Appenderator appenderator = Appenderators.createClosedSegmentsOffline(
+      Appenderator appenderator = Appenderators.createBatch(
           taskId,
           schema,
           rewriteAppenderatorConfigMemoryLimits(config),
@@ -595,7 +513,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   /**
    * This wrapper around IndexMerger limits concurrent calls to the merge/persist methods used by
    * {@link StreamAppenderator} with a shared executor service. Merge/persist methods that are not used by
-   * AppenderatorImpl will throw an exception if called.
+   * StreamAppenderator will throw an exception if called.
    */
   public static class LimitedPoolIndexMerger implements IndexMerger
   {

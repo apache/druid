@@ -20,6 +20,7 @@
 package org.apache.druid.msq.guice;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -29,6 +30,7 @@ import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
+import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
@@ -58,7 +60,9 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -125,7 +129,9 @@ public class MSQIndexingModule implements DruidModule
       TooManyColumnsFault.class,
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
+      TooManyRowsInAWindowFault.class,
       TooManyRowsWithSameKeyFault.class,
+      TooManySegmentsInTimeChunkFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
       TooManyAttemptsForJob.class,
@@ -189,6 +195,8 @@ public class MSQIndexingModule implements DruidModule
         PassthroughAggregatorFactory.class,
         NilInputSource.class
     );
+
+    module.registerSubtypes(new NamedType(MSQCompactionRunner.class, MSQCompactionRunner.TYPE));
 
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());

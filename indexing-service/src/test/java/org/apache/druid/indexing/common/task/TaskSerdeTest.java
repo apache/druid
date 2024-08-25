@@ -19,19 +19,14 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -47,12 +42,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.indexing.RealtimeTuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
-import org.apache.druid.segment.realtime.FireDepartment;
 import org.apache.druid.server.security.AuthTestUtils;
-import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -74,14 +65,9 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
-        new NamedType(IndexTuningConfig.class, "index"),
-        new NamedType(MockFirehoseFactory.class, "mock")
+        new NamedType(IndexTuningConfig.class, "index")
     );
   }
 
@@ -246,34 +232,15 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                9999,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                1L,
-                null
-            )
+            new IndexIOConfig(new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .withAwaitSegmentAvailabilityTimeoutMillis(1L)
+                               .build()
         ),
         null
     );
@@ -333,41 +300,17 @@ public class TaskSerdeTest
                 ),
                 null
             ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            new IndexIOConfig(new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withForceGuaranteedRollup(false)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .build()
         ),
         null
     );
-
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
 
     final String json = jsonMapper.writeValueAsString(task);
 
@@ -385,92 +328,6 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertTrue(task.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
     Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
-  }
-
-  @Test
-  public void testRealtimeIndexTaskSerde() throws Exception
-  {
-
-    final RealtimeIndexTask task = new RealtimeIndexTask(
-        null,
-        new TaskResource("rofl", 2),
-        new FireDepartment(
-            new DataSchema(
-                "foo",
-                null,
-                new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
-                null,
-                jsonMapper
-            ),
-            new RealtimeIOConfig(
-                new MockFirehoseFactory(),
-                (schema, config, metrics) -> null
-            ),
-
-            new RealtimeTuningConfig(
-                null,
-                1,
-                10L,
-                null,
-                new Period("PT10M"),
-                null,
-                null,
-                null,
-                null,
-                1,
-                NoneShardSpec.instance(),
-                indexSpec,
-                null,
-                0,
-                0,
-                true,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
-        ),
-        null
-    );
-
-    final String json = jsonMapper.writeValueAsString(task);
-
-    Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final RealtimeIndexTask task2 = (RealtimeIndexTask) jsonMapper.readValue(json, Task.class);
-
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
-    Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
-    Assert.assertEquals(
-        new Period("PT10M"),
-        task.getRealtimeIngestionSchema()
-            .getTuningConfig().getWindowPeriod()
-    );
-    Assert.assertEquals(
-        Granularities.HOUR,
-        task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
-    );
-    Assert.assertTrue(task.getRealtimeIngestionSchema().getTuningConfig().isReportParseExceptions());
-
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
-    Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
-    Assert.assertEquals(
-        task.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod(),
-        task2.getRealtimeIngestionSchema().getTuningConfig().getWindowPeriod()
-    );
-    Assert.assertEquals(
-        task.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory(),
-        task2.getRealtimeIngestionSchema().getTuningConfig().getMaxBytesInMemory()
-    );
-    Assert.assertEquals(
-        task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
-        task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
-    );
   }
 
   @Test
@@ -589,15 +446,6 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
-  }
-
-  private static class MockFirehoseFactory implements FirehoseFactory
-  {
-    @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
-    {
-      return null;
-    }
   }
 
   @Test

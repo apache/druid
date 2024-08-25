@@ -200,7 +200,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Map of datasource and generic object extending DataSourceInformation.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<String, T> tables = new ConcurrentHashMap<>();
 
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
@@ -269,9 +269,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               final boolean wasRecentFailure = DateTimes.utc(lastFailure)
                                                         .plus(config.getMetadataRefreshPeriod())
                                                         .isAfterNow();
+
               if (isServerViewInitialized &&
                   !wasRecentFailure &&
-                  (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
+                  shouldRefresh() &&
                   (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
                 // We need to do a refresh. Break out of the waiting loop.
                 break;
@@ -334,6 +335,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+
   /**
    * Lifecycle start method.
    */
@@ -361,6 +363,15 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // noop
   }
 
+  /**
+   * Refresh is executed only when there are segments or datasources needing refresh.
+   */
+  @SuppressWarnings("GuardedBy")
+  protected boolean shouldRefresh()
+  {
+    return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
+  }
+
   public void awaitInitialization() throws InterruptedException
   {
     initialized.await();
@@ -373,6 +384,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    *
    * @return schema information for the given datasource
    */
+  @Nullable
   public T getDatasource(String name)
   {
     return tables.get(name);
@@ -446,6 +458,13 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    // Skip adding tombstone segment to the cache. These segments lack data or column information.
+    // Additionally, segment metadata queries, which are not yet implemented for tombstone segments
+    // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
+    // leading to indefinite refresh attempts for these segments.
+    if (segment.isTombstone()) {
+      return;
+    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
@@ -518,6 +537,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void removeSegment(final DataSegment segment)
   {
+    // tombstone segments are not present in the cache
+    if (segment.isTombstone()) {
+      return;
+    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       log.debug("Segment [%s] is gone.", segment.getId());
