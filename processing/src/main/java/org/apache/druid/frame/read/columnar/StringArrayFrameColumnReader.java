@@ -428,19 +428,25 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     private ByteBuffer getStringUtf8(final int index)
     {
       if (startOfStringLengthSection > Long.MAX_VALUE - (long) Integer.BYTES * index) {
-        throw DruidException.defensive("DataEnd index would overflow trying to read the frame memory!");
+        throw DruidException.defensive("length index would overflow trying to read the frame memory!");
       }
+
+      final int dataEndVariableIndex = memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index);
+      if (startOfStringDataSection > Long.MAX_VALUE - dataEndVariableIndex) {
+        throw DruidException.defensive("data end index would overflow trying to read the frame memory!");
+      }
+
       final long dataStart;
-      final long dataEnd =
-          startOfStringDataSection +
-          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index);
+      final long dataEnd = startOfStringDataSection + dataEndVariableIndex;
 
       if (index == 0) {
         dataStart = startOfStringDataSection;
       } else {
-        dataStart =
-            startOfStringDataSection +
-            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
+        final int dataStartVariableIndex = memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
+        if (startOfStringDataSection > Long.MAX_VALUE - dataStartVariableIndex) {
+          throw DruidException.defensive("data start index would overflow trying to read the frame memory!");
+        }
+        dataStart = startOfStringDataSection + dataStartVariableIndex;
       }
 
       final int dataLength = Ints.checkedCast(dataEnd - dataStart);
