@@ -427,8 +427,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     @Nullable
     private ByteBuffer getStringUtf8(final int index)
     {
-      if (index > Long.MAX_VALUE / Integer.BYTES
-          || startOfStringLengthSection > Long.MAX_VALUE - (long) Integer.BYTES * index) {
+      if (startOfStringLengthSection > Long.MAX_VALUE - (long) Integer.BYTES * index) {
         throw DruidException.defensive("DataEnd index would overflow trying to read the frame memory!");
       }
       final long dataStart;
