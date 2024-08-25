@@ -156,6 +156,6 @@ public class CoordinatorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getStatusOfDuties()
   {
-    return Response.ok(coordinator.getStatusOfDuties()).build();
+    return Response.ok(new CoordinatorDutyStatus(coordinator.getStatusOfDuties())).build();
   }
 }

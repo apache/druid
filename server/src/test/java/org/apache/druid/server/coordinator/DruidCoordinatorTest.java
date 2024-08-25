@@ -608,7 +608,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testCompactSegmentsDutyWhenCustomDutyGroupEmpty()
   {
-    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
+            .andReturn(true).anyTimes();
+    EasyMock.replay(segmentsMetadataManager);
 
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
@@ -652,7 +654,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupDoesNotContainsCompactSegments()
   {
-    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
+            .andReturn(true).anyTimes();
+    EasyMock.replay(segmentsMetadataManager);
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -700,7 +704,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupContainsCompactSegments()
   {
-    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
+            .andReturn(true).anyTimes();
+    EasyMock.replay(segmentsMetadataManager);
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
