@@ -1064,10 +1064,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
-    log.debug(
-        "Polled and found [%,d] segments in the database in [%,d] ms.",
-        segments.size(), stopwatch.millisElapsed()
-    );
     emitMetric("segment/poll/time", stopwatch.millisElapsed());
 
     createDatasourcesSnapshot(segments);
@@ -1192,10 +1188,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties
-    );
-    log.debug(
-        "Successfully created snapshot from polled segments in [%d] ms. Found [%d] overshadowed segments.",
-        stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
     emitMetric("segment/buildSnapshot/time", stopwatch.millisElapsed());
   }

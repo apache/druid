@@ -81,10 +81,6 @@ public class RunRules implements CoordinatorDuty
     // b) replication throttling has a smaller impact on newer segments
     final Set<DataSegment> usedSegments = params.getUsedSegmentsNewestFirst();
     final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
-    log.debug(
-        "Applying retention rules on [%,d] used segments, skipping [%,d] overshadowed segments.",
-        usedSegments.size(), overshadowed.size()
-    );
 
     final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
 
@@ -164,17 +160,10 @@ public class RunRules implements CoordinatorDuty
 
   private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
   {
-    final Set<String> broadcastDatasources =
-        params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
-              .map(ImmutableDruidDataSource::getName)
-              .filter(this::isBroadcastDatasource)
-              .collect(Collectors.toSet());
-
-    if (!broadcastDatasources.isEmpty()) {
-      log.info("Found broadcast datasources [%s] which will not participate in balancing.", broadcastDatasources);
-    }
-
-    return broadcastDatasources;
+    return params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
+                 .map(ImmutableDruidDataSource::getName)
+                 .filter(this::isBroadcastDatasource)
+                 .collect(Collectors.toSet());
   }
 
   /**

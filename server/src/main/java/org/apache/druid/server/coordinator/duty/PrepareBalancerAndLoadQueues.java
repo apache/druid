@@ -133,13 +133,6 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
           }
       );
     }
-
-    if (cancelledCount.get() > 0) {
-      log.debug(
-          "Cancelled [%d] load/move operations on [%d] decommissioning servers.",
-          cancelledCount.get(), decommissioningServers.size()
-      );
-    }
   }
 
   private List<ImmutableDruidServer> prepareCurrentServers()
