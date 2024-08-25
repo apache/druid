@@ -427,6 +427,9 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     @Nullable
     private ByteBuffer getStringUtf8(final int index)
     {
+      if (memory.getCapacity() < startOfStringLengthSection + (long) Integer.BYTES * (index + 1)) {
+        throw DruidException.defensive("StringArrayFrameColumn trying to read outside frame memory!");
+      }
       final long dataStart;
       final long dataEnd =
           startOfStringDataSection +
