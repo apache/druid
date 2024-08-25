@@ -155,14 +155,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());

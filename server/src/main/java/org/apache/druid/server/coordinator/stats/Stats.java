@@ -63,8 +63,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
 
     // Values computed in a run
-    public static final CoordinatorStat BALANCER_THREADS
-        = CoordinatorStat.toDebugOnly("numBalancerThreads");
     public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
         = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
   }
@@ -176,5 +174,8 @@ public class Stats
     );
     public static final CoordinatorStat COMPUTATION_TIME = CoordinatorStat.toDebugOnly("costComputeTime");
     public static final CoordinatorStat COMPUTATION_COUNT = CoordinatorStat.toDebugOnly("costComputeCount");
+
+    public static final CoordinatorStat COMPUTE_THREADS = CoordinatorStat.toDebugOnly("balancerComputeThreads");
+    public static final CoordinatorStat MAX_TO_MOVE = CoordinatorStat.toDebugOnly("maxToMove");
   }
 }

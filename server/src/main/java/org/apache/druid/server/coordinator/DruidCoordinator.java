@@ -464,10 +464,9 @@ public class DruidCoordinator
         );
       }
 
-      log.info(
+      log.warn(
           "Created [%d] duty groups. DUTY RUNS WILL NOT BE LOGGED."
-          + " Use API '/druid/coordinator/v1/duties' to get duty status or set dynamic config"
-          + " 'debugDimensions' on API '/druid/coordinator/v1/config' to log more details.",
+          + " Use API '/druid/coordinator/v1/duties' to get current status.",
           dutiesRunnables.size()
       );
 

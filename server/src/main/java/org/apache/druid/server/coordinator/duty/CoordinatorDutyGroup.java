@@ -69,7 +69,7 @@ public class CoordinatorDutyGroup
     this.dutyNames = duties.stream().map(duty -> duty.getClass().getName()).collect(Collectors.toList());
     this.coordinator = coordinator;
 
-    log.info("Scheduled run of duty group[%s] at period[%s] with duties[%s].", name, period, dutyNames);
+    log.info("Created dutyGroup[%s] with period[%s] and duties[%s].", name, period, dutyNames);
   }
 
   public String getName()

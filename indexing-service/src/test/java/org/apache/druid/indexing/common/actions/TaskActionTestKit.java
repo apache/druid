@@ -104,16 +104,16 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
-    final ServiceEmitter noopEmitter = new NoopServiceEmitter();
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
@@ -137,10 +137,10 @@ public class TaskActionTestKit extends ExternalResource
             taskLockbox,
             taskLockConfig,
             metadataStorageCoordinator,
-            noopEmitter,
+            NoopServiceEmitter.instance(),
             ScheduledExecutors::fixed
         ),
-        noopEmitter,
+        NoopServiceEmitter.instance(),
         EasyMock.createMock(SupervisorManager.class),
         objectMapper
     );

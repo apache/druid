@@ -199,7 +199,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 
   private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)
   {
-    stats.add(Stats.Segments.BALANCER_THREADS, config.getBalancerComputeThreads());
+    stats.add(Stats.Balancer.COMPUTE_THREADS, config.getBalancerComputeThreads());
     stats.add(Stats.Segments.REPLICATION_THROTTLE_LIMIT, config.getReplicationThrottleLimit());
   }
 }

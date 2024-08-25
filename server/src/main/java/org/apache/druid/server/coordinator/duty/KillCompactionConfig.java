@@ -88,7 +88,6 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   {
     // If current compaction config is empty then there is nothing to do
     if (DruidCompactionConfig.empty().equals(current)) {
-      log.info("Nothing to do as compaction config is already empty.");
       return current;
     }
 
@@ -134,7 +133,6 @@ public class KillCompactionConfig extends MetadataCleanupDuty
     if (result.isOk()) {
       return compactionConfigRemoved.get();
     } else if (result.isRetryable()) {
-      log.debug("Retrying KillCompactionConfig duty");
       throw new RetryableException(result.getException());
     } else {
       log.error(result.getException(), "Failed to kill compaction configurations");

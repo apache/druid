@@ -33,7 +33,6 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import java.util.HashMap;
@@ -73,16 +72,11 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
         params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis()
     );
     if (sinceCoordinatorStarted.hasNotElapsed(requiredDelay)) {
-      log.info(
-          "Skipping MarkAsUnused as only [%s ms] have elapsed since Coordinator start. Required delay[%s].",
-          sinceCoordinatorStarted.millisElapsed(), requiredDelay
-      );
       return params;
     }
 
     final Set<DataSegment> allOvershadowedSegments = params.getDataSourcesSnapshot().getOvershadowedSegments();
     if (allOvershadowedSegments.isEmpty()) {
-      log.info("Skipping MarkAsUnused as there are no overshadowed segments.");
       return params;
     }
 
@@ -125,7 +119,7 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
           stats.add(Stats.Segments.OVERSHADOWED, datasourceKey, unusedSegments.size());
 
           int updatedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
-          log.info("Successfully marked [%d] segments of datasource[%s] as unused.", updatedCount, datasource);
+          log.info("Marked [%d] segments of datasource[%s] as unused.", updatedCount, datasource);
         }
     );
 
