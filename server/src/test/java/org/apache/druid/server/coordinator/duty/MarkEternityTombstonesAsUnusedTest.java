@@ -463,7 +463,7 @@ public class MarkEternityTombstonesAsUnusedTest
         .build();
 
     final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDataSourcesSnapshot(
             segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
         )

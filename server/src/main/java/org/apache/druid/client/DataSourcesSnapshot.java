@@ -21,7 +21,6 @@ package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -53,23 +52,6 @@ public class DataSourcesSnapshot
           .addSegmentIfAbsent(segment);
     });
     return new DataSourcesSnapshot(CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource));
-  }
-
-  public static DataSourcesSnapshot fromUsedSegmentsTimelines(
-      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
-      ImmutableMap<String, String> dataSourceProperties
-  )
-  {
-    Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments =
-        Maps.newHashMapWithExpectedSize(usedSegmentsTimelinesPerDataSource.size());
-    usedSegmentsTimelinesPerDataSource.forEach(
-        (dataSourceName, usedSegmentsTimeline) -> {
-          DruidDataSource dataSource = new DruidDataSource(dataSourceName, dataSourceProperties);
-          usedSegmentsTimeline.iterateAllObjects().forEach(dataSource::addSegment);
-          dataSourcesWithAllUsedSegments.put(dataSourceName, dataSource.toImmutableDruidDataSource());
-        }
-    );
-    return new DataSourcesSnapshot(dataSourcesWithAllUsedSegments, usedSegmentsTimelinesPerDataSource);
   }
 
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;

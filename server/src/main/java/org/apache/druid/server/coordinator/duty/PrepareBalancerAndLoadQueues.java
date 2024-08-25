@@ -85,7 +85,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final SegmentLoadingConfig segmentLoadingConfig
-        = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegments().size());
+        = SegmentLoadingConfig.create(dynamicConfig, params.getUsedSegmentCount());
 
     final DruidCluster cluster = prepareCluster(dynamicConfig, segmentLoadingConfig, currentServers);
     cancelLoadsOnDecommissioningServers(cluster);
@@ -93,11 +93,12 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     final CoordinatorRunStats stats = params.getCoordinatorStats();
     collectHistoricalStats(cluster, stats);
     collectUsedSegmentStats(params, stats);
+    collectDebugStats(segmentLoadingConfig, stats);
 
     final int numBalancerThreads = segmentLoadingConfig.getBalancerComputeThreads();
     final BalancerStrategy balancerStrategy = balancerStrategyFactory.createBalancerStrategy(numBalancerThreads);
-    log.info(
-        "Using balancer strategy [%s] with [%d] threads.",
+    log.debug(
+        "Using balancer strategy[%s] with [%d] threads.",
         balancerStrategy.getClass().getSimpleName(), numBalancerThreads
     );
 
@@ -134,7 +135,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     }
 
     if (cancelledCount.get() > 0) {
-      log.info(
+      log.debug(
           "Cancelled [%d] load/move operations on [%d] decommissioning servers.",
           cancelledCount.get(), decommissioningServers.size()
       );
@@ -194,5 +195,11 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       stats.add(Stats.Segments.USED_BYTES, datasourceKey, totalSizeOfUsedSegments);
       stats.add(Stats.Segments.USED, datasourceKey, timeline.getNumObjects());
     });
+  }
+
+  private void collectDebugStats(SegmentLoadingConfig config, CoordinatorRunStats stats)
+  {
+    stats.add(Stats.Segments.BALANCER_THREADS, config.getBalancerComputeThreads());
+    stats.add(Stats.Segments.REPLICATION_THROTTLE_LIMIT, config.getReplicationThrottleLimit());
   }
 }

@@ -61,6 +61,12 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
     public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
         = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
+
+    // Values computed in a run
+    public static final CoordinatorStat BALANCER_THREADS
+        = CoordinatorStat.toDebugOnly("numBalancerThreads");
+    public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
+        = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
   }
 
   public static class SegmentQueue

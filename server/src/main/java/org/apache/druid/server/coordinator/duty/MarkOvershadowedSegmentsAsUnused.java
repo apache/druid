@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -34,8 +34,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -56,9 +56,10 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
 {
   private static final Logger log = new Logger(MarkOvershadowedSegmentsAsUnused.class);
 
-  private final SegmentDeleteHandler deleteHandler;
+  private final MetadataAction.DeleteSegments deleteHandler;
+  private final Stopwatch sinceCoordinatorStarted = Stopwatch.createStarted();
 
-  public MarkOvershadowedSegmentsAsUnused(SegmentDeleteHandler deleteHandler)
+  public MarkOvershadowedSegmentsAsUnused(MetadataAction.DeleteSegments deleteHandler)
   {
     this.deleteHandler = deleteHandler;
   }
@@ -68,12 +69,13 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
   {
     // Mark overshadowed segments as unused only if the coordinator has been running
     // long enough to have refreshed its metadata view
-    final DateTime coordinatorStartTime = params.getCoordinatorStartTime();
-    final long delayMillis = params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis();
-    if (DateTimes.nowUtc().isBefore(coordinatorStartTime.plus(delayMillis))) {
+    final Duration requiredDelay = Duration.millis(
+        params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis()
+    );
+    if (sinceCoordinatorStarted.hasNotElapsed(requiredDelay)) {
       log.info(
-          "Skipping MarkAsUnused until [%s] have elapsed after coordinator start time[%s].",
-          Duration.ofMillis(delayMillis), coordinatorStartTime
+          "Skipping MarkAsUnused as only [%s ms] have elapsed since Coordinator start. Required delay[%s].",
+          sinceCoordinatorStarted.millisElapsed(), requiredDelay
       );
       return params;
     }

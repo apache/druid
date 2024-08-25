@@ -50,8 +50,8 @@ public class BalanceSegments implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    if (params.getUsedSegments().isEmpty()) {
-      log.info("Skipping balance as there are no used segments.");
+    if (params.getUsedSegmentCount() <= 0) {
+      log.debug("Skipping balance as there are no used segments.");
       return params;
     }
 
@@ -60,10 +60,10 @@ public class BalanceSegments implements CoordinatorDuty
 
     final int maxSegmentsToMove = getMaxSegmentsToMove(params);
     if (maxSegmentsToMove <= 0) {
-      log.info("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
+      log.debug("Skipping balance as maxSegmentsToMove is [%d].", maxSegmentsToMove);
       return params;
     } else {
-      log.info(
+      log.debug(
           "Balancing segments in tiers [%s] with maxSegmentsToMove[%,d] and maxLifetime[%d].",
           cluster.getTierNames(), maxSegmentsToMove, loadingConfig.getMaxLifetimeInLoadQueue()
       );

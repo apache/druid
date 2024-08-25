@@ -48,6 +48,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
@@ -61,7 +62,7 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
-import org.apache.druid.server.coordinator.duty.CoordinatorDuty;
+import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
 import org.apache.druid.server.coordinator.duty.KillSupervisorsCustomDuty;
 import org.apache.druid.server.coordinator.loading.CuratorLoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
@@ -114,6 +115,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
   private NewestSegmentFirstPolicy newestSegmentFirstPolicy;
+  private OverlordClient overlordClient;
   private final LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
 
   @Before
@@ -125,6 +127,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     dataSourcesSnapshot = EasyMock.createNiceMock(DataSourcesSnapshot.class);
     metadataRuleManager = EasyMock.createNiceMock(MetadataRuleManager.class);
     loadQueueTaskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
+    overlordClient = EasyMock.createMock(OverlordClient.class);
 
     JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
     EasyMock.expect(
@@ -181,7 +184,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
-        null,
+        overlordClient,
         loadQueueTaskMaster,
         new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
@@ -605,6 +608,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testCompactSegmentsDutyWhenCustomDutyGroupEmpty()
   {
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
+
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
@@ -612,7 +617,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
-        null,
+        overlordClient,
         loadQueueTaskMaster,
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
@@ -624,22 +629,30 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create()
     );
+    coordinator.start();
+
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
-    List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
-    Assert.assertTrue(indexingDuties.stream().anyMatch(coordinatorDuty -> coordinatorDuty instanceof CompactSegments));
+    final List<DutyGroupStatus> duties = coordinator.getStatusOfDuties();
+    Assert.assertEquals(3, duties.size());
 
-    // CompactSegments should not exist in Custom Duty Group
-    List<CompactSegments> compactSegmentsDutyFromCustomGroups = coordinator.getCompactSegmentsDutyFromCustomGroups();
-    Assert.assertTrue(compactSegmentsDutyFromCustomGroups.isEmpty());
+    Assert.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
+    Assert.assertEquals("IndexingServiceDuties", duties.get(1).getName());
+    Assert.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
 
-    // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
-    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
-    Assert.assertNotNull(duty);
+    final String compactDutyName = CompactSegments.class.getName();
+    Assert.assertTrue(duties.get(1).getDutyNames().contains(compactDutyName));
+
+    // CompactSegments should not exist in other duty groups
+    Assert.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
+    Assert.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
+
+    coordinator.stop();
   }
 
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupDoesNotContainsCompactSegments()
   {
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -652,7 +665,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
-        null,
+        overlordClient,
         loadQueueTaskMaster,
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
@@ -664,22 +677,30 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create()
     );
+    coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
-    List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
-    Assert.assertTrue(indexingDuties.stream().anyMatch(coordinatorDuty -> coordinatorDuty instanceof CompactSegments));
+    final List<DutyGroupStatus> duties = coordinator.getStatusOfDuties();
+    Assert.assertEquals(4, duties.size());
 
-    // CompactSegments should not exist in Custom Duty Group
-    List<CompactSegments> compactSegmentsDutyFromCustomGroups = coordinator.getCompactSegmentsDutyFromCustomGroups();
-    Assert.assertTrue(compactSegmentsDutyFromCustomGroups.isEmpty());
+    Assert.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
+    Assert.assertEquals("IndexingServiceDuties", duties.get(1).getName());
+    Assert.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
+    Assert.assertEquals("group1", duties.get(3).getName());
 
-    // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
-    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
-    Assert.assertNotNull(duty);
+    final String compactDutyName = CompactSegments.class.getName();
+    Assert.assertTrue(duties.get(1).getDutyNames().contains(compactDutyName));
+
+    // CompactSegments should not exist in other duty groups
+    Assert.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
+    Assert.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
+
+    coordinator.stop();
   }
 
   @Test
   public void testInitializeCompactSegmentsDutyWhenCustomDutyGroupContainsCompactSegments()
   {
+    EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically()).andReturn(true).anyTimes();
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -692,7 +713,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
-        null,
+        overlordClient,
         loadQueueTaskMaster,
         null,
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),
@@ -704,19 +725,27 @@ public class DruidCoordinatorTest extends CuratorTestBase
         null,
         CentralizedDatasourceSchemaConfig.create()
     );
+    coordinator.start();
+
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
-    List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
-    Assert.assertTrue(indexingDuties.stream().noneMatch(coordinatorDuty -> coordinatorDuty instanceof CompactSegments));
+    final List<DutyGroupStatus> duties = coordinator.getStatusOfDuties();
+    Assert.assertEquals(4, duties.size());
+
+    Assert.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
+    Assert.assertEquals("IndexingServiceDuties", duties.get(1).getName());
+    Assert.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
+    Assert.assertEquals("group1", duties.get(3).getName());
 
     // CompactSegments should exist in Custom Duty Group
-    List<CompactSegments> compactSegmentsDutyFromCustomGroups = coordinator.getCompactSegmentsDutyFromCustomGroups();
-    Assert.assertFalse(compactSegmentsDutyFromCustomGroups.isEmpty());
-    Assert.assertEquals(1, compactSegmentsDutyFromCustomGroups.size());
-    Assert.assertNotNull(compactSegmentsDutyFromCustomGroups.get(0));
+    final String compactDutyName = CompactSegments.class.getName();
+    Assert.assertTrue(duties.get(3).getDutyNames().contains(compactDutyName));
 
-    // CompactSegments returned by this method should be from the Custom Duty Group
-    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
-    Assert.assertNotNull(duty);
+    // CompactSegments should not exist in other duty groups
+    Assert.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
+    Assert.assertFalse(duties.get(1).getDutyNames().contains(compactDutyName));
+    Assert.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
+
+    coordinator.stop();
   }
 
   @Test(timeout = 3000)
@@ -797,7 +826,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         serviceEmitter,
         scheduledExecutorFactory,
-        null,
+        overlordClient,
         loadQueueTaskMaster,
         new SegmentLoadQueueManager(serverInventoryView, loadQueueTaskMaster),
         new LatchableServiceAnnouncer(leaderAnnouncerLatch, leaderUnannouncerLatch),

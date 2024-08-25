@@ -72,7 +72,7 @@ public class TierSegmentBalancer
     this.tier = tier;
     this.params = params;
     this.segmentAssigner = params.getSegmentAssigner();
-    this.runStats = segmentAssigner.getStats();
+    this.runStats = params.getCoordinatorStats();
 
     Map<Boolean, List<ServerHolder>> partitions =
         servers.stream().collect(Collectors.partitioningBy(ServerHolder::isDecommissioning));
@@ -167,7 +167,7 @@ public class TierSegmentBalancer
   @Nullable
   private DataSegment getLoadableSegment(DataSegment segmentToMove)
   {
-    if (!params.getUsedSegments().contains(segmentToMove)) {
+    if (!params.isUsedSegment(segmentToMove)) {
       markUnmoved("Segment is unused", segmentToMove);
       return null;
     }

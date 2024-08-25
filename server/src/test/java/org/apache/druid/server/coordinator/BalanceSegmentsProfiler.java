@@ -128,7 +128,7 @@ public class BalanceSegmentsProfiler
         .addTier("normal", serverHolderList.toArray(new ServerHolder[0]))
         .build();
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(segments)
         .withDynamicConfigs(
@@ -140,11 +140,10 @@ public class BalanceSegmentsProfiler
                 .build()
         )
         .withSegmentAssignerUsing(loadQueueManager)
-        .withDatabaseRuleManager(manager)
         .build();
 
     BalanceSegments tester = new BalanceSegments(Duration.standardMinutes(1));
-    RunRules runner = new RunRules(Set::size);
+    RunRules runner = new RunRules(Set::size, manager::getRulesWithDefault);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);
@@ -174,7 +173,7 @@ public class BalanceSegmentsProfiler
     EasyMock.replay(druidServer2);
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDruidCluster(
             DruidCluster
                 .builder()

@@ -19,13 +19,27 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.List;
 import java.util.Set;
 
-public interface SegmentDeleteHandler
+/**
+ * Contains functional interfaces that are used by a {@link CoordinatorDuty} to
+ * perform a single read or write operation on the metadata store.
+ */
+public final class MetadataAction
 {
+  @FunctionalInterface
+  public interface DeleteSegments
+  {
+    int markSegmentsAsUnused(Set<SegmentId> segmentIds);
+  }
 
-  int markSegmentsAsUnused(Set<SegmentId> segmentIds);
-
+  @FunctionalInterface
+  public interface GetDatasourceRules
+  {
+    List<Rule> getRulesWithDefault(String dataSource);
+  }
 }

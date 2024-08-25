@@ -130,7 +130,8 @@ public class KillUnusedSegmentsTest
         .withBufferPeriod(Duration.standardSeconds(1));
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
         .withKillTaskSlotRatio(1.0);
-    paramsBuilder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
+    paramsBuilder = DruidCoordinatorRuntimeParams.builder()
+                                                 .withUsedSegments(Collections.emptySet());
   }
 
   @Test
