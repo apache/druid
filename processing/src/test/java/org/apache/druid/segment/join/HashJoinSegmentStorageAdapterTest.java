@@ -74,6 +74,7 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
             "namespace",
             "page",
             "delta",
+            "channel_uniques",
             "c1.countryNumber",
             "c1.countryIsoCode",
             "c1.countryName"
