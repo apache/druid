@@ -80,7 +80,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     final RowSignature.Builder builder = RowSignature.builder();
     for (final String column : columns) {
-      builder.add(column, ColumnType.fromCapabilities(index.getColumnCapabilities(column)));
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+
+      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
+      // being 100% nulls. Don't add those to the row signature.
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
     }
 
     return builder.build();
