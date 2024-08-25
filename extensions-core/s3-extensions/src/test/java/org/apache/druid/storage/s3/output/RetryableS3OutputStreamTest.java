@@ -71,7 +71,7 @@ public class RetryableS3OutputStreamTest
   private File tempDir;
 
   @Before
-  public void setup() throws IOException
+  public void setup()
   {
     chunkSize = 10L;
     config = new S3OutputConfig(
