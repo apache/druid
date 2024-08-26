@@ -199,7 +199,6 @@
                                 </goals>
                                 <configuration>
                                     <executable>${project.parent.basedir}/examples/bin/run-java</executable>
-                                    <outputFile>${project.parent.basedir}/build_output</outputFile>
                                     <arguments>
                                         <argument>-classpath</argument>
                                         <classpath />
