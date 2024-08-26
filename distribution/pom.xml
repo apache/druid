@@ -123,6 +123,27 @@
             <build>
                 <plugins>
                     <plugin>
+                        <groupId>org.commonjava.maven.plugins</groupId>
+                        <artifactId>directory-maven-plugin</artifactId>
+                        <version>0.1</version>
+                        <executions>
+                            <execution>
+                                <id>directories</id>
+                                <goals>
+                                    <goal>directory-of</goal>
+                                </goals>
+                                <phase>initialize</phase>
+                                <configuration>
+                                    <property>druid.basedir</property>
+                                    <project>
+                                        <groupId>org.apache.druid</groupId>
+                                        <artifactId>druid</artifactId>
+                                    </project>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
@@ -194,6 +215,8 @@
                                         <argument>--clean</argument>
                                         <argument>--defaultVersion</argument>
                                         <argument>${project.parent.version}</argument>
+                                        <argument>--project-base-dir</argument>
+                                        <argument>${druid.basedir}</argument>
                                         <argument>-l</argument>
                                         <argument>${settings.localRepository}</argument>
                                         <argument>-h</argument>
@@ -259,8 +282,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
-                                        <argument>--projectBaseDir</argument>
-                                        <argument>${project.parent.basedir}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

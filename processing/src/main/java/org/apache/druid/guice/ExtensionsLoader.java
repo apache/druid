@@ -319,15 +319,18 @@ public class ExtensionsLoader
         }
         ObjectMapper objectMapper = new ObjectMapper();
         for (Pair<File, Boolean> extension : loaders.keySet()) {
-          log.info("Setting extension dependncies for %s", extension.lhs.getName());
-          Path dependenciesPath = Paths.get(extension.lhs.getAbsolutePath() + EXTENSION_DEPENDENCIES_JSON);
+          Path dependenciesPath = Paths.get(extension.lhs.getAbsolutePath() + "/" + EXTENSION_DEPENDENCIES_JSON);
           if (extension.rhs && Files.exists(dependenciesPath)) {
-            log.info("Found extension dependencies for %s", extension.lhs.getName());
             ExtensionDependencies extensionDependencies = objectMapper.readValue(dependenciesPath.toFile(), ExtensionDependencies.class);
-            log.info("Extension dependencies for %s [%s]", extension.lhs.getName(), extensionDependencies.getDependencies());
-
             ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) loaders.get(extension);
-            classLoader.setExtensionDependencyClassLoaders(extensionDependencies.getDependencies().stream().map(extensionClassLoaderMap::get).collect(Collectors.toList()));
+            List<ClassLoader> extensionClassLoaders = new ArrayList<>();
+            for (String dependency : extensionDependencies.getDependencies()) {
+              if (!extensionClassLoaderMap.containsKey(dependency)) {
+                throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
+              }
+              extensionClassLoaders.add(extensionClassLoaderMap.get(dependency));
+            }
+            classLoader.setExtensionDependencyClassLoaders(extensionClassLoaders);
           }
         }
       }

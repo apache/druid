@@ -73,7 +73,7 @@ import java.util.stream.Collectors;
 public class PullDependencies implements Runnable
 {
   private static final Logger log = new Logger(PullDependencies.class);
-  
+
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
       "https://repo1.maven.org/maven2/"
   );
@@ -159,6 +159,7 @@ public class PullDependencies implements Runnable
       Dependencies.builder()
                   .put("commons-beanutils", "commons-beanutils-core")
                   .build();
+  public static final String EXTENSION_DEPENDENCIES_JSON = "extension-dependencies.json";
 
   private final Dependencies hadoopExclusions;
 
@@ -254,7 +255,7 @@ public class PullDependencies implements Runnable
   public String proxyPassword = "";
 
   @Option(
-      name = {"--projectBaseDir"},
+      name = {"--project-base-dir"},
       title = "Absolute path to the project base directory"
   )
   public String projectBaseDir = "";
@@ -306,7 +307,7 @@ public class PullDependencies implements Runnable
     );
 
     try {
-      log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
+      System.out.println("Start downloading dependencies for extension coordinates: " + coordinates);
       for (String coordinate : coordinates) {
         coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
@@ -362,7 +363,7 @@ public class PullDependencies implements Runnable
 
   private void downloadExtensionDependencies(String artifactId, File extensionOutputDir)
   {
-    log.info("Downloading extension dependencies for [%s] [%s], baseDir [%s]", artifactId, extensionOutputDir, projectBaseDir);
+    System.out.println("Downloading extension dependencies for " + artifactId + " " + extensionOutputDir + " " + projectBaseDir);
     String extensionInputDirectoryName = artifactId;
     File coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
     File contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
@@ -399,9 +400,9 @@ public class PullDependencies implements Runnable
   private void copyExtensionDependencyFile(File extensionDirectory, File extensionOutputDir)
   {
     try {
-      File dependenciesFile = new File(extensionDirectory, "extension-dependencies.json");
+      File dependenciesFile = new File(extensionDirectory, EXTENSION_DEPENDENCIES_JSON);
       if (dependenciesFile.exists()) {
-        Files.copy(dependenciesFile.toPath(), extensionOutputDir.toPath());
+        Files.copy(dependenciesFile.toPath(), new File(extensionOutputDir, EXTENSION_DEPENDENCIES_JSON).toPath());
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
