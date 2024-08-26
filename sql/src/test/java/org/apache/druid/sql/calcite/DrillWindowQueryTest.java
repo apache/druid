@@ -69,8 +69,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -385,14 +387,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       DrillTestCase testCase = drillTestCaseRule.testCase;
       thread.setName("drillWindowQuery-" + testCase.filename);
 
+      final Map<String, Object> queryContext = new HashMap<>(testBuilder().getQueryContext());
+      queryContext.putAll(getQueryContext());
+
       testBuilder()
           .skipVectorize(true)
-          .queryContext(ImmutableMap.of(
-                            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                            PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-                            QueryContexts.ENABLE_DEBUG, true
-                        )
-          )
+          .queryContext(queryContext)
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
           .run();
@@ -404,6 +404,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  protected Map<String, Object> getQueryContext()
+  {
+    return ImmutableMap.of(
+        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+        PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
+        QueryContexts.ENABLE_DEBUG, true
+    );
+  }
 
   // testcases_start
   @DrillTest("aggregates/aggOWnFn_11")
