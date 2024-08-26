@@ -196,12 +196,12 @@ public class MSQCompactionRunner implements CompactionRunner
       Query<?> query;
       Interval interval = intervalDataSchema.getKey();
       DataSchema dataSchema = intervalDataSchema.getValue();
-      Map<String, VirtualColumn> inputToVirtualColMap = getVirtualColumns(dataSchema, interval);
+      Map<String, VirtualColumn> inputColToVirtualCol = getVirtualColumns(dataSchema, interval);
 
       if (isGroupBy(dataSchema)) {
-        query = buildGroupByQuery(compactionTask, interval, dataSchema, inputToVirtualColMap);
+        query = buildGroupByQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       } else {
-        query = buildScanQuery(compactionTask, interval, dataSchema, inputToVirtualColMap);
+        query = buildScanQuery(compactionTask, interval, dataSchema, inputColToVirtualCol);
       }
       QueryContext compactionTaskContext = new QueryContext(compactionTask.getContext());
 
@@ -314,7 +314,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static List<DimensionSpec> getAggregateDimensions(
       DataSchema dataSchema,
-      Map<String, VirtualColumn> inputToVirtualColMap
+      Map<String, VirtualColumn> inputColToVirtualCol
   )
   {
     List<DimensionSpec> dimensionSpecs = new ArrayList<>();
@@ -332,8 +332,8 @@ public class MSQCompactionRunner implements CompactionRunner
                   .map(dim -> {
                     String dimension = dim.getName();
                     ColumnType colType = dim.getColumnType();
-                    if (inputToVirtualColMap.containsKey(dim.getName())) {
-                      VirtualColumn virtualColumn = inputToVirtualColMap.get(dimension);
+                    if (inputColToVirtualCol.containsKey(dim.getName())) {
+                      VirtualColumn virtualColumn = inputColToVirtualCol.get(dimension);
                       dimension = virtualColumn.getOutputName();
                       if (virtualColumn instanceof ExpressionVirtualColumn) {
                         colType = ((ExpressionVirtualColumn) virtualColumn).getOutputType();
@@ -380,10 +380,10 @@ public class MSQCompactionRunner implements CompactionRunner
     return Collections.emptyList();
   }
 
-  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema, Map<String, VirtualColumn> inputToVirtualColMap)
+  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema, Map<String, VirtualColumn> inputColToVirtualCol)
   {
     RowSignature rowSignature = getRowSignature(dataSchema);
-    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
+    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
     Druids.ScanQueryBuilder scanQueryBuilder = new Druids.ScanQueryBuilder()
         .dataSource(dataSchema.getDataSource())
         .columns(rowSignature.getColumnNames())
@@ -442,7 +442,7 @@ public class MSQCompactionRunner implements CompactionRunner
    */
   private Map<String, VirtualColumn> getVirtualColumns(DataSchema dataSchema, Interval interval)
   {
-    Map<String, VirtualColumn> inputToVirtualColMap = new HashMap<>();
+    Map<String, VirtualColumn> inputColToVirtualCol = new HashMap<>();
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
       String virtualColumnExpr;
       if (dataSchema.getGranularitySpec()
@@ -462,7 +462,7 @@ public class MSQCompactionRunner implements CompactionRunner
                 periodQueryGranularity.getPeriod().toString()
             );
       }
-      inputToVirtualColMap.put(ColumnHolder.TIME_COLUMN_NAME, new ExpressionVirtualColumn(
+      inputColToVirtualCol.put(ColumnHolder.TIME_COLUMN_NAME, new ExpressionVirtualColumn(
           TIME_VIRTUAL_COLUMN,
           virtualColumnExpr,
           ColumnType.LONG,
@@ -489,7 +489,7 @@ public class MSQCompactionRunner implements CompactionRunner
 
       for (String dim : multiValuedColumns) {
         String virtualColumnExpr = StringUtils.format("mv_to_array(\"%s\")", dim);
-        inputToVirtualColMap.put(
+        inputColToVirtualCol.put(
             dim,
             new ExpressionVirtualColumn(
                 ARRAY_VIRTUAL_COLUMN_PREFIX + dim,
@@ -500,24 +500,24 @@ public class MSQCompactionRunner implements CompactionRunner
         );
       }
     }
-    return inputToVirtualColMap;
+    return inputColToVirtualCol;
   }
 
   private Query<?> buildGroupByQuery(
       CompactionTask compactionTask,
       Interval interval,
       DataSchema dataSchema,
-      Map<String, VirtualColumn> inputToVirtualColMap
+      Map<String, VirtualColumn> inputColToVirtualCol
   )
   {
     DimFilter dimFilter = dataSchema.getTransformSpec().getFilter();
 
-    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputToVirtualColMap.values()));
+    VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
 
     // Convert MVDs converted to arrays back to MVDs, with the same name as the input column.
     // This is safe since input column names no longer exist at post-aggregation stage.
     List<PostAggregator> postAggregators =
-        inputToVirtualColMap.entrySet()
+        inputColToVirtualCol.entrySet()
                             .stream()
                             .filter(entry -> !entry.getKey().equals(ColumnHolder.TIME_COLUMN_NAME))
                             .map(
@@ -537,7 +537,7 @@ public class MSQCompactionRunner implements CompactionRunner
         .setVirtualColumns(virtualColumns)
         .setDimFilter(dimFilter)
         .setGranularity(new AllGranularity())
-        .setDimensions(getAggregateDimensions(dataSchema, inputToVirtualColMap))
+        .setDimensions(getAggregateDimensions(dataSchema, inputColToVirtualCol))
         .setAggregatorSpecs(Arrays.asList(dataSchema.getAggregators()))
         .setPostAggregatorSpecs(postAggregators)
         .setContext(compactionTask.getContext())
