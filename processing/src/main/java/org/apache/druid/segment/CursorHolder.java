@@ -20,7 +20,9 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 
 import javax.annotation.Nullable;
@@ -42,7 +44,10 @@ public interface CursorHolder extends Closeable
   @Nullable
   default VectorCursor asVectorCursor()
   {
-    throw new UOE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor' on %s.", this.getClass().getName());
+    throw new UOE(
+        "Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor' on %s.",
+        this.getClass().getName()
+    );
   }
 
   /**
@@ -55,11 +60,28 @@ public interface CursorHolder extends Closeable
 
   /**
    * Returns cursor ordering, which may or may not match {@link CursorBuildSpec#getPreferredOrdering()}. If returns
-   * null then the cursor has no defined ordering
+   * an empty list then the cursor has no defined ordering.
+   *
+   * Cursors associated with this holder return rows in this ordering, using the natural comparator for the column type.
+   * Includes {@link ColumnHolder#TIME_COLUMN_NAME} if appropriate.
    */
   default List<OrderBy> getOrdering()
   {
     return Collections.emptyList();
+  }
+
+  /**
+   * If {@link #getOrdering()} starts with {@link ColumnHolder#TIME_COLUMN_NAME}, returns the time ordering; otherwise
+   * returns {@link Order#NONE}.
+   */
+  default Order getTimeOrder()
+  {
+    final List<OrderBy> ordering = getOrdering();
+    if (!ordering.isEmpty() && ColumnHolder.TIME_COLUMN_NAME.equals(ordering.get(0).getColumnName())) {
+      return ordering.get(0).getOrder();
+    } else {
+      return Order.NONE;
+    }
   }
 
   /**

@@ -162,7 +162,6 @@ public class RabbitStreamIndexTaskTuningConfigTest
         "resetOffsetAutomatically=false, " +
         "segmentWriteOutMediumFactory=null, " +
         "workerThreads=null, " +
-        "chatThreads=null, " +
         "chatRetries=8, " +
         "httpTimeout=PT10S, " +
         "shutdownTimeout=PT80S, " +

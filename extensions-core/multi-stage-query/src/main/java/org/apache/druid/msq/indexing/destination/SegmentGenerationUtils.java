@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.ISE;
@@ -79,12 +81,15 @@ public final class SegmentGenerationUtils
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
     final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
+    final boolean forceSegmentSortByTime =
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
 
-    final Pair<List<DimensionSchema>, List<AggregatorFactory>> dimensionsAndAggregators =
+    final Pair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
             querySignature,
             queryClusterBy,
             destination.getSegmentSortOrder(),
+            forceSegmentSortByTime,
             columnMappings,
             isRollupQuery,
             querySpec.getQuery(),
@@ -94,7 +99,7 @@ public final class SegmentGenerationUtils
     return new DataSchema(
         destination.getDataSource(),
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
-        new DimensionsSpec(dimensionsAndAggregators.lhs),
+        dimensionsAndAggregators.lhs,
         dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]),
         makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper),
         new TransformSpec(null, Collections.emptyList())
@@ -182,7 +187,8 @@ public final class SegmentGenerationUtils
     if (dimensionSchemas != null && dimensionSchemas.containsKey(outputColumnName)) {
       return dimensionSchemas.get(outputColumnName);
     }
-    // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollup,
+    // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollu
+
     // we won't have an entry in the map. For those cases, use the default config.
     return DimensionSchemaUtils.createDimensionSchema(
         outputColumnName,
@@ -192,10 +198,11 @@ public final class SegmentGenerationUtils
     );
   }
 
-  private static Pair<List<DimensionSchema>, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
+  private static Pair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
       final RowSignature querySignature,
       final ClusterBy queryClusterBy,
-      final List<String> segmentSortOrder,
+      final List<String> contextSegmentSortOrder,
+      final boolean forceSegmentSortByTime,
       final ColumnMappings columnMappings,
       final boolean isRollupQuery,
       final Query<?> query,
@@ -225,7 +232,12 @@ public final class SegmentGenerationUtils
     // that order.
 
     // Start with segmentSortOrder.
-    final Set<String> outputColumnsInOrder = new LinkedHashSet<>(segmentSortOrder);
+    final Set<String> outputColumnsInOrder = new LinkedHashSet<>(contextSegmentSortOrder);
+
+    // Then __time, if it's an output column and forceSegmentSortByTime is set.
+    if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME) && forceSegmentSortByTime) {
+      outputColumnsInOrder.add(ColumnHolder.TIME_COLUMN_NAME);
+    }
 
     // Then the query-level CLUSTERED BY.
     // Note: this doesn't work when CLUSTERED BY specifies an expression that is not being selected.
@@ -260,7 +272,7 @@ public final class SegmentGenerationUtils
       }
     }
 
-    // Each column can be of either time, dimension, aggregator. For this method. we can ignore the time column.
+    // Each column can be either a dimension or an aggregator.
     // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
     // a dimension. For complex columns, certains hacks are in place.
     for (final String outputColumnName : outputColumnsInOrder) {
@@ -275,10 +287,26 @@ public final class SegmentGenerationUtils
           querySignature.getColumnType(queryColumn)
                         .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
 
-      if (!outputColumnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-
-        if (!type.is(ValueType.COMPLEX)) {
-          // non complex columns
+      if (!type.is(ValueType.COMPLEX)) {
+        // non complex columns
+        populateDimensionsAndAggregators(
+            dimensions,
+            aggregators,
+            outputColumnAggregatorFactories,
+            outputColumnName,
+            type,
+            query.context(),
+            dimensionSchemas
+        );
+      } else {
+        // complex columns only
+        if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
+          dimensions.add(
+              getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas)
+          );
+        } else if (!isRollupQuery) {
+          aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
+        } else {
           populateDimensionsAndAggregators(
               dimensions,
               aggregators,
@@ -288,32 +316,23 @@ public final class SegmentGenerationUtils
               query.context(),
               dimensionSchemas
           );
-        } else {
-          // complex columns only
-          if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-            dimensions.add(
-                getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas)
-            );
-          } else if (!isRollupQuery) {
-            aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
-          } else {
-            populateDimensionsAndAggregators(
-                dimensions,
-                aggregators,
-                outputColumnAggregatorFactories,
-                outputColumnName,
-                type,
-                query.context(),
-                dimensionSchemas
-            );
-          }
         }
       }
     }
 
-    return Pair.of(dimensions, aggregators);
-  }
+    final DimensionsSpec.Builder dimensionsSpecBuilder = DimensionsSpec.builder();
 
+    if (!dimensions.isEmpty() && dimensions.get(0).getName().equals(ColumnHolder.TIME_COLUMN_NAME)) {
+      // Skip __time if it's in the first position, for compatibility with legacy dimensionSpecs.
+      dimensions.remove(0);
+      dimensionsSpecBuilder.setForceSegmentSortByTime(null);
+    } else {
+      // Store explicit forceSegmentSortByTime only if false, for compatibility with legacy dimensionSpecs.
+      dimensionsSpecBuilder.setForceSegmentSortByTime(forceSegmentSortByTime ? null : false);
+    }
+
+    return Pair.of(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
+  }
 
   /**
    * If the output column is present in the outputColumnAggregatorFactories that means we already have the aggregator information for this column.
@@ -335,7 +354,12 @@ public final class SegmentGenerationUtils
       Map<String, DimensionSchema> dimensionSchemas
   )
   {
-    if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(outputColumn)) {
+      if (!type.is(ValueType.LONG)) {
+        throw DruidException.defensive("Incorrect type[%s] for column[%s]", type, outputColumn);
+      }
+      dimensions.add(new LongDimensionSchema(outputColumn));
+    } else if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
       aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
     } else {
       dimensions.add(

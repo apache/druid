@@ -53,9 +53,11 @@ import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -206,18 +208,6 @@ public class FrameStorageAdapterTest
     }
 
     @Test
-    public void test_getMinTime()
-    {
-      Assert.assertEquals(queryableAdapter.getInterval().getStart(), frameAdapter.getMinTime());
-    }
-
-    @Test
-    public void test_getMaxTime()
-    {
-      Assert.assertEquals(queryableAdapter.getInterval().getEnd().minus(1), frameAdapter.getMaxTime());
-    }
-
-    @Test
     public void test_getNumRows()
     {
       Assert.assertEquals(queryableAdapter.getNumRows(), frameAdapter.getNumRows());
@@ -267,13 +257,14 @@ public class FrameStorageAdapterTest
       this.interval = interval;
       this.virtualColumns = virtualColumns;
       this.descending = descending;
-      this.buildSpec = CursorBuildSpec.builder()
-                                      .setFilter(this.filter)
-                                      .setInterval(this.interval)
-                                      .setVirtualColumns(this.virtualColumns)
-                                      .setPreferredOrdering(descending ? Cursors.descendingTimeOrder() : null)
-                                      .setQueryContext(queryContext)
-                                      .build();
+      this.buildSpec =
+          CursorBuildSpec.builder()
+                         .setFilter(this.filter)
+                         .setInterval(this.interval)
+                         .setVirtualColumns(this.virtualColumns)
+                         .setPreferredOrdering(descending ? Cursors.descendingTimeOrder() : Collections.emptyList())
+                         .setQueryContext(queryContext)
+                         .build();
     }
 
     @Parameterized.Parameters(name = "frameType = {0}, "
@@ -363,44 +354,49 @@ public class FrameStorageAdapterTest
     @Test
     public void test_makeCursor()
     {
-      assertCursorMatch(adapter -> adapter.makeCursorHolder(buildSpec));
+      final RowSignature signature = frameAdapter.getRowSignature();
+
+      // Frame adapters don't know the order of the underlying frames, so they should ignore the "preferred ordering"
+      // of the cursor build spec. We test this by passing the frameAdapter a build spec with a preferred ordering,
+      // and passing the queryableAdapter the same build spec *without* a preferred ordering, and verifying they match.
+      final CursorBuildSpec queryableBuildSpec =
+          CursorBuildSpec.builder(buildSpec).setPreferredOrdering(Collections.emptyList()).build();
+
+      try (final CursorHolder queryableCursorHolder = queryableAdapter.makeCursorHolder(queryableBuildSpec);
+           final CursorHolder frameCursorHolder = frameAdapter.makeCursorHolder(buildSpec)) {
+        final Sequence<List<Object>> queryableRows =
+            FrameTestUtil.readRowsFromCursor(advanceAndReset(queryableCursorHolder.asCursor()), signature);
+        final Sequence<List<Object>> frameRows =
+            FrameTestUtil.readRowsFromCursor(advanceAndReset(frameCursorHolder.asCursor()), signature);
+        FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
+      }
     }
 
     @Test
     public void test_makeVectorCursor()
     {
+      // Conditions for frames to be vectorizable.
+      Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.COLUMNAR));
+      Assume.assumeFalse(descending);
       assertVectorCursorsMatch(adapter -> adapter.makeCursorHolder(buildSpec));
-    }
-
-    private void assertCursorMatch(final Function<StorageAdapter, CursorHolder> call)
-    {
-      final RowSignature signature = frameAdapter.getRowSignature();
-      try (final CursorHolder queryableMaker = call.apply(queryableAdapter);
-           final CursorHolder frameMaker = call.apply(frameAdapter)) {
-        final Sequence<List<Object>> queryableRows =
-            FrameTestUtil.readRowsFromCursor(advanceAndReset(queryableMaker.asCursor()), signature);
-        final Sequence<List<Object>> frameRows =
-            FrameTestUtil.readRowsFromCursor(advanceAndReset(frameMaker.asCursor()), signature);
-        FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
-      }
     }
 
     private void assertVectorCursorsMatch(final Function<StorageAdapter, CursorHolder> call)
     {
       final CursorHolder cursorHolder = call.apply(queryableAdapter);
       final CursorHolder frameCursorHolder = call.apply(frameAdapter);
-      if (frameCursorHolder.canVectorize()) {
-        final RowSignature signature = frameAdapter.getRowSignature();
-        final Sequence<List<Object>> queryableRows =
-            FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(cursorHolder.asVectorCursor()), signature).withBaggage(cursorHolder);
-        final Sequence<List<Object>> frameRows =
-            FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameCursorHolder.asVectorCursor()), signature)
-                         .withBaggage(frameCursorHolder);
-        FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
-      } else {
-        cursorHolder.close();
-        frameCursorHolder.close();
-      }
+
+      Assert.assertTrue("queryable cursor is vectorizable", cursorHolder.canVectorize());
+      Assert.assertTrue("frame cursor is vectorizable", frameCursorHolder.canVectorize());
+
+      final RowSignature signature = frameAdapter.getRowSignature();
+      final Sequence<List<Object>> queryableRows =
+          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(cursorHolder.asVectorCursor()), signature)
+                       .withBaggage(cursorHolder);
+      final Sequence<List<Object>> frameRows =
+          FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(frameCursorHolder.asVectorCursor()), signature)
+                       .withBaggage(frameCursorHolder);
+      FrameTestUtil.assertRowsEqual(queryableRows, frameRows);
     }
 
     /**

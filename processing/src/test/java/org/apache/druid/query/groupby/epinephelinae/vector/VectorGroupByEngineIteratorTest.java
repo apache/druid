@@ -33,6 +33,7 @@ import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.V
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -62,6 +63,8 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         .setAggregatorSpecs(factory)
         .build();
     final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
+    final QueryableIndexTimeBoundaryInspector timeBoundaryInspector =
+        QueryableIndexTimeBoundaryInspector.create(TestIndex.getMMappedTestIndex());
     final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(
         GroupingEngine.makeCursorBuildSpec(query, null)
     );
@@ -81,7 +84,9 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         new GroupByQueryConfig(),
         GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG,
         storageAdapter,
+        timeBoundaryInspector,
         cursor,
+        cursorHolder.getTimeOrder(),
         interval,
         dimensions,
         byteBuffer,
