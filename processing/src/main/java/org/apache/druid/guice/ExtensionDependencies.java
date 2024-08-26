@@ -13,7 +13,10 @@ public class ExtensionDependencies {
   final private List<String> dependencies;
 
   @JsonCreator
-  public ExtensionDependencies(final String name, final List<String> dependencies) {
+  public ExtensionDependencies(
+      @JsonProperty("name") final String name,
+      @JsonProperty("dependencies") final List<String> dependencies
+  ) {
     this.name = name;
     this.dependencies = dependencies != null ? dependencies : new ArrayList<>();
   }
@@ -24,6 +27,5 @@ public class ExtensionDependencies {
 
   public List<String> getDependencies() {
     return dependencies;
-  }
   }
 }

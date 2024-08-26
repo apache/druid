@@ -307,7 +307,7 @@ public class PullDependencies implements Runnable
     );
 
     try {
-      System.out.println("Start downloading dependencies for extension coordinates: " + coordinates);
+      log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
       for (String coordinate : coordinates) {
         coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
