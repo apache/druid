@@ -166,8 +166,6 @@ public interface Query<T>
     return context().getHumanReadableBytes(key, defaultValue);
   }
 
-  boolean isDescending();
-
   /**
    * Comparator that represents the order in which results are generated from the
    * {@link QueryRunnerFactory#createRunner(Segment)} and

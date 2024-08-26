@@ -261,7 +261,7 @@ export default typedVisualModule({
                       timeColumnName,
                     )}, '${start.toISOString()}/${end.toISOString()}')`,
                   ),
-                ) as SqlExpression,
+                ),
               );
               highlightStore.getState().dropHighlight();
               myChart.dispatchAction({
