@@ -97,51 +97,29 @@ date,uid,show,episode
 
 ## Ingest data using Theta sketches
 
-1. Navigate to the **Load data > Batch-SQL** wizard in the web console.
-2. Select `Paste data` as the data source and paste the [sample data](#sample-data):
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to ingest the sample data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
-![Load data view with pasted data](../assets/tutorial-theta-v2_01.png)
 
-3. Select **Connect data**.
-4. Keep the default values and select **Next** to parse the data as a CSV, with included headers:
+```sql
+INSERT INTO "ts_tutorial"
+WITH "source" AS (SELECT * FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"date,uid,show,episode\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,alice,Game of Thrones,S1E2\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,bob,Bridgerton,S1E1\n2022-05-20,alice,Game of Thrones,S1E1\n2022-05-20,carol,Bridgerton,S1E2\n2022-05-20,dan,Bridgerton,S1E1\n2022-05-21,alice,Game of Thrones,S1E1\n2022-05-21,carol,Bridgerton,S1E1\n2022-05-21,erin,Game of Thrones,S1E1\n2022-05-21,alice,Bridgerton,S1E1\n2022-05-22,bob,Game of Thrones,S1E1\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,carol,Bridgerton,S1E2\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,erin,Game of Thrones,S1E1\n2022-05-22,erin,Bridgerton,S1E2\n2022-05-23,erin,Game of Thrones,S1E1\n2022-05-23,alice,Game of Thrones,S1E1"}',
+    '{"type":"csv","findColumnsFromHeader":true}'
+  )
+) EXTEND ("date" VARCHAR, "show" VARCHAR, "episode" VARCHAR, "uid" VARCHAR))
+SELECT
+  TIME_FLOOR(TIME_PARSE("date"), 'P1D') AS "__time",
+  "show",
+  "episode",
+  COUNT(*) AS "count",
+  DS_THETA("uid") AS "theta_uid"
+FROM "source"
+GROUP BY 1, 2, 3
+PARTITIONED BY DAY
+```
 
-![Parse raw data](../assets/tutorial-theta-v2_02.png)
-
-5. Select **`Datasource:inline_data`** to open the Destination dialog.
-
-![Open destination dialog to change table name](../assets/tutorial-theta-v2_03.png)
-
-6. Navigate to the **New table** tab and replace the current name with `ts_tutorial`.
-
-![Change table name](../assets/tutorial-theta-v2_04.png)
-
-7. Select **Save**
-
-8. Toggle **Rollup** and confirm your choice in the dialog box so that the adjacent label displays `on`. 
-
-![Configure schema for rollup](../assets/tutorial-theta-v2_05.png)
-
-9. Select **Add column > Custom metric** to open up a dialog on the right hand side.
-
-![Open dialog for new metrics](../assets/tutorial-theta-v2_06.png)
-
-10. Define the new metric as a theta sketch with the following details:
-   * **Name**: `theta_uid`
-   * **SQL expression**: `DS_THETA(uid)`
-
-![Add theta sketch metric](../assets/tutorial-theta-v2_07.png)
-
-11. Click **Apply** to add the new metric to the data model.
-
-12. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. To remove it, click on the `uid` column in the data model and delete it using the red trashcan icon on the right:
-
-![Delete uid column](../assets/tutorial-theta-v2_08.png)
-
-13. Select **Start loading data** to begin the ingestion job.
- 
-14. When the ingestion job finishes, select **`Query:ts_tutorial`**.
-
-![Begin querying with theta sketches](../assets/tutorial-theta-v2_09.png)
+Notice how there is no `uid` in the `SELECT` statement. In this scenario you are not interested in individual user ID's, only the unique counts. Instead you use the `DS_THETA` aggregator function to create a Theta sketch on the values of `uid`. The [`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) function has an optional second parameter, `size`, which accepts a positive integer-power of 2 greater than 0. The `size` parameter refers to the maximum number of entries the Theta sketch object retains. Higher values of `size`  result in higher accuracy, but require more space. The default value of `size` is 16384, and is recommended in most use cases. 
 
 ## Query the Theta sketch column
 
@@ -264,7 +242,7 @@ FROM ts_tutorial
 - This allows us to use rollup and discard the individual values, just retaining statistical approximations in the sketches.
 - With Theta sketch set operations, affinity analysis is easier, for example, to answer questions such as which segments correlate or overlap by how much.
 
-## Further reading
+## Learn more
 
 See the following topics for more information:
 * [Theta sketch](../development/extensions-core/datasketches-theta.md) for reference on ingestion and native queries on Theta sketches in Druid.
