@@ -466,22 +466,29 @@ public class MSQTaskSqlEngine implements SqlEngine
         );
       }
     } else if (!rootCollation.getFieldCollations().isEmpty()) {
-      int timePosition = -1;
-      for (int i = 0; i < rootCollation.getFieldCollations().size(); i++) {
-        final String fieldCollationName =
-            fieldMappings.get(rootCollation.getFieldCollations().get(i).getFieldIndex()).getValue();
-        if (ColumnHolder.TIME_COLUMN_NAME.equals(fieldCollationName)) {
-          timePosition = i;
+      int timePositionInRow = -1;
+      for (int i = 0; i < fieldMappings.size(); i++) {
+        Entry<Integer, String> entry = fieldMappings.get(i);
+        if (ColumnHolder.TIME_COLUMN_NAME.equals(entry.getValue())) {
+          timePositionInRow = i;
           break;
         }
       }
 
-      if (timePosition > 0) {
+      int timePositionInCollation = -1;
+      for (int i = 0; i < rootCollation.getFieldCollations().size(); i++) {
+        if (rootCollation.getFieldCollations().get(i).getFieldIndex() == timePositionInRow) {
+          timePositionInCollation = i;
+          break;
+        }
+      }
+
+      if (timePositionInCollation > 0) {
         throw InvalidSqlInput.exception(
             "Sort order (CLUSTERED BY) cannot include[%s] in position[%d] unless context parameter[%s] "
             + "is set to[false]. %s",
             ColumnHolder.TIME_COLUMN_NAME,
-            timePosition,
+            timePositionInCollation,
             MultiStageQueryContext.CTX_FORCE_TIME_SORT,
             DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
         );
