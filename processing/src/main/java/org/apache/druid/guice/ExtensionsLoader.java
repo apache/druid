@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
@@ -36,10 +37,14 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,6 +65,7 @@ import java.util.stream.Collectors;
 public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
+  public static final String EXTENSION_DEPENDENCIES_JSON = "extension-dependencies.json";
 
   private final ExtensionsConfig extensionsConfig;
   private final ConcurrentHashMap<Pair<File, Boolean>, URLClassLoader> loaders = new ConcurrentHashMap<>();
@@ -303,23 +309,31 @@ public class ExtensionsLoader
         }
       }
 
-      ExtensionFirstClassLoader kafkaLoader = null;
-      ExtensionFirstClassLoader globalLoader = null;
-      for (Pair<File, Boolean> extension : loaders.keySet()) {
-        String extensionName = extension.lhs.getName();
-        log.info("Extension name %s", extensionName);
-        if (extensionName.equals("druid-kafka-extraction-namespace")) {
-          kafkaLoader = (ExtensionFirstClassLoader) loaders.get(extension);
+      try {
+        Map<String, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
+        for (Pair<File, Boolean> extension : loaders.keySet()) {
+          extensionClassLoaderMap.put(
+              extension.lhs.getName(),
+              loaders.get(extension)
+          );
         }
+        ObjectMapper objectMapper = new ObjectMapper();
+        for (Pair<File, Boolean> extension : loaders.keySet()) {
+          log.info("Setting extension dependncies for %s", extension.lhs.getName());
+          Path dependenciesPath = Paths.get(extension.lhs.getAbsolutePath() + EXTENSION_DEPENDENCIES_JSON);
+          if (extension.rhs && Files.exists(dependenciesPath)) {
+            log.info("Found extension dependencies for %s", extension.lhs.getName());
+            ExtensionDependencies extensionDependencies = objectMapper.readValue(dependenciesPath.toFile(), ExtensionDependencies.class);
+            log.info("Extension dependencies for %s [%s]", extension.lhs.getName(), extensionDependencies.getDependencies());
 
-        if (extensionName.equals("druid-lookups-cached-global")) {
-          globalLoader = (ExtensionFirstClassLoader) loaders.get(extension);
+            ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) loaders.get(extension);
+            classLoader.setExtensionDependencyClassLoaders(extensionDependencies.getDependencies().stream().map(extensionClassLoaderMap::get).collect(Collectors.toList()));
+          }
         }
       }
-
-      if (kafkaLoader != null && globalLoader != null) {
-        log.info("Setting extension dependency %s %s", kafkaLoader.getURLs(), globalLoader.getURLs());
-        kafkaLoader.setExtensionDependencyClassLoaders(ImmutableList.of(globalLoader));
+      catch (Exception e) {
+        log.error("Failed to set extension dependencies");
+        throw new RuntimeException(e);
       }
 
       for (File extension : getExtensionFilesToLoad()) {

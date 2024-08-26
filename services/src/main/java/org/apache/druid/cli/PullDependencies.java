@@ -53,12 +53,14 @@ import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -71,7 +73,7 @@ import java.util.stream.Collectors;
 public class PullDependencies implements Runnable
 {
   private static final Logger log = new Logger(PullDependencies.class);
-
+  
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
       "https://repo1.maven.org/maven2/"
   );
@@ -251,6 +253,12 @@ public class PullDependencies implements Runnable
   )
   public String proxyPassword = "";
 
+  @Option(
+      name = {"--projectBaseDir"},
+      title = "Absolute path to the project base directory"
+  )
+  public String projectBaseDir = "";
+
   @SuppressWarnings("unused")  // used by com.github.rvesse.airline
   public PullDependencies()
   {
@@ -305,7 +313,7 @@ public class PullDependencies implements Runnable
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
         createExtensionDirectory(coordinate, currExtensionDir);
-
+        downloadExtensionDependencies(versionedArtifact.getArtifactId(), currExtensionDir);
         downloadExtension(versionedArtifact, currExtensionDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
@@ -350,6 +358,54 @@ public class PullDependencies implements Runnable
       }
     }
     return versionedArtifact;
+  }
+
+  private void downloadExtensionDependencies(String artifactId, File extensionOutputDir)
+  {
+    log.info("Downloading extension dependencies for [%s] [%s], baseDir [%s]", artifactId, extensionOutputDir, projectBaseDir);
+    String extensionInputDirectoryName = artifactId;
+    File coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
+    File contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
+
+    if (coreExtensionsDir.exists() && coreExtensionsDir.isDirectory()) {
+      copyExtensionDependencyFile(coreExtensionsDir, extensionOutputDir);
+      return;
+    }
+
+    if (contribExtensionsDir.exists() && contribExtensionsDir.isDirectory()) {
+      copyExtensionDependencyFile(contribExtensionsDir, extensionOutputDir);
+      return;
+    }
+
+    final String druidPrefix = "druid-";
+    if (!extensionInputDirectoryName.startsWith(druidPrefix)) {
+      return;
+    }
+    extensionInputDirectoryName = extensionInputDirectoryName.substring(druidPrefix.length());
+    coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
+    contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
+
+    if (coreExtensionsDir.exists() && coreExtensionsDir.isDirectory()) {
+      copyExtensionDependencyFile(coreExtensionsDir, extensionOutputDir);
+      return;
+    }
+
+    if (contribExtensionsDir.exists() && contribExtensionsDir.isDirectory()) {
+      copyExtensionDependencyFile(contribExtensionsDir, extensionOutputDir);
+      return;
+    }
+  }
+
+  private void copyExtensionDependencyFile(File extensionDirectory, File extensionOutputDir)
+  {
+    try {
+      File dependenciesFile = new File(extensionDirectory, "extension-dependencies.json");
+      if (dependenciesFile.exists()) {
+        Files.copy(dependenciesFile.toPath(), extensionOutputDir.toPath());
+      }
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**

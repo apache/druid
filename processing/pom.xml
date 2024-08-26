@@ -31,7 +31,6 @@
     <artifactId>druid</artifactId>
     <version>31.0.0-SNAPSHOT</version>
   </parent>
-
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sigar.base.version>1.6.5</sigar.base.version>
@@ -578,5 +577,4 @@
       </build>
     </profile>
   </profiles>
-
 </project>

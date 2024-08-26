@@ -178,6 +178,7 @@
                                 </goals>
                                 <configuration>
                                     <executable>${project.parent.basedir}/examples/bin/run-java</executable>
+                                    <outputFile>${project.parent.basedir}/build_output</outputFile>
                                     <arguments>
                                         <argument>-classpath</argument>
                                         <classpath />
@@ -258,6 +259,8 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
                                         <argument>${druid.distribution.pulldeps.opts}</argument>
+                                        <argument>--projectBaseDir</argument>
+                                        <argument>${project.parent.basedir}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

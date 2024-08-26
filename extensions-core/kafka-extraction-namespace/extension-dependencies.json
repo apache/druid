@@ -1,0 +1,4 @@
+{
+  "name": "kafka-extraction-namespace",
+  "dependencies": ["lookups-cached-global"]
+}
