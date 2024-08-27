@@ -63,8 +63,7 @@ import java.util.stream.Collectors;
  * The extensions are cached so that they can be reported by various REST APIs.
  */
 @LazySingleton
-public class ExtensionsLoader
-{
+public class ExtensionsLoader {
   private static final Logger log = new Logger(ExtensionsLoader.class);
   public static final String EXTENSION_DEPENDENCIES_JSON = "extension-dependencies.json";
 
@@ -77,18 +76,15 @@ public class ExtensionsLoader
   private final ConcurrentHashMap<Class<?>, Collection<?>> extensions = new ConcurrentHashMap<>();
 
   @Inject
-  public ExtensionsLoader(ExtensionsConfig config)
-  {
+  public ExtensionsLoader(ExtensionsConfig config) {
     this.extensionsConfig = config;
   }
 
-  public static ExtensionsLoader instance(Injector injector)
-  {
+  public static ExtensionsLoader instance(Injector injector) {
     return injector.getInstance(ExtensionsLoader.class);
   }
 
-  public ExtensionsConfig config()
-  {
+  public ExtensionsConfig config() {
     return extensionsConfig;
   }
 
@@ -98,8 +94,7 @@ public class ExtensionsLoader
    * @param clazz service class
    * @param <T>   the service type
    */
-  public <T> Collection<T> getLoadedImplementations(Class<T> clazz)
-  {
+  public <T> Collection<T> getLoadedImplementations(Class<T> clazz) {
     @SuppressWarnings("unchecked")
     Collection<T> retVal = (Collection<T>) extensions.get(clazz);
     if (retVal == null) {
@@ -111,14 +106,12 @@ public class ExtensionsLoader
   /**
    * @return a collection of implementations loaded.
    */
-  public Collection<DruidModule> getLoadedModules()
-  {
+  public Collection<DruidModule> getLoadedModules() {
     return getLoadedImplementations(DruidModule.class);
   }
 
   @VisibleForTesting
-  public Map<Pair<File, Boolean>, URLClassLoader> getLoadersMap()
-  {
+  public Map<Pair<File, Boolean>, URLClassLoader> getLoadersMap() {
     return loaders;
   }
 
@@ -128,14 +121,12 @@ public class ExtensionsLoader
    * does that, the one that is in the classpath will be loaded, the other will be ignored.
    *
    * @param serviceClass The class to look the implementations of (e.g., DruidModule)
-   *
    * @return A collection that contains implementations (of distinct concrete classes) of the given class. The order of
    * elements in the returned collection is not specified and not guaranteed to be the same for different calls to
    * getFromExtensions().
    */
   @SuppressWarnings("unchecked")
-  public <T> Collection<T> getFromExtensions(Class<T> serviceClass)
-  {
+  public <T> Collection<T> getFromExtensions(Class<T> serviceClass) {
     // Classes are loaded once upon first request. Since the class path does
     // not change during a run, the set of extension classes cannot change once
     // computed.
@@ -151,8 +142,7 @@ public class ExtensionsLoader
     return (Collection<T>) modules;
   }
 
-  public Collection<DruidModule> getModules()
-  {
+  public Collection<DruidModule> getModules() {
     return getFromExtensions(DruidModule.class);
   }
 
@@ -167,8 +157,7 @@ public class ExtensionsLoader
    *
    * @return an array of druid extension files that will be loaded by druid process
    */
-  public File[] getExtensionFilesToLoad()
-  {
+  public File[] getExtensionFilesToLoad() {
     final File rootExtensionsDir = new File(extensionsConfig.getDirectory());
     if (rootExtensionsDir.exists() && !rootExtensionsDir.isDirectory()) {
       throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
@@ -200,11 +189,9 @@ public class ExtensionsLoader
 
   /**
    * @param extension The File instance of the extension we want to load
-   *
    * @return a URLClassLoader that loads all the jars on which the extension is dependent
    */
-  public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
-  {
+  public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst) {
     return loaders.computeIfAbsent(
         Pair.of(extension, useExtensionClassloaderFirst),
         k -> makeClassLoaderForExtension(k.lhs, k.rhs)
@@ -214,8 +201,7 @@ public class ExtensionsLoader
   private static URLClassLoader makeClassLoaderForExtension(
       final File extension,
       final boolean useExtensionClassloaderFirst
-  )
-  {
+  ) {
     final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
     final URL[] urls = new URL[jars.size()];
 
@@ -226,20 +212,18 @@ public class ExtensionsLoader
         log.debug("added URL [%s] for extension [%s]", url, extension.getName());
         urls[i++] = url;
       }
-    }
-    catch (MalformedURLException e) {
+    } catch (MalformedURLException e) {
       throw new RuntimeException(e);
     }
 
     if (useExtensionClassloaderFirst) {
       return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
     } else {
-      return new URLClassLoader(urls, ExtensionsLoader.class.getClassLoader());
+      return new StandardClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
     }
   }
 
-  public static List<URL> getURLsForClasspath(String cp)
-  {
+  public static List<URL> getURLsForClasspath(String cp) {
     try {
       String[] paths = cp.split(File.pathSeparator);
 
@@ -250,11 +234,9 @@ public class ExtensionsLoader
           File parentDir = f.getParentFile();
           if (parentDir.isDirectory()) {
             File[] jars = parentDir.listFiles(
-                new FilenameFilter()
-                {
+                new FilenameFilter() {
                   @Override
-                  public boolean accept(File dir, String name)
-                  {
+                  public boolean accept(File dir, String name) {
                     return name != null && (name.endsWith(".jar") || name.endsWith(".JAR"));
                   }
                 }
@@ -268,20 +250,17 @@ public class ExtensionsLoader
         }
       }
       return urls;
-    }
-    catch (IOException ex) {
+    } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
   }
 
-  private class ServiceLoadingFromExtensions<T>
-  {
+  private class ServiceLoadingFromExtensions<T> {
     private final Class<T> serviceClass;
     private final List<T> implsToLoad = new ArrayList<>();
     private final Set<String> implClassNamesToLoad = new HashSet<>();
 
-    private ServiceLoadingFromExtensions(Class<T> serviceClass)
-    {
+    private ServiceLoadingFromExtensions(Class<T> serviceClass) {
       this.serviceClass = serviceClass;
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
@@ -289,20 +268,22 @@ public class ExtensionsLoader
       addAllFromFileSystem();
     }
 
-    private void addAllFromCurrentClassLoader()
-    {
+    private void addAllFromCurrentClassLoader() {
       ServiceLoader
           .load(serviceClass, Thread.currentThread().getContextClassLoader())
           .forEach(impl -> tryAdd(impl, "classpath"));
     }
 
-    private void addAllFromFileSystem()
-    {
+    private void addAllFromFileSystem() {
       for (File extension : getExtensionFilesToLoad()) {
         try {
           getClassLoaderForExtension(
               extension,
-              extensionsConfig.isUseExtensionClassloaderFirst()
+              true
+          );
+          getClassLoaderForExtension(
+              extension,
+              false
           );
         } catch (Exception e) {
           throw new RuntimeException(e);
@@ -310,33 +291,55 @@ public class ExtensionsLoader
       }
 
       try {
-        Map<String, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
-        for (Pair<File, Boolean> extension : loaders.keySet()) {
+        Map<Pair<String, Boolean>, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
+        for (File extension : getExtensionFilesToLoad()) {
           extensionClassLoaderMap.put(
-              extension.lhs.getName(),
-              loaders.get(extension)
+              Pair.of(extension.getName(), true),
+              getClassLoaderForExtension(
+                  extension,
+                  true
+              )
+          );
+          extensionClassLoaderMap.put(
+              Pair.of(extension.getName(), false),
+              getClassLoaderForExtension(
+                  extension,
+                  false
+              )
           );
         }
-        ObjectMapper objectMapper = new ObjectMapper();
-        Path dependenciesPath = Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON);
-        List<ExtensionDependencies> extensionDependenciesList = objectMapper.readValue(dependenciesPath.toFile(), new TypeReference<List<ExtensionDependencies>>() {});
+        List<ExtensionDependencies> extensionDependenciesList = new ObjectMapper().readValue(
+            Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON).toFile(),
+            new TypeReference<List<ExtensionDependencies>>() {}
+        );
         for (ExtensionDependencies extensionDependencies : extensionDependenciesList) {
+          StandardClassLoader standardClassLoader = (StandardClassLoader) extensionClassLoaderMap.getOrDefault(
+              Pair.of(extensionDependencies.getName(), false),
+              null
+          );
+          StandardClassLoader extensionFirstClassLoader = (StandardClassLoader) extensionClassLoaderMap.getOrDefault(
+              Pair.of(extensionDependencies.getName(), true),
+              null
+          );
           // If the extension is not being loaded, don't check its dependencies.
-          if (!extensionClassLoaderMap.containsKey(extensionDependencies.getName())) {
+          if (standardClassLoader == null || extensionFirstClassLoader == null) {
             continue;
           }
-          ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) extensionClassLoaderMap.get(extensionDependencies.getName());
-          List<ClassLoader> extensionClassLoaders = new ArrayList<>();
+          List<ClassLoader> extensionFirstClassLoaders = new ArrayList<>();
+          List<ClassLoader> standardClassLoaders = new ArrayList<>();
+
           for (String dependency : extensionDependencies.getDependencies()) {
-            if (!extensionClassLoaderMap.containsKey(dependency)) {
+            if (!extensionClassLoaderMap.containsKey(Pair.of(dependency, true))) {
               throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
             }
-            extensionClassLoaders.add(extensionClassLoaderMap.get(dependency));
+            extensionFirstClassLoaders.add(extensionClassLoaderMap.get(Pair.of(dependency, true)));
+            standardClassLoaders.add(extensionClassLoaderMap.get(Pair.of(dependency, false)));
+
           }
-          classLoader.setExtensionDependencyClassLoaders(extensionClassLoaders);
+          extensionFirstClassLoader.setExtensionDependencyClassLoaders(extensionFirstClassLoaders);
+          standardClassLoader.setExtensionDependencyClassLoaders(standardClassLoaders);
         }
-      }
-      catch (Exception e) {
+      } catch (Exception e) {
         log.error("Failed to configure inter-extension dependencies");
         throw new RuntimeException(e);
       }
@@ -351,25 +354,23 @@ public class ExtensionsLoader
               "Loading extension [%s], jars: %s",
               extension.getName(),
               Arrays.stream(loader.getURLs())
-                    .map(u -> new File(u.getPath()).getName())
-                    .collect(Collectors.joining(", "))
+                  .map(u -> new File(u.getPath()).getName())
+                  .collect(Collectors.joining(", "))
           );
 
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
           throw new RuntimeException(e);
         }
       }
     }
 
-    private void tryAdd(T serviceImpl, String extensionType)
-    {
+    private void tryAdd(T serviceImpl, String extensionType) {
       final String serviceImplName = serviceImpl.getClass().getName();
       if (serviceImplName == null) {
         log.warn(
             "Implementation %s was ignored because it doesn't have a canonical name, "
-            + "is it a local or anonymous class?",
+                + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
