@@ -506,50 +506,54 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         }}
                       />
                     </MenuItem>
-                    <MenuCheckbox
-                      checked={durableShuffleStorage}
+                    <MenuBoolean
+                      icon={IconNames.CLOUD_TICK}
                       text="Durable shuffle storage"
-                      onChange={() =>
+                      value={durableShuffleStorage}
+                      onValueChange={durableShuffleStorage =>
                         changeQueryContext({
                           ...queryContext,
-                          durableShuffleStorage: !durableShuffleStorage,
+                          durableShuffleStorage,
                         })
                       }
                     />
                   </>
                 ) : (
                   <>
-                    <MenuCheckbox
-                      checked={useCache}
+                    <MenuBoolean
+                      icon={IconNames.DATA_CONNECTION}
                       text="Use cache"
-                      onChange={() =>
+                      value={useCache}
+                      onValueChange={useCache =>
                         changeQueryContext({
                           ...queryContext,
-                          useCache: !useCache,
-                          populateCache: !useCache,
+                          useCache,
+                          populateCache: useCache,
                         })
                       }
                     />
-                    <MenuCheckbox
-                      checked={useApproximateTopN}
+                    <MenuBoolean
+                      icon={IconNames.HORIZONTAL_BAR_CHART_DESC}
                       text="Use approximate TopN"
-                      onChange={() =>
+                      value={useApproximateTopN}
+                      onValueChange={useApproximateTopN =>
                         changeQueryContext({
                           ...queryContext,
-                          useApproximateTopN: !useApproximateTopN,
+                          useApproximateTopN,
                         })
                       }
                     />
                   </>
                 )}
                 {effectiveEngine !== 'native' && (
-                  <MenuCheckbox
-                    checked={useApproximateCountDistinct}
+                  <MenuBoolean
+                    icon={IconNames.ROCKET_SLANT}
                     text="Use approximate COUNT(DISTINCT)"
-                    onChange={() =>
+                    value={useApproximateCountDistinct}
+                    onValueChange={useApproximateCountDistinct =>
                       changeQueryContext({
                         ...queryContext,
-                        useApproximateCountDistinct: !useApproximateCountDistinct,
+                        useApproximateCountDistinct,
                       })
                     }
                   />
