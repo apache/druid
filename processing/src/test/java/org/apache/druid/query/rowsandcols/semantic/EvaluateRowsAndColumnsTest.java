@@ -50,7 +50,7 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
   {
     Object[][] vals = new Object[][] {
         {1L, "a", 123L, new Object[]{"xyz", "x"}, 0L},
-        {2L, "a", 456L, new Object[]{"xyz", "x"}, 1L},
+        {2L, "a", 456L, new Object[]{"abc"}, 1L},
         {3L, "b", 789L, new Object[]{null}, 2L},
         {4L, null, 123L, null, 3L},
     };
@@ -67,7 +67,7 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
 
     Object[] expectedArr = new Object[][] {
         {"xyz", "x"},
-        {"xyz", "x"},
+        {"abc"},
         {null},
         null
     };

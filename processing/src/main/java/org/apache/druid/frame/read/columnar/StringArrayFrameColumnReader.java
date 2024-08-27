@@ -31,28 +31,18 @@ import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.columnar.FrameColumnWriters;
 import org.apache.druid.frame.write.columnar.StringFrameColumnWriter;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.DruidPredicateFactory;
-import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
 import org.apache.druid.query.rowsandcols.column.accessor.ObjectColumnAccessorBase;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.DimensionSelectorUtils;
-import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
-import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
@@ -166,7 +156,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
   }
 
   @VisibleForTesting
-  private static class StringArrayFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
+  private static class StringArrayFrameColumn extends ObjectColumnAccessorBase implements BaseColumn
   {
     private final Frame frame;
     private final Memory memory;
@@ -187,107 +177,14 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     }
 
     @Override
-    public boolean hasMultipleValues()
+    public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
     {
-      // Only used in segment tests that don't run on frames.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int getSingleValueRow(int rowNum)
-    {
-      // Only used in segment tests that don't run on frames.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IndexedInts getMultiValueRow(int rowNum)
-    {
-      // Only used in segment tests that don't run on frames.
-      throw new UnsupportedOperationException();
-    }
-
-    @Nullable
-    @Override
-    public String lookupName(int id)
-    {
-      // Only used on columns from segments, not frames.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int lookupId(String name)
-    {
-      // Only used on columns from segments, not frames.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int getCardinality()
-    {
-      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-    }
-
-    @Override
-    public DimensionSelector makeDimensionSelector(ReadableOffset offset, @Nullable ExtractionFn extractionFn)
-    {
-      class MultipleValueSelector implements DimensionSelector
+      return new ObjectColumnSelector<Object>()
       {
         @Override
-        public int getValueCardinality()
+        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
         {
-          return CARDINALITY_UNKNOWN;
-        }
-
-        @Nullable
-        @Override
-        public String lookupName(int id)
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public ByteBuffer lookupNameUtf8(int id)
-        {
-          return null;
-        }
-
-        @Override
-        public boolean supportsLookupNameUtf8()
-        {
-          return extractionFn == null;
-        }
-
-        @Override
-        public boolean nameLookupPossibleInAdvance()
-        {
-          return false;
-        }
-
-        @Nullable
-        @Override
-        public IdLookup idLookup()
-        {
-          return null;
-        }
-
-        @Override
-        public IndexedInts getRow()
-        {
-          return new RangeIndexedInts();
-        }
-
-        @Override
-        public ValueMatcher makeValueMatcher(@Nullable String value)
-        {
-          return DimensionSelectorUtils.makeValueMatcherGeneric(this, value);
-        }
-
-        @Override
-        public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
-        {
-          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
+          // Do nothing.
         }
 
         @Nullable
@@ -302,29 +199,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
         {
           return String[].class;
         }
-
-        @Override
-        public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-        {
-          // Do nothing.
-        }
-      }
-
-      return new MultipleValueSelector();
-    }
-
-    @Override
-    public SingleValueDimensionVectorSelector makeSingleValueDimensionVectorSelector(ReadableVectorOffset offset)
-    {
-      // Callers should use object selectors, because we have no dictionary.
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public MultiValueDimensionVectorSelector makeMultiValueDimensionVectorSelector(ReadableVectorOffset vectorOffset)
-    {
-      // Callers should use object selectors, because we have no dictionary.
-      throw new UnsupportedOperationException();
+      };
     }
 
     @Override
@@ -384,12 +259,6 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     }
 
     @Override
-    public int length()
-    {
-      return frame.numRows();
-    }
-
-    @Override
     public void close()
     {
       // Do nothing.
@@ -404,7 +273,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     @Override
     public int numRows()
     {
-      return length();
+      return frame.numRows();
     }
 
     @Override
@@ -442,7 +311,8 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
       if (index == 0) {
         dataStart = startOfStringDataSection;
       } else {
-        final int dataStartVariableIndex = memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
+        final int dataStartVariableIndex = memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index
+                                                                                                              - 1));
         if (startOfStringDataSection > Long.MAX_VALUE - dataStartVariableIndex) {
           throw DruidException.defensive("data start index would overflow trying to read the frame memory!");
         }
@@ -501,10 +371,6 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
 
       if (rowLength == 0) {
         return ObjectArrays.EMPTY_ARRAY;
-      } else if (rowLength == 1) {
-        final int index = cumulativeRowLength - 1;
-        final Object o = decode ? getString(index) : getStringUtf8(index);
-        return new Object[]{o};
       } else {
         final Object[] row = new Object[rowLength];
 
