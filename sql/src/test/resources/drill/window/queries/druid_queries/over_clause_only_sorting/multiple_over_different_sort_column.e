@@ -1,13 +1,6 @@
-Austria	null	#de.wikipedia	1	null
-Austria	Horsching	#de.wikipedia	2	null
-Austria	Vienna	#de.wikipedia	3	Horsching
-Austria	Vienna	#es.wikipedia	5	Vienna
-Austria	Vienna	#tr.wikipedia	13	Vienna
-Republic of Korea	null	#en.wikipedia	4	Vienna
-Republic of Korea	null	#ja.wikipedia	6	null
-Republic of Korea	null	#ko.wikipedia	7	null
-Republic of Korea	Jeonju	#ko.wikipedia	8	null
-Republic of Korea	Seongnam-si	#ko.wikipedia	9	Jeonju
-Republic of Korea	Seoul	#ko.wikipedia	10	Seongnam-si
-Republic of Korea	Suwon-si	#ko.wikipedia	11	Seoul
-Republic of Korea	Yongsan-dong	#ko.wikipedia	12	Suwon-si
+Guatemala	null	Sport Lisboa e Benfica	-167	5	null
+El Salvador	San Salvador	Wendigo	-1	6	null
+Guatemala	El Salvador	Fuerzas Armadas de Honduras	1	3	San Salvador
+El Salvador	San Salvador	Pedro de Valdivia	9	4	El Salvador
+El Salvador	San Salvador	Amor de barrio	106	1	San Salvador
+Guatemala	Guatemala City	Anexo:Segunda temporada de Gravity Falls	173	2	San Salvador

@@ -24,6 +24,8 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class IncrementalIndexSegment implements Segment
@@ -59,6 +61,19 @@ public class IncrementalIndexSegment implements Segment
   public StorageAdapter asStorageAdapter()
   {
     return new IncrementalIndexStorageAdapter(index);
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(final Class<T> clazz)
+  {
+    if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) new IncrementalIndexTimeBoundaryInspector(index);
+    } else if (MaxIngestedEventTimeInspector.class.equals(clazz)) {
+      return (T) new IncrementalIndexMaxIngestedEventTimeInspector(index);
+    } else {
+      return Segment.super.as(clazz);
+    }
   }
 
   @Override

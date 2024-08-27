@@ -31,9 +31,9 @@ public class TestQuery extends BaseQuery
   @Nullable
   private Set<String> requiredColumns;
 
-  public TestQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, boolean descending, Map context)
+  public TestQuery(DataSource dataSource, QuerySegmentSpec querySegmentSpec, Map context)
   {
-    super(dataSource, querySegmentSpec, descending, context);
+    super(dataSource, querySegmentSpec, context);
   }
 
   @Override
@@ -72,7 +72,6 @@ public class TestQuery extends BaseQuery
     return new TestQuery(
         getDataSource(),
         getQuerySegmentSpec(),
-        isDescending(),
         BaseQuery.computeOverriddenContext(getContext(), contextOverride)
     );
   }

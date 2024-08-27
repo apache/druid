@@ -276,6 +276,7 @@ averager
 averagers
 backend
 backfills
+backfilled
 backpressure
 base64
 big-endian
@@ -324,6 +325,7 @@ deserializes
 downtimes
 druid
 druid–kubernetes-extensions
+druid.table
 e.g.
 encodings
 endian

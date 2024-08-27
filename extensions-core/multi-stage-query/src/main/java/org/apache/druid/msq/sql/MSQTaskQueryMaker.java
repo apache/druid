@@ -237,20 +237,20 @@ public class MSQTaskQueryMaker implements QueryMaker
 
       final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);
 
-      MSQTaskQueryMakerUtils.validateSegmentSortOrder(
+      MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
           segmentSortOrder,
-          fieldMapping.stream().map(f -> f.getValue()).collect(Collectors.toList())
+          fieldMapping.stream().map(Entry::getValue).collect(Collectors.toSet())
       );
 
-      final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
+      final DataSourceMSQDestination dataSourceDestination = new DataSourceMSQDestination(
           targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
-          replaceTimeChunks
+          replaceTimeChunks,
+          null
       );
-      MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext,
-                                                        dataSourceMSQDestination.isReplaceTimeChunks());
-      destination = dataSourceMSQDestination;
+      MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext, dataSourceDestination.isReplaceTimeChunks());
+      destination = dataSourceDestination;
     } else {
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
       if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {

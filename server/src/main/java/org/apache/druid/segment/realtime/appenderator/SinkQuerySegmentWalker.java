@@ -28,7 +28,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -57,7 +56,7 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.segment.realtime.sink.SinkSegmentReference;
@@ -245,15 +244,21 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                     // 1) Only use caching if data is immutable
                     // 2) Hydrants are not the same between replicas, make sure cache is local
                     if (segmentReference.isImmutable() && cache.isLocal()) {
-                      StorageAdapter storageAdapter = segmentReference.getSegment().asStorageAdapter();
-                      long segmentMinTime = storageAdapter.getMinTime().getMillis();
-                      long segmentMaxTime = storageAdapter.getMaxTime().getMillis();
-                      Interval actualDataInterval = Intervals.utc(segmentMinTime, segmentMaxTime + 1);
+                      final SegmentReference segment = segmentReference.getSegment();
+                      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+                      final Interval cacheKeyInterval;
+
+                      if (timeBoundaryInspector != null) {
+                        cacheKeyInterval = timeBoundaryInspector.getMinMaxInterval();
+                      } else {
+                        cacheKeyInterval = segment.getDataInterval();
+                      }
+
                       runner = new CachingQueryRunner<>(
                           makeHydrantCacheIdentifier(sinkSegmentId, segmentReference.getHydrantNumber()),
                           cacheKeyPrefix,
                           descriptor,
-                          actualDataInterval,
+                          cacheKeyInterval,
                           objectMapper,
                           cache,
                           toolChest,

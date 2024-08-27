@@ -21,22 +21,16 @@ package org.apache.druid.frame.segment;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.CursorHolderFactory;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.vector.VectorCursor;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -52,14 +46,14 @@ public class FrameStorageAdapter implements StorageAdapter
   private final Frame frame;
   private final FrameReader frameReader;
   private final Interval interval;
-  private final CursorFactory cursorFactory;
+  private final CursorHolderFactory cursorFactory;
 
   public FrameStorageAdapter(Frame frame, FrameReader frameReader, Interval interval)
   {
     this.frame = frame;
     this.frameReader = frameReader;
     this.interval = interval;
-    this.cursorFactory = frameReader.makeCursorFactory(frame);
+    this.cursorFactory = frameReader.makeCursorHolderFactory(frame);
   }
 
   @Override
@@ -92,18 +86,6 @@ public class FrameStorageAdapter implements StorageAdapter
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
-  @Override
-  public DateTime getMinTime()
-  {
-    return getInterval().getStart();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return getInterval().getEnd().minus(1);
-  }
-
   @Nullable
   @Override
   public Comparable getMinValue(String column)
@@ -134,12 +116,6 @@ public class FrameStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return getMaxTime();
-  }
-
-  @Override
   @Nullable
   public Metadata getMetadata()
   {
@@ -147,49 +123,8 @@ public class FrameStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean canVectorize(@Nullable Filter filter, VirtualColumns virtualColumns, boolean descending)
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return cursorFactory.canVectorize(filter, virtualColumns, descending);
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return cursorFactory.makeCursors(
-        filter,
-        interval,
-        virtualColumns,
-        gran,
-        descending,
-        queryMetrics
-    );
-  }
-
-  @Nullable
-  @Override
-  public VectorCursor makeVectorCursor(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    return cursorFactory.makeVectorCursor(
-        filter,
-        interval,
-        virtualColumns,
-        descending,
-        vectorSize,
-        queryMetrics
-    );
+    return cursorFactory.makeCursorHolder(spec);
   }
 }

@@ -25,7 +25,7 @@ sidebar_label: "Query from deep storage"
 
 Query from deep storage allows you to query segments that are stored only in deep storage, which provides lower costs than if you were to load everything onto Historical processes. The tradeoff is that queries from deep storage may take longer to complete. 
 
-This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical processes, and querying data from deep storage.
+This tutorial walks you through loading example data, configuring load rules so that not all the segments get loaded onto Historical services, and querying data from deep storage. If you have [centralized datasource schema enabled](../configuration/index.md#centralized-datasource-schema), you can query datasources that are only in deep storage without having any segment available on Historical.
 
 To run the queries in this tutorial, replace `ROUTER:PORT` with the location of the Router process and its port number. For example, use `localhost:8888` for the quickstart deployment.
 

@@ -100,7 +100,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
     final List<Object[]> constructors = new ArrayList<>();
 
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory, false)) {
       final QueryRunner modifiedRunner = new QueryRunner()
       {
         @Override
