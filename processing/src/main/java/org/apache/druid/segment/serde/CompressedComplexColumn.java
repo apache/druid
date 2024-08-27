@@ -17,27 +17,41 @@
  * under the License.
  */
 
-package org.apache.druid.spectator.histogram;
+package org.apache.druid.segment.serde;
 
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.column.ComplexColumn;
+import org.apache.druid.segment.data.CompressedVariableSizedBlobColumn;
+import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
 
-public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
+public final class CompressedComplexColumn implements ComplexColumn
 {
-  private final SpectatorHistogramIndexed index;
   private final String typeName;
+  private final CompressedVariableSizedBlobColumn compressedColumn;
+  private final ImmutableBitmap nullValues;
+  private final ObjectStrategy<?> objectStrategy;
 
-  public SpectatorHistogramIndexBasedComplexColumn(String typeName, SpectatorHistogramIndexed index)
+  public CompressedComplexColumn(
+      String typeName,
+      CompressedVariableSizedBlobColumn compressedColumn,
+      ImmutableBitmap nullValues,
+      ObjectStrategy<?> objectStrategy
+  )
   {
-    this.index = index;
     this.typeName = typeName;
+    this.compressedColumn = compressedColumn;
+    this.nullValues = nullValues;
+    this.objectStrategy = objectStrategy;
   }
 
   @Override
   public Class<?> getClazz()
   {
-    return index.getClazz();
+    return objectStrategy.getClazz();
   }
 
   @Override
@@ -50,17 +64,23 @@ public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
   @Nullable
   public Object getRowValue(int rowNum)
   {
-    return index.get(rowNum);
+    if (nullValues.get(rowNum)) {
+      return null;
+    }
+
+    final ByteBuffer valueBuffer = compressedColumn.get(rowNum);
+    return objectStrategy.fromByteBuffer(valueBuffer, valueBuffer.remaining());
   }
 
   @Override
   public int getLength()
   {
-    return -1;
+    return compressedColumn.size();
   }
 
   @Override
   public void close()
   {
+    CloseableUtils.closeAndWrapExceptions(compressedColumn);
   }
 }

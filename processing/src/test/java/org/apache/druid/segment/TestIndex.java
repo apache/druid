@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -195,6 +196,13 @@ public class TestIndex
   private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
       () -> persistRealtimeAndLoadMMapped(realtimeIndex.get())
   );
+
+  private static Supplier<QueryableIndex> mmappedIndexCompressedComplex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(
+          realtimeIndex.get(),
+          IndexSpec.builder().withComplexMetricCompression(CompressionStrategy.LZ4).build()
+      )
+  );
   private static Supplier<QueryableIndex> nonTimeOrderedMmappedIndex = Suppliers.memoize(
       () -> persistRealtimeAndLoadMMapped(nonTimeOrderedRealtimeIndex.get())
   );
@@ -322,6 +330,11 @@ public class TestIndex
   public static QueryableIndex getFrontCodedMMappedTestIndex()
   {
     return frontCodedMmappedIndex.get();
+  }
+
+  public static QueryableIndex getMMappedTestIndexCompressedComplex()
+  {
+    return mmappedIndexCompressedComplex.get();
   }
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)

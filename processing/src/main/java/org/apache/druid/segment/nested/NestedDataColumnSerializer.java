@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
@@ -48,10 +47,10 @@ import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -248,7 +247,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   public void open() throws IOException
   {
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
-        getInternalFileName(name, RAW_FILE_NAME),
+        ColumnSerializerUtils.getInternalFileName(name, RAW_FILE_NAME),
         segmentWriteOutMedium,
         indexSpec.getJsonCompression() != null ? indexSpec.getJsonCompression() : CompressionStrategy.LZ4
     );
@@ -394,18 +393,6 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   {
     if (!closedForWrite) {
       closedForWrite = true;
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      IndexMerger.SERIALIZER_UTILS.writeString(
-          baos,
-          NestedDataComplexTypeSerde.OBJECT_MAPPER.writeValueAsString(
-              new NestedDataColumnMetadata(
-                  ByteOrder.nativeOrder(),
-                  indexSpec.getBitmapSerdeFactory(),
-                  name,
-                  !nullRowsBitmap.isEmpty()
-              )
-          )
-      );
       nullBitmapWriter.write(nullRowsBitmap);
       columnNameBytes = computeFilenameBytes();
     }
@@ -447,26 +434,26 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
         smoosher.add(internalName, fileMapper.mapFile(internalName));
       }
     } else {
-      writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
     }
     if (globalDictionaryIdLookup.getLongBuffer() != null) {
-      writeInternal(smoosher, globalDictionaryIdLookup.getLongBuffer(), LONG_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, globalDictionaryIdLookup.getLongBuffer(), ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
     } else {
-      writeInternal(smoosher, longDictionaryWriter, LONG_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, longDictionaryWriter, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
     }
     if (globalDictionaryIdLookup.getDoubleBuffer() != null) {
-      writeInternal(smoosher, globalDictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, globalDictionaryIdLookup.getDoubleBuffer(), ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     } else {
-      writeInternal(smoosher, doubleDictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, doubleDictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     }
     if (globalDictionaryIdLookup.getArrayBuffer() != null) {
-      writeInternal(smoosher, globalDictionaryIdLookup.getArrayBuffer(), ARRAY_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, globalDictionaryIdLookup.getArrayBuffer(), ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
     } else {
-      writeInternal(smoosher, arrayDictionaryWriter, ARRAY_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, arrayDictionaryWriter, ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
     }
     writeInternal(smoosher, rawWriter, RAW_FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
-      writeInternal(smoosher, nullBitmapWriter, NULL_BITMAP_FILE_NAME);
+      writeInternal(smoosher, nullBitmapWriter, ColumnSerializerUtils.NULL_BITMAP_FILE_NAME);
     }
 
 
