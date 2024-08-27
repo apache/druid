@@ -321,24 +321,24 @@ public class ExtensionsLoader
         ObjectMapper objectMapper = new ObjectMapper();
         Path dependenciesPath = Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON);
         List<ExtensionDependencies> extensionDependenciesList = objectMapper.readValue(dependenciesPath.toFile(), new TypeReference<List<ExtensionDependencies>>() {});
-        for (ExtensionDependencies dependencies : extensionDependenciesList) {
-            // If the extension is not being loaded, don't check its dependencies.
-            if (!extensionClassLoaderMap.containsKey(dependencies.getName())) {
-              continue;
+        for (ExtensionDependencies extensionDependencies : extensionDependenciesList) {
+          // If the extension is not being loaded, don't check its dependencies.
+          if (!extensionClassLoaderMap.containsKey(extensionDependencies.getName())) {
+            continue;
+          }
+          ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) extensionClassLoaderMap.get(extensionDependencies.getName());
+          List<ClassLoader> extensionClassLoaders = new ArrayList<>();
+          for (String dependency : extensionDependencies.getDependencies()) {
+            if (!extensionClassLoaderMap.containsKey(dependency)) {
+              throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
             }
-            ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) extensionClassLoaderMap.get(dependencies.getName());
-            List<ClassLoader> extensionClassLoaders = new ArrayList<>();
-            for (String dependency : dependencies.getDependencies()) {
-              if (!extensionClassLoaderMap.containsKey(dependency)) {
-                throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", dependencies.getName(), dependency));
-              }
-              extensionClassLoaders.add(extensionClassLoaderMap.get(dependency));
-            }
-            classLoader.setExtensionDependencyClassLoaders(extensionClassLoaders);
+            extensionClassLoaders.add(extensionClassLoaderMap.get(dependency));
+          }
+          classLoader.setExtensionDependencyClassLoaders(extensionClassLoaders);
         }
       }
       catch (Exception e) {
-        log.error("Failed to set extension dependencies");
+        log.error("Failed to configure inter-extension dependencies");
         throw new RuntimeException(e);
       }
 

@@ -342,7 +342,6 @@ public class PullDependencies implements Runnable
       }
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
 
-      System.out.println("Copying extension dependencies file back into extension directory.");
       if (temporaryDependencyPath != null) {
         Files.copy(
             temporaryDependencyPath,
@@ -373,19 +372,6 @@ public class PullDependencies implements Runnable
     return versionedArtifact;
   }
 
-  private void downloadExtensionDependencies(File extensionOutputDir)
-  {
-    try {
-      System.out.println("base dir" + projectBaseDir);
-      System.out.println("output dir" + extensionOutputDir.getAbsolutePath());
-      File dependenciesFile = new File(projectBaseDir, EXTENSION_DEPENDENCIES_JSON);
-      if (dependenciesFile.exists()) {
-        Files.copy(dependenciesFile.toPath(), new File(extensionOutputDir, EXTENSION_DEPENDENCIES_JSON).toPath());
-      }
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
   /**
    * Download the extension given its maven coordinate
    *
