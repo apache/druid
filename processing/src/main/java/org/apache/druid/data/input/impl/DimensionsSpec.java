@@ -60,8 +60,10 @@ public class DimensionsSpec
   public static final String WARNING_NON_TIME_SORT_ORDER = StringUtils.format(
       "Warning: support for segments not sorted by[%s] is experimental. Such segments are not readable by older "
       + "version of Druid, and certain queries cannot run on them. See "
-      + "https://druid.apache.org/docs/latest/ingestion/partitioning#sorting for details before using this option.",
-      ColumnHolder.TIME_COLUMN_NAME
+      + "https://druid.apache.org/docs/latest/ingestion/partitioning#sorting for details before setting "
+      + "%s to[false].",
+      ColumnHolder.TIME_COLUMN_NAME,
+      PARAMETER_FORCE_TIME_SORT
   );
 
   public static final boolean DEFAULT_FORCE_TIME_SORT = true;
