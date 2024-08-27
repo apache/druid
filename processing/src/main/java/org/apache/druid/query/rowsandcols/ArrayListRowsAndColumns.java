@@ -23,6 +23,8 @@ import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.common.semantic.SemanticCreator;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -73,7 +75,7 @@ import java.util.function.Function;
 public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumns
 {
   @SuppressWarnings("rawtypes")
-  private static final Map<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+  private static final Map<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = SemanticUtils
       .makeAsMap(ArrayListRowsAndColumns.class);
 
   private final ArrayList<RowType> rows;
@@ -142,6 +144,9 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   {
     if (!rowSignature.contains(name)) {
       final Column retVal = extraColumns.get(name);
+      if (retVal == null) {
+        return null;
+      }
       if (numRows() == rows.size()) {
         return retVal;
       }

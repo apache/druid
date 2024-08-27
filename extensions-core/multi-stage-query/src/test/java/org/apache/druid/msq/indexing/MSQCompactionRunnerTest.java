@@ -42,13 +42,13 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -60,7 +60,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -76,6 +75,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MSQCompactionRunnerTest
@@ -89,13 +89,9 @@ public class MSQCompactionRunnerTest
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
   private static List<String> PARTITION_DIMENSIONS;
 
-  private static final StringDimensionSchema DIM1 = new StringDimensionSchema(
-      "string_dim",
-      null,
-      null
-  );
-  private static final LongDimensionSchema LONG_DIMENSION_SCHEMA = new LongDimensionSchema("long_dim");
-  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(DIM1, LONG_DIMENSION_SCHEMA);
+  private static final StringDimensionSchema STRING_DIMENSION = new StringDimensionSchema("string_dim", null, null);
+  private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
+  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(STRING_DIMENSION, LONG_DIMENSION);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
@@ -131,7 +127,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -144,7 +140,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -157,7 +153,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -170,7 +166,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -183,7 +179,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, Granularities.ALL, null),
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
   }
 
   @Test
@@ -196,7 +192,41 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, false),
         AGGREGATORS.toArray(new AggregatorFactory[0])
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, Collections.emptyMap()).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+  }
+
+  @Test
+  public void testRollupTrueWithoutMetricsSpecIsInValid()
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        new ClientCompactionTaskGranularitySpec(null, null, true),
+        null
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+  }
+
+  @Test
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
+  {
+    // Aggregators having different input and ouput column names are unsupported.
+    final String inputColName = "added";
+    final String outputColName = "sum_added";
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        new ClientCompactionTaskGranularitySpec(null, null, null),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
+    );
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask);
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
+        validationResult.getReason()
+    );
   }
 
   @Test
@@ -259,7 +289,8 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
         ),
         actualMSQSpec.getDestination()
     );
@@ -271,10 +302,10 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertNull(msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY));
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
-    Assert.assertEquals(PARTITION_DIMENSIONS.stream().map(col -> new ScanQuery.OrderBy(
-        col,
-        ScanQuery.Order.ASCENDING
-    )).collect(Collectors.toList()), ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys());
+    Assert.assertEquals(
+        PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys()
+    );
   }
 
   @Test
@@ -328,7 +359,8 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
         ),
         actualMSQSpec.getDestination()
     );
@@ -343,48 +375,6 @@ public class MSQCompactionRunnerTest
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
     );
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
-  }
-
-  @Test
-  public void testIntervalsWithRolledUpSegmentsAndNonIdempotentAggregatorFails()
-  {
-    final String inputColName = "added";
-    final String outputColName = "sum_added";
-    CompactionTask compactionTask = createCompactionTask(
-        null,
-        null,
-        Collections.emptyMap(),
-        null,
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory(
-                outputColName,
-                inputColName
-            )
-        }
-    );
-    CombinedDataSchema dataSchema = new CombinedDataSchema(
-        DATA_SOURCE,
-        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
-        new DimensionsSpec(DIMENSIONS),
-        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)},
-        new UniformGranularitySpec(
-            SEGMENT_GRANULARITY.getDefaultGranularity(),
-            null,
-            false,
-            Collections.singletonList(COMPACTION_INTERVAL)
-        ),
-        null,
-        true
-    );
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
-        compactionTask,
-        Collections.singletonMap(COMPACTION_INTERVAL, dataSchema)
-    );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(validationResult.getReason(), StringUtils.format(
-        "MSQ: Rolled-up segments in compaction interval[%s].",
-        COMPACTION_INTERVAL
-    ));
   }
 
   private CompactionTask createCompactionTask(

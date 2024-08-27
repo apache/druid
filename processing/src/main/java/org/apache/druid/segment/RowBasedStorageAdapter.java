@@ -20,22 +20,20 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.SimpleSequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.joda.time.DateTime;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -58,7 +56,8 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   public RowBasedStorageAdapter(
       final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
-      final RowSignature rowSignature)
+      final RowSignature rowSignature
+  )
   {
     this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
     this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
@@ -106,18 +105,6 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
-  @Override
-  public DateTime getMinTime()
-  {
-    return getInterval().getStart();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return getInterval().getEnd().minus(1);
-  }
-
   @Nullable
   @Override
   public Comparable getMinValue(String column)
@@ -156,64 +143,60 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   }
 
   @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return getMaxTime();
-  }
-
-  @Override
   public Metadata getMetadata()
   {
     throw new UnsupportedOperationException("Cannot retrieve metadata");
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      final Interval queryInterval,
-      final VirtualColumns virtualColumns,
-      final Granularity gran,
-      final boolean descending,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final Interval actualInterval = queryInterval.overlap(new Interval(getMinTime(), gran.bucketEnd(getMaxTime())));
-
-    if (actualInterval == null) {
-      return Sequences.empty();
+    // It's in principle incorrect for sort order to be __time based here, but for historical reasons, we're keeping
+    // this in place for now. The handling of "interval" in "RowBasedCursor", which has been in place for some time,
+    // suggests we think the data is always sorted by time.
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
     }
+    return new CursorHolder()
+    {
+      final Closer closer = Closer.create();
 
-    if (!isQueryGranularityAllowed(actualInterval, gran)) {
-      throw new IAE(
-          "Cannot support interval [%s] with granularity [%s]",
-          Intervals.ETERNITY.equals(actualInterval) ? "ETERNITY" : actualInterval,
-          gran
-      );
-    }
+      @Override
+      public Cursor asCursor()
+      {
+        final RowWalker<RowType> rowWalker = closer.register(
+            new RowWalker<>(descending ? reverse(rowSequence) : rowSequence, rowAdapter)
+        );
+        return new RowBasedCursor<>(
+            rowWalker,
+            rowAdapter,
+            spec.getFilter(),
+            spec.getInterval(),
+            spec.getVirtualColumns(),
+            descending,
+            rowSignature
+        );
+      }
 
-    final RowWalker<RowType> rowWalker = new RowWalker<>(
-        descending ? reverse(rowSequence) : rowSequence,
-        rowAdapter
-    );
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
+      }
 
-    final Iterable<Interval> bucketIntervals = gran.getIterable(actualInterval);
-
-    return Sequences.simple(
-        Iterables.transform(
-            descending ? reverse(bucketIntervals) : bucketIntervals,
-            bucketInterval ->
-                (Cursor) new RowBasedCursor<>(
-                    rowWalker,
-                    rowAdapter,
-                    filter,
-                    bucketInterval,
-                    virtualColumns,
-                    gran,
-                    descending,
-                    rowSignature
-                )
-        )
-    ).withBaggage(rowWalker::close);
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
+    };
   }
 
   /**

@@ -30,6 +30,7 @@ import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class WindowRowNumberProcessor implements Processor
 {
@@ -136,5 +137,24 @@ public class WindowRowNumberProcessor implements Processor
   public List<String> getOutputColumnNames()
   {
     return Collections.singletonList(outputColumn);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    WindowRowNumberProcessor that = (WindowRowNumberProcessor) o;
+    return Objects.equals(outputColumn, that.outputColumn);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(outputColumn);
   }
 }

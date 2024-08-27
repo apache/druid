@@ -20,8 +20,13 @@
 package org.apache.druid.msq.indexing.destination;
 
 
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.junit.Test;
+
+import java.util.Map;
 
 public class DataSourceMSQDestinationTest
 {
@@ -30,7 +35,26 @@ public class DataSourceMSQDestinationTest
   public void testEquals()
   {
     EqualsVerifier.forClass(DataSourceMSQDestination.class)
-                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder")
+                  .withNonnullFields("dataSource", "segmentGranularity", "segmentSortOrder", "dimensionSchemas")
+                  .withPrefabValues(
+                      Map.class,
+                      ImmutableMap.of(
+                          "language",
+                          new StringDimensionSchema(
+                              "language",
+                              DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+                              false
+                          )
+                      ),
+                      ImmutableMap.of(
+                          "region",
+                          new StringDimensionSchema(
+                              "region",
+                              DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+                              false
+                          )
+                      )
+                  )
                   .usingGetClass()
                   .verify();
   }

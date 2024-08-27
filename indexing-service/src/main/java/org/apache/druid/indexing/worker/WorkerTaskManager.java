@@ -640,6 +640,22 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     return getNumTasksPerDatasource(this.getCompletedTasks().values(), TaskAnnouncement::getTaskDataSource);
   }
 
+  @Override
+  public Map<String, Long> getWorkerFailedTasks()
+  {
+    return getNumTasksPerDatasource(completedTasks.entrySet().stream()
+            .filter(entry -> entry.getValue().getTaskStatus().isFailure())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerSuccessfulTasks()
+  {
+    return getNumTasksPerDatasource(completedTasks.entrySet().stream()
+            .filter(entry -> entry.getValue().getTaskStatus().isSuccess())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
+  }
+
   private static class TaskDetails
   {
     private final Task task;

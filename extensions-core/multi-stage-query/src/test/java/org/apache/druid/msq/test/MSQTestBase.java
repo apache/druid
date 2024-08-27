@@ -48,6 +48,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -55,7 +56,6 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -141,6 +141,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -186,6 +187,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.guice.SqlBindings;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
@@ -357,8 +359,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
             {
               // We want this module to bring InputSourceModule along for the ride.
               binder.install(new InputSourceModule());
-              binder.install(new NestedDataModule());
-              NestedDataModule.registerHandlersAndSerde();
+              binder.install(new BuiltInTypesModule());
+              BuiltInTypesModule.registerHandlersAndSerde();
               SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
@@ -521,7 +523,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
-    objectMapper.registerModules(NestedDataModule.getJacksonModulesList());
+    objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
     doReturn(mock(Request.class)).when(brokerClient).makeRequest(any(), anyString());
 
@@ -562,7 +564,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         catalogResolver,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
@@ -904,7 +907,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedSegment(Set<SegmentId> expectedSegments)
+    public Builder setExpectedSegments(Set<SegmentId> expectedSegments)
     {
       Preconditions.checkArgument(expectedSegments != null, "Segments cannot be null");
       this.expectedSegments = expectedSegments;
@@ -1286,17 +1289,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
           Assert.assertEquals(expectedDestinationIntervals, destination.getReplaceTimeChunks());
         }
         if (expectedSegments != null) {
+          final int timeIndex =
+              MSQResultsReport.ColumnAndType.toRowSignature(expectedRowSignature)
+                                            .indexOf(ColumnHolder.TIME_COLUMN_NAME);
           Assert.assertEquals(expectedSegments, segmentIdVsOutputRowsMap.keySet());
           for (Object[] row : transformedOutputRows) {
-            List<SegmentId> diskSegmentList = segmentIdVsOutputRowsMap.keySet()
-                                                                      .stream()
-                                                                      .filter(segmentId -> segmentId.getInterval()
-                                                                                                    .contains((Long) row[0]))
-                                                                      .filter(segmentId -> {
-                                                                        List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
-                                                                        return lists.contains(Arrays.asList(row));
-                                                                      })
-                                                                      .collect(Collectors.toList());
+            List<SegmentId> diskSegmentList = segmentIdVsOutputRowsMap
+                .keySet()
+                .stream()
+                .filter(segmentId -> segmentId.getInterval().contains((Long) row[timeIndex]))
+                .filter(segmentId -> {
+                  List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
+                  return lists.contains(Arrays.asList(row));
+                })
+                .collect(Collectors.toList());
             if (diskSegmentList.size() != 1) {
               throw new IllegalStateException("Single key in multiple partitions");
             }

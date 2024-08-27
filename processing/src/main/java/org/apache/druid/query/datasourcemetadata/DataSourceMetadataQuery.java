@@ -51,7 +51,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, context);
   }
 
   @Override

@@ -36,9 +36,9 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -230,7 +230,7 @@ public class MSQArraysTest extends MSQTestBase
         .setQueryContext(adjustedContext)
         .setExpectedDataSource("foo")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
             NullHandling.sqlCompatible()
             ? ImmutableList.of(
@@ -278,7 +278,7 @@ public class MSQArraysTest extends MSQTestBase
         .setQueryContext(adjustedContext)
         .setExpectedDataSource("foo")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{0L, null},
@@ -325,7 +325,7 @@ public class MSQArraysTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(expectedRows)
                      .verifyResults();
   }
@@ -862,7 +862,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayString")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayString", ScanQuery.Order.DESCENDING)))
+        .orderBy(Collections.singletonList(OrderBy.descending("arrayString")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -925,7 +925,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayLong")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayLong", ScanQuery.Order.ASCENDING)))
+        .orderBy(Collections.singletonList(OrderBy.ascending("arrayLong")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -988,7 +988,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayDouble")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayDouble", ScanQuery.Order.ASCENDING)))
+        .orderBy(Collections.singletonList(OrderBy.ascending("arrayDouble")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 

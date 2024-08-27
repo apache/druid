@@ -20,6 +20,7 @@
 package org.apache.druid.frame.read;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
@@ -28,11 +29,11 @@ import org.apache.druid.frame.key.FrameComparisonWidgetImpl;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.frame.segment.row.FrameCursorFactory;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorHolderFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorHolderFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolderFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -44,7 +45,7 @@ import java.util.Set;
 
 /**
  * Embeds the logic to read frames with a given {@link RowSignature}.
- *
+ * <p>
  * Stateless and immutable.
  */
 public class FrameReader
@@ -136,17 +137,17 @@ public class FrameReader
   }
 
   /**
-   * Create a {@link CursorFactory} for the given frame.
+   * Create a {@link CursorHolderFactory} for the given frame.
    */
-  public CursorFactory makeCursorFactory(final Frame frame)
+  public CursorHolderFactory makeCursorHolderFactory(final Frame frame)
   {
     switch (frame.type()) {
       case COLUMNAR:
-        return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
+        return new ColumnarFrameCursorHolderFactory(frame, signature, columnReaders);
       case ROW_BASED:
-        return new FrameCursorFactory(frame, this, fieldReaders);
+        return new RowFrameCursorHolderFactory(frame, this, fieldReaders);
       default:
-        throw new ISE("Unrecognized frame type [%s]", frame.type());
+        throw DruidException.defensive("Unrecognized frame type [%s]", frame.type());
     }
   }
 

@@ -228,7 +228,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public Comparator<Result<TimeseriesResultValue>> createResultComparator(Query<Result<TimeseriesResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
+    return ResultGranularTimestampComparator.create(query.getGranularity(), ((TimeseriesQuery) query).isDescending());
   }
 
   private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)

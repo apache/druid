@@ -71,4 +71,10 @@ public class LongsLongEncodingReader implements CompressionFactory.LongEncodingR
   {
     return new LongsLongEncodingReader(buffer.getByteBuffer(), buffer.getTypeByteOrder());
   }
+
+  @Override
+  public CompressionFactory.LongEncodingStrategy getStrategy()
+  {
+    return CompressionFactory.LongEncodingStrategy.LONGS;
+  }
 }

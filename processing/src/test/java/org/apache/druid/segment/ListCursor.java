@@ -26,7 +26,6 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -187,12 +186,6 @@ public class ListCursor implements Cursor
         return null;
       }
     };
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
