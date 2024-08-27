@@ -291,7 +291,7 @@ public class PullDependencies implements Runnable
     final Path extensionDependenciesPath = new File(extensionsDir, EXTENSION_DEPENDENCIES_JSON).toPath();
     try {
       if (clean) {
-        // Copy dependencies file
+        // Copy dependencies file to temp location
         temporaryDependencyPath = Files.copy(
             extensionDependenciesPath,
             Files.createTempDirectory("extensionDependencies").resolve(EXTENSION_DEPENDENCIES_JSON));
@@ -313,12 +313,14 @@ public class PullDependencies implements Runnable
     );
 
     try {
+      log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
       for (String coordinate : coordinates) {
         coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
         createExtensionDirectory(coordinate, currExtensionDir);
+
         downloadExtension(versionedArtifact, currExtensionDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
@@ -342,6 +344,7 @@ public class PullDependencies implements Runnable
       }
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
 
+      // Copy dependencies file back to extensions directory
       if (temporaryDependencyPath != null) {
         Files.copy(
             temporaryDependencyPath,
