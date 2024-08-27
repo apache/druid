@@ -404,7 +404,10 @@ Druid supports double and null values in arrays for dynamic queries. For example
 {
    "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?,  doubleArrayColumn)",
    "parameters": [
-      {"type":"ARRAY", "value":[-25.7, null, 36.85]}
+      {
+        "type": "ARRAY",
+        "value": [-25.7, null, 36.85]
+      }
    ]
 }
 ```
