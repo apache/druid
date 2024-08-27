@@ -30,6 +30,7 @@
             <directory>${project.build.directory}/extensions</directory>
             <includes>
                 <include>*/*</include>
+                <include>extension-dependencies.json</include>
             </includes>
             <outputDirectory>extensions</outputDirectory>
         </fileSet>

@@ -61,6 +61,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -286,9 +287,14 @@ public class PullDependencies implements Runnable
 
     final File extensionsDir = new File(extensionsConfig.getDirectory());
     final File hadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
-
+    Path temporaryDependencyPath = null;
+    final Path extensionDependenciesPath = new File(extensionsDir, EXTENSION_DEPENDENCIES_JSON).toPath();
     try {
       if (clean) {
+        // Copy dependencies file
+        temporaryDependencyPath = Files.copy(
+            extensionDependenciesPath,
+            Files.createTempDirectory("extensionDependencies").resolve(EXTENSION_DEPENDENCIES_JSON));
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
@@ -307,14 +313,12 @@ public class PullDependencies implements Runnable
     );
 
     try {
-      log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
       for (String coordinate : coordinates) {
         coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
         createExtensionDirectory(coordinate, currExtensionDir);
-        downloadExtensionDependencies(versionedArtifact.getArtifactId(), currExtensionDir);
         downloadExtension(versionedArtifact, currExtensionDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
@@ -337,6 +341,14 @@ public class PullDependencies implements Runnable
         downloadExtension(versionedArtifact, currExtensionDir, hadoopExclusions);
       }
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
+
+      System.out.println("Copying extension dependencies file back into extension directory.");
+      if (temporaryDependencyPath != null) {
+        Files.copy(
+            temporaryDependencyPath,
+            extensionDependenciesPath
+        );
+      }
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -361,46 +373,12 @@ public class PullDependencies implements Runnable
     return versionedArtifact;
   }
 
-  private void downloadExtensionDependencies(String artifactId, File extensionOutputDir)
-  {
-    System.out.println("Downloading extension dependencies for " + artifactId + " " + extensionOutputDir + " " + projectBaseDir);
-    String extensionInputDirectoryName = artifactId;
-    File coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
-    File contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
-
-    if (coreExtensionsDir.exists() && coreExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(coreExtensionsDir, extensionOutputDir);
-      return;
-    }
-
-    if (contribExtensionsDir.exists() && contribExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(contribExtensionsDir, extensionOutputDir);
-      return;
-    }
-
-    final String druidPrefix = "druid-";
-    if (!extensionInputDirectoryName.startsWith(druidPrefix)) {
-      return;
-    }
-    extensionInputDirectoryName = extensionInputDirectoryName.substring(druidPrefix.length());
-    coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
-    contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
-
-    if (coreExtensionsDir.exists() && coreExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(coreExtensionsDir, extensionOutputDir);
-      return;
-    }
-
-    if (contribExtensionsDir.exists() && contribExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(contribExtensionsDir, extensionOutputDir);
-      return;
-    }
-  }
-
-  private void copyExtensionDependencyFile(File extensionDirectory, File extensionOutputDir)
+  private void downloadExtensionDependencies(File extensionOutputDir)
   {
     try {
-      File dependenciesFile = new File(extensionDirectory, EXTENSION_DEPENDENCIES_JSON);
+      System.out.println("base dir" + projectBaseDir);
+      System.out.println("output dir" + extensionOutputDir.getAbsolutePath());
+      File dependenciesFile = new File(projectBaseDir, EXTENSION_DEPENDENCIES_JSON);
       if (dependenciesFile.exists()) {
         Files.copy(dependenciesFile.toPath(), new File(extensionOutputDir, EXTENSION_DEPENDENCIES_JSON).toPath());
       }
@@ -408,7 +386,6 @@ public class PullDependencies implements Runnable
       throw new RuntimeException(e);
     }
   }
-
   /**
    * Download the extension given its maven coordinate
    *

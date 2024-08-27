@@ -128,7 +128,7 @@
                         <version>0.1</version>
                         <executions>
                             <execution>
-                                <id>directories</id>
+                                <id>get-root-directory</id>
                                 <goals>
                                     <goal>directory-of</goal>
                                 </goals>
@@ -139,6 +139,30 @@
                                         <groupId>org.apache.druid</groupId>
                                         <artifactId>druid</artifactId>
                                     </project>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.0.1</version>
+                        <executions>
+                            <execution>
+                                <id>copy-extension-dependencies</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/extensions</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${druid.basedir}</directory>
+                                            <includes>
+                                                <include>extension-dependencies.json</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
                                 </configuration>
                             </execution>
                         </executions>
@@ -198,6 +222,7 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
+                                    <outputFile>${druid.basedir}/output</outputFile>
                                     <executable>${project.parent.basedir}/examples/bin/run-java</executable>
                                     <arguments>
                                         <argument>-classpath</argument>

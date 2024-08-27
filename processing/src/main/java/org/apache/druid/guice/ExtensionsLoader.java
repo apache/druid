@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -318,20 +319,22 @@ public class ExtensionsLoader
           );
         }
         ObjectMapper objectMapper = new ObjectMapper();
-        for (Pair<File, Boolean> extension : loaders.keySet()) {
-          Path dependenciesPath = Paths.get(extension.lhs.getAbsolutePath() + "/" + EXTENSION_DEPENDENCIES_JSON);
-          if (extension.rhs && Files.exists(dependenciesPath)) {
-            ExtensionDependencies extensionDependencies = objectMapper.readValue(dependenciesPath.toFile(), ExtensionDependencies.class);
-            ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) loaders.get(extension);
+        Path dependenciesPath = Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON);
+        List<ExtensionDependencies> extensionDependenciesList = objectMapper.readValue(dependenciesPath.toFile(), new TypeReference<List<ExtensionDependencies>>() {});
+        for (ExtensionDependencies dependencies : extensionDependenciesList) {
+            // If the extension is not being loaded, don't check its dependencies.
+            if (!extensionClassLoaderMap.containsKey(dependencies.getName())) {
+              continue;
+            }
+            ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) extensionClassLoaderMap.get(dependencies.getName());
             List<ClassLoader> extensionClassLoaders = new ArrayList<>();
-            for (String dependency : extensionDependencies.getDependencies()) {
+            for (String dependency : dependencies.getDependencies()) {
               if (!extensionClassLoaderMap.containsKey(dependency)) {
-                throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
+                throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", dependencies.getName(), dependency));
               }
               extensionClassLoaders.add(extensionClassLoaderMap.get(dependency));
             }
             classLoader.setExtensionDependencyClassLoaders(extensionClassLoaders);
-          }
         }
       }
       catch (Exception e) {
