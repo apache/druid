@@ -23,7 +23,7 @@ title: "Iceberg extension"
   -->
 
 <!-- If the URL changes for this topic, make modifications
-to Apache Iceberg docs: https://github.com/apache/iceberg/tree/main/docs -->
+to Apache Iceberg docs: https://github.com/apache/iceberg/blob/main/docs/mkdocs.yml -->
 
 ## Iceberg Ingest extension
 
