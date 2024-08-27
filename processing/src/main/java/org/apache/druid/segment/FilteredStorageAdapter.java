@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
 import org.joda.time.Interval;
@@ -67,6 +68,12 @@ public class FilteredStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return baseStorageAdapter.getInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    return baseStorageAdapter.getRowSignature();
   }
 
   @Override

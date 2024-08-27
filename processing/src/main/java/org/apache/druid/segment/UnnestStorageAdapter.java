@@ -35,6 +35,8 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
@@ -167,6 +169,22 @@ public class UnnestStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return baseAdapter.getInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    final RowSignature baseSignature = baseAdapter.getRowSignature();
+    for (int i = 0; i < baseSignature.size(); i++) {
+      final String column = baseSignature.getColumnName(i);
+      if (!outputColumnName.equals(column)) {
+        builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
+      }
+    }
+
+    return builder.add(outputColumnName, ColumnType.fromCapabilities(getColumnCapabilities(outputColumnName))).build();
   }
 
   @Override

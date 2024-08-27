@@ -19,11 +19,14 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.joda.time.DateTime;
@@ -53,6 +56,40 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return index.getDataInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final LinkedHashSet<String> columns = new LinkedHashSet<>();
+
+    for (final OrderBy orderBy : index.getOrdering()) {
+      columns.add(orderBy.getColumnName());
+    }
+
+    // Add __time after the defined ordering, if __time wasn't part of it.
+    columns.add(ColumnHolder.TIME_COLUMN_NAME);
+
+    for (final String dimension : getAvailableDimensions()) {
+      columns.add(dimension);
+    }
+
+    for (final String metric : getAvailableMetrics()) {
+      columns.add(metric);
+    }
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+
+      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
+      // being 100% nulls. Don't add those to the row signature.
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
+    }
+
+    return builder.build();
   }
 
   @Override

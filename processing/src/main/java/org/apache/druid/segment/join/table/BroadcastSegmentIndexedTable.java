@@ -39,7 +39,6 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -88,12 +87,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         segment.getId()
     );
 
-    RowSignature.Builder sigBuilder = RowSignature.builder();
-    sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
-    for (String column : queryableIndex.getColumnNames()) {
-      sigBuilder.add(column, adapter.getColumnCapabilities(column).toColumnType());
-    }
-    this.rowSignature = sigBuilder.build();
+    this.rowSignature = adapter.getRowSignature();
 
     // initialize keycolumn index builders
     final ArrayList<RowBasedIndexBuilder> indexBuilders = new ArrayList<>(rowSignature.size());
