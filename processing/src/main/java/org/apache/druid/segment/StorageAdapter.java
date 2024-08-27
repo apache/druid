@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -34,7 +35,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.Optional;
 
 /**
  *
@@ -140,10 +140,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHo
     builder.addTimeColumn();
 
     for (final String column : Iterables.concat(getAvailableDimensions(), getAvailableMetrics())) {
-      builder.add(
-          column,
-          Optional.ofNullable(getColumnCapabilities(column)).map(ColumnCapabilities::toColumnType).orElse(null)
-      );
+      builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
     }
 
     return builder.build();

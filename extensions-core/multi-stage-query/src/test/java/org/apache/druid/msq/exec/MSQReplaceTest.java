@@ -279,8 +279,8 @@ public class MSQReplaceTest extends MSQTestBase
   public void testReplaceOnFooWithAllClusteredByDimExplicitSort(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
@@ -323,12 +323,12 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
-                             new Object[]{978307200000L, "1", 4.0f},
-                             new Object[]{946771200000L, "10.1", 2.0f},
-                             new Object[]{946857600000L, "2", 3.0f},
-                             new Object[]{978480000000L, "abc", 6.0f},
-                             new Object[]{978393600000L, "def", 5.0f}
+                             new Object[]{NullHandling.sqlCompatible() ? "" : null, 946684800000L, 1.0f},
+                             new Object[]{"1", 978307200000L, 4.0f},
+                             new Object[]{"10.1", 946771200000L, 2.0f},
+                             new Object[]{"2", 946857600000L, 3.0f},
+                             new Object[]{"abc", 978480000000L, 6.0f},
+                             new Object[]{"def", 978393600000L, 5.0f}
                          )
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
@@ -365,8 +365,8 @@ public class MSQReplaceTest extends MSQTestBase
     // forceSegmentSortByTime = false. (Same expectations as the prior test,
     // testReplaceOnFooWithAllClusteredByDimExplicitSort.)
     RowSignature rowSignature = RowSignature.builder()
-                                            .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
                                             .add("m1", ColumnType.FLOAT)
                                             .build();
 
@@ -409,12 +409,12 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
-                             new Object[]{978307200000L, "1", 4.0f},
-                             new Object[]{946771200000L, "10.1", 2.0f},
-                             new Object[]{946857600000L, "2", 3.0f},
-                             new Object[]{978480000000L, "abc", 6.0f},
-                             new Object[]{978393600000L, "def", 5.0f}
+                             new Object[]{NullHandling.sqlCompatible() ? "" : null, 946684800000L, 1.0f},
+                             new Object[]{"1", 978307200000L, 4.0f},
+                             new Object[]{"10.1", 946771200000L, 2.0f},
+                             new Object[]{"2", 946857600000L, 3.0f},
+                             new Object[]{"abc", 978480000000L, 6.0f},
+                             new Object[]{"def", 978393600000L, 5.0f}
                          )
                      )
                      .setExpectedSegmentGenerationProgressCountersForStageWorker(
