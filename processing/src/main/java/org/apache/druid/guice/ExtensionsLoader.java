@@ -286,7 +286,6 @@ public class ExtensionsLoader
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
       }
-
       addAllFromFileSystem();
     }
 

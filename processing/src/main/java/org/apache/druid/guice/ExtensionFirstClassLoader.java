@@ -92,7 +92,6 @@ public class ExtensionFirstClassLoader extends URLClassLoader
       throw new ClassNotFoundException();
     }
 
-
   @Override
   public URL getResource(final String name)
   {
@@ -109,6 +108,7 @@ public class ExtensionFirstClassLoader extends URLClassLoader
 
     return druidLoader.getResource(name);
   }
+
   protected URL getResourceFromExtensionsDependencies(final String name)
   {
     URL resourceFromExtension = null;
@@ -120,7 +120,6 @@ public class ExtensionFirstClassLoader extends URLClassLoader
     }
     return resourceFromExtension;
   }
-
 
   @Override
   public Enumeration<URL> getResources(final String name) throws IOException

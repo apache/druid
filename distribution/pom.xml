@@ -222,7 +222,6 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <outputFile>${druid.basedir}/output</outputFile>
                                     <executable>${project.parent.basedir}/examples/bin/run-java</executable>
                                     <arguments>
                                         <argument>-classpath</argument>
