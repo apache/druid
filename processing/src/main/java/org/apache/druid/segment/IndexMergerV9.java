@@ -732,7 +732,7 @@ public class IndexMergerV9 implements IndexMerger
           if (serde == null) {
             throw new ISE("Unknown type[%s]", type.getComplexTypeName());
           }
-          writer = serde.getSerializer(segmentWriteOutMedium, metric);
+          writer = serde.getSerializer(segmentWriteOutMedium, metric, indexSpec);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);

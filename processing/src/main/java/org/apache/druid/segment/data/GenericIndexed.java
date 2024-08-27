@@ -167,6 +167,12 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     {
       return Comparators.<String>naturalNullsFirst().compare(o1, o2);
     }
+
+    @Override
+    public boolean readRetainsBufferReference()
+    {
+      return false;
+    }
   };
 
   public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)

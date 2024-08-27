@@ -17,50 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.spectator.histogram;
+package org.apache.druid.query.aggregation.tdigestsketch;
 
-import org.apache.druid.segment.column.ComplexColumn;
+import org.junit.Assert;
+import org.junit.jupiter.api.Test;
 
-import javax.annotation.Nullable;
-
-public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
+public class TDigestSketchObjectStrategyTest
 {
-  private final SpectatorHistogramIndexed index;
-  private final String typeName;
-
-  public SpectatorHistogramIndexBasedComplexColumn(String typeName, SpectatorHistogramIndexed index)
+  @Test
+  public void testReadRetainsBufferReference()
   {
-    this.index = index;
-    this.typeName = typeName;
-  }
-
-  @Override
-  public Class<?> getClazz()
-  {
-    return index.getClazz();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return typeName;
-  }
-
-  @Override
-  @Nullable
-  public Object getRowValue(int rowNum)
-  {
-    return index.get(rowNum);
-  }
-
-  @Override
-  public int getLength()
-  {
-    return -1;
-  }
-
-  @Override
-  public void close()
-  {
+    TDigestSketchObjectStrategy strategy = new TDigestSketchObjectStrategy();
+    Assert.assertFalse(strategy.readRetainsBufferReference());
   }
 }
