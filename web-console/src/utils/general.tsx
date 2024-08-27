@@ -381,6 +381,14 @@ export function findMap<T, Q>(
   return filterMap(xs, f)[0];
 }
 
+export function changeByIndex<T>(
+  xs: readonly T[],
+  i: number,
+  f: (x: T, i: number) => T | undefined,
+): T[] {
+  return filterMap(xs, (x, j) => (j === i ? f(x, i) : x));
+}
+
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }

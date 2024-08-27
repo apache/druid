@@ -16,42 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-
-.form-group-with-info {
-  label.#{$bp-ns}-label {
-    position: relative;
-
-    .#{$bp-ns}-text-muted {
-      position: absolute;
-      right: 0;
-
-      // This is only needed because BP4 alerts are too agro in setting CSS on icons
-      .#{$bp-ns}-icon {
-        margin-right: 0;
-      }
-    }
-  }
-
-  .#{$bp-ns}-text-muted .#{$bp-ns}-popover-target {
-    margin-top: 0;
-  }
-
-  .#{$bp-ns}-form-content {
-    position: relative;
-
-    & > .info-popover {
-      position: absolute;
-      right: 0;
-      top: 5px;
-    }
-  }
-}
-
-.#{$bp-ns}-popover-content {
-  .code-block {
-    white-space: pre;
-    overflow: auto;
-    font-family: monospace;
-  }
-}
+export * from './intermediate-query-state';
+export * from './query-manager';
+export * from './query-state';
+export * from './result-with-auxiliary-work';
