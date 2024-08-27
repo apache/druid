@@ -403,7 +403,7 @@ The following example query uses the [ARRAY_CONTAINS](./sql-functions.md#array_c
 
 ```sql
 {
-   "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?,  doubleArrayColumn)",
+   "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
    "parameters": [
       {
         "type": "ARRAY",
