@@ -21,7 +21,7 @@
 .formatted-input {
   position: relative;
 
-  & > .#{$bp-ns}-popover2-target {
+  & > .#{$bp-ns}-popover-target {
     position: absolute;
     width: 0;
     right: 0;

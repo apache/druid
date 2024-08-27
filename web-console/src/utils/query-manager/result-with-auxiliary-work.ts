@@ -16,42 +16,15 @@
  * limitations under the License.
  */
 
-@import '../../variables';
+import type { CancelToken } from 'axios';
 
-.form-group-with-info {
-  label.#{$bp-ns}-label {
-    position: relative;
+export type AuxiliaryQueryFn<R> = (result: R, cancelToken: CancelToken) => Promise<R>;
+export class ResultWithAuxiliaryWork<R> {
+  public readonly result: R;
+  public readonly auxiliaryQueries: AuxiliaryQueryFn<R>[];
 
-    .#{$bp-ns}-text-muted {
-      position: absolute;
-      right: 0;
-
-      // This is only needed because BP4 alerts are too agro in setting CSS on icons
-      .#{$bp-ns}-icon {
-        margin-right: 0;
-      }
-    }
-  }
-
-  .#{$bp-ns}-text-muted .#{$bp-ns}-popover-target {
-    margin-top: 0;
-  }
-
-  .#{$bp-ns}-form-content {
-    position: relative;
-
-    & > .info-popover {
-      position: absolute;
-      right: 0;
-      top: 5px;
-    }
-  }
-}
-
-.#{$bp-ns}-popover-content {
-  .code-block {
-    white-space: pre;
-    overflow: auto;
-    font-family: monospace;
+  constructor(result: R, auxiliaryQueries: AuxiliaryQueryFn<R>[]) {
+    this.result = result;
+    this.auxiliaryQueries = auxiliaryQueries;
   }
 }
