@@ -39,6 +39,7 @@ interface FilterRendererProps {
 }
 
 export function GenericFilterInput({ column, filter, onChange, key }: FilterRendererProps) {
+  const INPUT_DEBOUNCE_TIME_IN_MILLISECONDS = 1000;
   const [menuOpen, setMenuOpen] = useState(false);
   const [focusedText, setFocusedText] = useState<string | undefined>();
   const [debouncedValue, setDebouncedValue] = useState<string | undefined>();
@@ -56,7 +57,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
         onChange(combineModeAndNeedle(mode, focusedText));
         setDebouncedValue(focusedText);
       }
-    }, 300);
+    }, INPUT_DEBOUNCE_TIME_IN_MILLISECONDS);
 
     return () => {
       clearTimeout(handler);
