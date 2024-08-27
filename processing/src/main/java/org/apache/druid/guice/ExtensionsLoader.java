@@ -318,6 +318,8 @@ public class ExtensionsLoader
               )
           );
         }
+
+        // Read the bundled extension-dependecies.json file and find class loaders each extension depends on.
         List<ExtensionDependencies> extensionDependenciesList = new ObjectMapper().readValue(
             Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON).toFile(),
             new TypeReference<List<ExtensionDependencies>>() {}
@@ -332,7 +334,7 @@ public class ExtensionsLoader
               null
           );
 
-          // If the extension is not being loaded, don't check its dependencies.
+          // If the extension is not being loaded, don't set its dependencies.
           if (standardClassLoader == null || extensionFirstClassLoader == null) {
             continue;
           }
