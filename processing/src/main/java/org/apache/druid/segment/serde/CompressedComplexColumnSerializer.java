@@ -30,9 +30,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
-import org.apache.druid.segment.nested.NestedDataColumnMetadata;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.io.ByteArrayOutputStream;
@@ -86,7 +83,7 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
   public void open() throws IOException
   {
     writer = new CompressedVariableSizedBlobColumnSerializer(
-        NestedCommonFormatColumnSerializer.getInternalFileName(name, FILE_NAME),
+        ColumnSerializerUtils.getInternalFileName(name, FILE_NAME),
         segmentWriteOutMedium,
         indexSpec.getComplexMetricCompression()
     );
@@ -130,13 +127,13 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
     channel.write(ByteBuffer.wrap(new byte[]{V0}));
     channel.write(ByteBuffer.wrap(metadataBytes));
 
-    NestedCommonFormatColumnSerializer.writeInternal(smoosher, writer, name, FILE_NAME);
+    ColumnSerializerUtils.writeInternal(smoosher, writer, name, FILE_NAME);
     if (!nullRowsBitmap.isEmpty()) {
-      NestedCommonFormatColumnSerializer.writeInternal(
+      ColumnSerializerUtils.writeInternal(
           smoosher,
           nullBitmapWriter,
           name,
-          NestedCommonFormatColumnSerializer.NULL_BITMAP_FILE_NAME
+          ColumnSerializerUtils.NULL_BITMAP_FILE_NAME
       );
     }
   }
@@ -149,8 +146,8 @@ public class CompressedComplexColumnSerializer<T> implements GenericColumnSerial
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       IndexMerger.SERIALIZER_UTILS.writeString(
           baos,
-          NestedDataComplexTypeSerde.OBJECT_MAPPER.writeValueAsString(
-              new NestedDataColumnMetadata(
+          ColumnSerializerUtils.SMILE_MAPPER.writeValueAsString(
+              new ComplexColumnMetadata(
                   ByteOrder.nativeOrder(),
                   indexSpec.getBitmapSerdeFactory(),
                   name,

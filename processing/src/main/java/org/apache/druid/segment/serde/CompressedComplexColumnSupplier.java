@@ -28,9 +28,6 @@ import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
-import org.apache.druid.segment.nested.NestedDataColumnMetadata;
-import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -48,9 +45,9 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
 
     if (version == CompressedComplexColumnSerializer.V0) {
       try {
-        final NestedDataColumnMetadata metadata = NestedDataComplexTypeSerde.OBJECT_MAPPER.readValue(
+        final ComplexColumnMetadata metadata = ColumnSerializerUtils.SMILE_MAPPER.readValue(
             IndexMerger.SERIALIZER_UTILS.readString(bb),
-            NestedDataColumnMetadata.class
+            ComplexColumnMetadata.class
         );
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
 
@@ -64,7 +61,7 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
         );
 
         compressedColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
-            NestedCommonFormatColumnSerializer.getInternalFileName(
+            ColumnSerializerUtils.getInternalFileName(
                 metadata.getFileNameBase(),
                 CompressedComplexColumnSerializer.FILE_NAME
             ),
@@ -79,7 +76,7 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
           final ByteBuffer nullIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
               mapper,
               metadata.getFileNameBase(),
-              NestedCommonFormatColumnSerializer.NULL_BITMAP_FILE_NAME
+              ColumnSerializerUtils.NULL_BITMAP_FILE_NAME
           );
           nullValues = metadata.getBitmapSerdeFactory().getObjectStrategy().fromByteBufferWithSize(nullIndexBuffer);
         } else {

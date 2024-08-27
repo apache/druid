@@ -182,18 +182,20 @@ public final class CompressedBlockReader implements Closeable
     decompressedDataBuffer.position(startBlockOffset);
     // possibly patch together value from n underlying compressed pages
     if (size < decompressedDataBuffer.remaining()) {
-      // sweet, same buffer, we can return the buffer directly with position and limit set
+      // sweet, same buffer
       if (copyValuesOnRead) {
+        // caller specified copyValuesOnRead, so copy the memory to a heap byte array
         final byte[] bytes = new byte[size];
         decompressedDataBuffer.get(bytes, 0, size);
         return ByteBuffer.wrap(bytes).order(byteOrder);
       } else {
+        // if we don't need to copy, we can return the buffer directly with position and limit set
         final ByteBuffer dupe = decompressedDataBuffer.duplicate().order(byteOrder);
         dupe.position(startBlockOffset).limit(startBlockOffset + size);
         return dupe;
       }
     } else {
-      // spans multiple blocks, copy on heap
+      // spans multiple blocks, always copy on heap
       final byte[] bytes = new byte[size];
       int bytesRead = 0;
       int block = startBlockNumber;

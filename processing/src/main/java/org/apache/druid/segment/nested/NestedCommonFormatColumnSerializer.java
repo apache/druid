@@ -21,9 +21,9 @@ package org.apache.druid.segment.nested;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 
 import java.io.IOException;
@@ -50,18 +50,7 @@ import java.util.SortedMap;
 public abstract class NestedCommonFormatColumnSerializer implements GenericColumnSerializer<StructuredData>
 {
   public static final byte V0 = 0x00;
-  public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
-  public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
-  public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";
-  public static final String ARRAY_DICTIONARY_FILE_NAME = "__arrayDictionary";
-  public static final String ARRAY_ELEMENT_DICTIONARY_FILE_NAME = "__arrayElementDictionary";
-  public static final String ENCODED_VALUE_COLUMN_FILE_NAME = "__encodedColumn";
-  public static final String LONG_VALUE_COLUMN_FILE_NAME = "__longColumn";
-  public static final String DOUBLE_VALUE_COLUMN_FILE_NAME = "__doubleColumn";
-  public static final String BITMAP_INDEX_FILE_NAME = "__valueIndexes";
-  public static final String ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME = "__arrayElementIndexes";
   public static final String RAW_FILE_NAME = "__raw";
-  public static final String NULL_BITMAP_FILE_NAME = "__nullIndex";
   public static final String NESTED_FIELD_PREFIX = "__field_";
 
   public abstract void openDictionaryWriter() throws IOException;
@@ -86,12 +75,12 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   protected void writeInternal(FileSmoosher smoosher, Serializer serializer, String fileName) throws IOException
   {
-    writeInternal(smoosher, serializer, getColumnName(), fileName);
+    ColumnSerializerUtils.writeInternal(smoosher, serializer, getColumnName(), fileName);
   }
 
   protected void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String fileName) throws IOException
   {
-    writeInternal(smoosher, buffer, getColumnName(), fileName);
+    ColumnSerializerUtils.writeInternal(smoosher, buffer, getColumnName(), fileName);
   }
 
   protected void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
@@ -109,31 +98,5 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     buffer.put(bytes);
     buffer.flip();
     return buffer;
-  }
-
-  public static void writeInternal(FileSmoosher smoosher, Serializer serializer, String columnName, String fileName)
-      throws IOException
-  {
-    final String internalName = getInternalFileName(columnName, fileName);
-    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
-      serializer.writeTo(smooshChannel, smoosher);
-    }
-  }
-
-  public static void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String columnName, String fileName)
-      throws IOException
-  {
-    final String internalName = getInternalFileName(columnName, fileName);
-    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
-      smooshChannel.write(buffer);
-    }
-  }
-
-  /**
-   * Nested field columns are stored in separate
-   */
-  public static String getInternalFileName(String fileNameBase, String field)
-  {
-    return fileNameBase + "." + field;
   }
 }
