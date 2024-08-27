@@ -163,7 +163,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     private final long startOfStringLengthSection;
     private final long startOfStringDataSection;
 
-    protected StringArrayFrameColumn(
+    private StringArrayFrameColumn(
         Frame frame,
         Memory memory,
         long startOfStringLengthSection,

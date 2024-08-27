@@ -201,7 +201,7 @@ public class StringFrameColumnReader implements FrameColumnReader
      */
     private final boolean multiValue;
 
-    protected StringFrameColumn(
+    private StringFrameColumn(
         Frame frame,
         boolean multiValue,
         Memory memory,
