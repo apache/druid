@@ -226,7 +226,8 @@ public class ExtensionsLoader
         log.debug("added URL [%s] for extension [%s]", url, extension.getName());
         urls[i++] = url;
       }
-    } catch (MalformedURLException e) {
+    }
+    catch (MalformedURLException e) {
       throw new RuntimeException(e);
     }
 
@@ -249,7 +250,8 @@ public class ExtensionsLoader
           File parentDir = f.getParentFile();
           if (parentDir.isDirectory()) {
             File[] jars = parentDir.listFiles(
-                new FilenameFilter() {
+                new FilenameFilter()
+                {
                   @Override
                   public boolean accept(File dir, String name) {
                     return name != null && (name.endsWith(".jar") || name.endsWith(".JAR"));
@@ -265,7 +267,8 @@ public class ExtensionsLoader
         }
       }
       return urls;
-    } catch (IOException ex) {
+    }
+    catch (IOException ex) {
       throw new RuntimeException(ex);
     }
   }
@@ -294,33 +297,20 @@ public class ExtensionsLoader
 
     private void addAllFromFileSystem()
     {
-      for (File extension : getExtensionFilesToLoad()) {
-        try {
-          getClassLoaderForExtension(
-              extension,
-              true
-          );
-          getClassLoaderForExtension(
-              extension,
-              false
-          );
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
-
       try {
-        Map<Pair<String, Boolean>, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
+        Map<String, URLClassLoader> extensionFirstClassLoaderMap = new HashMap<>();
+        Map<String, URLClassLoader> standardClassLoaderMap = new HashMap<>();
+
         for (File extension : getExtensionFilesToLoad()) {
-          extensionClassLoaderMap.put(
-              Pair.of(extension.getName(), true),
+          extensionFirstClassLoaderMap.put(
+              extension.getName(),
               getClassLoaderForExtension(
                   extension,
                   true
               )
           );
-          extensionClassLoaderMap.put(
-              Pair.of(extension.getName(), false),
+          standardClassLoaderMap.put(
+              extension.getName(),
               getClassLoaderForExtension(
                   extension,
                   false
@@ -332,14 +322,15 @@ public class ExtensionsLoader
             new TypeReference<List<ExtensionDependencies>>() {}
         );
         for (ExtensionDependencies extensionDependencies : extensionDependenciesList) {
-          StandardClassLoader standardClassLoader = (StandardClassLoader) extensionClassLoaderMap.getOrDefault(
-              Pair.of(extensionDependencies.getName(), false),
+          StandardClassLoader extensionFirstClassLoader = (StandardClassLoader) extensionFirstClassLoaderMap.getOrDefault(
+              extensionDependencies.getName(),
               null
           );
-          StandardClassLoader extensionFirstClassLoader = (StandardClassLoader) extensionClassLoaderMap.getOrDefault(
-              Pair.of(extensionDependencies.getName(), true),
+          StandardClassLoader standardClassLoader = (StandardClassLoader) standardClassLoaderMap.getOrDefault(
+              extensionDependencies.getName(),
               null
           );
+
           // If the extension is not being loaded, don't check its dependencies.
           if (standardClassLoader == null || extensionFirstClassLoader == null) {
             continue;
@@ -348,11 +339,11 @@ public class ExtensionsLoader
           List<ClassLoader> standardClassLoaders = new ArrayList<>();
 
           for (String dependency : extensionDependencies.getDependencies()) {
-            if (!extensionClassLoaderMap.containsKey(Pair.of(dependency, true))) {
+            if (!extensionFirstClassLoaderMap.containsKey(dependency) || !standardClassLoaderMap.containsKey(dependency)) {
               throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
             }
-            extensionFirstClassLoaders.add(extensionClassLoaderMap.get(Pair.of(dependency, true)));
-            standardClassLoaders.add(extensionClassLoaderMap.get(Pair.of(dependency, false)));
+            extensionFirstClassLoaders.add(extensionFirstClassLoaderMap.get(dependency));
+            standardClassLoaders.add(standardClassLoaderMap.get(dependency));
 
           }
           extensionFirstClassLoader.setExtensionDependencyClassLoaders(extensionFirstClassLoaders);
@@ -373,12 +364,13 @@ public class ExtensionsLoader
               "Loading extension [%s], jars: %s",
               extension.getName(),
               Arrays.stream(loader.getURLs())
-                  .map(u -> new File(u.getPath()).getName())
-                  .collect(Collectors.joining(", "))
+                    .map(u -> new File(u.getPath()).getName())
+                    .collect(Collectors.joining(", "))
           );
 
           ServiceLoader.load(serviceClass, loader).forEach(impl -> tryAdd(impl, "local file system"));
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
           throw new RuntimeException(e);
         }
       }
