@@ -61,7 +61,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
 
     return () => {
       clearTimeout(handler);
-    }
+    };
   }, [focusedText, debouncedValue, mode, onChange]);
 
   return (
