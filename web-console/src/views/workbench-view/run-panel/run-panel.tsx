@@ -33,7 +33,7 @@ import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { MenuCheckbox, MenuTristate } from '../../../components';
+import { MenuBoolean, MenuCheckbox } from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
 import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
 import type {
@@ -320,13 +320,13 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 )}
                 <MenuItem
                   icon={IconNames.PROPERTIES}
-                  text="Edit context"
+                  text="Edit query context..."
                   onClick={() => setEditContextDialogOpen(true)}
                   label={pluralIfNeeded(numContextKeys, 'key')}
                 />
                 <MenuItem
                   icon={IconNames.HELP}
-                  text="Define parameters"
+                  text="Define parameters..."
                   onClick={() => setEditParametersDialogOpen(true)}
                   label={queryParameters ? pluralIfNeeded(queryParameters.length, 'parameter') : ''}
                 />
@@ -372,49 +372,48 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 {effectiveEngine === 'sql-msq-task' ? (
                   <>
                     <MenuItem icon={IconNames.BRING_DATA} text="INSERT / REPLACE specific context">
-                      <MenuCheckbox
-                        checked={forceSegmentSortByTime}
+                      <MenuBoolean
                         text="Force segment sort by time"
-                        labelElement={EXPERIMENTAL_ICON}
-                        onChange={() =>
+                        value={forceSegmentSortByTime}
+                        onValueChange={forceSegmentSortByTime =>
                           changeQueryContext({
                             ...queryContext,
-                            forceSegmentSortByTime: !forceSegmentSortByTime,
+                            forceSegmentSortByTime,
                           })
                         }
+                        optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                       />
-                      <MenuCheckbox
-                        checked={useConcurrentLocks}
+                      <MenuBoolean
                         text="Use concurrent locks"
-                        labelElement={EXPERIMENTAL_ICON}
-                        onChange={() =>
+                        value={useConcurrentLocks}
+                        onValueChange={useConcurrentLocks =>
                           changeQueryContext({
                             ...queryContext,
-                            useConcurrentLocks: !useConcurrentLocks,
+                            useConcurrentLocks,
                           })
                         }
+                        optionsLabelElement={{ true: EXPERIMENTAL_ICON }}
                       />
-                      <MenuTristate
-                        icon={IconNames.DISABLE}
+                      <MenuBoolean
                         text="Fail on empty insert"
                         value={failOnEmptyInsert}
+                        undefinedLabel="auto"
                         undefinedEffectiveValue={false}
                         onValueChange={failOnEmptyInsert =>
                           changeQueryContext({ ...queryContext, failOnEmptyInsert })
                         }
                       />
-                      <MenuTristate
-                        icon={IconNames.STOPWATCH}
+                      <MenuBoolean
                         text="Wait until segments have loaded"
                         value={waitUntilSegmentsLoad}
+                        undefinedLabel="auto"
                         undefinedEffectiveValue={ingestMode}
                         onValueChange={waitUntilSegmentsLoad =>
                           changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
                         }
                       />
                       <MenuItem
-                        icon={IconNames.TH_DERIVED}
-                        text="Edit index spec"
+                        text="Edit index spec..."
                         label={summarizeIndexSpec(indexSpec)}
                         shouldDismissPopover={false}
                         onClick={() => {
@@ -439,19 +438,21 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         />
                       ))}
                     </MenuItem>
-                    <MenuTristate
+                    <MenuBoolean
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
                       value={finalizeAggregations}
+                      undefinedLabel="auto"
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={finalizeAggregations =>
                         changeQueryContext({ ...queryContext, finalizeAggregations })
                       }
                     />
-                    <MenuTristate
+                    <MenuBoolean
                       icon={IconNames.FORK}
                       text="Enable GroupBy multi-value unnesting"
                       value={groupByEnableMultiValueUnnesting}
+                      undefinedLabel="auto"
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={groupByEnableMultiValueUnnesting =>
                         changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })

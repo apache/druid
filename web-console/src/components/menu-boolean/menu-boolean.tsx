@@ -19,18 +19,20 @@
 import type { MenuItemProps } from '@blueprintjs/core';
 import { MenuItem } from '@blueprintjs/core';
 import classNames from 'classnames';
+import type { ReactNode } from 'react';
 import React from 'react';
 
 import { tickIcon } from '../../utils';
 
-export interface MenuTristateProps extends Omit<MenuItemProps, 'label'> {
+export interface MenuBooleanProps extends Omit<MenuItemProps, 'label'> {
   value: boolean | undefined;
   onValueChange(value: boolean | undefined): void;
   undefinedLabel?: string;
   undefinedEffectiveValue?: boolean;
+  optionsLabelElement?: Partial<Record<'undefined' | 'true' | 'false', ReactNode>>;
 }
 
-export function MenuTristate(props: MenuTristateProps) {
+export function MenuBoolean(props: MenuBooleanProps) {
   const {
     value,
     onValueChange,
@@ -38,8 +40,10 @@ export function MenuTristate(props: MenuTristateProps) {
     undefinedEffectiveValue,
     className,
     shouldDismissPopover,
+    optionsLabelElement = {},
     ...rest
   } = props;
+  const effectiveValue = undefinedLabel ? value : value ?? undefinedEffectiveValue;
   const shouldDismiss = shouldDismissPopover ?? false;
 
   function formatValue(value: boolean | undefined): string {
@@ -50,19 +54,19 @@ export function MenuTristate(props: MenuTristateProps) {
     <MenuItem
       className={classNames('menu-tristate', className)}
       shouldDismissPopover={shouldDismiss}
-      label={
-        formatValue(value) +
-        (typeof value === 'undefined' && typeof undefinedEffectiveValue === 'boolean'
+      label={`${formatValue(effectiveValue)}${
+        typeof effectiveValue === 'undefined' && typeof undefinedEffectiveValue === 'boolean'
           ? ` (${undefinedEffectiveValue})`
-          : '')
-      }
+          : ''
+      }`}
       {...rest}
     >
-      {[undefined, true, false].map((v, i) => (
+      {(undefinedLabel ? [undefined, true, false] : [true, false]).map(v => (
         <MenuItem
-          key={i}
-          icon={tickIcon(value === v)}
+          key={String(v)}
+          icon={tickIcon(effectiveValue === v)}
           text={formatValue(v)}
+          labelElement={optionsLabelElement[String(v) as 'undefined' | 'true' | 'false']}
           onClick={() => onValueChange(v)}
           shouldDismissPopover={shouldDismiss}
         />

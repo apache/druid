@@ -873,6 +873,10 @@ describe('spec utils', () => {
             "dataSource": "wikipedia",
             "dimensionsSpec": {
               "dimensions": [
+                {
+                  "name": "__time",
+                  "type": "long",
+                },
                 "user",
                 "id",
                 {

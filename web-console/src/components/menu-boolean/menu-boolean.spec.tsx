@@ -19,14 +19,15 @@
 import { render } from '@testing-library/react';
 import React from 'react';
 
-import { MenuTristate } from './menu-tristate';
+import { MenuBoolean } from './menu-boolean';
 
-describe('MenuTristate', () => {
+describe('MenuBoolean', () => {
   it('matches snapshot undefined', () => {
     const menuCheckbox = (
-      <MenuTristate
+      <MenuBoolean
         text="hello"
         value={undefined}
+        undefinedLabel="auto"
         undefinedEffectiveValue
         onValueChange={() => {}}
       />
@@ -37,13 +38,20 @@ describe('MenuTristate', () => {
 
   it('matches snapshot false', () => {
     const menuCheckbox = (
-      <MenuTristate
+      <MenuBoolean
         text="hello"
         value={false}
+        undefinedLabel="auto"
         undefinedEffectiveValue={false}
         onValueChange={() => {}}
       />
     );
+    const { container } = render(menuCheckbox);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+
+  it('matches snapshot no undefined', () => {
+    const menuCheckbox = <MenuBoolean text="hello" value={false} onValueChange={() => {}} />;
     const { container } = render(menuCheckbox);
     expect(container.firstChild).toMatchSnapshot();
   });
