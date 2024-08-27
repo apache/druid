@@ -356,6 +356,7 @@ public class ExtensionsLoader
       }
 
       for (File extension : getExtensionFilesToLoad()) {
+        log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
           final URLClassLoader loader = getClassLoaderForExtension(
               extension,
