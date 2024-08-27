@@ -17,50 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.spectator.histogram;
+package org.apache.druid.query.aggregation.momentsketch;
 
-import org.apache.druid.segment.column.ComplexColumn;
+import org.junit.Assert;
+import org.junit.Test;
 
-import javax.annotation.Nullable;
-
-public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
+public class MomentSketchObjectStrategyTest
 {
-  private final SpectatorHistogramIndexed index;
-  private final String typeName;
-
-  public SpectatorHistogramIndexBasedComplexColumn(String typeName, SpectatorHistogramIndexed index)
+  @Test
+  public void testReadRetainsBufferReference()
   {
-    this.index = index;
-    this.typeName = typeName;
-  }
-
-  @Override
-  public Class<?> getClazz()
-  {
-    return index.getClazz();
-  }
-
-  @Override
-  public String getTypeName()
-  {
-    return typeName;
-  }
-
-  @Override
-  @Nullable
-  public Object getRowValue(int rowNum)
-  {
-    return index.get(rowNum);
-  }
-
-  @Override
-  public int getLength()
-  {
-    return -1;
-  }
-
-  @Override
-  public void close()
-  {
+    MomentSketchObjectStrategy strategy = new MomentSketchObjectStrategy();
+    Assert.assertFalse(strategy.readRetainsBufferReference());
   }
 }

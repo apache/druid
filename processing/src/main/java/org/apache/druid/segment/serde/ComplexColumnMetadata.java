@@ -18,7 +18,7 @@
  */
 
 
-package org.apache.druid.segment.nested;
+package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,7 +26,7 @@ import org.apache.druid.segment.data.BitmapSerdeFactory;
 
 import java.nio.ByteOrder;
 
-public class NestedDataColumnMetadata
+public class ComplexColumnMetadata
 {
   private final ByteOrder byteOrder;
   private final BitmapSerdeFactory bitmapSerdeFactory;
@@ -34,7 +34,7 @@ public class NestedDataColumnMetadata
   private final Boolean hasNulls;
 
   @JsonCreator
-  public NestedDataColumnMetadata(
+  public ComplexColumnMetadata(
       @JsonProperty("byteOrder") ByteOrder byteOrder,
       @JsonProperty("bitmapSerdeFactory") BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("fileNameBase") String fileNameBase,

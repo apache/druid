@@ -57,4 +57,10 @@ public class SpectatorHistogramObjectStrategy implements ObjectStrategy<Spectato
   {
     return SpectatorHistogramAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    return false;
+  }
 }
