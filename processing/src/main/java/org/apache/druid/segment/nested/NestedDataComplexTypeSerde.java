@@ -20,13 +20,8 @@
 package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
@@ -52,8 +47,6 @@ import java.nio.ByteBuffer;
 public class NestedDataComplexTypeSerde extends ComplexMetricSerde
 {
   public static final String TYPE_NAME = "json";
-
-  public static final ObjectMapper OBJECT_MAPPER;
 
   public static final NestedDataComplexTypeSerde INSTANCE = new NestedDataComplexTypeSerde();
 
