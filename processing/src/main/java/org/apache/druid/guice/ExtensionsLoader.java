@@ -253,7 +253,8 @@ public class ExtensionsLoader
                 new FilenameFilter()
                 {
                   @Override
-                  public boolean accept(File dir, String name) {
+                  public boolean accept(File dir, String name)
+                  {
                     return name != null && (name.endsWith(".jar") || name.endsWith(".JAR"));
                   }
                 }
@@ -356,10 +357,11 @@ public class ExtensionsLoader
 
       for (File extension : getExtensionFilesToLoad()) {
         try {
-          URLClassLoader loader = getClassLoaderForExtension(
+          final URLClassLoader loader = getClassLoaderForExtension(
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
+
           log.info(
               "Loading extension [%s], jars: %s",
               extension.getName(),
@@ -382,7 +384,7 @@ public class ExtensionsLoader
       if (serviceImplName == null) {
         log.warn(
             "Implementation %s was ignored because it doesn't have a canonical name, "
-                + "is it a local or anonymous class?",
+            + "is it a local or anonymous class?",
             serviceImpl.getClass().getName()
         );
       } else if (!implClassNamesToLoad.contains(serviceImplName)) {
