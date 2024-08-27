@@ -70,8 +70,15 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
     >
       <div className={Classes.DIALOG_BODY}>
         <p>
-          Druid SQL supports dynamic parameters using question mark <Code>?</Code> syntax, where
-          parameters are bound positionally to ? placeholders at execution time.
+          Define up to 2 parameter values to replace question mark <Code>?</Code> placeholders in
+          your query. See the{' '}
+          <a
+            href="https://druid.apache.org/docs/0.20.2/querying/sql.html#dynamic-parameters"
+            target="_blank"
+          >
+            Druid SQL docs
+          </a>{' '}
+          Druid SQL docs for more information and examples.
         </p>
         {currentQueryParameters.map((queryParameter, i) => {
           const { type, value } = queryParameter;

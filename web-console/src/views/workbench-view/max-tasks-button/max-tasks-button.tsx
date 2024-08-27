@@ -50,6 +50,7 @@ export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIc
   defaultQueryContext: QueryContext;
   menuHeader?: JSX.Element;
   maxTasksLabelFn?: (maxNum: number) => { text: string; label?: string };
+  maxNumTaskOptions?: number[];
   fullClusterCapacityLabelFn?: (clusterCapacity: number) => string;
 }
 
@@ -62,6 +63,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
     menuHeader,
     maxTasksLabelFn = DEFAULT_MAX_NUM_TASKS_LABEL_FN,
     fullClusterCapacityLabelFn = DEFAULT_FULL_CLUSTER_CAPACITY_LABEL_FN,
+    maxNumTaskOptions = MAX_NUM_TASK_OPTIONS,
     ...rest
   } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
@@ -73,8 +75,8 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
     typeof clusterCapacity === 'number' ? fullClusterCapacityLabelFn(clusterCapacity) : undefined;
 
   const shownMaxNumTaskOptions = clusterCapacity
-    ? MAX_NUM_TASK_OPTIONS.filter(_ => _ <= clusterCapacity)
-    : MAX_NUM_TASK_OPTIONS;
+    ? maxNumTaskOptions.filter(_ => _ <= clusterCapacity)
+    : maxNumTaskOptions;
 
   return (
     <>
@@ -90,6 +92,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 icon={tickIcon(typeof maxNumTasks === 'undefined')}
                 text={fullClusterCapacity}
                 onClick={() => changeQueryContext(deleteKeys(queryContext, ['maxNumTasks']))}
+                shouldDismissPopover
               />
             )}
             {shownMaxNumTaskOptions.map(m => {
@@ -102,6 +105,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                   text={text}
                   label={label}
                   onClick={() => changeQueryContext({ ...queryContext, maxNumTasks: m })}
+                  shouldDismissPopover
                 />
               );
             })}

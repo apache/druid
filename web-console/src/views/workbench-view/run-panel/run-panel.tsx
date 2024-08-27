@@ -41,7 +41,6 @@ import type {
   DruidEngine,
   IndexSpec,
   QueryContext,
-  SelectDestination,
   SqlJoinAlgorithm,
   WorkbenchQuery,
 } from '../../../druid-models';
@@ -99,7 +98,10 @@ const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
 };
 
 export interface RunPanelProps
-  extends Pick<MaxTasksButtonProps, 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'> {
+  extends Pick<
+    MaxTasksButtonProps,
+    'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxNumTaskOptions'
+  > {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
   running: boolean;
@@ -125,6 +127,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     maxTasksMenuHeader,
     enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
     maxTasksLabelFn,
+    maxNumTaskOptions,
     fullClusterCapacityLabelFn,
   } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
@@ -170,7 +173,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     defaultQueryContext,
   );
   const finalizeAggregations = queryContext.finalizeAggregations;
-  const waitUntilSegmentsLoad = queryContext.waitUntilSegmentsLoad;
   const groupByEnableMultiValueUnnesting = queryContext.groupByEnableMultiValueUnnesting;
   const sqlJoinAlgorithm = getQueryContextKey(
     'sqlJoinAlgorithm',
@@ -384,15 +386,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           changeQueryContext({ ...queryContext, failOnEmptyInsert })
                         }
                       />
-                      <MenuTristate
-                        icon={IconNames.STOPWATCH}
-                        text="Wait until segments have loaded"
-                        value={waitUntilSegmentsLoad}
-                        undefinedEffectiveValue={ingestMode}
-                        onValueChange={waitUntilSegmentsLoad =>
-                          changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
-                        }
-                      />
                       <MenuItem
                         icon={IconNames.TH_DERIVED}
                         text="Edit index spec"
@@ -454,37 +447,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           }
                         />
                       ))}
-                    </MenuItem>
-                    <MenuItem
-                      icon={IconNames.MANUALLY_ENTERED_DATA}
-                      text="SELECT destination"
-                      label={selectDestination}
-                      intent={intent}
-                    >
-                      {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
-                        <MenuItem
-                          key={o}
-                          icon={tickIcon(selectDestination === o)}
-                          text={o}
-                          shouldDismissPopover={false}
-                          onClick={() =>
-                            changeQueryContext({ ...queryContext, selectDestination: o })
-                          }
-                        />
-                      ))}
-                      <MenuDivider />
-                      <MenuCheckbox
-                        checked={selectDestination === 'taskReport' ? !query.unlimited : false}
-                        intent={intent}
-                        disabled={selectDestination !== 'taskReport'}
-                        text="Limit SELECT results in taskReport"
-                        labelElement={
-                          query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
-                        }
-                        onChange={() => {
-                          onQueryChange(query.toggleUnlimited());
-                        }}
-                      />
                     </MenuItem>
                     <MenuCheckbox
                       checked={durableShuffleStorage}
@@ -568,6 +530,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               defaultQueryContext={defaultQueryContext}
               menuHeader={maxTasksMenuHeader}
               maxTasksLabelFn={maxTasksLabelFn}
+              maxNumTaskOptions={maxNumTaskOptions}
               fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
             />
           )}
