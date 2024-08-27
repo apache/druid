@@ -6567,7 +6567,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("arrayBool", ColumnType.LONG_ARRAY)
                     .add("arrayNestedLong", ColumnType.NESTED_DATA)
                     .add("arrayObject", ColumnType.NESTED_DATA)
-                    .add("null", ColumnType.STRING)
+                    .add("null", NullHandling.sqlCompatible() ? ColumnType.LONG : ColumnType.STRING)
                     .add("cstr", ColumnType.STRING)
                     .add("clong", ColumnType.LONG)
                     .add("cdouble", ColumnType.DOUBLE)

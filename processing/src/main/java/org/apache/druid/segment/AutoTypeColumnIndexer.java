@@ -405,8 +405,10 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       return ColumnType.NESTED_DATA;
     }
     if (isConstant && constantValue == null) {
-      // we didn't see anything, so we can be anything, so be long as it is the most restrictive type
-      return ColumnType.LONG;
+      // we didn't see anything, so we can be anything, so be long as it is the most restrictive type in SQL compatible
+      // mode. Default value mode however doesn't allow null numeric values to exist, so we're going to be a STRING
+      // since they can have nulls
+      return NullHandling.sqlCompatible() ? ColumnType.LONG : ColumnType.STRING;
     }
     if (fieldIndexers.size() == 1 && fieldIndexers.containsKey(NestedPathFinder.JSON_PATH_ROOT)) {
       FieldIndexer rootField = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
@@ -552,6 +554,9 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   {
     if (fieldIndexers.size() > 1 || hasNestedData) {
       return null;
+    }
+    if (isConstant && constantValue == null) {
+      return NilColumnValueSelector.instance();
     }
     final FieldIndexer root = fieldIndexers.get(NestedPathFinder.JSON_PATH_ROOT);
     if (root == null) {
