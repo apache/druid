@@ -285,7 +285,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     @Override
     protected Comparator<Object> getComparator()
     {
-      return Comparator.nullsFirst(Comparator.comparing(o -> ((String) o)));
+      return Comparator.nullsFirst(ColumnType.STRING_ARRAY.getStrategy());
     }
 
     /**
