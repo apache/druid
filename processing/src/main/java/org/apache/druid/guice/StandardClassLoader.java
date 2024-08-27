@@ -48,7 +48,7 @@ public class StandardClassLoader extends URLClassLoader
   @Override
   protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException
   {
-    Class<?> clazz = null;
+    Class<?> clazz;
     try {
       clazz = super.loadClass(name, resolve);
     }
