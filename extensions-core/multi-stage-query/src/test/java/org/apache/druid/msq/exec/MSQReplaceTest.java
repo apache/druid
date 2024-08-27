@@ -337,7 +337,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
                              context,
-                             Collections.singletonList("dim1"),
+                             Collections.emptyList(),
                              DimensionsSpec.builder()
                                            .setDimensions(
                                                ImmutableList.of(
