@@ -19,6 +19,8 @@
 
 package org.apache.druid.cli;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.google.common.annotations.VisibleForTesting;
@@ -32,6 +34,7 @@ import io.tesla.aether.Repository;
 import io.tesla.aether.TeslaAether;
 import io.tesla.aether.guice.RepositorySystemSessionProvider;
 import io.tesla.aether.internal.DefaultTeslaAether;
+import org.apache.druid.guice.ExtensionDependencies;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.FileUtils;
@@ -53,14 +56,12 @@ import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -287,14 +288,16 @@ public class PullDependencies implements Runnable
 
     final File extensionsDir = new File(extensionsConfig.getDirectory());
     final File hadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
-    Path temporaryDependencyPath = null;
+    List<ExtensionDependencies> extensionDependenciesList;
+    final ObjectMapper objectMapper = new ObjectMapper();
     final Path extensionDependenciesPath = new File(extensionsDir, EXTENSION_DEPENDENCIES_JSON).toPath();
     try {
+      // Read extension dependencies into memory, TODO do some circular dependency validation.
+      extensionDependenciesList = objectMapper.readValue(
+          extensionDependenciesPath.toFile(),
+          new TypeReference<List<ExtensionDependencies>>() {}
+      );
       if (clean) {
-        // Copy dependencies file to temp location
-        temporaryDependencyPath = Files.copy(
-            extensionDependenciesPath,
-            Files.createTempDirectory("extensionDependencies").resolve(EXTENSION_DEPENDENCIES_JSON));
         FileUtils.deleteDirectory(extensionsDir);
         FileUtils.deleteDirectory(hadoopDependenciesDir);
       }
@@ -345,12 +348,10 @@ public class PullDependencies implements Runnable
       log.info("Finish downloading dependencies for hadoop extension coordinates: [%s]", hadoopCoordinates);
 
       // Copy dependencies file back to extensions directory
-      if (temporaryDependencyPath != null) {
-        Files.copy(
-            temporaryDependencyPath,
-            extensionDependenciesPath
-        );
+      if (extensionDependenciesList == null) {
+        throw new RuntimeException("Failed to copy extension dependencies file to extensions directory");
       }
+      objectMapper.writeValue(extensionDependenciesPath.toFile(), extensionDependenciesList);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

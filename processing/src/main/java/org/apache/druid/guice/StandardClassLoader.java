@@ -23,13 +23,14 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 
 import javax.annotation.Nonnull;
+
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
+
 
 /**
  * The ClassLoader that gets used when druid.extensions.useExtensionClassloaderFirst = false.
@@ -50,7 +51,8 @@ public class StandardClassLoader extends URLClassLoader
     Class<?> clazz = null;
     try {
       clazz = super.loadClass(name, resolve);
-    } catch (ClassNotFoundException e) {
+    }
+    catch (ClassNotFoundException e) {
       clazz = loadClassFromExtensionDependencies(name);
     }
     if (resolve) {
@@ -58,18 +60,6 @@ public class StandardClassLoader extends URLClassLoader
     }
 
     return clazz;
-  }
-
-  protected Class<?> loadClassFromExtensionDependencies(final String name) throws ClassNotFoundException
-  {
-    for (ClassLoader classLoader : extensionDependencyClassLoaders) {
-      try {
-        return classLoader.loadClass(name);
-      }
-      catch (ClassNotFoundException ignored) {
-      }
-    }
-    throw new ClassNotFoundException();
   }
 
   @Override
@@ -84,6 +74,15 @@ public class StandardClassLoader extends URLClassLoader
     return getResourceFromExtensionsDependencies(name);
   }
 
+  @Override
+  public Enumeration<URL> getResources(final String name) throws IOException
+  {
+    final List<URL> urls = new ArrayList<>();
+    Iterators.addAll(urls, Iterators.forEnumeration(super.getResources(name)));
+    addExtensionResources(name, urls);
+    return Iterators.asEnumeration(urls.iterator());
+  }
+
   protected URL getResourceFromExtensionsDependencies(final String name)
   {
     URL resourceFromExtension = null;
@@ -96,22 +95,27 @@ public class StandardClassLoader extends URLClassLoader
     return resourceFromExtension;
   }
 
-  @Override
-  public Enumeration<URL> getResources(final String name) throws IOException
+  protected Class<?> loadClassFromExtensionDependencies(final String name) throws ClassNotFoundException
   {
-    final List<URL> urls = new ArrayList<>();
-    Iterators.addAll(urls, Iterators.forEnumeration(super.getResources(name)));
-    addExtensionResources(name, urls);
-    return Iterators.asEnumeration(urls.iterator());
+    for (ClassLoader classLoader : extensionDependencyClassLoaders) {
+      try {
+        return classLoader.loadClass(name);
+      }
+      catch (ClassNotFoundException ignored) {
+      }
+    }
+    throw new ClassNotFoundException();
   }
 
-  protected void addExtensionResources(final String name, List<URL> urls) throws IOException {
+  protected void addExtensionResources(final String name, List<URL> urls) throws IOException
+  {
     for (ClassLoader classLoader : extensionDependencyClassLoaders) {
       Iterators.addAll(urls, Iterators.forEnumeration(classLoader.getResources(name)));
     }
   }
 
-  public void setExtensionDependencyClassLoaders(@Nonnull List<ClassLoader> extensionDependencyClassLoaders) {
+  public void setExtensionDependencyClassLoaders(@Nonnull List<ClassLoader> extensionDependencyClassLoaders)
+  {
     this.extensionDependencyClassLoaders = extensionDependencyClassLoaders;
   }
 }

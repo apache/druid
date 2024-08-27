@@ -28,6 +28,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.inject.Inject;
@@ -38,8 +40,6 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -343,7 +343,7 @@ public class ExtensionsLoader
 
           for (String dependency : extensionDependencies.getDependencies()) {
             if (!extensionFirstClassLoaderMap.containsKey(dependency) || !standardClassLoaderMap.containsKey(dependency)) {
-              throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
+              throw new RE(StringUtils.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
             }
             extensionFirstClassLoaders.add(extensionFirstClassLoaderMap.get(dependency));
             standardClassLoaders.add(standardClassLoaderMap.get(dependency));
@@ -352,9 +352,10 @@ public class ExtensionsLoader
           extensionFirstClassLoader.setExtensionDependencyClassLoaders(extensionFirstClassLoaders);
           standardClassLoader.setExtensionDependencyClassLoaders(standardClassLoaders);
         }
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.error("Failed to configure inter-extension dependencies");
-        throw new RuntimeException(e);
+        throw new RE(e);
       }
 
       for (File extension : getExtensionFilesToLoad()) {
