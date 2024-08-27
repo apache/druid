@@ -91,9 +91,6 @@ public class TestNGGroup
    */
   public static final String AZURE_DEEP_STORAGE = "azure-deep-storage";
 
-  public static final String HDFS_GCS_DEEP_STORAGE = "hdfs-gcs-deep-storage";
-  public static final String HDFS_AZURE_DEEP_STORAGE = "hdfs-azure-deep-storage";
-
   /**
    * This group is not part of CI. To run this group, azure configs/credentials for your oss must be provided in a file.
    * The path of the file must then be pass to mvn with -Doverride.config.path=<PATH_TO_FILE>
