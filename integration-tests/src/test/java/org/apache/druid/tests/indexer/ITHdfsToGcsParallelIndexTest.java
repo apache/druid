@@ -36,7 +36,7 @@ import java.util.List;
  *    You will also need to include "druid-hdfs-storage" to druid_extensions_loadList in this file.
  * 3) Provide -Dresource.file.dir.path=<PATH_TO_FOLDER> with folder that contains GOOGLE_APPLICATION_CREDENTIALS file
  */
-@Test(groups = {TestNGGroup.GCS_DEEP_STORAGE, TestNGGroup.HDFS_GCS_DEEP_STORAGE})
+@Test(groups = TestNGGroup.GCS_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITHdfsToGcsParallelIndexTest extends AbstractHdfsInputSourceParallelIndexTest
 {

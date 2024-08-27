@@ -35,7 +35,7 @@ import java.util.List;
  *    integration-tests/docker/environment-configs/override-examples/azure for env vars to provide.
  *    You will also need to include "druid-hdfs-storage" to druid_extensions_loadList in this file.
  */
-@Test(groups = {TestNGGroup.AZURE_DEEP_STORAGE, TestNGGroup.HDFS_AZURE_DEEP_STORAGE})
+@Test(groups = TestNGGroup.AZURE_DEEP_STORAGE)
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITHdfsToAzureParallelIndexTest extends AbstractHdfsInputSourceParallelIndexTest
 {
