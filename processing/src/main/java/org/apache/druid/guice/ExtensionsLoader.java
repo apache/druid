@@ -27,6 +27,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.inject.Inject;
@@ -37,21 +39,22 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 /**
@@ -66,8 +69,9 @@ public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
   public static final String EXTENSION_DEPENDENCIES_JSON = "extension-dependencies.json";
-
   private final ExtensionsConfig extensionsConfig;
+  private final ObjectMapper objectMapper;
+
   private final ConcurrentHashMap<Pair<File, Boolean>, URLClassLoader> loaders = new ConcurrentHashMap<>();
 
   /**
@@ -76,9 +80,10 @@ public class ExtensionsLoader
   private final ConcurrentHashMap<Class<?>, Collection<?>> extensions = new ConcurrentHashMap<>();
 
   @Inject
-  public ExtensionsLoader(ExtensionsConfig config)
+  public ExtensionsLoader(ExtensionsConfig config, ObjectMapper objectMapper)
   {
     this.extensionsConfig = config;
+    this.objectMapper = objectMapper;
   }
 
   public static ExtensionsLoader instance(Injector injector)
@@ -233,7 +238,7 @@ public class ExtensionsLoader
     if (useExtensionClassloaderFirst) {
       return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
     } else {
-      return new URLClassLoader(urls, ExtensionsLoader.class.getClassLoader());
+      return new StandardClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
     }
   }
 
@@ -298,45 +303,16 @@ public class ExtensionsLoader
 
     private void addAllFromFileSystem()
     {
-      for (File extension : getExtensionFilesToLoad()) {
-        try {
-          getClassLoaderForExtension(
-              extension,
-              extensionsConfig.isUseExtensionClassloaderFirst()
-          );
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
+      Map<String, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
 
-      try {
-        Map<String, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
-        for (Pair<File, Boolean> extension : loaders.keySet()) {
-          extensionClassLoaderMap.put(
-              extension.lhs.getName(),
-              loaders.get(extension)
-          );
-        }
-        ObjectMapper objectMapper = new ObjectMapper();
-        for (Pair<File, Boolean> extension : loaders.keySet()) {
-          Path dependenciesPath = Paths.get(extension.lhs.getAbsolutePath() + "/" + EXTENSION_DEPENDENCIES_JSON);
-          if (extension.rhs && Files.exists(dependenciesPath)) {
-            ExtensionDependencies extensionDependencies = objectMapper.readValue(dependenciesPath.toFile(), ExtensionDependencies.class);
-            ExtensionFirstClassLoader classLoader = (ExtensionFirstClassLoader) loaders.get(extension);
-            List<ClassLoader> extensionClassLoaders = new ArrayList<>();
-            for (String dependency : extensionDependencies.getDependencies()) {
-              if (!extensionClassLoaderMap.containsKey(dependency)) {
-                throw new RuntimeException(String.format("%s depends on %s which is not a valid extension or not loaded.", extensionDependencies.getName(), dependency));
-              }
-              extensionClassLoaders.add(extensionClassLoaderMap.get(dependency));
-            }
-            classLoader.setExtensionDependencyClassLoaders(extensionClassLoaders);
-          }
-        }
-      }
-      catch (Exception e) {
-        log.error("Failed to set extension dependencies");
-        throw new RuntimeException(e);
+      for (File extension : getExtensionFilesToLoad()) {
+        extensionClassLoaderMap.put(
+            extension.getName(),
+            getClassLoaderForExtension(
+                extension,
+                extensionsConfig.isUseExtensionClassloaderFirst()
+            )
+        );
       }
 
       for (File extension : getExtensionFilesToLoad()) {
@@ -345,6 +321,30 @@ public class ExtensionsLoader
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
+          Optional<ExtensionDependencies> extensionDependencies = getExtensionDependencies(loader);
+          List<String> extensionDruidExtensionDependencies;
+          if (extensionDependencies.isPresent()) {
+            extensionDruidExtensionDependencies = extensionDependencies.get().getDependsOnDruidExtensions();
+          } else {
+            extensionDruidExtensionDependencies = ImmutableList.of();
+          }
+
+          log.info("Discovered extension dependencies %s", extensionDruidExtensionDependencies);
+          List<ClassLoader> chainedClassLoadersForExtension = new ArrayList<>();
+          for (String druidExtensionDependency : extensionDruidExtensionDependencies) {
+            if (!extensionClassLoaderMap.containsKey(druidExtensionDependency)) {
+              throw new RE(
+                  StringUtils.format(
+                      "%s depends on %s which is not a valid extension or not loaded.",
+                      extension.getName(),
+                      druidExtensionDependency
+                  )
+              );
+            }
+            chainedClassLoadersForExtension.add(extensionClassLoaderMap.get(druidExtensionDependency));
+          }
+          ((StandardClassLoader) loader).setExtensionDependencyClassLoaders(chainedClassLoadersForExtension);
+
           log.info(
               "Loading extension [%s], jars: %s",
               extension.getName(),
@@ -380,6 +380,34 @@ public class ExtensionsLoader
         implClassNamesToLoad.add(serviceImplName);
         implsToLoad.add(serviceImpl);
       }
+    }
+
+    private Optional<ExtensionDependencies> getExtensionDependencies(URLClassLoader loader)
+    {
+      for (URL url: loader.getURLs()) {
+        File jarFileLocation = new File(url.getPath());
+        if (jarFileLocation.getName().startsWith("druid")) {
+          try (JarFile jarFile = new JarFile(url.getPath())) {
+            Enumeration<JarEntry> entries = jarFile.entries();
+
+            while (entries.hasMoreElements()) {
+              JarEntry entry = entries.nextElement();
+              String entryName = entry.getName();
+
+              if (!entry.isDirectory() && entryName.equals(EXTENSION_DEPENDENCIES_JSON)) {
+                log.info("Found extension dependency entry in druid jar %s", url.getPath());
+                return Optional.of(objectMapper.readValue(
+                    jarFile.getInputStream(entry),
+                    ExtensionDependencies.class
+                ));
+              }
+            }
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+      return Optional.empty();
     }
   }
 }

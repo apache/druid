@@ -307,14 +307,12 @@ public class PullDependencies implements Runnable
     );
 
     try {
-      System.out.println("Start downloading dependencies for extension coordinates: " + coordinates);
       for (String coordinate : coordinates) {
         coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
         createExtensionDirectory(coordinate, currExtensionDir);
-        downloadExtensionDependencies(versionedArtifact.getArtifactId(), currExtensionDir);
         downloadExtension(versionedArtifact, currExtensionDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
@@ -359,54 +357,6 @@ public class PullDependencies implements Runnable
       }
     }
     return versionedArtifact;
-  }
-
-  private void downloadExtensionDependencies(String artifactId, File extensionOutputDir)
-  {
-    System.out.println("Downloading extension dependencies for " + artifactId + " " + extensionOutputDir + " " + projectBaseDir);
-    String extensionInputDirectoryName = artifactId;
-    File coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
-    File contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
-
-    if (coreExtensionsDir.exists() && coreExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(coreExtensionsDir, extensionOutputDir);
-      return;
-    }
-
-    if (contribExtensionsDir.exists() && contribExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(contribExtensionsDir, extensionOutputDir);
-      return;
-    }
-
-    final String druidPrefix = "druid-";
-    if (!extensionInputDirectoryName.startsWith(druidPrefix)) {
-      return;
-    }
-    extensionInputDirectoryName = extensionInputDirectoryName.substring(druidPrefix.length());
-    coreExtensionsDir = new File(projectBaseDir + "/extensions-core/" + extensionInputDirectoryName);
-    contribExtensionsDir = new File(projectBaseDir + "/extensions-contrib/" + extensionInputDirectoryName);
-
-    if (coreExtensionsDir.exists() && coreExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(coreExtensionsDir, extensionOutputDir);
-      return;
-    }
-
-    if (contribExtensionsDir.exists() && contribExtensionsDir.isDirectory()) {
-      copyExtensionDependencyFile(contribExtensionsDir, extensionOutputDir);
-      return;
-    }
-  }
-
-  private void copyExtensionDependencyFile(File extensionDirectory, File extensionOutputDir)
-  {
-    try {
-      File dependenciesFile = new File(extensionDirectory, EXTENSION_DEPENDENCIES_JSON);
-      if (dependenciesFile.exists()) {
-        Files.copy(dependenciesFile.toPath(), new File(extensionOutputDir, EXTENSION_DEPENDENCIES_JSON).toPath());
-      }
-    } catch (Exception e) {
-      throw new RuntimeException(e);
-    }
   }
 
   /**

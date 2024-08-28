@@ -1,4 +1,0 @@
-{
-  "name": "kafka-extraction-namespace",
-  "dependencies": ["druid-lookups-cached-global"]
-}

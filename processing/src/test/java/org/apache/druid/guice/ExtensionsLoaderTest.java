@@ -48,6 +48,8 @@ public class ExtensionsLoaderTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  private final ObjectMapper objectMapper = new ObjectMapper();
+
   private Injector startupInjector()
   {
     return new StartupInjectorBuilder()
@@ -90,7 +92,7 @@ public class ExtensionsLoaderTest
   @Test
   public void test06GetClassLoaderForExtension() throws IOException
   {
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig());
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig(), objectMapper);
 
     final File some_extension_dir = temporaryFolder.newFolder();
     final File a_jar = new File(some_extension_dir, "a.jar");
@@ -109,7 +111,7 @@ public class ExtensionsLoaderTest
   @Test
   public void testGetLoadedModules()
   {
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig());
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig(), objectMapper);
     Collection<DruidModule> modules = extnLoader.getModules();
     HashSet<DruidModule> moduleSet = new HashSet<>(modules);
 
@@ -134,7 +136,7 @@ public class ExtensionsLoaderTest
       {
         return tmpDir.getAbsolutePath();
       }
-    });
+    }, objectMapper);
     Assert.assertArrayEquals(
         "Non-exist root extensionsDir should return an empty array of File",
         new File[]{},
@@ -155,7 +157,7 @@ public class ExtensionsLoaderTest
         return extensionsDir.getAbsolutePath();
       }
     };
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
     extnLoader.getExtensionFilesToLoad();
   }
 
@@ -172,7 +174,7 @@ public class ExtensionsLoaderTest
       }
     };
 
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
     Assert.assertArrayEquals(
         "Empty root extensionsDir should return an empty array of File",
         new File[]{},
@@ -196,7 +198,7 @@ public class ExtensionsLoaderTest
         return extensionsDir.getAbsolutePath();
       }
     };
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
     mysql_metadata_storage.mkdir();
 
@@ -231,7 +233,7 @@ public class ExtensionsLoaderTest
         return extensionsDir.getAbsolutePath();
       }
     };
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
     final File mysql_metadata_storage = new File(extensionsDir, "mysql-metadata-storage");
     final File random_extension = new File(extensionsDir, "random-extensions");
 
@@ -267,7 +269,7 @@ public class ExtensionsLoaderTest
     };
     final File random_extension = new File(extensionsDir, "random-extensions");
     random_extension.mkdir();
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(config);
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
     extnLoader.getExtensionFilesToLoad();
   }
 
@@ -323,7 +325,7 @@ public class ExtensionsLoaderTest
     Assert.assertTrue(jar1.createNewFile());
     Assert.assertTrue(jar2.createNewFile());
 
-    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig());
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig(), objectMapper);
     final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1, false);
     final ClassLoader classLoader2 = extnLoader.getClassLoaderForExtension(extension2, false);
 
