@@ -122,7 +122,7 @@ exports[`MenuBoolean matches snapshot undefined 1`] = `
       aria-expanded="false"
       aria-haspopup="menu"
       class="bp5-menu-item menu-tristate"
-      label="auto (true)"
+      label="Auto (true)"
       role="none"
       tabindex="-1"
     >
@@ -134,7 +134,7 @@ exports[`MenuBoolean matches snapshot undefined 1`] = `
       <span
         class="bp5-menu-item-label"
       >
-        auto (true)
+        Auto (true)
       </span>
       <span
         class="bp5-icon bp5-icon-caret-right bp5-submenu-icon"
