@@ -384,7 +384,7 @@ public class ExtensionsLoader
 
     private Optional<ExtensionDependencies> getExtensionDependencies(URLClassLoader loader)
     {
-      for (URL url: loader.getURLs()) {
+      for (URL url : loader.getURLs()) {
         File jarFileLocation = new File(url.getPath());
         if (jarFileLocation.getName().startsWith("druid")) {
           try (JarFile jarFile = new JarFile(url.getPath())) {
@@ -394,7 +394,7 @@ public class ExtensionsLoader
               JarEntry entry = entries.nextElement();
               String entryName = entry.getName();
 
-              if (!entry.isDirectory() && entryName.equals(EXTENSION_DEPENDENCIES_JSON)) {
+              if (!entry.isDirectory() && EXTENSION_DEPENDENCIES_JSON.equals(entryName)) {
                 log.info("Found extension dependency entry in druid jar %s", url.getPath());
                 return Optional.of(objectMapper.readValue(
                     jarFile.getInputStream(entry),
@@ -402,7 +402,8 @@ public class ExtensionsLoader
                 ));
               }
             }
-          } catch (IOException e) {
+          }
+          catch (IOException e) {
             throw new RuntimeException(e);
           }
         }
