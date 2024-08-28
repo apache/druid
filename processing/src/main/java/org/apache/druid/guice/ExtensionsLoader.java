@@ -290,7 +290,6 @@ public class ExtensionsLoader
       if (extensionsConfig.searchCurrentClassloader()) {
         addAllFromCurrentClassLoader();
       }
-
       addAllFromFileSystem();
     }
 
@@ -316,20 +315,17 @@ public class ExtensionsLoader
       }
 
       for (File extension : getExtensionFilesToLoad()) {
+        log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
-          URLClassLoader loader = getClassLoaderForExtension(
+          final URLClassLoader loader = getClassLoaderForExtension(
               extension,
               extensionsConfig.isUseExtensionClassloaderFirst()
           );
           Optional<ExtensionDependencies> extensionDependencies = getExtensionDependencies(loader);
-          List<String> extensionDruidExtensionDependencies;
-          if (extensionDependencies.isPresent()) {
-            extensionDruidExtensionDependencies = extensionDependencies.get().getDependsOnDruidExtensions();
-          } else {
-            extensionDruidExtensionDependencies = ImmutableList.of();
-          }
+          List<String> extensionDruidExtensionDependencies = extensionDependencies.isPresent()
+              ? extensionDependencies.get().getDependsOnDruidExtensions()
+              : ImmutableList.of();
 
-          log.info("Discovered extension dependencies %s", extensionDruidExtensionDependencies);
           List<ClassLoader> chainedClassLoadersForExtension = new ArrayList<>();
           for (String druidExtensionDependency : extensionDruidExtensionDependencies) {
             if (!extensionClassLoaderMap.containsKey(druidExtensionDependency)) {

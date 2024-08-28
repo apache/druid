@@ -157,7 +157,6 @@ public class PullDependencies implements Runnable
       Dependencies.builder()
                   .put("commons-beanutils", "commons-beanutils-core")
                   .build();
-  public static final String EXTENSION_DEPENDENCIES_JSON = "extension-dependencies.json";
 
   private final Dependencies hadoopExclusions;
 
@@ -252,12 +251,6 @@ public class PullDependencies implements Runnable
   )
   public String proxyPassword = "";
 
-  @Option(
-      name = {"--project-base-dir"},
-      title = "Absolute path to the project base directory"
-  )
-  public String projectBaseDir = "";
-
   @SuppressWarnings("unused")  // used by com.github.rvesse.airline
   public PullDependencies()
   {
@@ -305,12 +298,14 @@ public class PullDependencies implements Runnable
     );
 
     try {
+      log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
       for (String coordinate : coordinates) {
         coordinate = coordinate.trim();
         final Artifact versionedArtifact = getArtifact(coordinate);
 
         File currExtensionDir = new File(extensionsDir, versionedArtifact.getArtifactId());
         createExtensionDirectory(coordinate, currExtensionDir);
+
         downloadExtension(versionedArtifact, currExtensionDir);
       }
       log.info("Finish downloading dependencies for extension coordinates: [%s]", coordinates);
