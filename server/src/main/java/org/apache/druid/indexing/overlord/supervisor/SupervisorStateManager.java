@@ -192,7 +192,7 @@ public class SupervisorStateManager
 
   public void markRunFinished()
   {
-    atLeastOneSuccessfulRun |= currentRunSuccessful;
+    atLeastOneSuccessfulRun = atLeastOneSuccessfulRun || currentRunSuccessful;
 
     consecutiveSuccessfulRuns = currentRunSuccessful ? consecutiveSuccessfulRuns + 1 : 0;
     consecutiveFailedRuns = currentRunSuccessful ? 0 : consecutiveFailedRuns + 1;

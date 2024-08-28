@@ -1424,13 +1424,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
 
     @Override
-    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-    {
-      inspector.visit("baseSelector", baseSelector);
-      inspector.visit("parts", parts);
-    }
-
-    @Override
     public boolean isNull()
     {
       final Object o = getObject();
@@ -1461,11 +1454,6 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       return null;
     }
 
-    @Override
-    public Class<?> classOfObject()
-    {
-      return Object.class;
-    }
   }
 
   /**

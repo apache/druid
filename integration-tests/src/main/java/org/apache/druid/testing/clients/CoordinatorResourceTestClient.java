@@ -390,7 +390,7 @@ public class CoordinatorResourceTestClient
 
     boolean isLoaded = true;
     for (Map.Entry<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>> host : defaultTier.entrySet()) {
-      isLoaded &= host.getValue().getCurrent().containsKey(lookup);
+      isLoaded = isLoaded && host.getValue().getCurrent().containsKey(lookup);
     }
 
     return isLoaded;
