@@ -27,7 +27,7 @@ describe('MenuBoolean', () => {
       <MenuBoolean
         text="hello"
         value={undefined}
-        undefinedLabel="auto"
+        showUndefined
         undefinedEffectiveValue
         onValueChange={() => {}}
       />
@@ -41,7 +41,7 @@ describe('MenuBoolean', () => {
       <MenuBoolean
         text="hello"
         value={false}
-        undefinedLabel="auto"
+        showUndefined
         undefinedEffectiveValue={false}
         onValueChange={() => {}}
       />

@@ -46,7 +46,13 @@ import { select, selectAll } from 'd3-selection';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { ClearableInput, LearnMore, Loader, MenuBoolean } from '../../../components';
+import {
+  ClearableInput,
+  ENABLE_DISABLE_OPTIONS_TEXT,
+  LearnMore,
+  Loader,
+  MenuBoolean,
+} from '../../../components';
 import { AsyncActionDialog } from '../../../dialogs';
 import type { Execution, ExternalConfig, IngestQueryPattern } from '../../../druid-models';
 import {
@@ -684,6 +690,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     text="Force segment sort by time"
                     value={forceSegmentSortByTime}
                     onValueChange={v => changeForceSegmentSortByTime(Boolean(v))}
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                   />
                 </Menu>

@@ -24,30 +24,47 @@ import React from 'react';
 
 import { tickIcon } from '../../utils';
 
+export type TrueFalseUndefined = 'true' | 'false' | 'undefined';
+
+function toKey(value: boolean | undefined) {
+  return String(value) as TrueFalseUndefined;
+}
+
+const DEFAULT_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = { undefined: 'Auto' };
+
+export const ENABLE_DISABLE_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = {
+  true: 'Enable',
+  false: 'Disable',
+  undefined: 'Auto',
+};
+
 export interface MenuBooleanProps extends Omit<MenuItemProps, 'label'> {
   value: boolean | undefined;
   onValueChange(value: boolean | undefined): void;
-  undefinedLabel?: string;
+  showUndefined?: boolean;
   undefinedEffectiveValue?: boolean;
-  optionsLabelElement?: Partial<Record<'undefined' | 'true' | 'false', ReactNode>>;
+  optionsText?: Partial<Record<TrueFalseUndefined, string>>;
+  optionsLabelElement?: Partial<Record<TrueFalseUndefined, ReactNode>>;
 }
 
 export function MenuBoolean(props: MenuBooleanProps) {
   const {
     value,
     onValueChange,
-    undefinedLabel,
+    showUndefined,
     undefinedEffectiveValue,
     className,
     shouldDismissPopover,
+    optionsText = DEFAULT_OPTIONS_TEXT,
     optionsLabelElement = {},
     ...rest
   } = props;
-  const effectiveValue = undefinedLabel ? value : value ?? undefinedEffectiveValue;
+  const effectiveValue = showUndefined ? value : value ?? undefinedEffectiveValue;
   const shouldDismiss = shouldDismissPopover ?? false;
 
   function formatValue(value: boolean | undefined): string {
-    return String(value ?? undefinedLabel ?? 'auto');
+    const s = toKey(value);
+    return optionsText[s] ?? s;
   }
 
   return (
@@ -56,17 +73,17 @@ export function MenuBoolean(props: MenuBooleanProps) {
       shouldDismissPopover={shouldDismiss}
       label={`${formatValue(effectiveValue)}${
         typeof effectiveValue === 'undefined' && typeof undefinedEffectiveValue === 'boolean'
-          ? ` (${undefinedEffectiveValue})`
+          ? ` (${formatValue(undefinedEffectiveValue)})`
           : ''
       }`}
       {...rest}
     >
-      {(undefinedLabel ? [undefined, true, false] : [true, false]).map(v => (
+      {(showUndefined ? [undefined, true, false] : [true, false]).map(v => (
         <MenuItem
           key={String(v)}
           icon={tickIcon(effectiveValue === v)}
           text={formatValue(v)}
-          labelElement={optionsLabelElement[String(v) as 'undefined' | 'true' | 'false']}
+          labelElement={optionsLabelElement[toKey(v)]}
           onClick={() => onValueChange(v)}
           shouldDismissPopover={shouldDismiss}
         />

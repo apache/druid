@@ -129,7 +129,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
             <MenuItem
               icon={IconNames.FLOW_BRANCH}
               text="Task assignment"
-              label={taskAssigment}
+              label={capitalizeFirst(taskAssigment)}
               submenuProps={{ style: { width: 300 } }}
             >
               {TASK_ASSIGNMENT_OPTIONS.map(t => (
