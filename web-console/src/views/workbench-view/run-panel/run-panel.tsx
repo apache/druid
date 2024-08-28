@@ -105,11 +105,19 @@ const SELECT_DESTINATION_LABEL: Record<SelectDestination, string> = {
 };
 
 const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
-  if (!engine) return { text: 'auto' };
-  return {
-    text: engine,
-    label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
-  };
+  switch (engine) {
+    case 'native':
+      return { text: 'Native' };
+
+    case 'sql-native':
+      return { text: 'SQL native' };
+
+    case 'sql-msq-task':
+      return { text: 'SQL MSQ-task', label: 'multi-stage-query' };
+
+    default:
+      return { text: 'Auto' };
+  }
 };
 
 const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
