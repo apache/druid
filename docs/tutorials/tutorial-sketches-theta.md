@@ -119,7 +119,7 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-Notice how there is no `uid` in the `SELECT` statement. In this scenario you are not interested in individual user ID's, only the unique counts. Instead you use the `DS_THETA` aggregator function to create a Theta sketch on the values of `uid`. The [`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) function has an optional second parameter, `size`, which accepts a positive integer-power of 2 greater than 0. The `size` parameter refers to the maximum number of entries the Theta sketch object retains. Higher values of `size`  result in higher accuracy, but require more space. The default value of `size` is 16384, and is recommended in most use cases. 
+Notice how there is no `uid` in the `SELECT` statement. In this scenario you are not interested in individual user ID's, only the unique counts. Instead you use the `DS_THETA` aggregator function to create a Theta sketch on the values of `uid`. The [`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) function has an optional second parameter, `size`, which accepts a positive integer-power of 2 greater than 0. The `size` parameter refers to the maximum number of entries the Theta sketch object retains. Higher values of `size`  result in higher accuracy, but require more space. The default value of `size` is 16384, and is recommended in most use cases. The `GROUP BY` statement groups the entries for each episode of a show watched on the same day.
 
 ## Query the Theta sketch column
 
@@ -162,7 +162,17 @@ Druid has the capability to use [filtered metrics](../querying/sql-aggregations.
  In the case of Theta sketches, the filter clause has to be inserted between the aggregator and the estimator.
 :::
 
-As an example, query the total unique users that watched _Bridgerton:_
+As an example, query the total unique users that watched _Bridgerton_:
+
+```sql
+SELECT APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) FILTER(WHERE "show" = 'Bridgerton') AS users
+FROM ts_tutorial
+```
+
+![Count distinct with Theta sketches and filters](../assets/tutorial-theta-05.png)
+
+
+In the preceding query, `APPROX_COUNT_DISTINCT_DS_THETA` is equivalent to calling `DS_THETA` and `THETA_SKETCH_ESIMATE` as follows:
 
 ```sql
 SELECT THETA_SKETCH_ESTIMATE(
@@ -171,7 +181,10 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-#TODO<!-- ![Count distinct with Theta sketches and filters](../assets/tutorial-theta-08.png) -->
+The `APPROX_COUNT_DISTINCT_DS_THETA` function applies the following:
+
+* `DS_THETA`: Creates a new Theta sketch where the show is _Bridgerton_ from the column of Theta sketches
+* `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`
 
 ### Set operations
 
@@ -189,7 +202,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-#TODO<!-- ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-09.png) -->
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-06.png)
 
 Again, the set function is spliced in between the aggregator and the estimator.
 
@@ -205,7 +218,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-#TODO<!-- ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-10.png) -->
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-07.png)
 
 And finally, there is `THETA_SKETCH_NOT` which computes the set difference of two or more segments.
 The result describes how many visitors watched episode 1 of Bridgerton but not episode 2.
@@ -221,24 +234,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-#TODO<!-- ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-11.png) -->
-
-## TODO Temporary Header 
-
-This tutorial demonstrates how to create Theta sketches during ingestions, and how to estimate the count during query time. However, there are cases where it makes sense to maintain the unique identifiers of the data during ingestion. In these cases, its necessary to create the Theta sketch object and estimate the count during query time. The `APPROX_COUNT_DISTINCT_DS_THETA` applies `DS_THETA` to create a new Theta sketch objects from a column, and the applies `THETA_SKETCH_ESTIMATE` to calculate the distinct count estimate from the output of `DS_THETA`. The function `APPROX_COUNT_DISTINCT_DS_THETA(expr)` returns the same as `THETA_SKETCH_ESTIMATE(DS_THETA(expr))`. To demonstrate, the following query shows the output of both side by side:
-
-```sql
-SELECT __time,
-       "show",
-       "episode",
-       THETA_SKETCH_ESTIMATE(DS_THETA(theta_uid)),
-       APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) AS users
-FROM   ts_tutorial
-GROUP  BY 1, 2, 3
-```
-
-#TODO
-
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-09.png)
 
 ## Conclusions
 
