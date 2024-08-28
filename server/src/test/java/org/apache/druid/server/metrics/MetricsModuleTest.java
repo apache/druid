@@ -212,6 +212,44 @@ public class MetricsModuleTest
     Assert.assertTrue(sysMonitor instanceof NoopOshiSysMonitor);
     Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
+
+  @Test
+  public void testGetOshiSysMonitorViaInjectorBroker()
+  {
+    final Injector injector = createInjector(new Properties()
+    {
+      {
+        setProperty("druid.monitoring.oshisys.skipEmitting", "[\"mem\"]");
+      }
+    }, ImmutableSet.of(NodeRole.BROKER));
+    final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertTrue(sysMonitor instanceof OshiSysMonitor);
+    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+  }
+
+  @Test
+  public void testGetOshiSysMonitorViaInjectorBrokerSkipAll()
+  {
+    final Injector injector = createInjector(new Properties()
+    {
+      {
+        setProperty(
+            "druid.monitoring.oshisys.skipEmitting",
+            "[\"mem\", \"swap\", \"fs\", \"disk\", \"net\", \"cpu\", \"sys\", \"tcp\"]"
+        );
+      }
+    }, ImmutableSet.of(NodeRole.BROKER));
+    final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
+    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
+    sysMonitor.doMonitor(emitter);
+
+    Assert.assertTrue(sysMonitor instanceof OshiSysMonitor);
+    Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
+  }
+
   @Test
   public void testGetOshiSysMonitorWhenNull()
   {

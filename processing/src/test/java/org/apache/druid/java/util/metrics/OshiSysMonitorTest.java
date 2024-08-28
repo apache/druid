@@ -21,6 +21,7 @@ package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -114,6 +115,24 @@ public class OshiSysMonitorTest
     emitter.verifyValue("sys/mem/max", 64L);
     emitter.verifyValue("sys/mem/used", 48L);
     emitter.verifyValue("sys/mem/free", 16L);
+  }
+
+  @Test
+  public void testMemStatsSkipOthers()
+  {
+    StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
+    GlobalMemory mem = Mockito.mock(GlobalMemory.class);
+    Mockito.when(mem.getTotal()).thenReturn(64L);
+    Mockito.when(mem.getAvailable()).thenReturn(16L);
+    Mockito.when(hal.getMemory()).thenReturn(mem);
+
+    OshiSysMonitor m = new OshiSysMonitor(si, ImmutableSet.of("swap", "fs", "disk", "net", "cpu", "sys", "tcp"));
+    m.start();
+    m.doMonitor(emitter);
+    m.stop();
+    Assert.assertEquals(3, emitter.getEvents().size());
+    emitter.verifyEmitted("sys/swap/pageIn", 0);
+    emitter.verifyEmitted("sys/fs/max", 0);
   }
 
   @Test

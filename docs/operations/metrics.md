@@ -507,6 +507,8 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/tcpv4/out/rsts`|Total "out reset" packets sent to reset the connection||Generally 0|
 |`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies|
 
+If you want to skip some of these metrics you could specify `druid.monitoring.oshisys.skipEmitting`.
+Possible values are `mem`, `swap`, `fs`, `disk`, `net`, `cpu`, `sys`, and `tcp`.
 
 ## S3 multi-part upload
 
