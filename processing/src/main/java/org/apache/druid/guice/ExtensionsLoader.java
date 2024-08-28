@@ -320,10 +320,15 @@ public class ExtensionsLoader
         }
 
         // Read the bundled extension-dependecies.json file and find class loaders each extension depends on.
-        List<ExtensionDependencies> extensionDependenciesList = new ObjectMapper().readValue(
-            Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON).toFile(),
-            new TypeReference<List<ExtensionDependencies>>() {}
-        );
+        File extensionDependenciesFile = Paths.get(extensionsConfig.getDirectory() + "/" + EXTENSION_DEPENDENCIES_JSON).toFile();
+        List<ExtensionDependencies> extensionDependenciesList = new ArrayList<>();
+        if (extensionDependenciesFile.exists()) {
+          extensionDependenciesList.addAll(new ObjectMapper().readValue(
+              extensionDependenciesFile,
+              new TypeReference<List<ExtensionDependencies>>() {
+              }
+          ));
+        }
         for (ExtensionDependencies extensionDependencies : extensionDependenciesList) {
           StandardClassLoader extensionFirstClassLoader = (StandardClassLoader) extensionFirstClassLoaderMap.getOrDefault(
               extensionDependencies.getName(),
