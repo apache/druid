@@ -183,7 +183,7 @@ FROM ts_tutorial
 
 The `APPROX_COUNT_DISTINCT_DS_THETA` function applies the following:
 
-* `DS_THETA`: Creates a new Theta sketch where the show is _Bridgerton_ from the column of Theta sketches
+* `DS_THETA`: Creates a new Theta sketch, where the show is _Bridgerton_, from the column of Theta sketches 
 * `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`
 
 ### Set operations
@@ -234,7 +234,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-09.png)
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-08.png)
 
 ## Conclusions
 
