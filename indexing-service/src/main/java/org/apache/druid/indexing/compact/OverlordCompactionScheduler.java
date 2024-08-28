@@ -20,18 +20,23 @@
 package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.indexer.TaskLocation;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
+import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.java.util.common.Stopwatch;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -79,8 +84,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private static final Duration METRIC_EMISSION_PERIOD = Duration.standardMinutes(5);
 
   private final SegmentsMetadataManager segmentManager;
-  private final OverlordClient overlordClient;
+  private final LocalOverlordClient overlordClient;
   private final ServiceEmitter emitter;
+  private final TaskMaster taskMaster;
 
   private final CompactionSupervisorsConfig schedulerConfig;
   private final Supplier<DruidCompactionConfig> compactionConfigSupplier;
@@ -92,6 +98,13 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ScheduledExecutorService executor;
 
   private final CompactionStatusTracker statusTracker;
+
+  /**
+   * Listener to watch task completion events and update CompactionStatusTracker.
+   * This helps in avoiding unnecessary metadata store calls.
+   */
+  private final TaskRunnerListener taskRunnerListener;
+
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final CompactSegments duty;
 
@@ -120,6 +133,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   {
     this.segmentManager = segmentManager;
     this.emitter = emitter;
+    this.taskMaster = taskMaster;
     this.schedulerConfig = schedulerConfig;
     this.compactionConfigSupplier = compactionConfigSupplier;
 
@@ -130,6 +144,29 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.overlordClient = new LocalOverlordClient(taskMaster, taskQueryTool, objectMapper);
     this.duty = new CompactSegments(this.statusTracker, overlordClient);
     this.activeDatasourceConfigs = new ConcurrentHashMap<>();
+
+    this.taskRunnerListener = new TaskRunnerListener()
+    {
+      @Override
+      public String getListenerId()
+      {
+        return "OverlordCompactionScheduler";
+      }
+
+      @Override
+      public void locationChanged(String taskId, TaskLocation newLocation)
+      {
+        // Do nothing
+      }
+
+      @Override
+      public void statusChanged(String taskId, TaskStatus status)
+      {
+        if (status.isComplete()) {
+          statusTracker.onTaskFinished(taskId, status);
+        }
+      }
+    };
   }
 
   @Override
@@ -187,6 +224,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private synchronized void initState()
   {
+    final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    if (taskRunnerOptional.isPresent()) {
+      taskRunnerOptional.get().registerListener(taskRunnerListener, Execs.directExecutor());
+    }
     if (shouldPollSegments) {
       segmentManager.startPollingDatabasePeriodically();
     }
@@ -194,6 +235,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private synchronized void cleanupState()
   {
+    final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    if (taskRunnerOptional.isPresent()) {
+      taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
+    }
     statusTracker.stop();
     activeDatasourceConfigs.clear();
 

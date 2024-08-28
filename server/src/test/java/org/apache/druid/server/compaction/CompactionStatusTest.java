@@ -239,10 +239,12 @@ public class CompactionStatusTest
         "'indexSpec' mismatch: "
         + "required[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
         + " dimensionCompression=lz4, stringDictionaryEncoding=Utf8{},"
-        + " metricCompression=lz4, longEncoding=longs, jsonCompression=null, segmentLoader=null}], "
+        + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
+        + " jsonCompression=null, segmentLoader=null}], "
         + "current[IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{},"
         + " dimensionCompression=zstd, stringDictionaryEncoding=Utf8{},"
-        + " metricCompression=lz4, longEncoding=longs, jsonCompression=null, segmentLoader=null}]"
+        + " metricCompression=lz4, longEncoding=longs, complexMetricCompression=null,"
+        + " jsonCompression=null, segmentLoader=null}]"
     );
   }
 

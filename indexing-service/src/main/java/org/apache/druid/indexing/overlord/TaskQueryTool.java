@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.http.TaskStateLookup;
 import org.apache.druid.indexing.overlord.http.TotalWorkerCapacityResponse;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -153,7 +155,41 @@ public class TaskQueryTool
 
   public List<TaskStatusPlus> getAllActiveTasks()
   {
-    return getTaskStatusPlusList(TaskStateLookup.ALL, null, null, 0, null);
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      // Serve active task statuses from memory
+      final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
+
+      // Use a dummy created time as this is not used by the caller, just needs to be non-null
+      final DateTime createdTime = DateTimes.nowUtc();
+
+      final List<Task> activeTasks = taskQueue.get().getTasks();
+      for (Task task : activeTasks) {
+        final Optional<TaskStatus> statusOptional = taskQueue.get().getTaskStatus(task.getId());
+        if (statusOptional.isPresent()) {
+          final TaskStatus status = statusOptional.get();
+          taskStatusPlusList.add(
+              new TaskStatusPlus(
+                  task.getId(),
+                  task.getGroupId(),
+                  task.getType(),
+                  createdTime,
+                  createdTime,
+                  status.getStatusCode(),
+                  null,
+                  status.getDuration(),
+                  status.getLocation(),
+                  task.getDataSource(),
+                  status.getErrorMsg()
+              )
+          );
+        }
+      }
+
+      return taskStatusPlusList;
+    } else {
+      return getTaskStatusPlusList(TaskStateLookup.ALL, null, null, 0, null);
+    }
   }
 
   public List<TaskStatusPlus> getTaskStatusPlusList(

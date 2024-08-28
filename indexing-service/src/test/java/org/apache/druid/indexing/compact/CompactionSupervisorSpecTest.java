@@ -46,7 +46,7 @@ public class CompactionSupervisorSpecTest
     scheduler = Mockito.mock(CompactionScheduler.class);
     Mockito.when(scheduler.validateCompactionConfig(ArgumentMatchers.any()))
            .thenReturn(CompactionConfigValidationResult.success());
-    
+
     OBJECT_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(CompactionScheduler.class, scheduler)

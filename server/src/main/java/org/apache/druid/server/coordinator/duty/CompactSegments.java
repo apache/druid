@@ -261,7 +261,9 @@ public class CompactSegments implements CoordinatorCustomDuty
     for (String taskId : finishedTaskIds) {
       // Assume unknown task to have finished successfully
       final TaskStatus taskStatus = taskStatusMap.getOrDefault(taskId, TaskStatus.success(taskId));
-      statusTracker.onTaskFinished(taskId, taskStatus);
+      if (taskStatus.isComplete()) {
+        statusTracker.onTaskFinished(taskId, taskStatus);
+      }
     }
   }
 

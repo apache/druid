@@ -79,6 +79,10 @@ public class CompactionStatusTracker
         .get(candidates.getUmbrellaInterval());
   }
 
+  /**
+   * Set of submitted compaction task IDs which have not been marked completed
+   * via {@link #onTaskFinished} yet.
+   */
   public Set<String> getSubmittedTaskIds()
   {
     return submittedTaskIdToSegments.keySet();
