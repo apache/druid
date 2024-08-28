@@ -137,36 +137,23 @@ Let's first see what the data looks like in Druid. Run the following SQL stateme
 SELECT * FROM ts_tutorial
 ```
 
-![View data with SELECT all query](../assets/tutorial-theta-06.png)
+![View data with SELECT all query](../assets/tutorial-theta-03.png)
 
 The Theta sketch column `theta_uid` appears as a Base64-encoded string; behind it is a bitmap.
 
-The following query to compute the distinct counts of user IDs uses `APPROX_COUNT_DISTINCT_DS_THETA` and groups by the other dimensions:
-```sql
-SELECT __time,
-       "show",
-       "episode",
-       APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) AS users
-FROM   ts_tutorial
-GROUP  BY 1, 2, 3
-```
-
-![Count distinct with Theta sketches](../assets/tutorial-theta-07.png)
-
-In the preceding query, `APPROX_COUNT_DISTINCT_DS_THETA` is equivalent to calling `DS_THETA` and `THETA_SKETCH_ESIMATE` as follows:
+The following query uses `THETA_SKETCH_ESTIMATE` to compute the distinct counts of user IDs and groups by the other dimensions:
 
 ```sql
-SELECT __time,
-       "show", 
-       "episode",
-       THETA_SKETCH_ESTIMATE(DS_THETA(theta_uid)) AS users
-FROM   ts_tutorial
-GROUP  BY 1, 2, 3
+SELECT
+  __time,
+  "show",
+  "episode",
+  THETA_SKETCH_ESTIMATE(theta_uid) AS users
+FROM ts_tutorial
+GROUP BY 1, 2, 3, 4
 ```
 
-That is, `APPROX_COUNT_DISTINCT_DS_THETA` applies the following:
-* `DS_THETA`: Creates a new Theta sketch from the column of Theta sketches
-* `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`
+![Count distinct with Theta sketches](../assets/tutorial-theta-04.png)
 
 ### Filtered metrics
 
@@ -184,7 +171,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches and filters](../assets/tutorial-theta-08.png)
+#TODO<!-- ![Count distinct with Theta sketches and filters](../assets/tutorial-theta-08.png) -->
 
 ### Set operations
 
@@ -202,7 +189,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-09.png)
+#TODO<!-- ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-09.png) -->
 
 Again, the set function is spliced in between the aggregator and the estimator.
 
@@ -218,7 +205,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-10.png)
+#TODO<!-- ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-10.png) -->
 
 And finally, there is `THETA_SKETCH_NOT` which computes the set difference of two or more segments.
 The result describes how many visitors watched episode 1 of Bridgerton but not episode 2.
@@ -234,7 +221,24 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-11.png)
+#TODO<!-- ![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-11.png) -->
+
+## TODO Temporary Header 
+
+This tutorial demonstrates how to create Theta sketches during ingestions, and how to estimate the count during query time. However, there are cases where it makes sense to maintain the unique identifiers of the data during ingestion. In these cases, its necessary to create the Theta sketch object and estimate the count during query time. The `APPROX_COUNT_DISTINCT_DS_THETA` applies `DS_THETA` to create a new Theta sketch objects from a column, and the applies `THETA_SKETCH_ESTIMATE` to calculate the distinct count estimate from the output of `DS_THETA`. The function `APPROX_COUNT_DISTINCT_DS_THETA(expr)` returns the same as `THETA_SKETCH_ESTIMATE(DS_THETA(expr))`. To demonstrate, the following query shows the output of both side by side:
+
+```sql
+SELECT __time,
+       "show",
+       "episode",
+       THETA_SKETCH_ESTIMATE(DS_THETA(theta_uid)),
+       APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) AS users
+FROM   ts_tutorial
+GROUP  BY 1, 2, 3
+```
+
+#TODO
+
 
 ## Conclusions
 
