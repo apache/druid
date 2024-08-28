@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
@@ -47,6 +48,7 @@ import java.io.File;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -64,6 +66,7 @@ public class HttpInputSource
   private final PasswordProvider httpAuthenticationPasswordProvider;
   private final SystemFields systemFields;
   private final HttpInputSourceConfig config;
+  private final Map<String, String> headersMap;
 
   @JsonCreator
   public HttpInputSource(
@@ -71,6 +74,7 @@ public class HttpInputSource
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
       @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields,
+      @JsonProperty("additionalHeaders") @Nullable Map<String, String> headersMap,
       @JacksonInject HttpInputSourceConfig config
   )
   {
@@ -80,15 +84,8 @@ public class HttpInputSource
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
+    this.headersMap = headersMap == null ? Maps.newHashMap() : headersMap;
     this.config = config;
-  }
-
-  @JsonIgnore
-  @Nonnull
-  @Override
-  public Set<String> getTypes()
-  {
-    return Collections.singleton(TYPE_KEY);
   }
 
   public static void throwIfInvalidProtocols(HttpInputSourceConfig config, List<URI> uris)
@@ -98,6 +95,14 @@ public class HttpInputSource
         throw new IAE("Only %s protocols are allowed", config.getAllowedProtocols());
       }
     }
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
   }
 
   @JsonProperty
@@ -128,6 +133,14 @@ public class HttpInputSource
     return httpAuthenticationPasswordProvider;
   }
 
+  @Nullable
+  @JsonProperty("additionalHeaders")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, String> getAdditionalHeaders()
+  {
+    return headersMap;
+  }
+
   @Override
   public Stream<InputSplit<URI>> createSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec)
   {
@@ -148,6 +161,7 @@ public class HttpInputSource
         httpAuthenticationUsername,
         httpAuthenticationPasswordProvider,
         systemFields,
+        headersMap,
         config
     );
   }
@@ -181,7 +195,8 @@ public class HttpInputSource
             createSplits(inputFormat, null).map(split -> new HttpEntity(
                 split.get(),
                 httpAuthenticationUsername,
-                httpAuthenticationPasswordProvider
+                httpAuthenticationPasswordProvider,
+                headersMap
             )).iterator()
         ),
         SystemFieldDecoratorFactory.fromInputSource(this),
@@ -203,13 +218,21 @@ public class HttpInputSource
            && Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername)
            && Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider)
            && Objects.equals(systemFields, that.systemFields)
+           && Objects.equals(headersMap, that.headersMap)
            && Objects.equals(config, that.config);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider, systemFields, config);
+    return Objects.hash(
+        uris,
+        httpAuthenticationUsername,
+        httpAuthenticationPasswordProvider,
+        systemFields,
+        headersMap,
+        config
+    );
   }
 
   @Override
@@ -226,6 +249,7 @@ public class HttpInputSource
            ", httpAuthenticationUsername=" + httpAuthenticationUsername +
            ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
            (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
+           ", additionalHeaders = " + headersMap.toString() +
            "}";
   }
 }

@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
 import java.util.Base64;
+import java.util.Map;
 
 public class HttpEntity extends RetryingInputEntity
 {
@@ -48,7 +49,8 @@ public class HttpEntity extends RetryingInputEntity
   HttpEntity(
       URI uri,
       @Nullable String httpAuthenticationUsername,
-      @Nullable PasswordProvider httpAuthenticationPasswordProvider
+      @Nullable PasswordProvider httpAuthenticationPasswordProvider,
+      @Nullable Map<String, String> additionalHeaders
   )
   {
     this.uri = uri;

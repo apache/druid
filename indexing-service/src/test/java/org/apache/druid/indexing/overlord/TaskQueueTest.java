@@ -562,6 +562,7 @@ public class TaskQueueTest extends IngestionTestBase
                             "user",
                             new DefaultPasswordProvider(password),
                             null,
+                            null,
                             httpInputSourceConfig),
         new NoopInputFormat(),
         null,

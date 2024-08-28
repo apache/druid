@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -86,6 +87,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           "bob",
           new DefaultPasswordProvider("secret"),
           SystemFields.none(),
+          null,
           new HttpInputSourceConfig(null)
       ),
       new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
@@ -259,6 +261,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             "bob",
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
+            ImmutableMap.of("Accept", "application/ndjson", "a", "b"),
             new HttpInputSourceConfig(null)
         ),
         new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
@@ -280,7 +283,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "  userName => 'bob',\n" +
              "  password => 'secret',\n" +
              "  uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],\n" +
-             "  format => 'csv'\n" +
+             "  format => 'csv',\n" +
+             "  headers=> '{\"Accept\":\"application/ndjson\", \"a\": \"b\" }'\n" +
              "  )\n" +
              ") EXTEND (\"timestamp\" VARCHAR, isRobot VARCHAR)\n" +
              "PARTITIONED BY HOUR")
@@ -390,6 +394,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             "bob",
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
+            null,
             new HttpInputSourceConfig(null)
         ),
         new JsonInputFormat(null, null, null, null, null),

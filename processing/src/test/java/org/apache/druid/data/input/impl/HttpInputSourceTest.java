@@ -53,6 +53,7 @@ public class HttpInputSourceTest
         "myName",
         new DefaultPasswordProvider("myPassword"),
         new SystemFields(EnumSet.of(SystemField.URI)),
+        null,
         httpInputSourceConfig
     );
     final byte[] json = mapper.writeValueAsBytes(source);
@@ -68,6 +69,7 @@ public class HttpInputSourceTest
         "myName",
         new DefaultPasswordProvider("myPassword"),
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
 
@@ -75,6 +77,7 @@ public class HttpInputSourceTest
         ImmutableList.of(URI.create("https:///")),
         "myName",
         new DefaultPasswordProvider("myPassword"),
+        null,
         null,
         new HttpInputSourceConfig(null)
     );
@@ -85,6 +88,7 @@ public class HttpInputSourceTest
         ImmutableList.of(URI.create("my-protocol:///")),
         "myName",
         new DefaultPasswordProvider("myPassword"),
+        null,
         null,
         new HttpInputSourceConfig(null)
     );
@@ -99,6 +103,7 @@ public class HttpInputSourceTest
         "myName",
         new DefaultPasswordProvider("myPassword"),
         null,
+         null,
         customConfig
     );
 
@@ -108,6 +113,7 @@ public class HttpInputSourceTest
         ImmutableList.of(URI.create("https:///")),
         "myName",
         new DefaultPasswordProvider("myPassword"),
+        null,
         null,
         customConfig
     );
@@ -122,6 +128,7 @@ public class HttpInputSourceTest
         "myName",
         new DefaultPasswordProvider("myPassword"),
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH)),
+        null,
         httpInputSourceConfig
     );
 
@@ -130,7 +137,7 @@ public class HttpInputSourceTest
         inputSource.getConfiguredSystemFields()
     );
 
-    final HttpEntity entity = new HttpEntity(URI.create("https://example.com/foo"), null, null);
+    final HttpEntity entity = new HttpEntity(URI.create("https://example.com/foo"), null, null, null);
 
     Assert.assertEquals("https://example.com/foo", inputSource.getSystemFieldValue(entity, SystemField.URI));
     Assert.assertEquals("/foo", inputSource.getSystemFieldValue(entity, SystemField.PATH));

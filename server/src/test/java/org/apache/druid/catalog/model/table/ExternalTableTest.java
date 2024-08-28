@@ -170,6 +170,7 @@ public class ExternalTableTest extends BaseExternTableTest
         "bob",
         new DefaultPasswordProvider("secret"),
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
     Map<String, Object> sourceMap = toMap(inputSource);
@@ -194,6 +195,7 @@ public class ExternalTableTest extends BaseExternTableTest
         Collections.singletonList(new URI("https://example.com/")),
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         null,
         new HttpInputSourceConfig(null)
     );

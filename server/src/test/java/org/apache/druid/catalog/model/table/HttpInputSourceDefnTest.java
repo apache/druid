@@ -99,6 +99,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         null,
         null,
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -116,6 +117,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid if URI is provided
     HttpInputSource inputSource = new HttpInputSource(
         Collections.singletonList(new URI("http://example.com/file.csv")),
+        null,
         null,
         null,
         null,
@@ -147,6 +149,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // No format: not valid if URI is provided
     HttpInputSource inputSource = new HttpInputSource(
         Collections.singletonList(new URI("http://example.com/file.csv")),
+        null,
         null,
         null,
         null,
@@ -215,6 +218,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")),
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         null,
         new HttpInputSourceConfig(null)
     );
@@ -344,6 +348,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         "bob",
         new DefaultPasswordProvider("secret"),
         null,
+         null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -382,6 +387,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         "bob",
         new EnvironmentVariablePasswordProvider("SECRET"),
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -414,6 +420,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         Collections.singletonList(new URI("http://foo.com/my.csv")), // removed
         "bob",
         new DefaultPasswordProvider("secret"),
+        null,
         null,
         new HttpInputSourceConfig(null)
     );
@@ -484,6 +491,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         "bob",
         new EnvironmentVariablePasswordProvider("SECRET"),
         null,
+        null,
         new HttpInputSourceConfig(null)
     );
     TableMetadata table = TableBuilder.external("foo")
@@ -518,7 +526,6 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
       assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
     }
     assertEquals("http://foo.com/my.csv", sourceSpec.getUris().get(0).toString());
-
     // Just a sanity check: details of CSV conversion are tested elsewhere.
     CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat;
     assertEquals(Arrays.asList("x", "y"), csvFormat.getColumns());
