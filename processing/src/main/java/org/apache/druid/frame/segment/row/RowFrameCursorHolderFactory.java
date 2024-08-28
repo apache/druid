@@ -34,12 +34,11 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.CursorHolderFactory;
-import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -69,16 +68,11 @@ public class RowFrameCursorHolderFactory implements CursorHolderFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
-    final List<OrderBy> ordering;
-    final boolean descending;
-    if (Cursors.preferDescendingTimeOrdering(spec)) {
-      ordering = Cursors.descendingTimeOrder();
-      descending = true;
-    } else {
-      ordering = Cursors.ascendingTimeOrder();
-      descending = false;
-    }
+    // Frames are not self-describing as to their sort order, so we can't determine the sort order by looking at
+    // the Frame object. We could populate this with information from the relevant ClusterBy, but that's not available
+    // at this point in the code. It could be plumbed in at some point. For now, use an empty list.
+    final List<OrderBy> ordering = Collections.emptyList();
+
     return new CursorHolder()
     {
       @Nullable
@@ -87,10 +81,7 @@ public class RowFrameCursorHolderFactory implements CursorHolderFactory
       {
         final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
 
-        final SimpleSettableOffset baseOffset = descending
-                                                ? new SimpleDescendingOffset(frame.numRows())
-                                                : new SimpleAscendingOffset(frame.numRows());
-
+        final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
 
         final ColumnSelectorFactory columnSelectorFactory =
             spec.getVirtualColumns().wrap(

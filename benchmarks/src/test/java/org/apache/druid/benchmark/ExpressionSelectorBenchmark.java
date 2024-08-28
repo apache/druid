@@ -39,9 +39,11 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -192,11 +194,11 @@ public class ExpressionSelectorBenchmark
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final CursorGranularizer granularizer = CursorGranularizer.create(
-          adapter,
           cursor,
+          QueryableIndexTimeBoundaryInspector.create(index),
+          Cursors.getTimeOrdering(index.getOrdering()),
           Granularities.HOUR,
-          adapter.getInterval(),
-          false
+          adapter.getInterval()
       );
       final Sequence<Long> results =
           Sequences.simple(granularizer.getBucketIterable())

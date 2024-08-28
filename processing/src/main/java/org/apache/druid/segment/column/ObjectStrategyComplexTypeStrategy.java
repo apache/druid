@@ -82,8 +82,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   @Override
   public boolean readRetainsBufferReference()
   {
-    // Can't guarantee that ObjectStrategy *doesn't* retain a reference.
-    return true;
+    return objectStrategy.readRetainsBufferReference();
   }
 
   @Override

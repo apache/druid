@@ -22,6 +22,9 @@ title: "Iceberg extension"
   ~ under the License.
   -->
 
+<!-- If the URL changes for this topic, make modifications
+to Apache Iceberg docs: https://github.com/apache/iceberg/blob/main/docs/mkdocs.yml -->
+
 ## Iceberg Ingest extension
 
 Apache Iceberg is an open table format for huge analytic datasets. [IcebergInputSource](../../ingestion/input-sources.md#iceberg-input-source) lets you ingest data stored in the Iceberg table format into Apache Druid. To use the iceberg extension, add the `druid-iceberg-extensions` to the list of loaded extensions. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.

@@ -83,12 +83,12 @@ exports[`SupervisorsView matches snapshot 1`] = `
             "text": "Aggregate lag",
           },
           {
-            "label": "status API",
-            "text": "Recent errors",
-          },
-          {
             "label": "stats API",
             "text": "Stats",
+          },
+          {
+            "label": "status API",
+            "text": "Recent errors",
           },
         ]
       }

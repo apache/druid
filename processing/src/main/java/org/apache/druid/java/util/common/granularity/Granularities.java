@@ -69,7 +69,6 @@ public class Granularities
     return granularity == null ? Granularities.ALL : granularity;
   }
 
-
   /**
    * Decorates {@link CursorBuildSpec} with a grouping column and virtual column equivalent to the {@link Granularity}
    * for a {@link Query}, if that query has granularity other than {@link Granularities#ALL}. If the query has 'ALL'

@@ -31,6 +31,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -129,16 +130,16 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
   @Override
   protected void writeValueColumn(FileSmoosher smoosher) throws IOException
   {
-    writeInternal(smoosher, longsSerializer, LONG_VALUE_COLUMN_FILE_NAME);
+    writeInternal(smoosher, longsSerializer, ColumnSerializerUtils.LONG_VALUE_COLUMN_FILE_NAME);
   }
 
   @Override
   protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
   {
     if (dictionaryIdLookup.getLongBuffer() != null) {
-      writeInternal(smoosher, dictionaryIdLookup.getLongBuffer(), LONG_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, dictionaryIdLookup.getLongBuffer(), ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
     } else {
-      writeInternal(smoosher, dictionaryWriter, LONG_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
     }
   }
 }

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -56,6 +55,31 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Assert.assertEquals(
         Intervals.of("2015-09-12/2015-09-12T05:21:00.060Z"),
         makeFactToCountrySegment().getInterval()
+    );
+  }
+
+  @Test
+  public void test_getRowSignature_factToCountry()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            "__time",
+            "channel",
+            "regionIsoCode",
+            "countryNumber",
+            "countryIsoCode",
+            "user",
+            "isRobot",
+            "isAnonymous",
+            "namespace",
+            "page",
+            "delta",
+            "channel_uniques",
+            "c1.countryNumber",
+            "c1.countryIsoCode",
+            "c1.countryName"
+        ),
+        Lists.newArrayList(makeFactToCountrySegment().getRowSignature().getColumnNames())
     );
   }
 
@@ -124,24 +148,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
     Assert.assertEquals(
         1,
         makeFactToCountrySegment().getDimensionCardinality(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "nonexistent")
-    );
-  }
-
-  @Test
-  public void test_getMinTime_factToCountry()
-  {
-    Assert.assertEquals(
-        DateTimes.of("2015-09-12T00:46:58.771Z"),
-        makeFactToCountrySegment().getMinTime()
-    );
-  }
-
-  @Test
-  public void test_getMaxTime_factToCountry()
-  {
-    Assert.assertEquals(
-        DateTimes.of("2015-09-12T05:21:00.059Z"),
-        makeFactToCountrySegment().getMaxTime()
     );
   }
 
@@ -265,15 +271,6 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
         "STRING",
         makeFactToCountrySegment().getColumnCapabilities(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
                                   .asTypeString()
-    );
-  }
-
-  @Test
-  public void test_getMaxIngestedEventTime_factToCountry()
-  {
-    Assert.assertEquals(
-        DateTimes.of("2015-09-12T05:21:00.059Z"),
-        makeFactToCountrySegment().getMaxIngestedEventTime()
     );
   }
 
