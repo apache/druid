@@ -22,6 +22,7 @@ package org.apache.druid.indexing.compact;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.java.util.common.Stopwatch;
@@ -36,6 +37,7 @@ import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -44,6 +46,7 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Duration;
 
@@ -135,7 +138,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isEnabled() && started.compareAndSet(false, true)) {
       log.info("Starting compaction scheduler.");
       initState();
-      scheduleOnExecutor(this::checkSchedulingStatus, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
     }
   }
 
@@ -152,6 +155,19 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   public boolean isRunning()
   {
     return isEnabled() && started.get();
+  }
+
+  @Override
+  public CompactionConfigValidationResult validateCompactionConfig(DataSourceCompactionConfig compactionConfig)
+  {
+    if (compactionConfig == null) {
+      return CompactionConfigValidationResult.failure("Cannot be null");
+    } else {
+      return ClientCompactionRunnerInfo.validateCompactionConfig(
+          compactionConfig,
+          compactionConfigSupplier.get().getEngine()
+      );
+    }
   }
 
   @Override
@@ -191,7 +207,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     return schedulerConfig.isEnabled();
   }
 
-  private synchronized void checkSchedulingStatus()
+  private synchronized void scheduledRun()
   {
     if (isRunning()) {
       try {
@@ -200,7 +216,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
       }
-      scheduleOnExecutor(this::checkSchedulingStatus, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
     } else {
       cleanupState();
     }
@@ -221,6 +237,10 @@ public class OverlordCompactionScheduler implements CompactionScheduler
           }
       );
       sinceStatsEmitted.restart();
+    } else {
+      // Always emit number of submitted tasks
+      long numSubmittedTasks = stats.get(Stats.Compaction.SUBMITTED_TASKS);
+      emitStat(Stats.Compaction.SUBMITTED_TASKS, Collections.emptyMap(), numSubmittedTasks);
     }
   }
 

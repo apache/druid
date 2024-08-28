@@ -22,6 +22,7 @@ package org.apache.druid.indexing.compact;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
@@ -48,6 +49,8 @@ public interface CompactionScheduler
   void stop();
 
   boolean isRunning();
+
+  CompactionConfigValidationResult validateCompactionConfig(DataSourceCompactionConfig compactionConfig);
 
   void startCompaction(String dataSourceName, DataSourceCompactionConfig compactionConfig);
 

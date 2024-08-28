@@ -25,10 +25,12 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.util.Collections;
@@ -42,6 +44,9 @@ public class CompactionSupervisorSpecTest
   public void setUp()
   {
     scheduler = Mockito.mock(CompactionScheduler.class);
+    Mockito.when(scheduler.validateCompactionConfig(ArgumentMatchers.any()))
+           .thenReturn(CompactionConfigValidationResult.success());
+    
     OBJECT_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(CompactionScheduler.class, scheduler)

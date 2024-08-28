@@ -28,12 +28,12 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Tracks status of recently submitted compaction tasks. Can be used by a segment
@@ -42,9 +42,13 @@ import java.util.Set;
  */
 public class CompactionStatusTracker
 {
+  private static final Duration MAX_STATUS_RETAIN_DURATION = Duration.standardHours(12);
+
   private final ObjectMapper objectMapper;
-  private final Map<String, DatasourceStatus> datasourceStatuses = new HashMap<>();
-  private final Map<String, SegmentsToCompact> submittedTaskIdToSegments = new HashMap<>();
+  private final ConcurrentHashMap<String, DatasourceStatus> datasourceStatuses
+      = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, SegmentsToCompact> submittedTaskIdToSegments
+      = new ConcurrentHashMap<>();
 
   @Inject
   public CompactionStatusTracker(ObjectMapper objectMapper)
@@ -104,6 +108,9 @@ public class CompactionStatusTracker
         datasourceStatuses.remove(datasource);
       }
     });
+
+    // Clean up stale task statuses
+    datasourceStatuses.values().forEach(DatasourceStatus::cleanupStaleTaskStatuses);
   }
 
   public void onTaskSubmitted(
@@ -142,7 +149,8 @@ public class CompactionStatusTracker
   {
     static final DatasourceStatus EMPTY = new DatasourceStatus();
 
-    final Map<Interval, CompactionTaskStatus> intervalToTaskStatus = new HashMap<>();
+    final ConcurrentHashMap<Interval, CompactionTaskStatus> intervalToTaskStatus
+        = new ConcurrentHashMap<>();
 
     void handleCompletedTask(Interval compactionInterval, TaskStatus taskStatus)
     {
@@ -179,6 +187,20 @@ public class CompactionStatusTracker
             new CompactionTaskStatus(TaskState.RUNNING, now, lastStatus.getNumConsecutiveFailures())
         );
       }
+    }
+
+    void cleanupStaleTaskStatuses()
+    {
+      final DateTime now = DateTimes.nowUtc();
+
+      final Set<Interval> staleIntervals = new HashSet<>();
+      intervalToTaskStatus.forEach((interval, taskStatus) -> {
+        if (taskStatus.getUpdatedTime().plus(MAX_STATUS_RETAIN_DURATION).isBefore(now)) {
+          staleIntervals.add(interval);
+        }
+      });
+
+      staleIntervals.forEach(intervalToTaskStatus::remove);
     }
   }
 }

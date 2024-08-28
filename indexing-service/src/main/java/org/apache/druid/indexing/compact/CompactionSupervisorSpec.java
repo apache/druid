@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
@@ -47,8 +48,9 @@ public class CompactionSupervisorSpec implements SupervisorSpec
       @JacksonInject CompactionScheduler scheduler
   )
   {
-    if (spec == null) {
-      throw InvalidInput.exception("'spec' must be specified for a compaction supervisor.");
+    final CompactionConfigValidationResult validationResult = scheduler.validateCompactionConfig(spec);
+    if (!validationResult.isValid()) {
+      throw InvalidInput.exception("Compaction supervisor 'spec' is invalid. Reason[%s].", validationResult.getReason());
     }
 
     this.spec = spec;
