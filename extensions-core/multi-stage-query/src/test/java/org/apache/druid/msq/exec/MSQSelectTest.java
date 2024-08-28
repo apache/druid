@@ -2324,7 +2324,7 @@ public class MSQSelectTest extends MSQTestBase
     if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
       new File(
           localFileStorageDir,
-          DurableStorageUtils.getWorkerOutputSuccessFilePath("query-test-query", 0, 0)
+          DurableStorageUtils.getWorkerOutputSuccessFilePath(TEST_CONTROLLER_TASK_ID, 0, 0)
       );
 
       Mockito.verify(localFileStorageConnector, Mockito.times(2))
