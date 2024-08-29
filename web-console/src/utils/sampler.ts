@@ -73,16 +73,18 @@ export interface SampleResponse {
   numRowsRead: number;
 }
 
+export type TimeColumnAction = 'preserve' | 'ignore' | 'ignoreIfZero';
+
 export function getHeaderNamesFromSampleResponse(
   sampleResponse: SampleResponse,
-  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+  timeColumnAction: TimeColumnAction = 'preserve',
 ): string[] {
   return getHeaderFromSampleResponse(sampleResponse, timeColumnAction).map(s => s.name);
 }
 
 export function getHeaderFromSampleResponse(
   sampleResponse: SampleResponse,
-  timeColumnAction: 'preserve' | 'ignore' | 'ignoreIfZero' = 'preserve',
+  timeColumnAction: TimeColumnAction = 'preserve',
 ): { name: string; type: string }[] {
   const ignoreTimeColumn =
     timeColumnAction === 'ignore' ||
@@ -462,13 +464,17 @@ export async function sampleForTimestamp(
 export async function sampleForTransform(
   spec: Partial<IngestionSpec>,
   cacheRows: CacheRows,
+  forceSegmentSortByTime: boolean,
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
 
   // Extra step to simulate auto-detecting dimension with transforms
-  let specialDimensionSpec: DimensionsSpec = { useSchemaDiscovery: true };
+  let specialDimensionSpec: DimensionsSpec = {
+    useSchemaDiscovery: true,
+    forceSegmentSortByTime,
+  };
   if (transforms && transforms.length) {
     const sampleSpecHack: SampleSpec = {
       type: samplerType,
