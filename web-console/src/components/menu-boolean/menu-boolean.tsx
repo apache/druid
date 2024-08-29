@@ -19,50 +19,71 @@
 import type { MenuItemProps } from '@blueprintjs/core';
 import { MenuItem } from '@blueprintjs/core';
 import classNames from 'classnames';
+import type { ReactNode } from 'react';
 import React from 'react';
 
 import { tickIcon } from '../../utils';
 
-export interface MenuTristateProps extends Omit<MenuItemProps, 'label'> {
-  value: boolean | undefined;
-  onValueChange(value: boolean | undefined): void;
-  undefinedLabel?: string;
-  undefinedEffectiveValue?: boolean;
+export type TrueFalseUndefined = 'true' | 'false' | 'undefined';
+
+function toKey(value: boolean | undefined) {
+  return String(value) as TrueFalseUndefined;
 }
 
-export function MenuTristate(props: MenuTristateProps) {
+const DEFAULT_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = { undefined: 'Auto' };
+
+export const ENABLE_DISABLE_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = {
+  true: 'Enable',
+  false: 'Disable',
+  undefined: 'Auto',
+};
+
+export interface MenuBooleanProps extends Omit<MenuItemProps, 'label'> {
+  value: boolean | undefined;
+  onValueChange(value: boolean | undefined): void;
+  showUndefined?: boolean;
+  undefinedEffectiveValue?: boolean;
+  optionsText?: Partial<Record<TrueFalseUndefined, string>>;
+  optionsLabelElement?: Partial<Record<TrueFalseUndefined, ReactNode>>;
+}
+
+export function MenuBoolean(props: MenuBooleanProps) {
   const {
     value,
     onValueChange,
-    undefinedLabel,
+    showUndefined,
     undefinedEffectiveValue,
     className,
     shouldDismissPopover,
+    optionsText = DEFAULT_OPTIONS_TEXT,
+    optionsLabelElement = {},
     ...rest
   } = props;
+  const effectiveValue = showUndefined ? value : value ?? undefinedEffectiveValue;
   const shouldDismiss = shouldDismissPopover ?? false;
 
   function formatValue(value: boolean | undefined): string {
-    return String(value ?? undefinedLabel ?? 'auto');
+    const s = toKey(value);
+    return optionsText[s] ?? s;
   }
 
   return (
     <MenuItem
       className={classNames('menu-tristate', className)}
       shouldDismissPopover={shouldDismiss}
-      label={
-        formatValue(value) +
-        (typeof value === 'undefined' && typeof undefinedEffectiveValue === 'boolean'
-          ? ` (${undefinedEffectiveValue})`
-          : '')
-      }
+      label={`${formatValue(effectiveValue)}${
+        typeof effectiveValue === 'undefined' && typeof undefinedEffectiveValue === 'boolean'
+          ? ` (${formatValue(undefinedEffectiveValue)})`
+          : ''
+      }`}
       {...rest}
     >
-      {[undefined, true, false].map((v, i) => (
+      {(showUndefined ? [undefined, true, false] : [true, false]).map(v => (
         <MenuItem
-          key={i}
-          icon={tickIcon(value === v)}
+          key={String(v)}
+          icon={tickIcon(effectiveValue === v)}
           text={formatValue(v)}
+          labelElement={optionsLabelElement[toKey(v)]}
           onClick={() => onValueChange(v)}
           shouldDismissPopover={shouldDismiss}
         />

@@ -63,3 +63,9 @@ body {
     width: 100%;
   }
 }
+
+// Prevent popover menus from being longer than 45% of available height, let them scroll instead
+.#{$bp-ns}-popover-content > .#{$bp-ns}-menu {
+  max-height: 47vh;
+  overflow: auto;
+}
