@@ -98,7 +98,7 @@ public class AppenderatorDriverAddResult
       overThreshold = getNumRowsInSegment() >= maxRowsPerSegment;
     }
     if (maxTotalRows != null) {
-      overThreshold = overThreshold || getTotalNumRowsInAppenderator() >= maxTotalRows;
+      overThreshold |= getTotalNumRowsInAppenderator() >= maxTotalRows;
     }
     return overThreshold;
   }
