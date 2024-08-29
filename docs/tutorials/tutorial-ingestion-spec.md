@@ -590,8 +590,8 @@ bin/post-index-task --file quickstart/ingestion-tutorial-index.json --url http:/
 
 After the script completes, we will query the data.
 
-Let's issue a `select * from "ingestion-tutorial";` query to the SQL API and see what data was ingested.
+In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
 
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"query": "select * from \"ingestion-tutorial\""}' http://localhost:8888/druid/v2/sql
-```
+```select * from "ingestion-tutorial";```
+
+Returns the following:
