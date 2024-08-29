@@ -592,6 +592,16 @@ After the script completes, we will query the data.
 
 In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
 
-```select * from "ingestion-tutorial";```
+```sql
+select * from "ingestion-tutorial"
+```
 
 Returns the following:
+
+| `__time` | `bytes` | `cost` | `count` | `dstIP` | `dstPort` | `packets` | `protocol` | `srcIP` | `srcPort` |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| `2018-01-01T01:01:00.000Z` | `6000` | `4.9` | `3` | `2.2.2.2` | `3000` | `60` | `6` | `1.1.1.1` | `2000` |
+| `2018-01-01T01:02:00.000Z` |  `9000` | `18.1` | `2` | `2.2.2.2` | `7000` | `90` | `6` | `1.1.1.1` | `5000` |
+| `2018-01-01T01:03:00.000Z` | `6000` |  `4.3` | `1` | `2.2.2.2` | `7000` | `60` | `6` | `1.1.1.1` | `5000` |
+| `2018-01-01T02:33:00.000Z` | `30000` | `56.9` | `2` | `8.8.8.8` | `5000` | `300` | `17` | `7.7.7.7` | `4000` |
+| `2018-01-01T02:35:00.000Z` | `30000` | `46.3` | `1` | `8.8.8.8` | `5000` | `300` | `17` | `7.7.7.7` | `4000` |
