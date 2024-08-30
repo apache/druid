@@ -30,7 +30,6 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -67,12 +66,6 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private static final String ARBITRARY_COORDINATOR_BASE_PATH = "/proxy/coordinator";
   private static final String ARBITRARY_OVERLORD_BASE_PATH = "/proxy/overlord";
 
-  // If Compaction Scheduler is enabled, compaction status APIs must be forwarded to the Overlord
-  //   Client Request: https://{ROUTER_HOST}:9088/druid/coordinator/v1/compaction/status
-  //   Proxy Request:  https://{OVERLORD_HOST}:8281/druid/indexer/v1/compaction/status
-  private static final String COMPACTION_COORDINATOR_PATH = "/druid/coordinator/v1/compaction";
-  private static final String COMPACTION_OVERLORD_PATH = "/druid/indexer/v1/compaction";
-
   // This path is used to check if the managment proxy is enabled, it simply returns {"enabled":true}
   private static final String ENABLED_PATH = "/proxy/enabled";
 
@@ -82,7 +75,6 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private final DruidLeaderSelector coordLeaderSelector;
   private final DruidLeaderSelector overlordLeaderSelector;
   private final AuthorizerMapper authorizerMapper;
-  private final CompactionSupervisorsConfig compactionSupervisorsConfig;
 
   @Inject
   public AsyncManagementForwardingServlet(
@@ -91,7 +83,6 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       @Global DruidHttpClientConfig httpClientConfig,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       @IndexingService DruidLeaderSelector overlordLeaderSelector,
-      CompactionSupervisorsConfig compactionSupervisorsConfig,
       AuthorizerMapper authorizerMapper
   )
   {
@@ -100,7 +91,6 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     this.httpClientConfig = httpClientConfig;
     this.coordLeaderSelector = coordLeaderSelector;
     this.overlordLeaderSelector = overlordLeaderSelector;
-    this.compactionSupervisorsConfig = compactionSupervisorsConfig;
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -109,15 +99,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   {
     String currentLeader;
     String requestURI = StringUtils.toLowerCase(request.getRequestURI());
-    if (compactionSupervisorsConfig.isEnabled()
-        && requestURI.startsWith(COMPACTION_COORDINATOR_PATH)) {
-      // If Compaction Scheduler is enabled, compaction APIs must be forwarded to the Overlord
-      currentLeader = overlordLeaderSelector.getCurrentLeader();
-      request.setAttribute(
-          MODIFIED_PATH_ATTRIBUTE,
-          StringUtils.replace(request.getRequestURI(), COMPACTION_COORDINATOR_PATH, COMPACTION_OVERLORD_PATH)
-      );
-    } else if (requestURI.startsWith(STANDARD_COORDINATOR_BASE_PATH)) {
+    if (requestURI.startsWith(STANDARD_COORDINATOR_BASE_PATH)) {
       currentLeader = coordLeaderSelector.getCurrentLeader();
     } else if (requestURI.startsWith(STANDARD_OVERLORD_BASE_PATH)) {
       currentLeader = overlordLeaderSelector.getCurrentLeader();

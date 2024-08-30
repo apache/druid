@@ -28,6 +28,7 @@ import java.util.List;
 
 /**
  * A simple table POJO with any number of rows and specified column names.
+ * Used in {@link CompactionSimulateResult}.
  */
 public class Table
 {

@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -282,6 +283,24 @@ public class CompactionRunSimulator
 
     @Override
     public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ListenableFuture<Long> getBytesAwaitingCompaction(String dataSource)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
     {
       throw new UnsupportedOperationException();
     }

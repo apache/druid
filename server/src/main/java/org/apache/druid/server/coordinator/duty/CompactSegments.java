@@ -439,7 +439,6 @@ public class CompactSegments implements CoordinatorCustomDuty
       }
 
       final String dataSourceName = entry.getDataSource();
-      LOG.info("Compacting version[%s].", entry.getFirst().getVersion());
 
       // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
       currentRunAutoCompactionSnapshotBuilders

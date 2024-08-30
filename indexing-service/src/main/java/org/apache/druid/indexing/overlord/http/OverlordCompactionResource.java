@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.compact.CompactionScheduler;
@@ -55,6 +56,15 @@ public class OverlordCompactionResource
   }
 
   @GET
+  @Path("/isSupervisorEnabled")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response isCompactionSupervisorEnabled()
+  {
+    return Response.ok(scheduler.isRunning()).build();
+  }
+
+  @GET
   @Path("/progress")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
@@ -62,6 +72,10 @@ public class OverlordCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
+    if (!scheduler.isRunning()) {
+      return buildErrorResponseIfSchedulerDisabled();
+    }
+
     if (dataSource == null || dataSource.isEmpty()) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(Collections.singletonMap("error", "No DataSource specified"))
@@ -83,10 +97,14 @@ public class OverlordCompactionResource
   @Path("/status")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response getCompactionSnapshotForDataSource(
+  public Response getCompactionSnapshots(
       @QueryParam("dataSource") String dataSource
   )
   {
+    if (!scheduler.isRunning()) {
+      return buildErrorResponseIfSchedulerDisabled();
+    }
+
     final Collection<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
       snapshots = scheduler.getAllCompactionSnapshots().values();
@@ -106,12 +124,23 @@ public class OverlordCompactionResource
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response simulateClusterCompactionConfigUpdate(
+  public Response simulateRunWithConfigUpdate(
       ClusterCompactionConfig updatePayload
   )
   {
     return Response.ok().entity(
         scheduler.simulateRunWithConfigUpdate(updatePayload)
+    ).build();
+  }
+
+  private Response buildErrorResponseIfSchedulerDisabled()
+  {
+    return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(
+        ImmutableMap.of(
+            "error",
+            "Compaction Supervisors are disabled on the Overlord."
+            + " Use Coordinator APIs to fetch compaction status."
+        )
     ).build();
   }
 }

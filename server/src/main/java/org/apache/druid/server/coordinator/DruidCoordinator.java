@@ -35,6 +35,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -160,8 +161,6 @@ public class DruidCoordinator
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-  private final CompactionSupervisorsConfig compactionSupervisorsConfig;
-
 
   private volatile boolean started = false;
 
@@ -206,8 +205,7 @@ public class DruidCoordinator
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
       CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
-      CompactionStatusTracker compactionStatusTracker,
-      CompactionSupervisorsConfig compactionSupervisorsConfig
+      CompactionStatusTracker compactionStatusTracker
   )
   {
     this.config = config;
@@ -230,7 +228,6 @@ public class DruidCoordinator
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
-    this.compactionSupervisorsConfig = compactionSupervisorsConfig;
   }
 
   public boolean isLeader()
@@ -443,7 +440,7 @@ public class DruidCoordinator
     }
   }
 
-  public void becomeLeader()
+  private void becomeLeader()
   {
     synchronized (lock) {
       if (!started) {
@@ -535,7 +532,7 @@ public class DruidCoordinator
     }
   }
 
-  public void stopBeingLeader()
+  private void stopBeingLeader()
   {
     synchronized (lock) {
 
@@ -550,6 +547,20 @@ public class DruidCoordinator
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
       balancerStrategyFactory.stopExecutor();
+    }
+  }
+
+  /**
+   * Check if compaction supervisors are enabled on the Overlord.
+   */
+  private boolean isCompactionSupervisorEnabled()
+  {
+    try {
+      return FutureUtils.getUnchecked(overlordClient.isCompactionSupervisorEnabled(), true);
+    }
+    catch (Exception e) {
+      // The Overlord is probably on an older version, assume that compaction supervisor is not enabled
+      return false;
     }
   }
 
@@ -803,13 +814,13 @@ public class DruidCoordinator
      */
     private boolean shouldSkipAutoCompactDuty(CoordinatorDuty duty)
     {
-      final boolean shouldSkipDuty = compactionSupervisorsConfig.isEnabled()
-                                     && duty instanceof CompactSegments
-                                     && !COMPACT_SEGMENTS_DUTIES_DUTY_GROUP.equals(dutyGroupName);
+      final boolean shouldSkipDuty = duty instanceof CompactSegments
+                                     && !COMPACT_SEGMENTS_DUTIES_DUTY_GROUP.equals(dutyGroupName)
+                                     && isCompactionSupervisorEnabled();
       if (shouldSkipDuty) {
         log.warn(
             "Skipping Compact Segments duty in group[%s] since compaction"
-            + " scheduler is already running on Overlord.",
+            + " supervisors are already running on Overlord.",
             dutyGroupName
         );
       }

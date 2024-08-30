@@ -66,17 +66,17 @@ public class AutoCompactionSnapshot
 
   @JsonCreator
   public AutoCompactionSnapshot(
-      @JsonProperty @NotNull String dataSource,
-      @JsonProperty @NotNull AutoCompactionScheduleStatus scheduleStatus,
-      @JsonProperty long bytesAwaitingCompaction,
-      @JsonProperty long bytesCompacted,
-      @JsonProperty long bytesSkipped,
-      @JsonProperty long segmentCountAwaitingCompaction,
-      @JsonProperty long segmentCountCompacted,
-      @JsonProperty long segmentCountSkipped,
-      @JsonProperty long intervalCountAwaitingCompaction,
-      @JsonProperty long intervalCountCompacted,
-      @JsonProperty long intervalCountSkipped
+      @JsonProperty("dataSource") @NotNull String dataSource,
+      @JsonProperty("scheduleStatus") @NotNull AutoCompactionScheduleStatus scheduleStatus,
+      @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
+      @JsonProperty("bytesCompacted") long bytesCompacted,
+      @JsonProperty("bytesSkipped") long bytesSkipped,
+      @JsonProperty("segmentCountAwaitingCompaction") long segmentCountAwaitingCompaction,
+      @JsonProperty("segmentCountCompacted") long segmentCountCompacted,
+      @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
+      @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
+      @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
+      @JsonProperty("intervalCountSkipped") long intervalCountSkipped
   )
   {
     this.dataSource = dataSource;

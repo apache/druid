@@ -21,7 +21,9 @@ package org.apache.druid.indexing.compact;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.CompactionTask;
@@ -36,11 +38,18 @@ import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
+import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -59,6 +68,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -206,6 +216,32 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
+  public void testNullCompactionConfigIsInvalid()
+  {
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(null);
+    Assert.assertFalse(result.isValid());
+    Assert.assertEquals("Cannot be null", result.getReason());
+  }
+
+  @Test
+  public void testMsqCompactionConfigWithOneMaxTasksIsInvalid()
+  {
+    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withEngine(CompactionEngine.MSQ)
+        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .build();
+
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(datasourceConfig);
+    Assert.assertFalse(result.isValid());
+    Assert.assertEquals(
+        "MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)",
+        result.getReason()
+    );
+  }
+
+  @Test
   public void testStartCompactionForDatasource()
   {
     final List<DataSegment> wikiSegments = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100);
@@ -275,6 +311,52 @@ public class OverlordCompactionSchedulerTest
 
     serviceEmitter.verifyNotEmitted(Stats.Compaction.SUBMITTED_TASKS.getMetricName());
     serviceEmitter.verifyNotEmitted(Stats.Compaction.COMPACTED_BYTES.getMetricName());
+
+    scheduler.stop();
+  }
+
+  @Test
+  public void testRunSimulation()
+  {
+    final List<DataSegment> wikiSegments = CreateDataSegments
+        .ofDatasource(TestDataSource.WIKI)
+        .forIntervals(1, Granularities.DAY)
+        .startingAt("2013-01-01")
+        .withNumPartitions(10)
+        .eachOfSizeInMb(100);
+    wikiSegments.forEach(segmentsMetadataManager::addSegment);
+
+    scheduler.start();
+    scheduler.startCompaction(
+        TestDataSource.WIKI,
+        DataSourceCompactionConfig.builder()
+                                  .forDataSource(TestDataSource.WIKI)
+                                  .withSkipOffsetFromLatest(Period.seconds(0))
+                                  .build()
+    );
+
+    final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(
+        new ClusterCompactionConfig(null, null, null, null, null)
+    );
+    Assert.assertEquals(1, simulateResult.getCompactionStates().size());
+    final Table pendingCompactionTable = simulateResult.getCompactionStates().get(CompactionStatus.State.PENDING);
+    Assert.assertEquals(
+        Arrays.asList("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact"),
+        pendingCompactionTable.getColumnNames()
+    );
+    Assert.assertEquals(
+        Collections.singletonList(
+            Arrays.asList("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "not compacted yet")
+        ),
+        pendingCompactionTable.getRows()
+    );
+
+    scheduler.stopCompaction(TestDataSource.WIKI);
+
+    final CompactionSimulateResult simulateResultWhenDisabled = scheduler.simulateRunWithConfigUpdate(
+        new ClusterCompactionConfig(null, null, null, null, null)
+    );
+    Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 
     scheduler.stop();
   }

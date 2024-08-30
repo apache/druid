@@ -22,11 +22,14 @@ package org.apache.druid.server.http;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
-import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -45,16 +48,16 @@ import java.util.Collection;
 public class CoordinatorCompactionResource
 {
   private final DruidCoordinator coordinator;
-  private final CompactionSupervisorsConfig compactionSupervisorsConfig;
+  private final OverlordClient overlordClient;
 
   @Inject
   public CoordinatorCompactionResource(
       DruidCoordinator coordinator,
-      CompactionSupervisorsConfig compactionSupervisorsConfig
+      OverlordClient overlordClient
   )
   {
     this.coordinator = coordinator;
-    this.compactionSupervisorsConfig = compactionSupervisorsConfig;
+    this.overlordClient = overlordClient;
   }
 
   /**
@@ -78,19 +81,19 @@ public class CoordinatorCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (compactionSupervisorsConfig.isEnabled()) {
-      buildErrorResponseWhenRunningAsSupervisor();
-    }
-
     if (dataSource == null || dataSource.isEmpty()) {
       return Response.status(Response.Status.BAD_REQUEST)
                      .entity(ImmutableMap.of("error", "No DataSource specified"))
                      .build();
     }
 
+    if (isCompactionSupervisorEnabled()) {
+      return buildResponse(overlordClient.getBytesAwaitingCompaction(dataSource));
+    }
+
     final AutoCompactionSnapshot snapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
     if (snapshot == null) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+      return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "Unknown DataSource")).build();
     } else {
       return Response.ok(ImmutableMap.of("remainingSegmentSize", snapshot.getBytesAwaitingCompaction())).build();
     }
@@ -104,8 +107,8 @@ public class CoordinatorCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (compactionSupervisorsConfig.isEnabled()) {
-      return buildErrorResponseWhenRunningAsSupervisor();
+    if (isCompactionSupervisorEnabled()) {
+      return buildResponse(overlordClient.getCompactionSnapshots(dataSource));
     }
 
     final Collection<AutoCompactionSnapshot> snapshots;
@@ -114,7 +117,7 @@ public class CoordinatorCompactionResource
     } else {
       AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
       if (autoCompactionSnapshot == null) {
-        return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+        return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "Unknown DataSource")).build();
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
@@ -125,27 +128,45 @@ public class CoordinatorCompactionResource
   @Path("/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response simulateClusterCompactionConfigUpdate(
+  public Response simulateWithClusterConfigUpdate(
       ClusterCompactionConfig updatePayload
   )
   {
-    if (compactionSupervisorsConfig.isEnabled()) {
-      return buildErrorResponseWhenRunningAsSupervisor();
-    }
-
     return Response.ok().entity(
         coordinator.simulateRunWithConfigUpdate(updatePayload)
     ).build();
   }
 
-  private Response buildErrorResponseWhenRunningAsSupervisor()
+  private <T> Response buildResponse(ListenableFuture<T> future)
   {
-    return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(
-        ImmutableMap.of(
-            "error",
-            "Compaction has been disabled on the Coordinator."
-            + " Use Overlord APIs to fetch compaction status."
-        )
-    ).build();
+    try {
+      return Response.ok(FutureUtils.getUnchecked(future, true)).build();
+    }
+    catch (Exception e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        final HttpResponseException cause = (HttpResponseException) e.getCause();
+        return Response.status(cause.getResponse().getStatus().getCode())
+                       .entity(cause.getResponse().getContent())
+                       .build();
+      } else {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                       .entity(ImmutableMap.of("error", e.getMessage()))
+                       .build();
+      }
+    }
+  }
+
+  /**
+   * Check if compaction supervisors are enabled on the Overlord. 
+   */
+  private boolean isCompactionSupervisorEnabled()
+  {
+    try {
+      return FutureUtils.getUnchecked(overlordClient.isCompactionSupervisorEnabled(), true);
+    }
+    catch (Exception e) {
+      // Overlord is probably on an older version, assume that compaction supervisor is not enabled
+      return false;
+    }
   }
 }
