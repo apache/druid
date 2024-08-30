@@ -64,7 +64,7 @@ public class CostBalancerStrategyTest
     balancerExecutor = Execs.singleThreaded("test-balance-exec-%d");
     strategy = new CostBalancerStrategy(MoreExecutors.listeningDecorator(balancerExecutor));
 
-    serviceEmitter = new StubServiceEmitter("test-service", "host");
+    serviceEmitter = new StubServiceEmitter();
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
