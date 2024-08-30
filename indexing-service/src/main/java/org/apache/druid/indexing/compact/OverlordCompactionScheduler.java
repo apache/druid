@@ -43,7 +43,7 @@ import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
-import org.apache.druid.server.coordinator.CompactionSupervisorsConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -66,7 +66,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Implementation of {@link CompactionScheduler}.
  * <p>
- * When {@link CompactionSupervisorsConfig} is enabled, this class performs the
+ * When {@link CompactionSupervisorConfig} is enabled, this class performs the
  * following responsibilities on the leader Overlord:
  * <ul>
  * <li>Poll segments from metadata</li>
@@ -88,7 +88,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private final ServiceEmitter emitter;
   private final TaskMaster taskMaster;
 
-  private final CompactionSupervisorsConfig schedulerConfig;
+  private final CompactionSupervisorConfig supervisorConfig;
   private final Supplier<DruidCompactionConfig> compactionConfigSupplier;
   private final ConcurrentHashMap<String, DataSourceCompactionConfig> activeDatasourceConfigs;
 
@@ -124,7 +124,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       SegmentsMetadataManager segmentManager,
       Supplier<DruidCompactionConfig> compactionConfigSupplier,
       CompactionStatusTracker statusTracker,
-      CompactionSupervisorsConfig schedulerConfig,
+      CompactionSupervisorConfig supervisorConfig,
       CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter,
@@ -134,7 +134,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     this.segmentManager = segmentManager;
     this.emitter = emitter;
     this.taskMaster = taskMaster;
-    this.schedulerConfig = schedulerConfig;
+    this.supervisorConfig = supervisorConfig;
     this.compactionConfigSupplier = compactionConfigSupplier;
 
     this.executor = executorFactory.create(1, "CompactionScheduler-%s");
@@ -249,7 +249,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
 
   private boolean isEnabled()
   {
-    return schedulerConfig.isEnabled();
+    return supervisorConfig.isEnabled();
   }
 
   private synchronized void scheduledRun()

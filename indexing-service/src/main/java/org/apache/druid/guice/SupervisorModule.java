@@ -28,6 +28,7 @@ import com.google.inject.Binder;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 
 import java.util.List;
 
@@ -37,6 +38,7 @@ public class SupervisorModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.supervisor", SupervisorStateManagerConfig.class);
+    JsonConfigProvider.bind(binder, "druid.supervisor.compaction", CompactionSupervisorConfig.class);
   }
 
   @Override

@@ -27,28 +27,24 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * This config must be bound on the following services:
- * <ul>
- * <li>CliOverlord - to run the compaction supervisors on the Overlord</li>
- * <li>CliOverlord - to prevent the Coordinator from running auto-compaction duty</li>
- * <li>CliRouter - to allow the Router to forward compaction stats requests to the Overlord</li>
- * </ul>
+ * This config must be bound on CliOverlord to enable running compaction supervisors
+ * on the Overlord. When compaction supervisors are enabled, the Coordinator
+ * does not run auto-compact duty.
  */
-public class CompactionSupervisorsConfig
+public class CompactionSupervisorConfig
 {
-  public static final String PROPERTY_PREFIX = "druid.compaction.supervisors";
-  private static final CompactionSupervisorsConfig DEFAULT = new CompactionSupervisorsConfig(null);
+  private static final CompactionSupervisorConfig DEFAULT = new CompactionSupervisorConfig(null);
 
   @JsonProperty
   private final boolean enabled;
 
-  public static CompactionSupervisorsConfig defaultConfig()
+  public static CompactionSupervisorConfig defaultConfig()
   {
     return DEFAULT;
   }
 
   @JsonCreator
-  public CompactionSupervisorsConfig(
+  public CompactionSupervisorConfig(
       @JsonProperty("enabled") @Nullable Boolean enabled
   )
   {
@@ -69,7 +65,7 @@ public class CompactionSupervisorsConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    CompactionSupervisorsConfig that = (CompactionSupervisorsConfig) o;
+    CompactionSupervisorConfig that = (CompactionSupervisorConfig) o;
     return enabled == that.enabled;
   }
 

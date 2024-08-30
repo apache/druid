@@ -25,6 +25,7 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CompactionSupervisorConfig;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.Consumes;
@@ -46,13 +47,16 @@ import java.util.Collections;
 public class OverlordCompactionResource
 {
   private final CompactionScheduler scheduler;
+  private final CompactionSupervisorConfig supervisorConfig;
 
   @Inject
   public OverlordCompactionResource(
+      CompactionSupervisorConfig supervisorConfig,
       CompactionScheduler scheduler
   )
   {
     this.scheduler = scheduler;
+    this.supervisorConfig = supervisorConfig;
   }
 
   @GET
@@ -61,7 +65,7 @@ public class OverlordCompactionResource
   @ResourceFilters(StateResourceFilter.class)
   public Response isCompactionSupervisorEnabled()
   {
-    return Response.ok(scheduler.isRunning()).build();
+    return Response.ok(supervisorConfig.isEnabled()).build();
   }
 
   @GET
@@ -72,7 +76,7 @@ public class OverlordCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (!scheduler.isRunning()) {
+    if (!supervisorConfig.isEnabled()) {
       return buildErrorResponseIfSchedulerDisabled();
     }
 
@@ -101,7 +105,7 @@ public class OverlordCompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    if (!scheduler.isRunning()) {
+    if (!supervisorConfig.isEnabled()) {
       return buildErrorResponseIfSchedulerDisabled();
     }
 
