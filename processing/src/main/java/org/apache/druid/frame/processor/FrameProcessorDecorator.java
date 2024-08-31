@@ -17,20 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.testing.tools;
+package org.apache.druid.frame.processor;
 
-import com.google.inject.Binder;
-import org.apache.druid.guice.ExpressionModule;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.sql.guice.SqlBindings;
-
-public class SleepModule implements DruidModule
+/**
+ * Passed to {@link SuperSorter} to decorate the processors it launches.
+ */
+public interface FrameProcessorDecorator
 {
-
-  @Override
-  public void configure(Binder binder)
+  FrameProcessorDecorator NONE = new FrameProcessorDecorator()
   {
-    SqlBindings.addOperatorConversion(binder, SleepOperatorConversion.class);
-    ExpressionModule.addExprMacro(binder, SleepExprMacro.class);
-  }
+    @Override
+    public <T> FrameProcessor<T> decorate(FrameProcessor<T> processor)
+    {
+      return processor;
+    }
+  };
+
+  <T> FrameProcessor<T> decorate(FrameProcessor<T> processor);
 }
