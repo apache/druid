@@ -48,4 +48,15 @@ public interface CompactionSegmentSearchPolicy
       Map<String, List<Interval>> skipIntervals,
       CompactionStatusTracker statusTracker
   );
+
+  /**
+   * Checks if the given candidate segments are eligible for compaction in
+   * the current iteration. A policy implementation may implement this method
+   * to avoid compacting intervals that do not fulfil some required criteria.
+   */
+  boolean isEligibleForCompaction(
+      SegmentsToCompact candidateSegments,
+      CompactionStatus currentCompactionStatus,
+      CompactionTaskStatus latestTaskStatus
+  );
 }

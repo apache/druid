@@ -25,6 +25,7 @@ import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -36,11 +37,11 @@ public class SegmentsToCompact
 {
   private final List<DataSegment> segments;
   private final Interval umbrellaInterval;
-  private final String datasource;
+  private final String dataSource;
   private final long totalBytes;
   private final int numIntervals;
 
-  private final CompactionStatus compactionStatus;
+  private final CompactionStatus currentStatus;
 
   public static SegmentsToCompact from(List<DataSegment> segments)
   {
@@ -51,7 +52,7 @@ public class SegmentsToCompact
     }
   }
 
-  private SegmentsToCompact(List<DataSegment> segments, CompactionStatus status)
+  private SegmentsToCompact(List<DataSegment> segments, @Nullable CompactionStatus currentStatus)
   {
     this.segments = segments;
     this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
@@ -59,8 +60,8 @@ public class SegmentsToCompact
         segments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
     );
     this.numIntervals = (int) segments.stream().map(DataSegment::getInterval).distinct().count();
-    this.datasource = segments.get(0).getDataSource();
-    this.compactionStatus = status;
+    this.dataSource = segments.get(0).getDataSource();
+    this.currentStatus = currentStatus;
   }
 
   public List<DataSegment> getSegments()
@@ -99,7 +100,7 @@ public class SegmentsToCompact
 
   public String getDataSource()
   {
-    return datasource;
+    return dataSource;
   }
 
   public CompactionStatistics getStats()
@@ -107,12 +108,13 @@ public class SegmentsToCompact
     return CompactionStatistics.create(totalBytes, size(), numIntervals);
   }
 
-  public CompactionStatus getCompactionStatus()
+  @Nullable
+  public CompactionStatus getCurrentStatus()
   {
-    return compactionStatus;
+    return currentStatus;
   }
 
-  public SegmentsToCompact withStatus(CompactionStatus status)
+  public SegmentsToCompact withCurrentStatus(CompactionStatus status)
   {
     return new SegmentsToCompact(this.segments, status);
   }
@@ -121,9 +123,10 @@ public class SegmentsToCompact
   public String toString()
   {
     return "SegmentsToCompact{" +
-           "datasource=" + datasource +
+           "datasource=" + dataSource +
            ", segments=" + SegmentUtils.commaSeparatedIdentifiers(segments) +
            ", totalSize=" + totalBytes +
+           ", currentStatus=" + currentStatus +
            '}';
   }
 }

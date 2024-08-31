@@ -22,7 +22,6 @@ package org.apache.druid.server.compaction;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -69,8 +68,6 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   private final CompactionStatusTracker statusTracker;
   private final PriorityBasedSegmentSearchPolicy searchPolicy;
 
-  private final Granularity configuredSegmentGranularity;
-
   private final List<SegmentsToCompact> compactedSegments = new ArrayList<>();
   private final List<SegmentsToCompact> skippedSegments = new ArrayList<>();
 
@@ -96,12 +93,6 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     this.searchPolicy = searchPolicy;
     this.queue = new PriorityQueue<>(searchPolicy.getSegmentComparator());
 
-    if (config.getGranularitySpec() == null || config.getGranularitySpec().getSegmentGranularity() == null) {
-      this.configuredSegmentGranularity = null;
-    } else {
-      this.configuredSegmentGranularity = config.getGranularitySpec().getSegmentGranularity();
-    }
-
     populateQueue(timeline, skipIntervals);
   }
 
@@ -110,7 +101,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     if (timeline != null) {
       if (!timeline.isEmpty()) {
         SegmentTimeline originalTimeline = null;
-        if (configuredSegmentGranularity != null) {
+        if (config.getSegmentGranularity() != null) {
           final Set<DataSegment> segments = timeline.findNonOvershadowedObjectsInInterval(
               Intervals.ETERNITY,
               Partitions.ONLY_COMPLETE
@@ -126,7 +117,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             }
           }
           if (!partialEternitySegments.isEmpty()) {
-            SegmentsToCompact candidatesWithStatus = SegmentsToCompact.from(partialEternitySegments).withStatus(
+            SegmentsToCompact candidatesWithStatus = SegmentsToCompact.from(partialEternitySegments).withCurrentStatus(
                 CompactionStatus.skipped("Segments have partial-eternity intervals")
             );
             skippedSegments.add(candidatesWithStatus);
@@ -141,7 +132,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           final SegmentTimeline timelineWithConfiguredSegmentGranularity = new SegmentTimeline();
           final Map<Interval, Set<DataSegment>> intervalToPartitionMap = new HashMap<>();
           for (DataSegment segment : segments) {
-            for (Interval interval : configuredSegmentGranularity.getIterable(segment.getInterval())) {
+            for (Interval interval : config.getSegmentGranularity().getIterable(segment.getInterval())) {
               intervalToPartitionMap.computeIfAbsent(interval, k -> new HashSet<>())
                                     .add(segment);
             }
@@ -215,12 +206,9 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     }
 
     final SegmentsToCompact entry = queue.poll();
-    if (entry == null) {
+    if (entry == null || entry.isEmpty()) {
       throw new NoSuchElementException();
     }
-
-    final List<DataSegment> resultSegments = entry.getSegments();
-    Preconditions.checkState(!resultSegments.isEmpty(), "Queue entry must not be empty");
 
     return entry;
   }
@@ -326,65 +314,27 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      // Do not compact an interval which comprises of a single tombstone
+      // Do not compact an interval which contains a single tombstone
       // If there are multiple tombstones in the interval, we may still want to compact them
       if (segments.size() == 1 && segments.get(0).isTombstone()) {
         continue;
       }
 
       final SegmentsToCompact candidates = SegmentsToCompact.from(segments);
-      final CompactionStatus compactionStatus = computeCompactionStatus(candidates);
-      final SegmentsToCompact candidatesWithStatus = candidates.withStatus(compactionStatus);
+      final CompactionStatus compactionStatus
+          = statusTracker.computeCompactionStatus(candidates, config, searchPolicy);
+      final SegmentsToCompact candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
       statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
 
       if (compactionStatus.isComplete()) {
         compactedSegments.add(candidatesWithStatus);
       } else if (compactionStatus.isSkipped()) {
         skippedSegments.add(candidatesWithStatus);
-      } else {
+      } else if (!queuedIntervals.contains(candidates.getUmbrellaInterval())) {
         queue.add(candidatesWithStatus);
-        if (configuredSegmentGranularity != null) {
-          queuedIntervals.add(candidates.getUmbrellaInterval());
-        }
+        queuedIntervals.add(candidates.getUmbrellaInterval());
       }
     }
-  }
-
-  private CompactionStatus computeCompactionStatus(SegmentsToCompact candidate)
-  {
-    final CompactionStatus compactionStatus
-        = CompactionStatus.compute(candidate, config, statusTracker.getObjectMapper());
-    if (compactionStatus.isComplete()) {
-      return compactionStatus;
-    }
-
-    // Skip intervals that violate max allowed input segment size
-    final long inputSegmentSize = config.getInputSegmentSizeBytes();
-    if (candidate.getTotalBytes() > inputSegmentSize) {
-      return CompactionStatus.skipped(
-          "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
-          candidate.getTotalBytes(), inputSegmentSize
-      );
-    }
-
-    // Skip intervals that are already queued
-    if (configuredSegmentGranularity != null
-        && queuedIntervals.contains(candidate.getUmbrellaInterval())) {
-      return CompactionStatus.skipped("Interval is already queued");
-    }
-
-    // Skip intervals that already have a running task
-    final CompactionTaskStatus lastTaskStatus = statusTracker.getLatestTaskStatus(candidate);
-    if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
-      return CompactionStatus.skipped("Task for interval is already running");
-    }
-
-    // Skip intervals that have been filtered out by the policy
-    if (searchPolicy.shouldSkipCompaction(candidate, compactionStatus, lastTaskStatus)) {
-      return CompactionStatus.skipped("Skipped by policy");
-    }
-
-    return compactionStatus;
   }
 
   /**
@@ -402,7 +352,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     final TimelineObjectHolder<String, DataSegment> first = Preconditions.checkNotNull(timeline.first(), "first");
     final TimelineObjectHolder<String, DataSegment> last = Preconditions.checkNotNull(timeline.last(), "last");
     final Interval latestSkipInterval = computeLatestSkipInterval(
-        configuredSegmentGranularity,
+        config.getSegmentGranularity(),
         last.getInterval().getEnd(),
         skipOffset
     );
@@ -424,7 +374,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           reason = CompactionStatus.skipped("interval locked by another task");
         }
 
-        final SegmentsToCompact candidatesWithStatus = candidates.withStatus(reason);
+        final SegmentsToCompact candidatesWithStatus = candidates.withCurrentStatus(reason);
         skippedSegments.add(candidatesWithStatus);
         statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
       }

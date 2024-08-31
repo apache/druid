@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -94,15 +93,13 @@ public class CompactionRunSimulator
     final CompactionStatusTracker simulationStatusTracker = new CompactionStatusTracker(null)
     {
       @Override
-      public CompactionTaskStatus getLatestTaskStatus(SegmentsToCompact candidates)
+      public CompactionStatus computeCompactionStatus(
+          SegmentsToCompact candidate,
+          DataSourceCompactionConfig config,
+          CompactionSegmentSearchPolicy searchPolicy
+      )
       {
-        return statusTracker.getLatestTaskStatus(candidates);
-      }
-
-      @Override
-      public ObjectMapper getObjectMapper()
-      {
-        return statusTracker.getObjectMapper();
+        return statusTracker.computeCompactionStatus(candidate, config, searchPolicy);
       }
 
       @Override
@@ -111,7 +108,7 @@ public class CompactionRunSimulator
           DataSourceCompactionConfig config
       )
       {
-        final CompactionStatus status = candidateSegments.getCompactionStatus();
+        final CompactionStatus status = candidateSegments.getCurrentStatus();
         if (status.getState() == CompactionStatus.State.COMPLETE) {
           compactedIntervals.addRow(
               createRow(candidateSegments, null, null)
@@ -131,7 +128,7 @@ public class CompactionRunSimulator
       public void onTaskSubmitted(ClientCompactionTaskQuery taskPayload, SegmentsToCompact candidateSegments)
       {
         // Add a row for each task in order of submission
-        final CompactionStatus status = candidateSegments.getCompactionStatus();
+        final CompactionStatus status = candidateSegments.getCurrentStatus();
         queuedIntervals.addRow(
             createRow(candidateSegments, taskPayload.getTuningConfig(), status.getReason())
         );

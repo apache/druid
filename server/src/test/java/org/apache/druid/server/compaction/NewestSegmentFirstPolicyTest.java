@@ -22,7 +22,6 @@ package org.apache.druid.server.compaction;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -34,6 +33,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -57,7 +57,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.apache.druid.utils.Streams;
 import org.joda.time.DateTimeZone;
@@ -68,7 +67,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -97,18 +95,17 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testLargeOffsetAndSmallSegmentInterval()
   {
-    final Period segmentPeriod = new Period("PT1H");
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P2D"), null)),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
-                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    final Period segmentPeriod = Period.hours(1);
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(new Period("P2D")).build(),
+        createTimeline(
+            createSegments().forIntervals(8, Granularities.HOUR)
+                            .startingAt("2017-11-16T20:00:00Z")
+                            .withNumPartitions(4),
+            createSegments().forIntervals(55, Granularities.HOUR)
+                            .startingAt("2017-11-14")
+                            .withNumPartitions(4)
+        )
     );
 
     assertCompactSegmentIntervals(
@@ -123,18 +120,17 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSmallOffsetAndLargeSegmentInterval()
   {
-    final Period segmentPeriod = new Period("PT1H");
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1M"), null)),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
-                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    final Period segmentPeriod = Period.hours(1);
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(new Period("PT1M")).build(),
+        createTimeline(
+            createSegments().forIntervals(8, Granularities.HOUR)
+                            .startingAt("2017-11-16T20:00:00Z")
+                            .withNumPartitions(4),
+            createSegments().forIntervals(55, Granularities.HOUR)
+                            .startingAt("2017-11-14")
+                            .withNumPartitions(4)
+        )
     );
 
     assertCompactSegmentIntervals(
@@ -157,19 +153,17 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testLargeGapInData()
   {
-    final Period segmentPeriod = new Period("PT1H");
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1H1M"), null)),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
-                // larger gap than SegmentCompactionUtil.LOOKUP_PERIOD (1 day)
-                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-15T07:00:00"), segmentPeriod)
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    final Period segmentPeriod = Period.hours(1);
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(new Period("PT1H1M")).build(),
+        createTimeline(
+            createSegments().forIntervals(8, Granularities.HOUR)
+                            .startingAt("2017-11-16T20:00:00Z")
+                            .withNumPartitions(4),
+            createSegments().forIntervals(31, Granularities.HOUR)
+                            .startingAt("2017-11-14")
+                            .withNumPartitions(4)
+        )
     );
 
     assertCompactSegmentIntervals(
@@ -192,33 +186,22 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testHugeShard()
   {
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"), null)),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-11-17T00:00:00/2017-11-18T03:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    DEFAULT_NUM_SEGMENTS_PER_SHARD
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-11-09T00:00:00/2017-11-17T00:00:00"),
-                    new Period("P2D"),
-                    13000, // larger than target compact segment size
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-11-05T00:00:00/2017-11-09T00:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    DEFAULT_NUM_SEGMENTS_PER_SHARD
-                )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(Period.days(1)).build(),
+        createTimeline(
+            createSegments()
+                .forIntervals(27, Granularities.HOUR)
+                .startingAt("2017-11-17")
+                .withNumPartitions(4),
+            createSegments()
+                .forIntervals(4, new PeriodGranularity(Period.days(2), null, null))
+                .startingAt("2017-11-09")
+                .withNumPartitions(1),
+            createSegments()
+                .forIntervals(96, Granularities.HOUR)
+                .startingAt("2017-11-05")
+                .withNumPartitions(4)
+        )
     );
 
     Interval lastInterval = null;
@@ -243,39 +226,22 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testManySegmentsPerShard()
   {
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(800000, new Period("P1D"), null)),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            createTimeline(
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-04T01:00:00/2017-12-05T03:00:00"),
-                    new Period("PT1H"),
-                    375,
-                    80
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-04T00:00:00/2017-12-04T01:00:00"),
-                    new Period("PT1H"),
-                    200,
-                    150
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-03T18:00:00/2017-12-04T00:00:00"),
-                    new Period("PT6H"),
-                    200000,
-                    1
-                ),
-                new SegmentGenerateSpec(
-                    Intervals.of("2017-12-03T11:00:00/2017-12-03T18:00:00"),
-                    new Period("PT1H"),
-                    375,
-                    80
-                )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(Period.days(1)).build(),
+        createTimeline(
+            createSegments().forIntervals(26, Granularities.HOUR)
+                            .startingAt("2017-12-04T01:00:00Z")
+                            .withNumPartitions(80),
+            createSegments().forIntervals(1, Granularities.HOUR)
+                            .startingAt("2017-12-04")
+                            .withNumPartitions(150),
+            createSegments().forIntervals(1, Granularities.SIX_HOUR)
+                            .startingAt("2017-12-03T18:00:00Z")
+                            .withNumPartitions(1),
+            createSegments().forIntervals(7, Granularities.HOUR)
+                            .startingAt("2017-12-03T11:00:00Z")
+                            .withNumPartitions(80)
+        )
     );
 
     Interval lastInterval = null;
@@ -301,19 +267,23 @@ public class NewestSegmentFirstPolicyTest
   public void testSkipUnknownDataSource()
   {
     final String unknownDataSource = "unknown";
-    final Period segmentPeriod = new Period("PT1H");
+    final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(
             unknownDataSource,
-            createCompactionConfig(10000, new Period("P2D"), null),
+            configBuilder().forDataSource(unknownDataSource).withSkipOffsetFromLatest(Period.days(2)).build(),
             DATA_SOURCE,
-            createCompactionConfig(10000, new Period("P2D"), null)
+            configBuilder().forDataSource(DATA_SOURCE).withSkipOffsetFromLatest(Period.days(2)).build()
         ),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
-                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
+                createSegments().forIntervals(8, Granularities.HOUR)
+                                .startingAt("2017-11-16T20:00:00Z")
+                                .withNumPartitions(4),
+                createSegments().forIntervals(55, Granularities.HOUR)
+                                .startingAt("2017-11-14")
+                                .withNumPartitions(4)
             )
         ),
         Collections.emptyMap(),
@@ -332,32 +302,32 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testClearSegmentsToCompactWhenSkippingSegments()
   {
-    final long inputSegmentSizeBytes = 800000;
-    final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-12-03T00:00:00/2017-12-04T00:00:00"),
-            new Period("P1D"),
-            inputSegmentSizeBytes / 2 + 10,
-            1
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-12-02T00:00:00/2017-12-03T00:00:00"),
-            new Period("P1D"),
-            inputSegmentSizeBytes + 10, // large segment
-            1
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"),
-            new Period("P1D"),
-            inputSegmentSizeBytes / 3 + 10,
-            2
-        )
+    final long inputSegmentSizeBytes = 800_000;
+    final List<DataSegment> segments = new ArrayList<>(
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-12-03")
+            .withNumPartitions(1)
+            .eachOfSize(inputSegmentSizeBytes / 2 + 10)
     );
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(inputSegmentSizeBytes, new Period("P0D"), null)),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    segments.addAll(
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-12-02")
+            .withNumPartitions(1)
+            .eachOfSize(inputSegmentSizeBytes + 10) // large segment
+    );
+    segments.addAll(
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-12-01")
+            .withNumPartitions(2)
+            .eachOfSize(inputSegmentSizeBytes / 3 + 10)
+    );
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(segments);
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withInputSegmentSizeBytes(inputSegmentSizeBytes).build(),
+        timeline
     );
 
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
@@ -374,8 +344,8 @@ public class NewestSegmentFirstPolicyTest
                                                      .map(SegmentsToCompact::getSegments)
                                                      .collect(Collectors.toSet());
     Assert.assertEquals(
-        observedSegments,
-        ImmutableSet.of(expectedSegmentsToCompact, expectedSegmentsToCompact2)
+        ImmutableSet.of(expectedSegmentsToCompact, expectedSegmentsToCompact2),
+        observedSegments
     );
   }
 
@@ -383,19 +353,15 @@ public class NewestSegmentFirstPolicyTest
   public void testIfFirstSegmentIsInSkipOffset()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-12-02T14:00:00/2017-12-03T00:00:00"),
-            new Period("PT5H"),
-            40000,
-            1
-        )
+        createSegments()
+            .forIntervals(2, new PeriodGranularity(Period.hours(5), null, null))
+            .startingAt("2017-12-02T14:00:00Z")
+            .withNumPartitions(1)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), null)),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(Period.days(1)).build(),
+        timeline
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -405,19 +371,15 @@ public class NewestSegmentFirstPolicyTest
   public void testIfFirstSegmentOverlapsSkipOffset()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-12-01T23:00:00/2017-12-03T00:00:00"),
-            new Period("PT5H"),
-            40000,
-            1
-        )
+        createSegments()
+            .forIntervals(5, new PeriodGranularity(Period.hours(5), null, null))
+            .startingAt("2017-12-01T23:00:00Z")
+            .withNumPartitions(1)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), null)),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withSkipOffsetFromLatest(Period.days(1)).build(),
+        timeline
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -427,20 +389,25 @@ public class NewestSegmentFirstPolicyTest
   public void testIfSegmentsSkipOffsetWithConfiguredSegmentGranularityEqual()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(Intervals.of("2017-11-30T23:00:00/2017-12-03T00:00:00"), new Period("P1D")),
-        new SegmentGenerateSpec(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), new Period("P1D"))
+        createSegments().forIntervals(2, Granularities.DAY)
+                        .startingAt("2017-12-01")
+                        .withNumPartitions(4),
+        createSegments().forIntervals(1, Granularities.DAY)
+                        .startingAt("2017-10-14")
+                        .withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder()
+            .withSkipOffsetFromLatest(Period.days(1))
+            .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
+            .build(),
+        timeline
     );
 
     // We should only get segments in Oct
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-12-02T00:00:00"), Partitions.ONLY_COMPLETE)
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14/2017-12-02"), Partitions.ONLY_COMPLETE)
     );
 
     Assert.assertTrue(iterator.hasNext());
@@ -461,20 +428,25 @@ public class NewestSegmentFirstPolicyTest
         // - Cross between month boundary of latest month (starts in Nov and ends in Dec). This should be skipped
         // - Fully in latest month (starts in Dec and ends in Dec). This should be skipped
         // - Does not overlap latest month (starts in Oct and ends in Oct). This should not be skipped
-        new SegmentGenerateSpec(Intervals.of("2017-11-30T23:00:00/2017-12-03T00:00:00"), new Period("PT5H")),
-        new SegmentGenerateSpec(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), new Period("PT5H"))
+        createSegments().forIntervals(5, new PeriodGranularity(Period.hours(5), null, null))
+                        .startingAt("2017-11-30T23:00:00Z")
+                        .withNumPartitions(4),
+        createSegments().forIntervals(4, new PeriodGranularity(Period.hours(5), null, null))
+                        .startingAt("2017-10-14T04:00:00Z")
+                        .withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder()
+            .withSkipOffsetFromLatest(Period.days(1))
+            .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))
+            .build(),
+        timeline
     );
 
     // We should only get segments in Oct
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
-        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), Partitions.ONLY_COMPLETE)
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-14/P1D"), Partitions.ONLY_COMPLETE)
     );
 
     Assert.assertTrue(iterator.hasNext());
@@ -488,15 +460,20 @@ public class NewestSegmentFirstPolicyTest
   public void testIfSegmentsSkipOffsetWithConfiguredSegmentGranularitySmaller()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(Intervals.of("2017-12-01T23:00:00/2017-12-03T00:00:00"), new Period("PT5H")),
-        new SegmentGenerateSpec(Intervals.of("2017-10-14T00:00:00/2017-10-15T00:00:00"), new Period("PT5H"))
+        createSegments().forIntervals(5, new PeriodGranularity(Period.hours(5), null, null))
+                        .startingAt("2017-12-01T23:00:00Z")
+                        .withNumPartitions(4),
+        createSegments().forIntervals(4, new PeriodGranularity(Period.hours(5), null, null))
+                        .startingAt("2017-10-14")
+                        .withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P1D"), new UserCompactionTaskGranularityConfig(Granularities.MINUTE, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder()
+            .withSkipOffsetFromLatest(Period.days(1))
+            .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.MINUTE, null, null))
+            .build(),
+        timeline
     );
 
     // We should only get segments in Oct
@@ -517,14 +494,18 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testWithSkipIntervals()
   {
-    final Period segmentPeriod = new Period("PT1H");
+    final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("P1D"), null)),
+        ImmutableMap.of(DATA_SOURCE, configBuilder().withSkipOffsetFromLatest(Period.days(1)).build()),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T20:00:00/2017-11-17T04:00:00"), segmentPeriod),
-                new SegmentGenerateSpec(Intervals.of("2017-11-14T00:00:00/2017-11-16T07:00:00"), segmentPeriod)
+                createSegments().forIntervals(8, Granularities.HOUR)
+                                .startingAt("2017-11-16T20:00:00Z")
+                                .withNumPartitions(4),
+                createSegments().forIntervals(55, Granularities.HOUR)
+                                .startingAt("2017-11-14")
+                                .withNumPartitions(4)
             )
         ),
         ImmutableMap.of(
@@ -558,13 +539,13 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testHoleInSearchInterval()
   {
-    final Period segmentPeriod = new Period("PT1H");
+    final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(10000, new Period("PT1H"), null)),
+        ImmutableMap.of(DATA_SOURCE, configBuilder().withSkipOffsetFromLatest(Period.hours(1)).build()),
         ImmutableMap.of(
             DATA_SOURCE,
             createTimeline(
-                new SegmentGenerateSpec(Intervals.of("2017-11-16T00:00:00/2017-11-17T00:00:00"), segmentPeriod)
+                createSegments().forIntervals(1, Granularities.HOUR).startingAt("2017-11-16").withNumPartitions(4)
             )
         ),
         ImmutableMap.of(
@@ -606,15 +587,15 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsInConfiguredSegmentGranularity()
   {
     final SegmentTimeline timeline = createTimeline(
-        // Segments with day interval from Oct to Dec
-        new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-12-31T00:00:00"), new Period("P1D"))
+        createSegments()
+            .forIntervals(3, Granularities.MONTH)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.MONTH),
+        timeline
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
@@ -655,16 +636,14 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsInMultipleIntervalIfConfiguredSegmentGranularityCrossBoundary()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(Intervals.of("2020-01-01/2020-01-08"), new Period("P7D")),
-        new SegmentGenerateSpec(Intervals.of("2020-01-28/2020-02-03"), new Period("P7D")),
-        new SegmentGenerateSpec(Intervals.of("2020-02-08/2020-02-15"), new Period("P7D"))
+        createSegments().forIntervals(1, Granularities.WEEK).startingAt("2020-01-01").withNumPartitions(4),
+        createSegments().forIntervals(1, Granularities.WEEK).startingAt("2020-01-28").withNumPartitions(4),
+        createSegments().forIntervals(1, Granularities.WEEK).startingAt("2020-02-08").withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.MONTH),
+        timeline
     );
     // We should get the segment of "2020-01-28/2020-02-03" back twice when the iterator returns for Jan and when the
     // iterator returns for Feb.
@@ -693,14 +672,12 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorDoesNotReturnCompactedInterval()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(Intervals.of("2017-12-01T00:00:00/2017-12-02T00:00:00"), new Period("P1D"))
+        createSegments().forIntervals(1, Granularities.DAY).startingAt("2017-12-01").withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(40000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MINUTE, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.MINUTE),
+        timeline
     );
 
     final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
@@ -719,15 +696,15 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsAllMixedVersionSegmentsInConfiguredSegmentGranularity()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), new Period("P1D"), "1994-04-29T00:00:00.000Z", null),
-        new SegmentGenerateSpec(Intervals.of("2017-10-01T01:00:00/2017-10-01T02:00:00"), new Period("PT1H"), "1994-04-30T00:00:00.000Z", null)
+        createSegments().forIntervals(1, Granularities.DAY).startingAt("2017-10-01")
+                        .withVersion("v1").withNumPartitions(4),
+        createSegments().forIntervals(1, Granularities.HOUR).startingAt("2017-10-01")
+                        .withVersion("v2").withNumPartitions(4)
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.MONTH),
+        timeline
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
@@ -753,26 +730,20 @@ public class NewestSegmentFirstPolicyTest
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .startingAt("2017-10-01")
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
+            .withNumPartitions(4),
+        createSegments()
+            .startingAt("2017-10-02")
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
+            .withNumPartitions(4)
     );
 
     // Auto compaction config sets segmentGranularity=DAY
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.DAY),
+        timeline
     );
     Assert.assertFalse(iterator.hasNext());
   }
@@ -786,27 +757,20 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
+    final CompactionState compactionState
+        = new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"));
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
-        )
+        createSegments()
+            .forIntervals(2, Granularities.DAY)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(compactionState)
     );
 
     // Auto compaction config sets segmentGranularity=DAY
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.DAY),
+        timeline
     );
     Assert.assertFalse(iterator.hasNext());
   }
@@ -820,27 +784,19 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
+    final CompactionState compactionState = new CompactionState(partitionsSpec, null, null, null, indexSpec, null);
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .forIntervals(2, Granularities.DAY)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(compactionState)
     );
 
     // Auto compaction config sets segmentGranularity=YEAR
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.YEAR),
+        timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -864,27 +820,20 @@ public class NewestSegmentFirstPolicyTest
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
+    final CompactionState compactionState
+        = new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"));
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("segmentGranularity", "day"))
-        )
+        createSegments()
+            .forIntervals(2, Granularities.DAY)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(compactionState)
     );
 
     // Auto compaction config sets segmentGranularity=YEAR
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.YEAR),
+        timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -909,35 +858,28 @@ public class NewestSegmentFirstPolicyTest
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
     );
 
     // Duration of new segmentGranularity is the same as before (P1D),
     // but we changed the timezone from UTC to Bangkok in the auto compaction spec
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(
-                            130000,
-                            new Period("P0D"),
-                            new UserCompactionTaskGranularityConfig(
-                                new PeriodGranularity(
-                                    new Period("P1D"),
-                                    null,
-                                    DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Bangkok"))
-                                ),
-                                null,
-                                null
-                            )
-                        )
-        ),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(
+                new PeriodGranularity(
+                    Period.days(1),
+                    null,
+                    DateTimeZone.forTimeZone(TimeZone.getTimeZone("Asia/Bangkok"))
+                ),
+                null,
+                null
+            )
+        ).build(),
+        timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -962,34 +904,27 @@ public class NewestSegmentFirstPolicyTest
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
     );
 
     // Duration of new segmentGranularity is the same as before (P1D), but we changed the origin in the autocompaction spec
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(
-                            130000,
-                            new Period("P0D"),
-                            new UserCompactionTaskGranularityConfig(
-                                new PeriodGranularity(
-                                    new Period("P1D"),
-                                    DateTimes.of("2012-01-02T00:05:00.000Z"),
-                                    DateTimeZone.UTC
-                                ),
-                                null,
-                                null
-                            )
-                        )
-        ),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(
+                new PeriodGranularity(
+                    Period.days(1),
+                    DateTimes.of("2012-01-02T00:05:00.000Z"),
+                    DateTimeZone.UTC
+                ),
+                null,
+                null
+            )
+        ).build(),
+        timeline
     );
     // We should get all segments in timeline back since skip offset is P0D.
     Assert.assertTrue(iterator.hasNext());
@@ -1017,32 +952,29 @@ public class NewestSegmentFirstPolicyTest
     // rollup=true for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
     // and rollup=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (queryGranularity was not set during last compaction)
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("rollup", "false"))
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("rollup", "true"))
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of())
-        )
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("rollup", "false"))),
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("rollup", "true"))),
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-03")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of()))
     );
 
     // Auto compaction config sets rollup=true
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, null, true))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(null, null, true)
+        ).build(),
+        timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1078,32 +1010,29 @@ public class NewestSegmentFirstPolicyTest
     // queryGranularity=MINUTE for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
     // and queryGranularity=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (queryGranularity was not set during last compaction)
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("queryGranularity", "day"))
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("queryGranularity", "minute"))
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of())
-        )
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("queryGranularity", "day"))),
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of("queryGranularity", "minute"))),
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-03")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, ImmutableMap.of()))
     );
 
     // Auto compaction config sets queryGranularity=MINUTE
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(null, Granularities.MINUTE, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(null, Granularities.MINUTE, null)
+        ).build(),
+        timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00 and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1140,45 +1069,34 @@ public class NewestSegmentFirstPolicyTest
     // Dimensions=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (dimensions was not set during last compaction)
     // and dimensionsSpec=null for interval 2017-10-04T00:00:00/2017-10-05T00:00:00 (dimensionsSpec was not set during last compaction)
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))), null, null, indexSpec, null)
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))), null, null, indexSpec, null)
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, DimensionsSpec.EMPTY, null, null, indexSpec, null)
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))), null, null, indexSpec, null)
+            ),
+        createSegments()
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))), null, null, indexSpec, null)
+            ),
+        createSegments()
+            .startingAt("2017-10-03")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, DimensionsSpec.EMPTY, null, null, indexSpec, null)),
+        createSegments()
+            .startingAt("2017-10-04")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
     );
 
     // Auto compaction config sets Dimensions=["foo"]
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-            null,
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withDimensionsSpec(
+            new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo")))
+        ).build(),
+        timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1209,18 +1127,11 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertFalse(iterator.hasNext());
 
     // Auto compaction config sets Dimensions=null
-    iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            new UserCompactionTaskDimensionsConfig(null),
-            null,
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    iterator = createIterator(
+        configBuilder().withDimensionsSpec(
+            new UserCompactionTaskDimensionsConfig(null)
+        ).build(),
+        timeline
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1241,66 +1152,57 @@ public class NewestSegmentFirstPolicyTest
     // filter=null for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (filter was not set during last compaction)
     // and transformSpec=null for interval 2017-10-04T00:00:00/2017-10-05T00:00:00 (transformSpec was not set during last compaction)
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null)), new TypeReference<Map<String, Object>>() {}),
-                indexSpec,
-                null
-            )
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null)), new TypeReference<Map<String, Object>>() {}),
-                indexSpec,
-                null
-            )
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                mapper.readValue(mapper.writeValueAsString(new TransformSpec(null, null)), new TypeReference<Map<String, Object>>() {}),
-                indexSpec,
-                null
-            )
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(
+                    partitionsSpec,
+                    null,
+                    null,
+                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null)), new TypeReference<Map<String, Object>>() {}),
+                    indexSpec,
+                    null
+                )
+            ),
+        createSegments()
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(
+                    partitionsSpec,
+                    null,
+                    null,
+                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null)), new TypeReference<Map<String, Object>>() {}),
+                    indexSpec,
+                    null
+                )
+            ),
+        createSegments()
+            .startingAt("2017-10-03")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(
+                    partitionsSpec,
+                    null,
+                    null,
+                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(null, null)), new TypeReference<Map<String, Object>>() {}),
+                    indexSpec,
+                    null
+                )
+            ),
+        createSegments()
+            .startingAt("2017-10-04")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
     );
 
     // Auto compaction config sets filter=SelectorDimFilter("dim1", "bar", null)
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            null,
-            new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "bar", null)),
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withTransformSpec(
+            new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "bar", null))
+        ).build(),
+        timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1331,18 +1233,11 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertFalse(iterator.hasNext());
 
     // Auto compaction config sets filter=null
-    iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            null,
-            new UserCompactionTaskTransformConfig(null),
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    iterator = createIterator(
+        configBuilder().withTransformSpec(
+            new UserCompactionTaskTransformConfig(null)
+        ).build(),
+        timeline
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1367,66 +1262,57 @@ public class NewestSegmentFirstPolicyTest
     // metricsSpec=[] for interval 2017-10-03T00:00:00/2017-10-04T00:00:00 (filter was not set during last compaction)
     // and metricsSpec=null for interval 2017-10-04T00:00:00/2017-10-05T00:00:00 (transformSpec was not set during last compaction)
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt")}, new TypeReference<List<Object>>() {}),
-                null,
-                indexSpec,
-                null
-            )
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}, new TypeReference<List<Object>>() {}),
-                null,
-                indexSpec,
-                null
-            )
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-03T00:00:00/2017-10-04T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
-                null,
-                indexSpec,
-                null
-            )
-        ),
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-04T00:00:00/2017-10-05T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, indexSpec, null)
-        )
+        createSegments()
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(
+                    partitionsSpec,
+                    null,
+                    mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt")}, new TypeReference<List<Object>>() {}),
+                    null,
+                    indexSpec,
+                    null
+                )
+            ),
+        createSegments()
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(
+                    partitionsSpec,
+                    null,
+                    mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}, new TypeReference<List<Object>>() {}),
+                    null,
+                    indexSpec,
+                    null
+                )
+            ),
+        createSegments()
+            .startingAt("2017-10-03")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(
+                    partitionsSpec,
+                    null,
+                    mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
+                    null,
+                    indexSpec,
+                    null
+                )
+            ),
+        createSegments()
+            .startingAt("2017-10-04")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null))
     );
 
     // Auto compaction config sets metricsSpec={CountAggregatorFactory("cnt"), LongSumAggregatorFactory("val", "val")}
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            null,
-            null,
-            new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withMetricsSpec(
+            new AggregatorFactory[]{new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}
+        ).build(),
+        timeline
     );
     // We should get interval 2017-10-01T00:00:00/2017-10-02T00:00:00, interval 2017-10-04T00:00:00/2017-10-05T00:00:00, and interval 2017-10-03T00:00:00/2017-10-04T00:00:00.
     Assert.assertTrue(iterator.hasNext());
@@ -1457,18 +1343,9 @@ public class NewestSegmentFirstPolicyTest
     Assert.assertFalse(iterator.hasNext());
 
     // Auto compaction config sets metricsSpec=null
-    iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            null,
-            null,
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    iterator = createIterator(
+        configBuilder().build(),
+        timeline
     );
     // No more
     Assert.assertFalse(iterator.hasNext());
@@ -1478,15 +1355,15 @@ public class NewestSegmentFirstPolicyTest
   public void testIteratorReturnsSegmentsSmallerSegmentGranularityCoveringMultipleSegmentsInTimeline()
   {
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), new Period("P1D"), "1994-04-29T00:00:00.000Z", null),
-        new SegmentGenerateSpec(Intervals.of("2017-10-01T01:00:00/2017-10-01T02:00:00"), new Period("PT1H"), "1994-04-30T00:00:00.000Z", null)
+        createSegments().forIntervals(1, Granularities.DAY).startingAt("2017-10-01")
+                        .withNumPartitions(4).withVersion("v1"),
+        createSegments().forIntervals(1, Granularities.HOUR).startingAt("2017-10-01")
+                        .withNumPartitions(4).withVersion("v2")
     );
 
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(130000, new Period("P0D"), new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        createConfigWithSegmentGranularity(Granularities.HOUR),
+        timeline
     );
 
     // We should get all segments in timeline back since skip offset is P0D.
@@ -1515,34 +1392,27 @@ public class NewestSegmentFirstPolicyTest
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-02T00:00:00/2017-10-03T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(partitionsSpec, null, null, null, newIndexSpecMap, null)
-        )
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, newIndexSpecMap, null))
     );
 
     // Duration of new segmentGranularity is the same as before (P1D)
-    final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(
-                            130000,
-                            new Period("P0D"),
-                            new UserCompactionTaskGranularityConfig(
-                                new PeriodGranularity(
-                                    new Period("P1D"),
-                                    null,
-                                    DateTimeZone.UTC
-                                ),
-                                null,
-                                null
-                            )
-                        )
-        ),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(
+                new PeriodGranularity(
+                    Period.days(1),
+                    null,
+                    DateTimeZone.UTC
+                ),
+                null,
+                null
+            )
+        ).build(),
+        timeline
     );
     // We should get all segments in timeline back since indexSpec changed
     Assert.assertTrue(iterator.hasNext());
@@ -1563,28 +1433,17 @@ public class NewestSegmentFirstPolicyTest
     NullHandling.initializeForTests();
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
     final SegmentTimeline timeline = createTimeline(
-        new SegmentGenerateSpec(
-            Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"),
-            new Period("P1D"),
-            null,
-            new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                IndexSpec.DEFAULT.asMap(mapper),
-                null
+        createSegments()
+            .forIntervals(1, Granularities.DAY)
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(partitionsSpec, null, null, null, IndexSpec.DEFAULT.asMap(mapper), null)
             )
-        )
     );
 
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            null,
-            null,
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withTuningConfig(
             new UserCompactionTaskQueryTuningConfig(
                 null,
                 new OnheapIncrementalIndex.Spec(true),
@@ -1605,22 +1464,14 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 null,
                 null
-            ),
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+            )
+        ).build(),
+        timeline
     );
     Assert.assertFalse(iterator.hasNext());
 
-    iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, createCompactionConfig(
-            130000,
-            new Period("P0D"),
-            null,
-            null,
-            null,
+    iterator = createIterator(
+        configBuilder().withTuningConfig(
             new UserCompactionTaskQueryTuningConfig(
                 null,
                 new OnheapIncrementalIndex.Spec(false),
@@ -1641,12 +1492,9 @@ public class NewestSegmentFirstPolicyTest
                 null,
                 null,
                 null
-            ),
-            null
-        )),
-        ImmutableMap.of(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
+            )
+        ).build(),
+        timeline
     );
     Assert.assertFalse(iterator.hasNext());
   }
@@ -1654,31 +1502,22 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSkipAllGranularityToDefault()
   {
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               null
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(
-                                            new DataSegment(
-                                                DATA_SOURCE,
-                                                Intervals.ETERNITY,
-                                                "0",
-                                                new HashMap<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new NumberedShardSpec(0, 0),
-                                                0,
-                                                100)
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(
+                                        new DataSegment(
+                                            DATA_SOURCE,
+                                            Intervals.ETERNITY,
+                                            "0",
+                                            new HashMap<>(),
+                                            new ArrayList<>(),
+                                            new ArrayList<>(),
+                                            new NumberedShardSpec(0, 0),
+                                            0,
+                                            100
                                         )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+                                    )
+        )
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1687,31 +1526,22 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSkipFirstHalfEternityToDefault()
   {
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               null
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(
-                                            new DataSegment(
-                                                DATA_SOURCE,
-                                                new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
-                                                "0",
-                                                new HashMap<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new NumberedShardSpec(0, 0),
-                                                0,
-                                                100)
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(
+                                        new DataSegment(
+                                            DATA_SOURCE,
+                                            new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
+                                            "0",
+                                            new HashMap<>(),
+                                            new ArrayList<>(),
+                                            new ArrayList<>(),
+                                            new NumberedShardSpec(0, 0),
+                                            0,
+                                            100
                                         )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+                                    )
+        )
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1720,31 +1550,22 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSkipSecondHalfOfEternityToDefault()
   {
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               null
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(
-                                            new DataSegment(
-                                                DATA_SOURCE,
-                                                new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
-                                                "0",
-                                                new HashMap<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new NumberedShardSpec(0, 0),
-                                                0,
-                                                100)
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(
+                                        new DataSegment(
+                                            DATA_SOURCE,
+                                            new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
+                                            "0",
+                                            new HashMap<>(),
+                                            new ArrayList<>(),
+                                            new ArrayList<>(),
+                                            new NumberedShardSpec(0, 0),
+                                            0,
+                                            100
                                         )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+                                    )
+        )
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1753,31 +1574,24 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSkipAllToAllGranularity()
   {
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               new UserCompactionTaskGranularityConfig(Granularities.ALL, null, null)
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(
-                                            new DataSegment(
-                                                DATA_SOURCE,
-                                                Intervals.ETERNITY,
-                                                "0",
-                                                new HashMap<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new NumberedShardSpec(0, 0),
-                                                0,
-                                                100)
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.ALL, null, null)
+        ).build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(
+                                        new DataSegment(
+                                            DATA_SOURCE,
+                                            Intervals.ETERNITY,
+                                            "0",
+                                            new HashMap<>(),
+                                            new ArrayList<>(),
+                                            new ArrayList<>(),
+                                            new NumberedShardSpec(0, 0),
+                                            0,
+                                            100
                                         )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+                                    )
+        )
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1786,31 +1600,24 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testSkipAllToFinerGranularity()
   {
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(
-                                            new DataSegment(
-                                                DATA_SOURCE,
-                                                Intervals.ETERNITY,
-                                                "0",
-                                                new HashMap<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new NumberedShardSpec(0, 0),
-                                                0,
-                                                100)
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null)
+        ).build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(
+                                        new DataSegment(
+                                            DATA_SOURCE,
+                                            Intervals.ETERNITY,
+                                            "0",
+                                            new HashMap<>(),
+                                            new ArrayList<>(),
+                                            new ArrayList<>(),
+                                            new NumberedShardSpec(0, 0),
+                                            0,
+                                            100
                                         )
-            )
-        ),
-        Collections.emptyMap(),
-        statusTracker
+                                    )
+        )
     );
 
     Assert.assertFalse(iterator.hasNext());
@@ -1850,19 +1657,11 @@ public class NewestSegmentFirstPolicyTest
         0,
         1);
 
-    CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(tombstone2023, dataSegment2023, tombstone2024))
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+        ).build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(tombstone2023, dataSegment2023, tombstone2024))
     );
 
     // Skips 2024/2025 since it has a single tombstone and no data.
@@ -1902,26 +1701,18 @@ public class NewestSegmentFirstPolicyTest
         TombstoneShardSpec.INSTANCE,
         0,
         1);
-    iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE,
-                        createCompactionConfig(10000,
-                                               new Period("P0D"),
-                                               new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
-                        )
-        ),
-        ImmutableMap.of(
-            DATA_SOURCE,
-            SegmentTimeline.forSegments(ImmutableSet.of(
-                tombstone2023,
-                dataSegment2023,
-                tombstone2024,
-                tombstone2025Jan,
-                tombstone2025Feb,
-                tombstone2025Mar
-            ))
-        ),
-        Collections.emptyMap(),
-        statusTracker
+    iterator = createIterator(
+        configBuilder().withGranularitySpec(
+            new UserCompactionTaskGranularityConfig(Granularities.YEAR, null, null)
+        ).build(),
+        SegmentTimeline.forSegments(ImmutableSet.of(
+            tombstone2023,
+            dataSegment2023,
+            tombstone2024,
+            tombstone2025Jan,
+            tombstone2025Feb,
+            tombstone2025Mar
+        ))
     );
     // Does not skip the tombstones in 2025 since there are multiple of them which could potentially be condensed to one
     Assert.assertEquals(
@@ -1950,8 +1741,8 @@ public class NewestSegmentFirstPolicyTest
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(DATA_SOURCE);
     CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(
-            DATA_SOURCE, createCompactionConfig(Long.MAX_VALUE, Period.seconds(0), null),
-            DATASOURCE_KOALA, createCompactionConfig(Long.MAX_VALUE, Period.seconds(0), null)
+            DATA_SOURCE, configBuilder().forDataSource(DATA_SOURCE).build(),
+            DATASOURCE_KOALA, configBuilder().forDataSource(DATASOURCE_KOALA).build()
         ),
         ImmutableMap.of(
             DATA_SOURCE, SegmentTimeline.forSegments(wikiSegments),
@@ -2020,145 +1811,46 @@ public class NewestSegmentFirstPolicyTest
     }
   }
 
-  private static SegmentTimeline createTimeline(SegmentGenerateSpec... specs)
+  private static CreateDataSegments createSegments()
   {
-    List<DataSegment> segments = new ArrayList<>();
-    final String version = DateTimes.nowUtc().toString();
-
-    final List<SegmentGenerateSpec> orderedSpecs = Arrays.asList(specs);
-    orderedSpecs.sort(Comparator.comparing(s -> s.totalInterval, Comparators.intervalsByStartThenEnd().reversed()));
-
-    for (SegmentGenerateSpec spec : orderedSpecs) {
-      Interval remainingInterval = spec.totalInterval;
-
-      while (!Intervals.isEmpty(remainingInterval)) {
-        final Interval segmentInterval;
-        if (remainingInterval.toDuration().isLongerThan(spec.segmentPeriod.toStandardDuration())) {
-          segmentInterval = new Interval(spec.segmentPeriod, remainingInterval.getEnd());
-        } else {
-          segmentInterval = remainingInterval;
-        }
-
-        for (int i = 0; i < spec.numSegmentsPerShard; i++) {
-          final ShardSpec shardSpec = new NumberedShardSpec(i, spec.numSegmentsPerShard);
-          final DataSegment segment = new DataSegment(
-              DATA_SOURCE,
-              segmentInterval,
-              spec.version == null ? version : spec.version,
-              null,
-              ImmutableList.of(),
-              ImmutableList.of(),
-              shardSpec,
-              spec.lastCompactionState,
-              0,
-              spec.segmentSize
-          );
-          segments.add(segment);
-        }
-
-        remainingInterval = removeIntervalFromEnd(remainingInterval, segmentInterval);
-      }
-    }
-
-    return SegmentTimeline.forSegments(segments);
+    return CreateDataSegments.ofDatasource(DATA_SOURCE).withNumPartitions(DEFAULT_NUM_SEGMENTS_PER_SHARD);
   }
 
-  /**
-   * Returns an interval [largeInterval.start - smallInterval.start) given that
-   * the end of both intervals is the same.
-   */
-  private static Interval removeIntervalFromEnd(Interval largeInterval, Interval smallInterval)
+  private CompactionSegmentIterator createIterator(DataSourceCompactionConfig config, SegmentTimeline timeline)
   {
-    Preconditions.checkArgument(
-        largeInterval.getEnd().equals(smallInterval.getEnd()),
-        "end should be same. largeInterval[%s] smallInterval[%s]",
-        largeInterval,
-        smallInterval
-    );
-    return new Interval(largeInterval.getStart(), smallInterval.getStart());
-  }
-
-  private DataSourceCompactionConfig createCompactionConfig(
-      long inputSegmentSizeBytes,
-      Period skipOffsetFromLatest,
-      UserCompactionTaskGranularityConfig granularitySpec
-  )
-  {
-    return createCompactionConfig(inputSegmentSizeBytes, skipOffsetFromLatest, granularitySpec, null, null, null, null);
-  }
-
-  private DataSourceCompactionConfig createCompactionConfig(
-      long inputSegmentSizeBytes,
-      Period skipOffsetFromLatest,
-      UserCompactionTaskGranularityConfig granularitySpec,
-      UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
-      AggregatorFactory[] metricsSpec
-  )
-  {
-    return createCompactionConfig(inputSegmentSizeBytes, skipOffsetFromLatest, granularitySpec, dimensionsSpec, transformSpec, null, metricsSpec);
-  }
-
-  private DataSourceCompactionConfig createCompactionConfig(
-      long inputSegmentSizeBytes,
-      Period skipOffsetFromLatest,
-      UserCompactionTaskGranularityConfig granularitySpec,
-      UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
-      UserCompactionTaskQueryTuningConfig tuningConfig,
-      AggregatorFactory[] metricsSpec
-  )
-  {
-    return new DataSourceCompactionConfig(
-        DATA_SOURCE,
-        0,
-        inputSegmentSizeBytes,
-        null,
-        skipOffsetFromLatest,
-        tuningConfig,
-        granularitySpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        null,
-        null,
-        null
+    return policy.createIterator(
+        Collections.singletonMap(DATA_SOURCE, config),
+        Collections.singletonMap(DATA_SOURCE, timeline),
+        Collections.emptyMap(),
+        statusTracker
     );
   }
 
-  private static class SegmentGenerateSpec
+  private static SegmentTimeline createTimeline(
+      CreateDataSegments... segmentBuilders
+  )
   {
-    private final Interval totalInterval;
-    private final Period segmentPeriod;
-    private final long segmentSize;
-    private final int numSegmentsPerShard;
-    private final String version;
-    private final CompactionState lastCompactionState;
-
-    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod)
-    {
-      this(totalInterval, segmentPeriod, null, null);
+    final SegmentTimeline timeline = new SegmentTimeline();
+    for (CreateDataSegments builder : segmentBuilders) {
+      timeline.addSegments(builder.eachOfSizeInMb(100).iterator());
     }
 
-    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, String version, CompactionState lastCompactionState)
-    {
-      this(totalInterval, segmentPeriod, DEFAULT_SEGMENT_SIZE, DEFAULT_NUM_SEGMENTS_PER_SHARD, version, lastCompactionState);
-    }
+    return timeline;
+  }
 
-    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, long segmentSize, int numSegmentsPerShard)
-    {
-      this(totalInterval, segmentPeriod, segmentSize, numSegmentsPerShard, null, null);
-    }
+  private static DataSourceCompactionConfig createConfigWithSegmentGranularity(
+      Granularity segmentGranularity 
+  )
+  {
+    return configBuilder().withGranularitySpec(
+        new UserCompactionTaskGranularityConfig(segmentGranularity, null, null)
+    ).build();
+  }
 
-    SegmentGenerateSpec(Interval totalInterval, Period segmentPeriod, long segmentSize, int numSegmentsPerShard, String version, CompactionState lastCompactionState)
-    {
-      Preconditions.checkArgument(numSegmentsPerShard >= 1);
-      this.totalInterval = totalInterval;
-      this.segmentPeriod = segmentPeriod;
-      this.segmentSize = segmentSize;
-      this.numSegmentsPerShard = numSegmentsPerShard;
-      this.version = version;
-      this.lastCompactionState = lastCompactionState;
-    }
+  private static DataSourceCompactionConfig.Builder configBuilder()
+  {
+    return DataSourceCompactionConfig.builder()
+                                     .forDataSource(DATA_SOURCE)
+                                     .withSkipOffsetFromLatest(Period.seconds(0));
   }
 }

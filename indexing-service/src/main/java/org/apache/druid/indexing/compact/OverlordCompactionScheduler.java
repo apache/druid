@@ -175,7 +175,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isEnabled() && started.compareAndSet(false, true)) {
       log.info("Starting compaction scheduler.");
       initState();
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun);
     }
   }
 
@@ -210,7 +210,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   @Override
   public void startCompaction(String dataSourceName, DataSourceCompactionConfig config)
   {
-    if (isRunning()) {
+    // Track active datasources even if scheduler has not started yet because
+    // SupervisorManager is started before the scheduler
+    if (isEnabled()) {
       activeDatasourceConfigs.put(dataSourceName, config);
     }
   }
@@ -261,7 +263,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
       catch (Exception e) {
         log.error(e, "Error processing compaction queue. Continuing schedule.");
       }
-      scheduleOnExecutor(this::scheduledRun, SCHEDULE_PERIOD_SECONDS);
+      scheduleOnExecutor(this::scheduledRun);
     } else {
       cleanupState();
     }
@@ -337,7 +339,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
                          .getUsedSegmentsTimelinesPerDataSource();
   }
 
-  private void scheduleOnExecutor(Runnable runnable, long delaySeconds)
+  private void scheduleOnExecutor(Runnable runnable)
   {
     executor.schedule(
         () -> {
@@ -348,7 +350,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
             log.error(t, "Error while executing runnable");
           }
         },
-        delaySeconds,
+        SCHEDULE_PERIOD_SECONDS,
         TimeUnit.SECONDS
     );
   }

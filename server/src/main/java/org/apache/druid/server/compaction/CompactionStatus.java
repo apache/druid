@@ -105,6 +105,15 @@ public class CompactionStatus
     return state;
   }
 
+  @Override
+  public String toString()
+  {
+    return "CompactionStatus{" +
+           "state=" + state +
+           ", reason=" + reason +
+           '}';
+  }
+
   private static CompactionStatus incomplete(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args));

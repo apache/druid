@@ -61,11 +61,6 @@ public class CompactionStatusTracker
     datasourceStatuses.clear();
   }
 
-  public ObjectMapper getObjectMapper()
-  {
-    return objectMapper;
-  }
-
   public void removeDatasource(String datasource)
   {
     datasourceStatuses.remove(datasource);
@@ -88,6 +83,40 @@ public class CompactionStatusTracker
     return submittedTaskIdToSegments.keySet();
   }
 
+  public CompactionStatus computeCompactionStatus(
+      SegmentsToCompact candidate,
+      DataSourceCompactionConfig config,
+      CompactionSegmentSearchPolicy searchPolicy
+  )
+  {
+    final CompactionStatus compactionStatus = CompactionStatus.compute(candidate, config, objectMapper);
+    if (compactionStatus.isComplete()) {
+      return compactionStatus;
+    }
+
+    // Skip intervals that violate max allowed input segment size
+    final long inputSegmentSize = config.getInputSegmentSizeBytes();
+    if (candidate.getTotalBytes() > inputSegmentSize) {
+      return CompactionStatus.skipped(
+          "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
+          candidate.getTotalBytes(), inputSegmentSize
+      );
+    }
+
+    // Skip intervals that already have a running task
+    final CompactionTaskStatus lastTaskStatus = getLatestTaskStatus(candidate);
+    if (lastTaskStatus != null && lastTaskStatus.getState() == TaskState.RUNNING) {
+      return CompactionStatus.skipped("Task for interval is already running");
+    }
+
+    // Skip intervals that have been filtered out by the policy
+    if (!searchPolicy.isEligibleForCompaction(candidate, compactionStatus, lastTaskStatus)) {
+      return CompactionStatus.skipped("Rejected by search policy");
+    }
+
+    return compactionStatus;
+  }
+
   public void onCompactionStatusComputed(
       SegmentsToCompact candidateSegments,
       DataSourceCompactionConfig config
@@ -100,21 +129,21 @@ public class CompactionStatusTracker
   {
     final Set<String> compactionEnabledDatasources = new HashSet<>();
     if (compactionConfig.getCompactionConfigs() != null) {
-      compactionConfig.getCompactionConfigs().forEach(
-          config -> compactionEnabledDatasources.add(config.getDataSource())
-      );
+      compactionConfig.getCompactionConfigs().forEach(config -> {
+        getOrComputeDatasourceStatus(config.getDataSource())
+            .cleanupStaleTaskStatuses();
+
+        compactionEnabledDatasources.add(config.getDataSource());
+      });
     }
 
-    // Clean up state for datasources where compaction has been freshly disabled
+    // Clean up state for datasources where compaction has been disabled
     final Set<String> allDatasources = new HashSet<>(datasourceStatuses.keySet());
     allDatasources.forEach(datasource -> {
       if (!compactionEnabledDatasources.contains(datasource)) {
         datasourceStatuses.remove(datasource);
       }
     });
-
-    // Clean up stale task statuses
-    datasourceStatuses.values().forEach(DatasourceStatus::cleanupStaleTaskStatuses);
   }
 
   public void onTaskSubmitted(
@@ -149,6 +178,9 @@ public class CompactionStatusTracker
     return datasourceStatuses.computeIfAbsent(datasource, ds -> new DatasourceStatus());
   }
 
+  /**
+   * Contains compaction task status of intervals of a datasource.
+   */
   private static class DatasourceStatus
   {
     static final DatasourceStatus EMPTY = new DatasourceStatus();

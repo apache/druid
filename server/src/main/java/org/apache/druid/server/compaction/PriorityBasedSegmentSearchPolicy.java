@@ -69,20 +69,14 @@ public abstract class PriorityBasedSegmentSearchPolicy implements CompactionSegm
     );
   }
 
-  /**
-   * Checks if compaction of the given candidate segments should be skipped in
-   * the current iteration. A concrete policy implementation may override this
-   * method to avoid compacting intervals that do not fulfil some required criteria.
-   *
-   * @return false by default
-   */
-  protected boolean shouldSkipCompaction(
+  @Override
+  public boolean isEligibleForCompaction(
       SegmentsToCompact candidateSegments,
       CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   )
   {
-    return false;
+    return true;
   }
 
   /**
