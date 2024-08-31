@@ -19,12 +19,8 @@
 
 package org.apache.druid.testing.tools;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
-
-import java.util.Collections;
-import java.util.List;
 
 /**
  * Super-simple "client" for the custom node role which defines
@@ -40,9 +36,4 @@ public class CustomNodeRoleClientModule implements DruidModule
     // NodeRoles.addRole(binder, CliCustomNodeRole.NODE_ROLE);
   }
 
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
 }

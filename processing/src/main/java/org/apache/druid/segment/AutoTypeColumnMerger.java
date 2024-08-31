@@ -445,11 +445,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       return counter;
     }
 
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException("remove");
-    }
   }
 
   public static class IdLookupArrayIterator implements Iterator<int[]>
