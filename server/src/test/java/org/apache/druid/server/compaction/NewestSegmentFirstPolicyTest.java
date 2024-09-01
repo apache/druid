@@ -266,6 +266,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        policy,
         ImmutableMap.of(
             TestDataSource.KOALA,
             configBuilder().forDataSource(TestDataSource.KOALA).build(),
@@ -284,7 +285,6 @@ public class NewestSegmentFirstPolicyTest
             )
         ),
         Collections.emptyMap(),
-        policy,
         statusTracker
     );
 
@@ -494,6 +494,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        policy,
         ImmutableMap.of(TestDataSource.WIKI, configBuilder().withSkipOffsetFromLatest(Period.days(1)).build()),
         ImmutableMap.of(
             TestDataSource.WIKI,
@@ -514,7 +515,6 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
             )
         ),
-        policy,
         statusTracker
     );
 
@@ -540,6 +540,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        policy,
         ImmutableMap.of(TestDataSource.WIKI, configBuilder().withSkipOffsetFromLatest(Period.hours(1)).build()),
         ImmutableMap.of(
             TestDataSource.WIKI,
@@ -554,7 +555,6 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
             )
         ),
-        policy,
         statusTracker
     );
 
@@ -1740,6 +1740,7 @@ public class NewestSegmentFirstPolicyTest
     // Setup policy and iterator with priorityDatasource = WIKI
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(TestDataSource.WIKI);
     CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        policy,
         ImmutableMap.of(
             TestDataSource.WIKI, configBuilder().forDataSource(TestDataSource.WIKI).build(),
             TestDataSource.KOALA, configBuilder().forDataSource(TestDataSource.KOALA).build()
@@ -1749,7 +1750,6 @@ public class NewestSegmentFirstPolicyTest
             TestDataSource.KOALA, SegmentTimeline.forSegments(koalaSegments)
         ),
         Collections.emptyMap(),
-        policy,
         statusTracker
     );
 
@@ -1768,10 +1768,10 @@ public class NewestSegmentFirstPolicyTest
   private CompactionSegmentIterator createIterator(DataSourceCompactionConfig config, SegmentTimeline timeline)
   {
     return new PriorityBasedCompactionSegmentIterator(
+        policy,
         Collections.singletonMap(TestDataSource.WIKI, config),
         Collections.singletonMap(TestDataSource.WIKI, timeline),
         Collections.emptyMap(),
-        policy,
         statusTracker
     );
   }

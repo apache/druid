@@ -45,10 +45,10 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   private final Map<String, DataSourceCompactibleSegmentIterator> datasourceIterators;
 
   public PriorityBasedCompactionSegmentIterator(
+      CompactionCandidateSearchPolicy searchPolicy,
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      CompactionCandidateSearchPolicy searchPolicy,
       CompactionStatusTracker statusTracker
   )
   {

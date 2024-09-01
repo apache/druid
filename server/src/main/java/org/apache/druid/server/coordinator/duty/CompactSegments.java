@@ -217,10 +217,10 @@ public class CompactSegments implements CoordinatorCustomDuty
     // Get iterator over segments to compact and submit compaction tasks
     final CompactionCandidateSearchPolicy policy = dynamicConfig.getCompactionPolicy();
     final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        policy,
         compactionConfigs,
         dataSources,
         intervalsToSkipCompaction,
-        policy,
         statusTracker
     );
 

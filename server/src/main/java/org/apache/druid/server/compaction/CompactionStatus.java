@@ -46,7 +46,7 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * Represents the status of compaction for a given list of candidate segments.
+ * Represents the status of compaction for a given {@link CompactionCandidate}.
  */
 public class CompactionStatus
 {
