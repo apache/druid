@@ -24,6 +24,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -36,7 +37,7 @@ public class CompactionStatusTrackerTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final DataSegment WIKI_SEGMENT
-      = CreateDataSegments.ofDatasource(DS.WIKI).eachOfSizeInMb(100).get(0);
+      = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100).get(0);
 
   private CompactionStatusTracker statusTracker;
 
@@ -51,7 +52,7 @@ public class CompactionStatusTrackerTest
   {
     final SegmentsToCompact candidateSegments
         = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1", DS.WIKI), candidateSegments);
+    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.RUNNING, status.getState());
@@ -62,7 +63,7 @@ public class CompactionStatusTrackerTest
   {
     final SegmentsToCompact candidateSegments
         = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1", DS.WIKI), candidateSegments);
+    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -74,7 +75,7 @@ public class CompactionStatusTrackerTest
   {
     final SegmentsToCompact candidateSegments
         = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
-    statusTracker.onTaskSubmitted(createCompactionTask("task1", DS.WIKI), candidateSegments);
+    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -88,10 +89,10 @@ public class CompactionStatusTrackerTest
     final SegmentsToCompact candidateSegments
         = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
 
-    statusTracker.onTaskSubmitted(createCompactionTask("task1", DS.WIKI), candidateSegments);
+    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
-    statusTracker.onTaskSubmitted(createCompactionTask("task2", DS.WIKI), candidateSegments);
+    statusTracker.onTaskSubmitted(createCompactionTask("task2"), candidateSegments);
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.RUNNING, status.getState());
     Assert.assertEquals(1, status.getNumConsecutiveFailures());
@@ -104,13 +105,12 @@ public class CompactionStatusTrackerTest
   }
 
   private ClientCompactionTaskQuery createCompactionTask(
-      String taskId,
-      String datasource
+      String taskId
   )
   {
     return new ClientCompactionTaskQuery(
         taskId,
-        datasource,
+        TestDataSource.WIKI,
         null,
         null,
         null,
@@ -120,10 +120,5 @@ public class CompactionStatusTrackerTest
         null,
         null
     );
-  }
-
-  private static class DS
-  {
-    static final String WIKI = "wiki";
   }
 }

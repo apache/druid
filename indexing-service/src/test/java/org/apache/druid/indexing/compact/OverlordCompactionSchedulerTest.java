@@ -41,6 +41,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatistics;
@@ -346,7 +347,14 @@ public class OverlordCompactionSchedulerTest
     );
     Assert.assertEquals(
         Collections.singletonList(
-            Arrays.asList("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, "not compacted yet")
+            Arrays.asList(
+                TestDataSource.WIKI,
+                Intervals.of("2013-01-01/P1D"),
+                10,
+                1_000_000_000L,
+                1,
+                "not compacted yet"
+            )
         ),
         pendingCompactionTable.getRows()
     );

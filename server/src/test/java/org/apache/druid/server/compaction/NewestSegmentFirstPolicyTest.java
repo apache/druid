@@ -43,6 +43,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -78,9 +79,6 @@ import java.util.stream.Collectors;
 
 public class NewestSegmentFirstPolicyTest
 {
-  private static final String DATA_SOURCE = "wikipedia";
-  private static final String DATASOURCE_KOALA = "koala";
-  private static final long DEFAULT_SEGMENT_SIZE = 1000;
   private static final int DEFAULT_NUM_SEGMENTS_PER_SHARD = 4;
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
@@ -155,7 +153,7 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = createIterator(
-        configBuilder().withSkipOffsetFromLatest(new Period("PT1H1M")).build(),
+        configBuilder().withSkipOffsetFromLatest(Period.minutes(61)).build(),
         createTimeline(
             createSegments().forIntervals(8, Granularities.HOUR)
                             .startingAt("2017-11-16T20:00:00Z")
@@ -264,19 +262,18 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
-  public void testSkipUnknownDataSource()
+  public void testSkipDataSourceWithNoSegments()
   {
-    final String unknownDataSource = "unknown";
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(
-            unknownDataSource,
-            configBuilder().forDataSource(unknownDataSource).withSkipOffsetFromLatest(Period.days(2)).build(),
-            DATA_SOURCE,
-            configBuilder().forDataSource(DATA_SOURCE).withSkipOffsetFromLatest(Period.days(2)).build()
+            TestDataSource.KOALA,
+            configBuilder().forDataSource(TestDataSource.KOALA).build(),
+            TestDataSource.WIKI,
+            configBuilder().forDataSource(TestDataSource.WIKI).withSkipOffsetFromLatest(Period.days(2)).build()
         ),
         ImmutableMap.of(
-            DATA_SOURCE,
+            TestDataSource.WIKI,
             createTimeline(
                 createSegments().forIntervals(8, Granularities.HOUR)
                                 .startingAt("2017-11-16T20:00:00Z")
@@ -496,9 +493,9 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, configBuilder().withSkipOffsetFromLatest(Period.days(1)).build()),
+        ImmutableMap.of(TestDataSource.WIKI, configBuilder().withSkipOffsetFromLatest(Period.days(1)).build()),
         ImmutableMap.of(
-            DATA_SOURCE,
+            TestDataSource.WIKI,
             createTimeline(
                 createSegments().forIntervals(8, Granularities.HOUR)
                                 .startingAt("2017-11-16T20:00:00Z")
@@ -509,7 +506,7 @@ public class NewestSegmentFirstPolicyTest
             )
         ),
         ImmutableMap.of(
-            DATA_SOURCE,
+            TestDataSource.WIKI,
             ImmutableList.of(
                 Intervals.of("2017-11-16T00:00:00/2017-11-17T00:00:00"),
                 Intervals.of("2017-11-15T00:00:00/2017-11-15T20:00:00"),
@@ -541,15 +538,15 @@ public class NewestSegmentFirstPolicyTest
   {
     final Period segmentPeriod = Period.hours(1);
     final CompactionSegmentIterator iterator = policy.createIterator(
-        ImmutableMap.of(DATA_SOURCE, configBuilder().withSkipOffsetFromLatest(Period.hours(1)).build()),
+        ImmutableMap.of(TestDataSource.WIKI, configBuilder().withSkipOffsetFromLatest(Period.hours(1)).build()),
         ImmutableMap.of(
-            DATA_SOURCE,
+            TestDataSource.WIKI,
             createTimeline(
                 createSegments().forIntervals(1, Granularities.HOUR).startingAt("2017-11-16").withNumPartitions(4)
             )
         ),
         ImmutableMap.of(
-            DATA_SOURCE,
+            TestDataSource.WIKI,
             ImmutableList.of(
                 Intervals.of("2017-11-16T04:00:00/2017-11-16T10:00:00"),
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
@@ -1506,7 +1503,7 @@ public class NewestSegmentFirstPolicyTest
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
                                         new DataSegment(
-                                            DATA_SOURCE,
+                                            TestDataSource.WIKI,
                                             Intervals.ETERNITY,
                                             "0",
                                             new HashMap<>(),
@@ -1530,7 +1527,7 @@ public class NewestSegmentFirstPolicyTest
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
                                         new DataSegment(
-                                            DATA_SOURCE,
+                                            TestDataSource.WIKI,
                                             new Interval(DateTimes.MIN, DateTimes.of("2024-01-01")),
                                             "0",
                                             new HashMap<>(),
@@ -1554,7 +1551,7 @@ public class NewestSegmentFirstPolicyTest
         configBuilder().build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
                                         new DataSegment(
-                                            DATA_SOURCE,
+                                            TestDataSource.WIKI,
                                             new Interval(DateTimes.of("2024-01-01"), DateTimes.MAX),
                                             "0",
                                             new HashMap<>(),
@@ -1580,7 +1577,7 @@ public class NewestSegmentFirstPolicyTest
         ).build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
                                         new DataSegment(
-                                            DATA_SOURCE,
+                                            TestDataSource.WIKI,
                                             Intervals.ETERNITY,
                                             "0",
                                             new HashMap<>(),
@@ -1606,7 +1603,7 @@ public class NewestSegmentFirstPolicyTest
         ).build(),
         SegmentTimeline.forSegments(ImmutableSet.of(
                                         new DataSegment(
-                                            DATA_SOURCE,
+                                            TestDataSource.WIKI,
                                             Intervals.ETERNITY,
                                             "0",
                                             new HashMap<>(),
@@ -1627,7 +1624,7 @@ public class NewestSegmentFirstPolicyTest
   public void testSkipCompactionForIntervalsContainingSingleTombstone()
   {
     final DataSegment tombstone2023 = new DataSegment(
-        DATA_SOURCE,
+        TestDataSource.WIKI,
         Intervals.of("2023/2024"),
         "0",
         new HashMap<>(),
@@ -1637,7 +1634,7 @@ public class NewestSegmentFirstPolicyTest
         0,
         1);
     final DataSegment dataSegment2023 = new DataSegment(
-        DATA_SOURCE,
+        TestDataSource.WIKI,
         Intervals.of("2023/2024"),
         "0",
         new HashMap<>(),
@@ -1647,7 +1644,7 @@ public class NewestSegmentFirstPolicyTest
         0,
         100);
     final DataSegment tombstone2024 = new DataSegment(
-        DATA_SOURCE,
+        TestDataSource.WIKI,
         Intervals.of("2024/2025"),
         "0",
         new HashMap<>(),
@@ -1672,7 +1669,7 @@ public class NewestSegmentFirstPolicyTest
     );
 
     final DataSegment tombstone2025Jan = new DataSegment(
-        DATA_SOURCE,
+        TestDataSource.WIKI,
         Intervals.of("2025-01-01/2025-02-01"),
         "0",
         new HashMap<>(),
@@ -1682,7 +1679,7 @@ public class NewestSegmentFirstPolicyTest
         0,
         1);
     final DataSegment tombstone2025Feb = new DataSegment(
-        DATA_SOURCE,
+        TestDataSource.WIKI,
         Intervals.of("2025-02-01/2025-03-01"),
         "0",
         new HashMap<>(),
@@ -1692,7 +1689,7 @@ public class NewestSegmentFirstPolicyTest
         0,
         1);
     final DataSegment tombstone2025Mar = new DataSegment(
-        DATA_SOURCE,
+        TestDataSource.WIKI,
         Intervals.of("2025-03-01/2025-04-01"),
         "0",
         new HashMap<>(),
@@ -1725,45 +1722,55 @@ public class NewestSegmentFirstPolicyTest
   public void testPriorityDatasource()
   {
     final List<DataSegment> wikiSegments
-        = CreateDataSegments.ofDatasource(DATA_SOURCE)
+        = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                             .forIntervals(1, Granularities.DAY)
                             .startingAt("2012-01-01")
                             .withNumPartitions(10)
                             .eachOfSizeInMb(100);
     final List<DataSegment> koalaSegments
-        = CreateDataSegments.ofDatasource(DATASOURCE_KOALA)
+        = CreateDataSegments.ofDatasource(TestDataSource.KOALA)
                             .forIntervals(1, Granularities.DAY)
                             .startingAt("2013-01-01")
                             .withNumPartitions(10)
                             .eachOfSizeInMb(100);
 
-    // Setup policy and iterator with priorityDatasource = wikipedia
-    final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(DATA_SOURCE);
+    // Setup policy and iterator with priorityDatasource = WIKI
+    final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(TestDataSource.WIKI);
     CompactionSegmentIterator iterator = policy.createIterator(
         ImmutableMap.of(
-            DATA_SOURCE, configBuilder().forDataSource(DATA_SOURCE).build(),
-            DATASOURCE_KOALA, configBuilder().forDataSource(DATASOURCE_KOALA).build()
+            TestDataSource.WIKI, configBuilder().forDataSource(TestDataSource.WIKI).build(),
+            TestDataSource.KOALA, configBuilder().forDataSource(TestDataSource.KOALA).build()
         ),
         ImmutableMap.of(
-            DATA_SOURCE, SegmentTimeline.forSegments(wikiSegments),
-            DATASOURCE_KOALA, SegmentTimeline.forSegments(koalaSegments)
+            TestDataSource.WIKI, SegmentTimeline.forSegments(wikiSegments),
+            TestDataSource.KOALA, SegmentTimeline.forSegments(koalaSegments)
         ),
         Collections.emptyMap(),
         statusTracker
     );
 
-    // Verify that the segments of "wikipedia" are preferred even though they are older
+    // Verify that the segments of WIKI are preferred even though they are older
     Assert.assertTrue(iterator.hasNext());
     SegmentsToCompact next = iterator.next();
     Assert.assertFalse(next.isEmpty());
-    Assert.assertEquals(DATA_SOURCE, next.getDataSource());
+    Assert.assertEquals(TestDataSource.WIKI, next.getDataSource());
     Assert.assertEquals(Intervals.of("2012-01-01/P1D"), next.getUmbrellaInterval());
 
     Assert.assertTrue(iterator.hasNext());
     next = iterator.next();
     Assert.assertFalse(next.isEmpty());
-    Assert.assertEquals(DATASOURCE_KOALA, next.getDataSource());
+    Assert.assertEquals(TestDataSource.KOALA, next.getDataSource());
     Assert.assertEquals(Intervals.of("2013-01-01/P1D"), next.getUmbrellaInterval());
+  }
+
+  private CompactionSegmentIterator createIterator(DataSourceCompactionConfig config, SegmentTimeline timeline)
+  {
+    return policy.createIterator(
+        Collections.singletonMap(TestDataSource.WIKI, config),
+        Collections.singletonMap(TestDataSource.WIKI, timeline),
+        Collections.emptyMap(),
+        statusTracker
+    );
   }
 
   private static void assertCompactSegmentIntervals(
@@ -1813,17 +1820,7 @@ public class NewestSegmentFirstPolicyTest
 
   private static CreateDataSegments createSegments()
   {
-    return CreateDataSegments.ofDatasource(DATA_SOURCE).withNumPartitions(DEFAULT_NUM_SEGMENTS_PER_SHARD);
-  }
-
-  private CompactionSegmentIterator createIterator(DataSourceCompactionConfig config, SegmentTimeline timeline)
-  {
-    return policy.createIterator(
-        Collections.singletonMap(DATA_SOURCE, config),
-        Collections.singletonMap(DATA_SOURCE, timeline),
-        Collections.emptyMap(),
-        statusTracker
-    );
+    return CreateDataSegments.ofDatasource(TestDataSource.WIKI);
   }
 
   private static SegmentTimeline createTimeline(
@@ -1850,7 +1847,7 @@ public class NewestSegmentFirstPolicyTest
   private static DataSourceCompactionConfig.Builder configBuilder()
   {
     return DataSourceCompactionConfig.builder()
-                                     .forDataSource(DATA_SOURCE)
+                                     .forDataSource(TestDataSource.WIKI)
                                      .withSkipOffsetFromLatest(Period.seconds(0));
   }
 }

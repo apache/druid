@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.TestDataSource;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,12 +31,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class DataSourceCompactionConfigAuditEntryTest
 {
-  private static final String DS_WIKI = "wiki";
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
   
   private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
       new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.MSQ, null),
-      DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+      DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
       auditInfo,
       DateTimes.nowUtc()
   );
@@ -45,7 +45,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.MSQ, null),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -58,7 +58,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, false, CompactionEngine.MSQ, null),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -67,7 +67,7 @@ public class DataSourceCompactionConfigAuditEntryTest
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.NATIVE, null),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -80,7 +80,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.NATIVE, null),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );

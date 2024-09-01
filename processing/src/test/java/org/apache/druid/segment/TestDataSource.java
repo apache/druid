@@ -17,8 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.compact;
+package org.apache.druid.segment;
 
+/**
+ * DataSource names used in tests.
+ */
 public final class TestDataSource
 {
   public static final String WIKI = "wiki";

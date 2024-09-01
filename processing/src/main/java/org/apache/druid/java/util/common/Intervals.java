@@ -53,11 +53,6 @@ public final class Intervals
     return of(StringUtils.format(format, formatArgs));
   }
 
-  public static boolean isEmpty(Interval interval)
-  {
-    return interval.getStart().equals(interval.getEnd());
-  }
-
   /**
    * Returns true if the provided interval has endpoints that can be compared against other DateTimes using their
    * string representations.

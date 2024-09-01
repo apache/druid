@@ -29,6 +29,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -45,11 +46,10 @@ import java.util.Collections;
 public class CompactionStatusTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private static final String DS_WIKI = "wiki";
 
   private static final DataSegment WIKI_SEGMENT
       = DataSegment.builder()
-                   .dataSource(DS_WIKI)
+                   .dataSource(TestDataSource.WIKI)
                    .interval(Intervals.of("2013-01-01/PT1H"))
                    .size(100_000_000L)
                    .version("v1")
@@ -179,7 +179,7 @@ public class CompactionStatusTest
   {
     verifyCompactionStatusIsPendingBecause(
         null,
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "not compacted yet"
     );
   }
@@ -189,7 +189,7 @@ public class CompactionStatusTest
   {
     verifyCompactionStatusIsPendingBecause(
         new CompactionState(null, null, null, null, null, null),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         "'partitionsSpec' mismatch: required['dynamic' with 5,000,000 rows], current[null]"
     );
   }
@@ -202,7 +202,7 @@ public class CompactionStatusTest
     final CompactionState lastCompactionState
         = new CompactionState(currentPartitionsSpec, null, null, null, null, null);
     final DataSourceCompactionConfig compactionConfig
-        = DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build();
+        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
 
     verifyCompactionStatusIsPendingBecause(
         lastCompactionState,
@@ -229,7 +229,7 @@ public class CompactionStatusTest
     );
     final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
         .builder()
-        .forDataSource(DS_WIKI)
+        .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, null))
         .build();
 
@@ -267,7 +267,7 @@ public class CompactionStatusTest
     );
     final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
         .builder()
-        .forDataSource(DS_WIKI)
+        .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.DAY, null, null))
         .build();
@@ -297,7 +297,7 @@ public class CompactionStatusTest
     );
     final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
         .builder()
-        .forDataSource(DS_WIKI)
+        .forDataSource(TestDataSource.WIKI)
         .withTuningConfig(createTuningConfig(currentPartitionsSpec, currentIndexSpec))
         .withGranularitySpec(new UserCompactionTaskGranularityConfig(Granularities.HOUR, null, null))
         .build();
@@ -336,7 +336,7 @@ public class CompactionStatusTest
   )
   {
     return DataSourceCompactionConfig.builder()
-                                     .forDataSource(DS_WIKI)
+                                     .forDataSource(TestDataSource.WIKI)
                                      .withTuningConfig(createTuningConfig(partitionsSpec, null))
                                      .build();
   }
