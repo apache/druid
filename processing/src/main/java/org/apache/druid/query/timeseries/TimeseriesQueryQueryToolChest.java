@@ -383,6 +383,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               timestamp = granularity.toDateTime(Preconditions.checkNotNull(timestampNumber, "timestamp").longValue());
             }
 
+            // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+            // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+            // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
+            if (StringUtils.isNotEmpty(query.getTimestampResultField()) && timestamp != null) {
+              retVal.put(query.getTimestampResultField(), timestamp.getMillis());
+            }
+
             CacheStrategy.fetchAggregatorsFromCache(
                 aggs,
                 resultIter,
