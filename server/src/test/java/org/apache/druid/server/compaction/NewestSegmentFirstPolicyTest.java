@@ -265,7 +265,7 @@ public class NewestSegmentFirstPolicyTest
   public void testSkipDataSourceWithNoSegments()
   {
     final Period segmentPeriod = Period.hours(1);
-    final CompactionSegmentIterator iterator = policy.createIterator(
+    final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
         ImmutableMap.of(
             TestDataSource.KOALA,
             configBuilder().forDataSource(TestDataSource.KOALA).build(),
@@ -284,6 +284,7 @@ public class NewestSegmentFirstPolicyTest
             )
         ),
         Collections.emptyMap(),
+        policy,
         statusTracker
     );
 
@@ -338,7 +339,7 @@ public class NewestSegmentFirstPolicyTest
     expectedSegmentsToCompact2.sort(Comparator.naturalOrder());
 
     Set<List<DataSegment>> observedSegments = Streams.sequentialStreamFrom(iterator)
-                                                     .map(SegmentsToCompact::getSegments)
+                                                     .map(CompactionCandidate::getSegments)
                                                      .collect(Collectors.toSet());
     Assert.assertEquals(
         ImmutableSet.of(expectedSegmentsToCompact, expectedSegmentsToCompact2),
@@ -492,7 +493,7 @@ public class NewestSegmentFirstPolicyTest
   public void testWithSkipIntervals()
   {
     final Period segmentPeriod = Period.hours(1);
-    final CompactionSegmentIterator iterator = policy.createIterator(
+    final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
         ImmutableMap.of(TestDataSource.WIKI, configBuilder().withSkipOffsetFromLatest(Period.days(1)).build()),
         ImmutableMap.of(
             TestDataSource.WIKI,
@@ -513,6 +514,7 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-13T00:00:00/2017-11-14T01:00:00")
             )
         ),
+        policy,
         statusTracker
     );
 
@@ -537,7 +539,7 @@ public class NewestSegmentFirstPolicyTest
   public void testHoleInSearchInterval()
   {
     final Period segmentPeriod = Period.hours(1);
-    final CompactionSegmentIterator iterator = policy.createIterator(
+    final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
         ImmutableMap.of(TestDataSource.WIKI, configBuilder().withSkipOffsetFromLatest(Period.hours(1)).build()),
         ImmutableMap.of(
             TestDataSource.WIKI,
@@ -552,6 +554,7 @@ public class NewestSegmentFirstPolicyTest
                 Intervals.of("2017-11-16T14:00:00/2017-11-16T20:00:00")
             )
         ),
+        policy,
         statusTracker
     );
 
@@ -1736,7 +1739,7 @@ public class NewestSegmentFirstPolicyTest
 
     // Setup policy and iterator with priorityDatasource = WIKI
     final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(TestDataSource.WIKI);
-    CompactionSegmentIterator iterator = policy.createIterator(
+    CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
         ImmutableMap.of(
             TestDataSource.WIKI, configBuilder().forDataSource(TestDataSource.WIKI).build(),
             TestDataSource.KOALA, configBuilder().forDataSource(TestDataSource.KOALA).build()
@@ -1746,29 +1749,29 @@ public class NewestSegmentFirstPolicyTest
             TestDataSource.KOALA, SegmentTimeline.forSegments(koalaSegments)
         ),
         Collections.emptyMap(),
+        policy,
         statusTracker
     );
 
     // Verify that the segments of WIKI are preferred even though they are older
     Assert.assertTrue(iterator.hasNext());
-    SegmentsToCompact next = iterator.next();
-    Assert.assertFalse(next.isEmpty());
+    CompactionCandidate next = iterator.next();
     Assert.assertEquals(TestDataSource.WIKI, next.getDataSource());
     Assert.assertEquals(Intervals.of("2012-01-01/P1D"), next.getUmbrellaInterval());
 
     Assert.assertTrue(iterator.hasNext());
     next = iterator.next();
-    Assert.assertFalse(next.isEmpty());
     Assert.assertEquals(TestDataSource.KOALA, next.getDataSource());
     Assert.assertEquals(Intervals.of("2013-01-01/P1D"), next.getUmbrellaInterval());
   }
 
   private CompactionSegmentIterator createIterator(DataSourceCompactionConfig config, SegmentTimeline timeline)
   {
-    return policy.createIterator(
+    return new PriorityBasedCompactionSegmentIterator(
         Collections.singletonMap(TestDataSource.WIKI, config),
         Collections.singletonMap(TestDataSource.WIKI, timeline),
         Collections.emptyMap(),
+        policy,
         statusTracker
     );
   }

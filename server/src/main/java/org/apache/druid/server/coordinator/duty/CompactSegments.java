@@ -48,9 +48,10 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
-import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
-import org.apache.druid.server.compaction.SegmentsToCompact;
+import org.apache.druid.server.compaction.PriorityBasedCompactionSegmentIterator;
+import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -214,9 +215,14 @@ public class CompactSegments implements CoordinatorCustomDuty
     );
 
     // Get iterator over segments to compact and submit compaction tasks
-    final CompactionSegmentSearchPolicy policy = dynamicConfig.getCompactionPolicy();
-    final CompactionSegmentIterator iterator =
-        policy.createIterator(compactionConfigs, dataSources, intervalsToSkipCompaction, statusTracker);
+    final CompactionCandidateSearchPolicy policy = dynamicConfig.getCompactionPolicy();
+    final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
+        compactionConfigs,
+        dataSources,
+        intervalsToSkipCompaction,
+        policy,
+        statusTracker
+    );
 
     final int compactionTaskCapacity = getCompactionTaskCapacity(dynamicConfig);
     final int availableCompactionTaskSlots
@@ -433,11 +439,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     int totalTaskSlotsAssigned = 0;
 
     while (iterator.hasNext() && totalTaskSlotsAssigned < numAvailableCompactionTaskSlots) {
-      final SegmentsToCompact entry = iterator.next();
-      if (entry.isEmpty()) {
-        throw new ISE("segmentsToCompact is empty?");
-      }
-
+      final CompactionCandidate entry = iterator.next();
       final String dataSourceName = entry.getDataSource();
 
       // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
@@ -592,13 +594,10 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     // Mark all the segments remaining in the iterator as "awaiting compaction"
     while (iterator.hasNext()) {
-      final SegmentsToCompact entry = iterator.next();
-      if (!entry.isEmpty()) {
-        final String dataSourceName = entry.getDataSource();
-        currentRunAutoCompactionSnapshotBuilders
-            .computeIfAbsent(dataSourceName, AutoCompactionSnapshot::builder)
-            .incrementWaitingStats(entry.getStats());
-      }
+      final CompactionCandidate entry = iterator.next();
+      currentRunAutoCompactionSnapshotBuilders
+          .computeIfAbsent(entry.getDataSource(), AutoCompactionSnapshot::builder)
+          .incrementWaitingStats(entry.getStats());
     }
 
     // Statistics of all segments considered compacted after this run
@@ -656,7 +655,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   }
 
   private String compactSegments(
-      SegmentsToCompact entry,
+      CompactionCandidate entry,
       int compactionTaskPriority,
       ClientCompactionTaskQueryTuningConfig tuningConfig,
       ClientCompactionTaskGranularitySpec granularitySpec,

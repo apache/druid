@@ -25,19 +25,19 @@ import java.util.List;
 /**
  * Iterator over compactible segments.
  */
-public interface CompactionSegmentIterator extends Iterator<SegmentsToCompact>
+public interface CompactionSegmentIterator extends Iterator<CompactionCandidate>
 {
   /**
    * List of candidate segments that are already compacted and do not need to be
    * compacted again. None of these segments are returned by {@link #next()}.
    */
-  List<SegmentsToCompact> getCompactedSegments();
+  List<CompactionCandidate> getCompactedSegments();
 
   /**
    * List of candidate segments that have been skipped for compaction as they
    * cannot be compacted due to some reason. None of these segments are returned
    * by {@link #next()}.
    */
-  List<SegmentsToCompact> getSkippedSegments();
+  List<CompactionCandidate> getSkippedSegments();
 
 }

@@ -21,41 +21,33 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.Interval;
 
-import java.util.List;
-import java.util.Map;
+import java.util.Comparator;
 
 /**
- * Segment searching policy used by {@link CompactSegments}.
+ * Policy used by {@link CompactSegments} duty to pick segments for compaction.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class),
-    @JsonSubTypes.Type(name = "smallestSegmentFirst", value = SmallestSegmentFirstPolicy.class)
+    @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class)
 })
-public interface CompactionSegmentSearchPolicy
+public interface CompactionCandidateSearchPolicy extends Comparator<CompactionCandidate>
 {
   /**
-   * Creates an iterator that returns compactible segments.
+   * Compares between two compaction candidates. Used to determine the
+   * order in which segments and intervals should be picked for compaction.
    */
-  CompactionSegmentIterator createIterator(
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals,
-      CompactionStatusTracker statusTracker
-  );
+  @Override
+  int compare(CompactionCandidate o1, CompactionCandidate o2);
 
   /**
-   * Checks if the given candidate segments are eligible for compaction in
-   * the current iteration. A policy implementation may implement this method
-   * to avoid compacting intervals that do not fulfil some required criteria.
+   * Checks if the given {@link CompactionCandidate} is eligible for compaction
+   * in the current iteration. A policy may implement this method to skip
+   * compacting intervals or segments that do not fulfil some required criteria.
    */
   boolean isEligibleForCompaction(
-      SegmentsToCompact candidateSegments,
+      CompactionCandidate candidate,
       CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   );

@@ -50,8 +50,8 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForSubmittedTask()
   {
-    final SegmentsToCompact candidateSegments
-        = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
+    final CompactionCandidate candidateSegments
+        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
     statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
 
     CompactionTaskStatus status = statusTracker.getLatestTaskStatus(candidateSegments);
@@ -61,8 +61,8 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForSuccessfulTask()
   {
-    final SegmentsToCompact candidateSegments
-        = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
+    final CompactionCandidate candidateSegments
+        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
     statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 
@@ -73,8 +73,8 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForFailedTask()
   {
-    final SegmentsToCompact candidateSegments
-        = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
+    final CompactionCandidate candidateSegments
+        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
     statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));
 
@@ -86,8 +86,8 @@ public class CompactionStatusTrackerTest
   @Test
   public void testGetLatestTaskStatusForRepeatedlyFailingTask()
   {
-    final SegmentsToCompact candidateSegments
-        = SegmentsToCompact.from(Collections.singletonList(WIKI_SEGMENT));
+    final CompactionCandidate candidateSegments
+        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
 
     statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.failure("task1", "some failure"));

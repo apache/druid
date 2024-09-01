@@ -27,13 +27,13 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 /**
- * List of segments to compact.
+ * Non-empty list of segments of a datasource being considered for compaction.
+ * A candidate typically contains all the segments of a single time chunk.
  */
-public class SegmentsToCompact
+public class CompactionCandidate
 {
   private final List<DataSegment> segments;
   private final Interval umbrellaInterval;
@@ -43,16 +43,16 @@ public class SegmentsToCompact
 
   private final CompactionStatus currentStatus;
 
-  public static SegmentsToCompact from(List<DataSegment> segments)
+  public static CompactionCandidate from(List<DataSegment> segments)
   {
     if (segments == null || segments.isEmpty()) {
       throw InvalidInput.exception("Segments to compact must be non-empty");
     } else {
-      return new SegmentsToCompact(segments, null);
+      return new CompactionCandidate(segments, null);
     }
   }
 
-  private SegmentsToCompact(List<DataSegment> segments, @Nullable CompactionStatus currentStatus)
+  private CompactionCandidate(List<DataSegment> segments, @Nullable CompactionStatus currentStatus)
   {
     this.segments = segments;
     this.totalBytes = segments.stream().mapToLong(DataSegment::getSize).sum();
@@ -64,23 +64,12 @@ public class SegmentsToCompact
     this.currentStatus = currentStatus;
   }
 
+  /**
+   * @return Non-empty list of segments that make up this candidate.
+   */
   public List<DataSegment> getSegments()
   {
     return segments;
-  }
-
-  public DataSegment getFirst()
-  {
-    if (segments.isEmpty()) {
-      throw new NoSuchElementException("No segment to compact");
-    } else {
-      return segments.get(0);
-    }
-  }
-
-  public boolean isEmpty()
-  {
-    return segments.isEmpty();
   }
 
   public long getTotalBytes()
@@ -88,11 +77,15 @@ public class SegmentsToCompact
     return totalBytes;
   }
 
-  public int size()
+  public int numSegments()
   {
     return segments.size();
   }
 
+  /**
+   * Umbrella interval of all the segments in this candidate. This typically
+   * corresponds to a single time chunk in the segment timeline.
+   */
   public Interval getUmbrellaInterval()
   {
     return umbrellaInterval;
@@ -105,18 +98,24 @@ public class SegmentsToCompact
 
   public CompactionStatistics getStats()
   {
-    return CompactionStatistics.create(totalBytes, size(), numIntervals);
+    return CompactionStatistics.create(totalBytes, numSegments(), numIntervals);
   }
 
+  /**
+   * Current compaction status of the time chunk corresponding to this candidate.
+   */
   @Nullable
   public CompactionStatus getCurrentStatus()
   {
     return currentStatus;
   }
 
-  public SegmentsToCompact withCurrentStatus(CompactionStatus status)
+  /**
+   * Creates a copy of this CompactionCandidate object with the given status.
+   */
+  public CompactionCandidate withCurrentStatus(CompactionStatus status)
   {
-    return new SegmentsToCompact(this.segments, status);
+    return new CompactionCandidate(this.segments, status);
   }
 
   @Override

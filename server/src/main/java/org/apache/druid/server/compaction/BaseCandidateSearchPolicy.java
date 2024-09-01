@@ -20,31 +20,37 @@
 package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.Interval;
+import org.apache.druid.java.util.common.guava.Comparators;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
- * {@link CompactionSegmentSearchPolicy} that selects segments in order of a
- * given priority.
+ * Base implementation of {@link CompactionCandidateSearchPolicy} that can have
+ * a {@code priorityDatasource}.
  */
-public abstract class PriorityBasedSegmentSearchPolicy implements CompactionSegmentSearchPolicy
+public abstract class BaseCandidateSearchPolicy
+    implements CompactionCandidateSearchPolicy, Comparator<CompactionCandidate>
 {
   private final String priorityDatasource;
+  private final Comparator<CompactionCandidate> comparator;
 
-  protected PriorityBasedSegmentSearchPolicy(
-      @Nullable String priorityDatasource
-  )
+  protected BaseCandidateSearchPolicy(@Nullable String priorityDatasource)
   {
     this.priorityDatasource = priorityDatasource;
+    if (priorityDatasource == null || priorityDatasource.isEmpty()) {
+      this.comparator = getSegmentComparator();
+    } else {
+      this.comparator = Comparators.alwaysFirst(priorityDatasource)
+                                   .onResultOf(CompactionCandidate::getDataSource)
+                                   .thenComparing(getSegmentComparator());
+    }
   }
 
+  /**
+   * The candidates of this datasource are prioritized over all others.
+   */
   @Nullable
   @JsonProperty
   public final String getPriorityDatasource()
@@ -53,25 +59,14 @@ public abstract class PriorityBasedSegmentSearchPolicy implements CompactionSegm
   }
 
   @Override
-  public CompactionSegmentIterator createIterator(
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals,
-      CompactionStatusTracker statusTracker
-  )
+  public final int compare(CompactionCandidate o1, CompactionCandidate o2)
   {
-    return new PriorityBasedCompactionSegmentIterator(
-        compactionConfigs,
-        dataSources,
-        skipIntervals,
-        this,
-        statusTracker
-    );
+    return comparator.compare(o1, o2);
   }
 
   @Override
   public boolean isEligibleForCompaction(
-      SegmentsToCompact candidateSegments,
+      CompactionCandidate candidate,
       CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   )
@@ -80,9 +75,10 @@ public abstract class PriorityBasedSegmentSearchPolicy implements CompactionSegm
   }
 
   /**
-   * Comparator used to prioritize between compactible segments.
+   * Compares between two compaction candidates. Used to determine the
+   * order in which segments and intervals should be picked for compaction.
    */
-  protected abstract Comparator<SegmentsToCompact> getSegmentComparator();
+  protected abstract Comparator<CompactionCandidate> getSegmentComparator();
 
   @Override
   public boolean equals(Object o)
@@ -93,8 +89,8 @@ public abstract class PriorityBasedSegmentSearchPolicy implements CompactionSegm
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    PriorityBasedSegmentSearchPolicy that = (PriorityBasedSegmentSearchPolicy) o;
-    return Objects.equals(priorityDatasource, that.priorityDatasource);
+    BaseCandidateSearchPolicy that = (BaseCandidateSearchPolicy) o;
+    return Objects.equals(this.priorityDatasource, that.priorityDatasource);
   }
 
   @Override

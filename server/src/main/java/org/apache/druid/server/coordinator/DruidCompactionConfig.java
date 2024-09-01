@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 
 import javax.annotation.Nullable;
@@ -40,7 +40,7 @@ public class DruidCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
-  private static final CompactionSegmentSearchPolicy DEFAULT_COMPACTION_POLICY
+  private static final CompactionCandidateSearchPolicy DEFAULT_COMPACTION_POLICY
       = new NewestSegmentFirstPolicy(null);
   private static final DruidCompactionConfig EMPTY_INSTANCE
       = new DruidCompactionConfig(Collections.emptyList(), null, null, null, null, null);
@@ -50,7 +50,7 @@ public class DruidCompactionConfig
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
   private final CompactionEngine engine;
-  private final CompactionSegmentSearchPolicy compactionPolicy;
+  private final CompactionCandidateSearchPolicy compactionPolicy;
 
   public DruidCompactionConfig withDatasourceConfigs(
       List<DataSourceCompactionConfig> compactionConfigs
@@ -99,7 +99,7 @@ public class DruidCompactionConfig
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
       @JsonProperty("engine") @Nullable CompactionEngine compactionEngine,
-      @JsonProperty("compactionPolicy") @Nullable CompactionSegmentSearchPolicy compactionPolicy
+      @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy
   )
   {
     this.compactionConfigs = Configs.valueOrDefault(compactionConfigs, Collections.emptyList());
@@ -171,7 +171,7 @@ public class DruidCompactionConfig
   }
 
   @JsonProperty
-  public CompactionSegmentSearchPolicy getCompactionPolicy()
+  public CompactionCandidateSearchPolicy getCompactionPolicy()
   {
     return compactionPolicy;
   }

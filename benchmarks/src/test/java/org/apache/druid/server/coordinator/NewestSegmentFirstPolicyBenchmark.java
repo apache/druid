@@ -25,7 +25,7 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
-import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.apache.druid.timeline.DataSegment;
@@ -62,7 +62,7 @@ public class NewestSegmentFirstPolicyBenchmark
 {
   private static final String DATA_SOURCE_PREFIX = "dataSource_";
 
-  private final CompactionSegmentSearchPolicy policy = new NewestSegmentFirstPolicy(null);
+  private final CompactionCandidateSearchPolicy policy = new NewestSegmentFirstPolicy(null);
 
   @Param("100")
   private int numDataSources;

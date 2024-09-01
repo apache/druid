@@ -21,14 +21,12 @@ package org.apache.druid.server.compaction;
 
 import com.google.common.collect.Maps;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -36,35 +34,25 @@ import java.util.PriorityQueue;
 import java.util.stream.Collectors;
 
 /**
- * Implementation of {@link CompactionSegmentIterator} that returns segments in
- * order of their priority.
+ * Implementation of {@link CompactionSegmentIterator} that returns candidate
+ * segments in order of their priority.
  */
 public class PriorityBasedCompactionSegmentIterator implements CompactionSegmentIterator
 {
   private static final Logger log = new Logger(PriorityBasedCompactionSegmentIterator.class);
 
-  private final PriorityQueue<SegmentsToCompact> queue;
+  private final PriorityQueue<CompactionCandidate> queue;
   private final Map<String, DataSourceCompactibleSegmentIterator> datasourceIterators;
 
   public PriorityBasedCompactionSegmentIterator(
       Map<String, DataSourceCompactionConfig> compactionConfigs,
       Map<String, SegmentTimeline> datasourceToTimeline,
       Map<String, List<Interval>> skipIntervals,
-      PriorityBasedSegmentSearchPolicy searchPolicy,
+      CompactionCandidateSearchPolicy searchPolicy,
       CompactionStatusTracker statusTracker
   )
   {
-    final Comparator<SegmentsToCompact> comparator;
-    final String priorityDatasource = searchPolicy.getPriorityDatasource();
-    if (priorityDatasource == null || priorityDatasource.isEmpty()) {
-      comparator = searchPolicy.getSegmentComparator();
-    } else {
-      comparator = Comparators.alwaysFirst(priorityDatasource)
-                              .onResultOf(SegmentsToCompact::getDataSource)
-                              .thenComparing(searchPolicy.getSegmentComparator());
-    }
-    this.queue = new PriorityQueue<>(comparator);
-
+    this.queue = new PriorityQueue<>(searchPolicy);
     this.datasourceIterators = Maps.newHashMapWithExpectedSize(datasourceToTimeline.size());
     compactionConfigs.forEach((datasource, config) -> {
       if (config == null) {
@@ -91,7 +79,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public List<SegmentsToCompact> getCompactedSegments()
+  public List<CompactionCandidate> getCompactedSegments()
   {
     return datasourceIterators.values().stream().flatMap(
         iterator -> iterator.getCompactedSegments().stream()
@@ -99,7 +87,7 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public List<SegmentsToCompact> getSkippedSegments()
+  public List<CompactionCandidate> getSkippedSegments()
   {
     return datasourceIterators.values().stream().flatMap(
         iterator -> iterator.getSkippedSegments().stream()
@@ -113,14 +101,14 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   }
 
   @Override
-  public SegmentsToCompact next()
+  public CompactionCandidate next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    final SegmentsToCompact entry = queue.poll();
-    if (entry == null || entry.isEmpty()) {
+    final CompactionCandidate entry = queue.poll();
+    if (entry == null) {
       throw new NoSuchElementException();
     }
 
@@ -132,9 +120,9 @@ public class PriorityBasedCompactionSegmentIterator implements CompactionSegment
   {
     final DataSourceCompactibleSegmentIterator iterator = datasourceIterators.get(dataSourceName);
     if (iterator.hasNext()) {
-      final SegmentsToCompact segmentsToCompact = iterator.next();
-      if (!segmentsToCompact.isEmpty()) {
-        queue.add(segmentsToCompact);
+      final CompactionCandidate compactionCandidate = iterator.next();
+      if (compactionCandidate != null) {
+        queue.add(compactionCandidate);
       }
     }
   }

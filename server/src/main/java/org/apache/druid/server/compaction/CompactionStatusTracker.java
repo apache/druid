@@ -47,7 +47,7 @@ public class CompactionStatusTracker
   private final ObjectMapper objectMapper;
   private final ConcurrentHashMap<String, DatasourceStatus> datasourceStatuses
       = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, SegmentsToCompact> submittedTaskIdToSegments
+  private final ConcurrentHashMap<String, CompactionCandidate> submittedTaskIdToSegments
       = new ConcurrentHashMap<>();
 
   @Inject
@@ -66,7 +66,7 @@ public class CompactionStatusTracker
     datasourceStatuses.remove(datasource);
   }
 
-  public CompactionTaskStatus getLatestTaskStatus(SegmentsToCompact candidates)
+  public CompactionTaskStatus getLatestTaskStatus(CompactionCandidate candidates)
   {
     return datasourceStatuses
         .getOrDefault(candidates.getDataSource(), DatasourceStatus.EMPTY)
@@ -84,9 +84,9 @@ public class CompactionStatusTracker
   }
 
   public CompactionStatus computeCompactionStatus(
-      SegmentsToCompact candidate,
+      CompactionCandidate candidate,
       DataSourceCompactionConfig config,
-      CompactionSegmentSearchPolicy searchPolicy
+      CompactionCandidateSearchPolicy searchPolicy
   )
   {
     final CompactionStatus compactionStatus = CompactionStatus.compute(candidate, config, objectMapper);
@@ -118,7 +118,7 @@ public class CompactionStatusTracker
   }
 
   public void onCompactionStatusComputed(
-      SegmentsToCompact candidateSegments,
+      CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config
   )
   {
@@ -148,7 +148,7 @@ public class CompactionStatusTracker
 
   public void onTaskSubmitted(
       ClientCompactionTaskQuery taskPayload,
-      SegmentsToCompact candidateSegments
+      CompactionCandidate candidateSegments
   )
   {
     submittedTaskIdToSegments.put(taskPayload.getId(), candidateSegments);
@@ -162,7 +162,7 @@ public class CompactionStatusTracker
       return;
     }
 
-    final SegmentsToCompact candidateSegments = submittedTaskIdToSegments.remove(taskId);
+    final CompactionCandidate candidateSegments = submittedTaskIdToSegments.remove(taskId);
     if (candidateSegments == null) {
       // Nothing to do since we don't know the corresponding datasource or interval
       return;
@@ -209,7 +209,7 @@ public class CompactionStatusTracker
       intervalToTaskStatus.put(compactionInterval, updatedStatus);
     }
 
-    void handleSubmittedTask(SegmentsToCompact candidateSegments)
+    void handleSubmittedTask(CompactionCandidate candidateSegments)
     {
       final Interval interval = candidateSegments.getUmbrellaInterval();
       final CompactionTaskStatus lastStatus = intervalToTaskStatus.get(interval);

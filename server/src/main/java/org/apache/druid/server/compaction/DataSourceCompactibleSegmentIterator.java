@@ -66,10 +66,10 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   private final String dataSource;
   private final DataSourceCompactionConfig config;
   private final CompactionStatusTracker statusTracker;
-  private final PriorityBasedSegmentSearchPolicy searchPolicy;
+  private final CompactionCandidateSearchPolicy searchPolicy;
 
-  private final List<SegmentsToCompact> compactedSegments = new ArrayList<>();
-  private final List<SegmentsToCompact> skippedSegments = new ArrayList<>();
+  private final List<CompactionCandidate> compactedSegments = new ArrayList<>();
+  private final List<CompactionCandidate> skippedSegments = new ArrayList<>();
 
   // This is needed for datasource that has segmentGranularity configured
   // If configured segmentGranularity in config is finer than current segmentGranularity, the same set of segments
@@ -77,13 +77,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   // run of the compaction job and skip any interval that was already previously compacted.
   private final Set<Interval> queuedIntervals = new HashSet<>();
 
-  private final PriorityQueue<SegmentsToCompact> queue;
+  private final PriorityQueue<CompactionCandidate> queue;
 
   public DataSourceCompactibleSegmentIterator(
       DataSourceCompactionConfig config,
       SegmentTimeline timeline,
       List<Interval> skipIntervals,
-      PriorityBasedSegmentSearchPolicy searchPolicy,
+      CompactionCandidateSearchPolicy searchPolicy,
       CompactionStatusTracker statusTracker
   )
   {
@@ -91,7 +91,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     this.config = config;
     this.dataSource = config.getDataSource();
     this.searchPolicy = searchPolicy;
-    this.queue = new PriorityQueue<>(searchPolicy.getSegmentComparator());
+    this.queue = new PriorityQueue<>(searchPolicy);
 
     populateQueue(timeline, skipIntervals);
   }
@@ -117,7 +117,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             }
           }
           if (!partialEternitySegments.isEmpty()) {
-            SegmentsToCompact candidatesWithStatus = SegmentsToCompact.from(partialEternitySegments).withCurrentStatus(
+            CompactionCandidate candidatesWithStatus = CompactionCandidate.from(partialEternitySegments).withCurrentStatus(
                 CompactionStatus.skipped("Segments have partial-eternity intervals")
             );
             skippedSegments.add(candidatesWithStatus);
@@ -181,13 +181,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   @Override
-  public List<SegmentsToCompact> getCompactedSegments()
+  public List<CompactionCandidate> getCompactedSegments()
   {
     return compactedSegments;
   }
 
   @Override
-  public List<SegmentsToCompact> getSkippedSegments()
+  public List<CompactionCandidate> getSkippedSegments()
   {
     return skippedSegments;
   }
@@ -199,18 +199,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   @Override
-  public SegmentsToCompact next()
+  public CompactionCandidate next()
   {
-    if (!hasNext()) {
+    if (hasNext()) {
+      return queue.poll();
+    } else {
       throw new NoSuchElementException();
     }
-
-    final SegmentsToCompact entry = queue.poll();
-    if (entry == null || entry.isEmpty()) {
-      throw new NoSuchElementException();
-    }
-
-    return entry;
   }
 
   /**
@@ -320,10 +315,10 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         continue;
       }
 
-      final SegmentsToCompact candidates = SegmentsToCompact.from(segments);
+      final CompactionCandidate candidates = CompactionCandidate.from(segments);
       final CompactionStatus compactionStatus
           = statusTracker.computeCompactionStatus(candidates, config, searchPolicy);
-      final SegmentsToCompact candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
+      final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(compactionStatus);
       statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
 
       if (compactionStatus.isComplete()) {
@@ -365,7 +360,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           timeline.findNonOvershadowedObjectsInInterval(skipInterval, Partitions.ONLY_COMPLETE)
       );
       if (!CollectionUtils.isNullOrEmpty(segments)) {
-        final SegmentsToCompact candidates = SegmentsToCompact.from(segments);
+        final CompactionCandidate candidates = CompactionCandidate.from(segments);
 
         final CompactionStatus reason;
         if (candidates.getUmbrellaInterval().overlaps(latestSkipInterval)) {
@@ -374,7 +369,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           reason = CompactionStatus.skipped("interval locked by another task");
         }
 
-        final SegmentsToCompact candidatesWithStatus = candidates.withCurrentStatus(reason);
+        final CompactionCandidate candidatesWithStatus = candidates.withCurrentStatus(reason);
         skippedSegments.add(candidatesWithStatus);
         statusTracker.onCompactionStatusComputed(candidatesWithStatus, config);
       }

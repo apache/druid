@@ -20,7 +20,6 @@
 package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
@@ -202,7 +201,7 @@ public class CompactionStatus
    * further checks are not performed and the incomplete status is returned.
    */
   static CompactionStatus compute(
-      SegmentsToCompact candidateSegments,
+      CompactionCandidate candidateSegments,
       DataSourceCompactionConfig config,
       ObjectMapper objectMapper
   )
@@ -236,23 +235,21 @@ public class CompactionStatus
   {
     private final ObjectMapper objectMapper;
     private final DataSourceCompactionConfig compactionConfig;
-    private final SegmentsToCompact candidateSegments;
+    private final CompactionCandidate candidateSegments;
     private final CompactionState lastCompactionState;
     private final ClientCompactionTaskQueryTuningConfig tuningConfig;
     private final ClientCompactionTaskGranularitySpec existingGranularitySpec;
     private final UserCompactionTaskGranularityConfig configuredGranularitySpec;
 
     private Evaluator(
-        SegmentsToCompact candidateSegments,
+        CompactionCandidate candidateSegments,
         DataSourceCompactionConfig compactionConfig,
         ObjectMapper objectMapper
     )
     {
-      Preconditions.checkArgument(!candidateSegments.isEmpty(), "Empty candidates");
-
       this.candidateSegments = candidateSegments;
       this.objectMapper = objectMapper;
-      this.lastCompactionState = candidateSegments.getFirst().getLastCompactionState();
+      this.lastCompactionState = candidateSegments.getSegments().get(0).getLastCompactionState();
       this.compactionConfig = compactionConfig;
       this.tuningConfig = ClientCompactionTaskQueryTuningConfig.from(compactionConfig);
       this.configuredGranularitySpec = compactionConfig.getGranularitySpec();

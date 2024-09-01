@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.CompactionEngine;
-import org.apache.druid.server.compaction.CompactionSegmentSearchPolicy;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -38,7 +38,7 @@ public class ClusterCompactionConfig
   private final Integer maxCompactionTaskSlots;
   private final Boolean useAutoScaleSlots;
   private final CompactionEngine engine;
-  private final CompactionSegmentSearchPolicy compactionPolicy;
+  private final CompactionCandidateSearchPolicy compactionPolicy;
 
   @JsonCreator
   public ClusterCompactionConfig(
@@ -46,7 +46,7 @@ public class ClusterCompactionConfig
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
-      @JsonProperty("compactionPolicy") @Nullable CompactionSegmentSearchPolicy compactionPolicy
+      @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy
   )
   {
     this.compactionTaskSlotRatio = compactionTaskSlotRatio;
@@ -86,7 +86,7 @@ public class ClusterCompactionConfig
 
   @Nullable
   @JsonProperty
-  public CompactionSegmentSearchPolicy getCompactionPolicy()
+  public CompactionCandidateSearchPolicy getCompactionPolicy()
   {
     return compactionPolicy;
   }

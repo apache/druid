@@ -304,7 +304,7 @@ public class CompactionStatusTest
 
     final DataSegment segment = DataSegment.builder(WIKI_SEGMENT).lastCompactionState(lastCompactionState).build();
     final CompactionStatus status = CompactionStatus.compute(
-        SegmentsToCompact.from(Collections.singletonList(segment)),
+        CompactionCandidate.from(Collections.singletonList(segment)),
         compactionConfig,
         OBJECT_MAPPER
     );
@@ -322,7 +322,7 @@ public class CompactionStatusTest
                      .lastCompactionState(lastCompactionState)
                      .build();
     final CompactionStatus status = CompactionStatus.compute(
-        SegmentsToCompact.from(Collections.singletonList(segment)),
+        CompactionCandidate.from(Collections.singletonList(segment)),
         compactionConfig,
         OBJECT_MAPPER
     );

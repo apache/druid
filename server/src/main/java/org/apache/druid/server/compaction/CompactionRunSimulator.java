@@ -94,9 +94,9 @@ public class CompactionRunSimulator
     {
       @Override
       public CompactionStatus computeCompactionStatus(
-          SegmentsToCompact candidate,
+          CompactionCandidate candidate,
           DataSourceCompactionConfig config,
-          CompactionSegmentSearchPolicy searchPolicy
+          CompactionCandidateSearchPolicy searchPolicy
       )
       {
         return statusTracker.computeCompactionStatus(candidate, config, searchPolicy);
@@ -104,7 +104,7 @@ public class CompactionRunSimulator
 
       @Override
       public void onCompactionStatusComputed(
-          SegmentsToCompact candidateSegments,
+          CompactionCandidate candidateSegments,
           DataSourceCompactionConfig config
       )
       {
@@ -125,7 +125,7 @@ public class CompactionRunSimulator
       }
 
       @Override
-      public void onTaskSubmitted(ClientCompactionTaskQuery taskPayload, SegmentsToCompact candidateSegments)
+      public void onTaskSubmitted(ClientCompactionTaskQuery taskPayload, CompactionCandidate candidateSegments)
       {
         // Add a row for each task in order of submission
         final CompactionStatus status = candidateSegments.getCurrentStatus();
@@ -165,7 +165,7 @@ public class CompactionRunSimulator
   }
 
   private Object[] createRow(
-      SegmentsToCompact candidate,
+      CompactionCandidate candidate,
       ClientCompactionTaskQueryTuningConfig tuningConfig,
       String reason
   )
@@ -173,7 +173,7 @@ public class CompactionRunSimulator
     final List<Object> row = new ArrayList<>();
     row.add(candidate.getDataSource());
     row.add(candidate.getUmbrellaInterval());
-    row.add(candidate.size());
+    row.add(candidate.numSegments());
     row.add(candidate.getTotalBytes());
     if (tuningConfig != null) {
       row.add(CompactSegments.findMaxNumTaskSlotsUsedByOneNativeCompactionTask(tuningConfig));

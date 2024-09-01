@@ -27,10 +27,10 @@ import javax.annotation.Nullable;
 import java.util.Comparator;
 
 /**
- * Implementation of {@link CompactionSegmentSearchPolicy} that prioritizes
+ * Implementation of {@link CompactionCandidateSearchPolicy} that prioritizes
  * intervals which have the latest data.
  */
-public class NewestSegmentFirstPolicy extends PriorityBasedSegmentSearchPolicy
+public class NewestSegmentFirstPolicy extends BaseCandidateSearchPolicy
 {
   @JsonCreator
   public NewestSegmentFirstPolicy(
@@ -41,7 +41,7 @@ public class NewestSegmentFirstPolicy extends PriorityBasedSegmentSearchPolicy
   }
 
   @Override
-  protected Comparator<SegmentsToCompact> getSegmentComparator()
+  protected Comparator<CompactionCandidate> getSegmentComparator()
   {
     return (o1, o2) -> Comparators.intervalsByStartThenEnd()
                                   .compare(o2.getUmbrellaInterval(), o1.getUmbrellaInterval());
