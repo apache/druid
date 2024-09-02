@@ -1513,7 +1513,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testMultiValuedColumnsInfoProcessing()
+  public void testMultiValuedDimensionsProcessing()
       throws IOException
   {
     final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
@@ -1529,10 +1529,7 @@ public class CompactionTaskTest
     );
     for (DataSchema dataSchema : dataSchemasForIntervals.values()) {
       Assert.assertTrue(dataSchema instanceof CombinedDataSchema);
-      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().isProcessed());
-      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo()
-                                                         .getMultiValuedColumns()
-                                                         .isEmpty());
+      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedDimensions().isEmpty());
     }
   }
 

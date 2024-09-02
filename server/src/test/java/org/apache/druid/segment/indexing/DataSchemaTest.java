@@ -688,8 +688,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   public void testCombinedDataSchemaSetsMultiValuedColumnsInfo()
   {
-    MultiValuedColumnsInfo multiValuedColumnsInfo = MultiValuedColumnsInfo.processed();
-    multiValuedColumnsInfo.addMultiValuedColumn("dimA");
+    Set<String> multiValuedColumnsInfo = ImmutableSet.of("dimA");
 
     CombinedDataSchema schema = new CombinedDataSchema(
         IdUtilsTest.VALID_ID_CHARS,
@@ -705,7 +704,6 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         null,
         multiValuedColumnsInfo
     );
-    Assert.assertTrue(schema.getMultiValuedColumnsInfo().isProcessed());
-    Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedColumnsInfo().getMultiValuedColumns());
+    Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
   }
 }

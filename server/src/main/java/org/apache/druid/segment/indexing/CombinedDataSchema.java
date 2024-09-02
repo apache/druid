@@ -25,15 +25,15 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  * Class representing the combined DataSchema of a set of segments, currently used only by Compaction.
  */
 public class CombinedDataSchema extends DataSchema
 {
-  private final MultiValuedColumnsInfo multiValuedColumnsInfo;
+  private final Set<String> multiValuedDimensions;
 
   public CombinedDataSchema(
       String dataSource,
@@ -42,7 +42,7 @@ public class CombinedDataSchema extends DataSchema
       AggregatorFactory[] aggregators,
       GranularitySpec granularitySpec,
       TransformSpec transformSpec,
-      MultiValuedColumnsInfo multiValuedColumnsInfo
+      @Nullable Set<String> multiValuedDimensions
   )
   {
     super(
@@ -55,13 +55,13 @@ public class CombinedDataSchema extends DataSchema
         null,
         null
     );
-    this.multiValuedColumnsInfo = multiValuedColumnsInfo;
+    this.multiValuedDimensions = multiValuedDimensions;
   }
 
-  @Nonnull
-  public MultiValuedColumnsInfo getMultiValuedColumnsInfo()
+  @Nullable
+  public Set<String> getMultiValuedDimensions()
   {
-    return multiValuedColumnsInfo;
+    return multiValuedDimensions;
   }
 
 }

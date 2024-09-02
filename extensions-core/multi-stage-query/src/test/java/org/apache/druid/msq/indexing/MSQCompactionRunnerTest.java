@@ -23,8 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.NullHandling;
@@ -45,7 +43,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -68,7 +65,6 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.MultiValuedColumnsInfo;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -83,8 +79,10 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -111,7 +109,7 @@ public class MSQCompactionRunnerTest
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
   private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
-  private static MSQCompactionRunner MSQ_COMPACTION_RUNNER;
+  private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, TestExprMacroTable.INSTANCE, null);
 
   @BeforeClass
   public static void setupClass()
@@ -125,11 +123,6 @@ public class MSQCompactionRunnerTest
     );
 
     PARTITION_DIMENSIONS = Collections.singletonList(stringDimensionSchema.getName());
-
-    Injector injector = Guice.createInjector(binder -> {
-      binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
-    });
-    MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, injector);
   }
 
   @Test
@@ -339,9 +332,8 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    MultiValuedColumnsInfo multiValuedColumnsInfo =
-        MultiValuedColumnsInfo.processed();
-    multiValuedColumnsInfo.addMultiValuedColumn(MV_STRING_DIMENSION.getName());
+    Set<String> multiValuedDimensions = new HashSet<>();
+    multiValuedDimensions.add(MV_STRING_DIMENSION.getName());
 
     CombinedDataSchema dataSchema = new CombinedDataSchema(
         DATA_SOURCE,
@@ -354,7 +346,7 @@ public class MSQCompactionRunnerTest
             Collections.singletonList(COMPACTION_INTERVAL)
         ),
         new TransformSpec(dimFilter, Collections.emptyList()),
-        multiValuedColumnsInfo
+        multiValuedDimensions
     );
 
 
@@ -457,7 +449,7 @@ public class MSQCompactionRunnerTest
         .transformSpec(transformSpec)
         .granularitySpec(granularitySpec)
         .metricsSpec(metricsSpec)
-        .compactionRunner(new MSQCompactionRunner(JSON_MAPPER, null))
+        .compactionRunner(MSQ_COMPACTION_RUNNER)
         .context(context);
 
     return builder.build();

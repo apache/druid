@@ -95,6 +95,7 @@ public class MSQCompactionRunner implements CompactionRunner
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularities.ALL;
 
   private final ObjectMapper jsonMapper;
+  private final ExprMacroTable exprMacroTable;
   private final Injector injector;
   // Needed as output column name while grouping in the scenario of:
   // a) no query granularity -- to specify an output name for the time dimension column since __time is a reserved name.
@@ -112,9 +113,13 @@ public class MSQCompactionRunner implements CompactionRunner
 
 
   @JsonCreator
-  public MSQCompactionRunner(@JacksonInject ObjectMapper jsonMapper, @JacksonInject Injector injector)
+  public MSQCompactionRunner(@JacksonInject final ObjectMapper jsonMapper,
+                             @JacksonInject final ExprMacroTable exprMacroTable,
+                             @JacksonInject final Injector injector
+  )
   {
     this.jsonMapper = jsonMapper;
+    this.exprMacroTable = exprMacroTable;
     this.injector = injector;
   }
 
@@ -380,7 +385,12 @@ public class MSQCompactionRunner implements CompactionRunner
     return Collections.emptyList();
   }
 
-  private static Query<?> buildScanQuery(CompactionTask compactionTask, Interval interval, DataSchema dataSchema, Map<String, VirtualColumn> inputColToVirtualCol)
+  private static Query<?> buildScanQuery(
+      CompactionTask compactionTask,
+      Interval interval,
+      DataSchema dataSchema,
+      Map<String, VirtualColumn> inputColToVirtualCol
+  )
   {
     RowSignature rowSignature = getRowSignature(dataSchema);
     VirtualColumns virtualColumns = VirtualColumns.create(new ArrayList<>(inputColToVirtualCol.values()));
@@ -444,18 +454,19 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     Map<String, VirtualColumn> inputColToVirtualCol = new HashMap<>();
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
-      String virtualColumnExpr;
+      // Round-off time field according to provided queryGranularity
+      String timeVirtualColumnExpr;
       if (dataSchema.getGranularitySpec()
                     .getQueryGranularity()
                     .equals(Granularities.ALL)) {
         // For ALL query granularity, all records in a segment are assigned the interval start timestamp of the segment.
         // It's the same behaviour in native compaction.
-        virtualColumnExpr = StringUtils.format("timestamp_parse('%s')", interval.getStart());
+        timeVirtualColumnExpr = StringUtils.format("timestamp_parse('%s')", interval.getStart());
       } else {
         PeriodGranularity periodQueryGranularity = (PeriodGranularity) dataSchema.getGranularitySpec()
                                                                                  .getQueryGranularity();
         // Round off the __time column according to the required granularity.
-        virtualColumnExpr =
+        timeVirtualColumnExpr =
             StringUtils.format(
                 "timestamp_floor(\"%s\", '%s')",
                 ColumnHolder.TIME_COLUMN_NAME,
@@ -464,9 +475,9 @@ public class MSQCompactionRunner implements CompactionRunner
       }
       inputColToVirtualCol.put(ColumnHolder.TIME_COLUMN_NAME, new ExpressionVirtualColumn(
           TIME_VIRTUAL_COLUMN,
-          virtualColumnExpr,
+          timeVirtualColumnExpr,
           ColumnType.LONG,
-          injector.getInstance(ExprMacroTable.class)
+          exprMacroTable
       ));
     }
     if (isGroupBy(dataSchema)) {
@@ -478,10 +489,10 @@ public class MSQCompactionRunner implements CompactionRunner
                                                  .map(DimensionSchema::getName)
                                                  .collect(Collectors.toSet());
       if (dataSchema instanceof CombinedDataSchema &&
-          ((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().isProcessed()) {
+          ((CombinedDataSchema) dataSchema).getMultiValuedDimensions() != null) {
         // Filter actual MVDs from schema info.
         Set<String> multiValuedColumnsFromSchema =
-            ((CombinedDataSchema) dataSchema).getMultiValuedColumnsInfo().getMultiValuedColumns();
+            ((CombinedDataSchema) dataSchema).getMultiValuedDimensions();
         multiValuedColumns = multiValuedColumns.stream()
                                                .filter(multiValuedColumnsFromSchema::contains)
                                                .collect(Collectors.toSet());
@@ -495,7 +506,7 @@ public class MSQCompactionRunner implements CompactionRunner
                 ARRAY_VIRTUAL_COLUMN_PREFIX + dim,
                 virtualColumnExpr,
                 ColumnType.STRING_ARRAY,
-                injector.getInstance(ExprMacroTable.class)
+                exprMacroTable
             )
         );
       }
@@ -527,7 +538,7 @@ public class MSQCompactionRunner implements CompactionRunner
                                         StringUtils.format("array_to_mv(\"%s\")", entry.getValue().getOutputName()),
                                         null,
                                         ColumnType.STRING,
-                                        injector.getInstance(ExprMacroTable.class)
+                                        exprMacroTable
                                     )
                             )
                             .collect(Collectors.toList());
