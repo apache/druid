@@ -28,9 +28,6 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -44,11 +41,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
