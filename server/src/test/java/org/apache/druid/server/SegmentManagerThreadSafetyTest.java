@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -263,6 +264,12 @@ public class SegmentManagerThreadSafetyTest
         @Nullable
         @Override
         public QueryableIndex asQueryableIndex()
+        {
+          throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public CursorFactory asCursorFactory()
         {
           throw new UnsupportedOperationException();
         }

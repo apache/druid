@@ -28,12 +28,14 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -237,6 +239,12 @@ public class TestSegmentUtils
     public QueryableIndex asQueryableIndex()
     {
       return index;
+    }
+
+    @Override
+    public CursorFactory asCursorFactory()
+    {
+      return new QueryableIndexCursorFactory(index);
     }
 
     @Nullable

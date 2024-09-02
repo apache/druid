@@ -16089,7 +16089,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWindowingOverJoin()
   {
-    msqIncompatible();
     testBuilder()
         .sql("with "
             + "main as "
