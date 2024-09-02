@@ -19,7 +19,7 @@
 import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Column, ReactTableFunction } from 'react-table';
 
 import {
@@ -39,8 +39,10 @@ interface FilterRendererProps {
 }
 
 export function GenericFilterInput({ column, filter, onChange, key }: FilterRendererProps) {
+  const INPUT_DEBOUNCE_TIME_IN_MILLISECONDS = 1000;
   const [menuOpen, setMenuOpen] = useState(false);
   const [focusedText, setFocusedText] = useState<string | undefined>();
+  const [debouncedValue, setDebouncedValue] = useState<string | undefined>();
 
   const enableComparisons = String(column.headerClassName).includes('enable-comparisons');
 
@@ -48,6 +50,19 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
     mode: '~',
     needle: '',
   };
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (focusedText !== undefined && focusedText !== debouncedValue) {
+        onChange(combineModeAndNeedle(mode, focusedText));
+        setDebouncedValue(focusedText);
+      }
+    }, INPUT_DEBOUNCE_TIME_IN_MILLISECONDS);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [focusedText, debouncedValue, mode, onChange]);
 
   return (
     <InputGroup
@@ -79,15 +94,17 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
         </Popover>
       }
       value={focusedText ?? needle}
-      onChange={e => {
-        const enteredText = e.target.value;
-        setFocusedText(enteredText);
-        onChange(combineModeAndNeedle(mode, enteredText));
+      onChange={e => setFocusedText(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          const inputValue = (e.target as HTMLInputElement).value;
+          setDebouncedValue(undefined); // Reset debounce to avoid duplicate triggers
+          onChange(combineModeAndNeedle(mode, inputValue));
+        }
       }}
       rightElement={
         filter ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
       }
-      onFocus={() => setFocusedText(needle)}
       onBlur={e => {
         setFocusedText(undefined);
         if (filter && !e.target.value) onChange('');

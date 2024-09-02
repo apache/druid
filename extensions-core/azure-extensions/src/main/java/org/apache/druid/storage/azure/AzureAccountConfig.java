@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 
 /**
  * Stores the configuration for an Azure account.
@@ -31,7 +30,7 @@ import javax.validation.constraints.NotNull;
 public class AzureAccountConfig
 {
   @JsonProperty
-  @NotNull
+  @Nullable
   private String account;
 
   /**

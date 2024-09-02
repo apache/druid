@@ -398,6 +398,21 @@ at execution time. To use dynamic parameters, replace any literal in the query w
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
 which they are passed. Parameters are supported in both the [HTTP POST](../api-reference/sql-api.md) and [JDBC](../api-reference/sql-jdbc.md) APIs.
 
+Druid supports double and null values in arrays for dynamic queries.
+The following example query uses the [ARRAY_CONTAINS](./sql-functions.md#array_contains) function to return `doubleArrayColumn` when the reference array `[-25.7, null, 36.85]` contains all elements of the value of `doubleArrayColumn`:
+
+```sql
+{
+   "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
+   "parameters": [
+      {
+        "type": "ARRAY",
+        "value": [-25.7, null, 36.85]
+      }
+   ]
+}
+```
+
 In certain cases, using dynamic parameters in expressions can cause type inference issues which cause your query to fail, for example:
 
 ```sql

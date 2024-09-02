@@ -130,13 +130,13 @@ FROM <table>
 
 ##### S3
 
-Export results to S3 by passing the function `S3()` as an argument to the `EXTERN` function. Note that this requires the `druid-s3-extensions`.
-The `S3()` function is a Druid function that configures the connection. Arguments for `S3()` should be passed as named parameters with the value in single quotes like the following example:
+Export results to S3 by passing the function `s3()` as an argument to the `EXTERN` function. Note that this requires the `druid-s3-extensions`.
+The `s3()` function is a Druid function that configures the connection. Arguments for `s3()` should be passed as named parameters with the value in single quotes like the following example:
 
 ```sql
 INSERT INTO
   EXTERN(
-    S3(bucket => 'your_bucket', prefix => 'prefix/to/files')
+    s3(bucket => 'your_bucket', prefix => 'prefix/to/files')
   )
 AS CSV
 SELECT
