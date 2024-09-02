@@ -60,7 +60,7 @@ public class PeonProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    ProcessingModuleHelper.registerConfigsAndMonitor(binder);
+    DruidProcessingModule.registerConfigsAndMonitor(binder);
   }
 
   @Provides
@@ -71,7 +71,7 @@ public class PeonProcessingModule implements Module
       CacheConfig cacheConfig
   )
   {
-    return ProcessingModuleHelper.createCachePopulator(smileMapper, cachePopulatorStats, cacheConfig);
+    return DruidProcessingModule.createCachePopulator(smileMapper, cachePopulatorStats, cacheConfig);
   }
 
   @Provides
@@ -94,7 +94,7 @@ public class PeonProcessingModule implements Module
       }
       return NoopQueryProcessingPool.instance();
     }
-    return ProcessingModuleHelper.createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
+    return DruidProcessingModule.createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
   }
 
   @Provides
@@ -105,7 +105,7 @@ public class PeonProcessingModule implements Module
     if (!task.supportsQueries()) {
       return DummyNonBlockingPool.instance();
     }
-    return ProcessingModuleHelper.createIntermediateResultsPool(config);
+    return DruidProcessingModule.createIntermediateResultsPool(config);
   }
 
   @Provides
@@ -124,7 +124,7 @@ public class PeonProcessingModule implements Module
       }
       return DummyBlockingPool.instance();
     }
-    return ProcessingModuleHelper.createMergeBufferPool(config);
+    return DruidProcessingModule.createMergeBufferPool(config);
   }
 
   @Provides

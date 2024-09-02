@@ -19,22 +19,113 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.java.util.common.concurrent.Execs;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Implementation of {@link QueryProcessingPool} that throws when it is given any query execution task unit
+ * Implementation of {@link QueryProcessingPool} that throws when any query execution task unit is submitted to it. It is
+ * semantically shutdown from the moment it is created, and since the shutdown methods are supposed to be idempotent,
+ * they do not throw like the execution methods
  */
-public class NoopQueryProcessingPool extends ForwardingQueryProcessingPool
+public class NoopQueryProcessingPool implements QueryProcessingPool
 {
   private static final QueryProcessingPool INSTANCE = new NoopQueryProcessingPool();
+  private static final DruidException UNSUPPORTED_EXCEPTION =
+      DruidException.defensive("Unexpected call made to NoopQueryProcessingPool");
 
   public static QueryProcessingPool instance()
   {
     return INSTANCE;
   }
 
-  private NoopQueryProcessingPool()
+  @Override
+  public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
-    super(Execs.dummy());
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public <T> ListenableFuture<T> submit(Callable<T> callable)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public ListenableFuture<?> submit(Runnable runnable)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public <T> ListenableFuture<T> submit(Runnable runnable, T t)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public void shutdown()
+  {
+    // No op, since it is already shutdown
+  }
+
+  @Override
+  public List<Runnable> shutdownNow()
+  {
+    return Collections.emptyList();
+  }
+
+  @Override
+  public boolean isShutdown()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean isTerminated()
+  {
+    return true;
+  }
+
+  @Override
+  public boolean awaitTermination(long l, TimeUnit timeUnit) throws InterruptedException
+  {
+    return true;
+  }
+
+  @Override
+  public <T> T invokeAny(Collection<? extends Callable<T>> collection)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public <T> T invokeAny(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit)
+  {
+    throw UNSUPPORTED_EXCEPTION;
+  }
+
+  @Override
+  public void execute(Runnable runnable)
+  {
+    throw UNSUPPORTED_EXCEPTION;
   }
 }

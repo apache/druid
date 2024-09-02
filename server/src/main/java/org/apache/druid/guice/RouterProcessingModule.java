@@ -53,7 +53,7 @@ public class RouterProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    ProcessingModuleHelper.registerConfigsAndMonitor(binder);
+    DruidProcessingModule.registerConfigsAndMonitor(binder);
   }
 
   @Provides

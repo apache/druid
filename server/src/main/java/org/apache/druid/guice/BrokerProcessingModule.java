@@ -63,8 +63,8 @@ public class BrokerProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, ProcessingModuleHelper.PROCESSING_PROPERTY_BASE + ".merge", BrokerParallelMergeConfig.class);
-    ProcessingModuleHelper.registerConfigsAndMonitor(binder);
+    JsonConfigProvider.bind(binder, DruidProcessingModule.PROCESSING_PROPERTY_PREFIX + ".merge", BrokerParallelMergeConfig.class);
+    DruidProcessingModule.registerConfigsAndMonitor(binder);
   }
 
   @Provides
@@ -75,7 +75,7 @@ public class BrokerProcessingModule implements Module
       CacheConfig cacheConfig
   )
   {
-    return ProcessingModuleHelper.createCachePopulator(smileMapper, cachePopulatorStats, cacheConfig);
+    return DruidProcessingModule.createCachePopulator(smileMapper, cachePopulatorStats, cacheConfig);
   }
 
   @Provides
@@ -93,7 +93,6 @@ public class BrokerProcessingModule implements Module
   public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
-
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
