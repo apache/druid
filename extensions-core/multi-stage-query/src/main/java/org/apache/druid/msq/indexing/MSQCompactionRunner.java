@@ -283,9 +283,7 @@ public class MSQCompactionRunner implements CompactionRunner
         rowsPerSegment = partitionsSpec.getMaxRowsPerSegment();
       } else if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
         DimensionRangePartitionsSpec dimensionRangePartitionsSpec = (DimensionRangePartitionsSpec) partitionsSpec;
-        rowsPerSegment = dimensionRangePartitionsSpec.getTargetRowsPerSegment() != null
-                         ? dimensionRangePartitionsSpec.getTargetRowsPerSegment()
-                         : dimensionRangePartitionsSpec.getMaxRowsPerSegment();
+        rowsPerSegment = dimensionRangePartitionsSpec.getTargetRowsPerSegment();
       }
     }
     return rowsPerSegment;
