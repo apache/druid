@@ -51,6 +51,7 @@ import java.util.Comparator;
 
 /**
  * Reader for {@link ColumnType#STRING_ARRAY}.
+ * This is similar to {@link StringFrameColumnReader} reading mvds in reading bytes from frame
  */
 public class StringArrayFrameColumnReader implements FrameColumnReader
 {
@@ -197,7 +198,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
         @Override
         public Class<?> classOfObject()
         {
-          return String[].class;
+          return Object[].class;
         }
       };
     }

@@ -85,13 +85,16 @@ public class StringFrameColumnReader implements FrameColumnReader
     final Memory memory = frame.region(columnNumber);
     validate(memory);
 
-    final boolean multiValue = isMultiValue(memory);
-    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), multiValue);
-    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), multiValue);
+    if (isMultiValue(memory)) {
+      throw DruidException.defensive("Only Window Functions invoke readRACColumn and they do not support MVDs. "
+                                     + "Use MV_TO_ARRAY to convert them to Arrays");
+    }
+    final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), false);
+    final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), false);
 
     StringFrameColumn frameCol = new StringFrameColumn(
         frame,
-        multiValue,
+        false,
         memory,
         positionOfLengths,
         positionOfPayloads
