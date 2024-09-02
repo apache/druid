@@ -48,8 +48,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionRunSimulator;
+import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
@@ -125,6 +127,7 @@ public class DruidCoordinator
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
+  private final CompactionStatusTracker compactionStatusTracker;
   private final CompactSegments compactSegments;
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
@@ -171,9 +174,9 @@ public class DruidCoordinator
       CoordinatorCustomDutyGroups customDutyGroups,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      CompactionStatusTracker compactionStatusTracker
   )
   {
     this.config = config;
@@ -191,7 +194,8 @@ public class DruidCoordinator
     this.balancerStrategyFactory = config.getBalancerStrategyFactory();
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-    this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
+    this.compactionStatusTracker = compactionStatusTracker;
+    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
@@ -313,12 +317,6 @@ public class DruidCoordinator
   }
 
   @Nullable
-  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
-  {
-    return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
-  }
-
-  @Nullable
   public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
   {
     return compactSegments.getAutoCompactionSnapshot(dataSource);
@@ -327,6 +325,16 @@ public class DruidCoordinator
   public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
   {
     return compactSegments.getAutoCompactionSnapshot();
+  }
+
+  public CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest)
+  {
+    return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
+        metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
+        metadataManager.segments()
+                       .getSnapshotOfDataSourcesWithAllUsedSegments()
+                       .getUsedSegmentsTimelinesPerDataSource()
+    );
   }
 
   public String getCurrentLeader()
@@ -505,6 +513,7 @@ public class DruidCoordinator
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStop();
       }
+      compactionStatusTracker.stop();
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
@@ -589,11 +598,11 @@ public class DruidCoordinator
     return duties;
   }
 
-  private CompactSegments initializeCompactSegmentsDuty(CompactionSegmentSearchPolicy compactionSegmentSearchPolicy)
+  private CompactSegments initializeCompactSegmentsDuty(CompactionStatusTracker statusTracker)
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient);
+      return new CompactSegments(statusTracker, overlordClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(

@@ -24,6 +24,7 @@ import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
@@ -193,7 +194,11 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   }
 
   @Override
-  public GenericColumnSerializer<?> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer<?> getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     if (compressionEnabled) {
       return new SerializablePairLongStringColumnSerializer(
@@ -262,6 +267,12 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
           }
 
           return bbuf.array();
+        }
+
+        @Override
+        public boolean readRetainsBufferReference()
+        {
+          return false;
         }
       };
 }

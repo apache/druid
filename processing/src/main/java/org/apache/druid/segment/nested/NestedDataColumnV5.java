@@ -30,6 +30,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -92,7 +93,7 @@ public class NestedDataColumnV5<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public String getFieldFileName(String fileNameBase, String field, int fieldIndex)
   {
-    return NestedCommonFormatColumnSerializer.getInternalFileName(
+    return ColumnSerializerUtils.getInternalFileName(
         fileNameBase,
         NestedCommonFormatColumnSerializer.NESTED_FIELD_PREFIX + fieldIndex
     );

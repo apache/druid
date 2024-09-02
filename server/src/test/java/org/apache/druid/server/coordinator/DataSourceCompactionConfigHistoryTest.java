@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.TestDataSource;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -37,14 +38,14 @@ public class DataSourceCompactionConfigHistoryTest
 {
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
   private final DataSourceCompactionConfig wikiCompactionConfig
-      = DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).build();
+      = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
 
   private DataSourceCompactionConfigHistory wikiAuditHistory;
 
   @Before
   public void setup()
   {
-    wikiAuditHistory = new DataSourceCompactionConfigHistory(DS.WIKI);
+    wikiAuditHistory = new DataSourceCompactionConfigHistory(TestDataSource.WIKI);
   }
 
   @Test
@@ -94,7 +95,7 @@ public class DataSourceCompactionConfigHistoryTest
   public void testAddDeleteAnotherDatasourceConfigShouldNotAddToHistory()
   {
     final DataSourceCompactionConfig koalaCompactionConfig
-        = DataSourceCompactionConfig.builder().forDataSource(DS.KOALA).build();
+        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build();
 
     wikiAuditHistory.add(
         DruidCompactionConfig.empty().withDatasourceConfig(koalaCompactionConfig),
@@ -147,7 +148,7 @@ public class DataSourceCompactionConfigHistoryTest
 
     final DataSourceCompactionConfig updatedWikiConfig
         = DataSourceCompactionConfig.builder()
-                                    .forDataSource(DS.WIKI)
+                                    .forDataSource(TestDataSource.WIKI)
                                     .withSkipOffsetFromLatest(Period.hours(5))
                                     .build();
     wikiAuditHistory.add(
@@ -177,7 +178,7 @@ public class DataSourceCompactionConfigHistoryTest
     wikiAuditHistory.add(originalConfig, auditInfo, DateTimes.nowUtc());
 
     final DruidCompactionConfig updatedConfig = originalConfig.withClusterConfig(
-        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ)
+        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ, null)
     );
     wikiAuditHistory.add(updatedConfig, auditInfo, DateTimes.nowUtc());
 
@@ -191,11 +192,5 @@ public class DataSourceCompactionConfigHistoryTest
     Assert.assertEquals(originalConfig.clusterConfig(), firstEntry.getGlobalConfig());
     Assert.assertEquals(updatedConfig.clusterConfig(), secondEntry.getGlobalConfig());
     Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-  }
-
-  private static class DS
-  {
-    static final String KOALA = "koala";
-    static final String WIKI = "wiki";
   }
 }

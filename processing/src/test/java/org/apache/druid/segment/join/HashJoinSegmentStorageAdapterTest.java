@@ -59,6 +59,31 @@ public class HashJoinSegmentStorageAdapterTest extends BaseHashJoinSegmentStorag
   }
 
   @Test
+  public void test_getRowSignature_factToCountry()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            "__time",
+            "channel",
+            "regionIsoCode",
+            "countryNumber",
+            "countryIsoCode",
+            "user",
+            "isRobot",
+            "isAnonymous",
+            "namespace",
+            "page",
+            "delta",
+            "channel_uniques",
+            "c1.countryNumber",
+            "c1.countryIsoCode",
+            "c1.countryName"
+        ),
+        Lists.newArrayList(makeFactToCountrySegment().getRowSignature().getColumnNames())
+    );
+  }
+
+  @Test
   public void test_getAvailableDimensions_factToCountry()
   {
     Assert.assertEquals(

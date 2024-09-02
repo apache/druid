@@ -20,6 +20,7 @@
 package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -42,6 +43,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -85,15 +87,24 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
+  private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   @Inject
+  public MSQTaskSqlEngine(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
+  {
+    this(overlordClient, jsonMapper, new MSQTerminalStageSpecFactory());
+  }
+
+  @VisibleForTesting
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
+    this.terminalStageSpecFactory = terminalStageSpecFactory;
   }
 
   @Override
@@ -162,7 +173,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        terminalStageSpecFactory
     );
   }
 
@@ -195,7 +207,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        terminalStageSpecFactory
     );
   }
 
@@ -466,22 +479,29 @@ public class MSQTaskSqlEngine implements SqlEngine
         );
       }
     } else if (!rootCollation.getFieldCollations().isEmpty()) {
-      int timePosition = -1;
-      for (int i = 0; i < rootCollation.getFieldCollations().size(); i++) {
-        final String fieldCollationName =
-            fieldMappings.get(rootCollation.getFieldCollations().get(i).getFieldIndex()).getValue();
-        if (ColumnHolder.TIME_COLUMN_NAME.equals(fieldCollationName)) {
-          timePosition = i;
+      int timePositionInRow = -1;
+      for (int i = 0; i < fieldMappings.size(); i++) {
+        Entry<Integer, String> entry = fieldMappings.get(i);
+        if (ColumnHolder.TIME_COLUMN_NAME.equals(entry.getValue())) {
+          timePositionInRow = i;
           break;
         }
       }
 
-      if (timePosition > 0) {
+      int timePositionInCollation = -1;
+      for (int i = 0; i < rootCollation.getFieldCollations().size(); i++) {
+        if (rootCollation.getFieldCollations().get(i).getFieldIndex() == timePositionInRow) {
+          timePositionInCollation = i;
+          break;
+        }
+      }
+
+      if (timePositionInCollation > 0) {
         throw InvalidSqlInput.exception(
             "Sort order (CLUSTERED BY) cannot include[%s] in position[%d] unless context parameter[%s] "
             + "is set to[false]. %s",
             ColumnHolder.TIME_COLUMN_NAME,
-            timePosition,
+            timePositionInCollation,
             MultiStageQueryContext.CTX_FORCE_TIME_SORT,
             DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
         );

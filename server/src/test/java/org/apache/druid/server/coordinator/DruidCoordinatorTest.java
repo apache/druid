@@ -51,9 +51,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -97,6 +97,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private static final Duration LOAD_TIMEOUT = Duration.standardMinutes(15);
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -114,8 +115,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private DruidCoordinatorConfig druidCoordinatorConfig;
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
-  private NewestSegmentFirstPolicy newestSegmentFirstPolicy;
   private OverlordClient overlordClient;
+  private CompactionStatusTracker statusTracker;
   private final LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
 
   @Before
@@ -150,7 +151,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
-    newestSegmentFirstPolicy = new NewestSegmentFirstPolicy(objectMapper);
+    statusTracker = new CompactionStatusTracker(objectMapper);
     druidCoordinatorConfig = new DruidCoordinatorConfig(
         new CoordinatorRunConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD)),
         new CoordinatorPeriodConfig(null, null),
@@ -193,8 +194,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
   }
 
@@ -628,8 +629,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     coordinator.start();
 
@@ -678,8 +679,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
@@ -710,7 +711,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
-        ImmutableList.of(new CompactSegments(null, null))
+        ImmutableList.of(new CompactSegments(statusTracker, null))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
@@ -728,8 +729,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     coordinator.start();
 
@@ -841,8 +842,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     coordinator.start();
 

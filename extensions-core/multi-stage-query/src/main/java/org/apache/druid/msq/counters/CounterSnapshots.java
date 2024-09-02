@@ -27,6 +27,7 @@ import java.util.Objects;
 
 /**
  * Named counter snapshots. Immutable. Often part of a {@link CounterSnapshotsTree}.
+ * Created by {@link CounterTracker#snapshot()}.
  */
 public class CounterSnapshots
 {

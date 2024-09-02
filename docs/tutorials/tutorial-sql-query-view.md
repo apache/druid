@@ -100,9 +100,9 @@ In this section you run some queries using aggregate functions and perform some 
 
    ![aggregate-query](../assets/tutorial-sql-aggregate-query.png)
 
-7. Click **Engine: auto (sql-native)** to display the engine options&mdash;**native** for native (JSON-based) queries, **sql-native** for Druid SQL queries, and **sql-msq-task** for SQL-based ingestion. 
+7. Click **Engine: Auto (SQL native)** to display the engine options&mdash;**Native** for native (JSON-based) queries, **SQL native** for Druid SQL queries, and **SQL MSQ-task** for SQL-based ingestion. 
 
-   Select **auto** to let Druid select the most efficient engine based on your query input.
+   Select **Auto** to let Druid select the most efficient engine based on your query input.
 
 8. From the engine menu you can also edit the query context and turn off some query defaults. 
 
