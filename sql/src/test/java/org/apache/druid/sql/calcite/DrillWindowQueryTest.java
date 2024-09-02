@@ -319,14 +319,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       for (int i = 0; i < cc.size(); i++) {
         ColumnType type = rs.getColumnType(i).get();
         assertNull(type.getComplexTypeName());
-        final String val = row[i];
-        Object newVal;
-        if ("null".equals(val)) {
-          newVal = null;
-        } else {
-          newVal = parseElement(val, type.getType());
-        }
-        newRow[i] = newVal;
+        newRow[i] = parseElement(row[i], type.getType());
       }
       ret.add(newRow);
     }
@@ -335,6 +328,9 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
 
   private static Object parseElement(String element, ValueType elementType)
   {
+    if ("null".equals(element)) {
+      return null;
+    }
     switch (elementType) {
       case STRING:
         return element;
