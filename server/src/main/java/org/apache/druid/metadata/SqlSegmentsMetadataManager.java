@@ -1064,7 +1064,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
+    stopwatch.stop();
     emitMetric("segment/poll/time", stopwatch.millisElapsed());
+    log.info(
+        "Polled and found [%,d] segments in the database in [%,d]ms.",
+        segments.size(), stopwatch.millisElapsed()
+    );
 
     createDatasourcesSnapshot(segments);
   }
@@ -1162,7 +1167,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
+    stopwatch.stop();
     emitMetric("segment/pollWithSchema/time", stopwatch.millisElapsed());
+    log.info(
+        "Polled and found [%,d] segments and [%,d] schemas in the database in [%,d]ms.",
+        segments.size(), schemaMap.size(), stopwatch.millisElapsed()
+    );
 
     createDatasourcesSnapshot(segments);
   }
@@ -1190,6 +1200,10 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         dataSourceProperties
     );
     emitMetric("segment/buildSnapshot/time", stopwatch.millisElapsed());
+    log.debug(
+        "Created snapshot from polled segments in [%d]ms. Found [%d] overshadowed segments.",
+        stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
+    );
   }
 
   private static ImmutableMap<String, String> createDefaultDataSourceProperties()
