@@ -324,23 +324,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         if ("null".equals(val)) {
           newVal = null;
         } else {
-          switch (type.getType()) {
-            case STRING:
-            case LONG:
-            case DOUBLE:
-              newVal = parseElement(val, type.getType());
-              break;
-            case ARRAY:
-              String[] elements = val.substring(1, val.length() - 1).split(",");
-              List<String> arrayElements = new ArrayList<>();
-              for (String element : elements) {
-                arrayElements.add(parseElement(element.trim(), type.getElementType().getType()).toString());
-              }
-              newVal = "[" + String.join(",", arrayElements) + "]";
-              break;
-            default:
-              throw new RuntimeException("unimplemented type: " + type.getType());
-          }
+          newVal = parseElement(val, type.getType());
         }
         newRow[i] = newVal;
       }
@@ -358,8 +342,15 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
         return parseLongValue(element);
       case DOUBLE:
         return Numbers.parseDoubleObject(element);
+      case ARRAY:
+        String[] elements = element.substring(1, element.length() - 1).split(",");
+        List<String> arrayElements = new ArrayList<>();
+        for (String s : elements) {
+          arrayElements.add(parseElement(s.trim(), ValueType.STRING).toString());
+        }
+        return "[" + String.join(",", arrayElements) + "]";
       default:
-        throw new RuntimeException("Unsupported array element type: " + elementType);
+        throw new RuntimeException("unimplemented type: " + elementType);
     }
   }
 
