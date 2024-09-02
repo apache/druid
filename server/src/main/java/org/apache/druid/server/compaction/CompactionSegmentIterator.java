@@ -17,27 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.compact;
+package org.apache.druid.server.compaction;
 
-import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
-import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.Interval;
-
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
- * Segment searching policy used by {@link CompactSegments}.
+ * Iterator over compactible segments.
  */
-public interface CompactionSegmentSearchPolicy
+public interface CompactionSegmentIterator extends Iterator<CompactionCandidate>
 {
   /**
-   * Creates an iterator that returns compactible segments.
+   * List of candidate segments that are already compacted and do not need to be
+   * compacted again. None of these segments are returned by {@link #next()}.
    */
-  CompactionSegmentIterator createIterator(
-      Map<String, DataSourceCompactionConfig> compactionConfigs,
-      Map<String, SegmentTimeline> dataSources,
-      Map<String, List<Interval>> skipIntervals
-  );
+  List<CompactionCandidate> getCompactedSegments();
+
+  /**
+   * List of candidate segments that have been skipped for compaction as they
+   * cannot be compacted due to some reason. None of these segments are returned
+   * by {@link #next()}.
+   */
+  List<CompactionCandidate> getSkippedSegments();
+
 }
