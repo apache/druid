@@ -573,7 +573,7 @@ public class RunWorkOrder
         workOrder.getStageNumber(),
         workerContext.workerId(),
         frameSize,
-        MSQTasks.makeStorageConnector(workerContext.injector(), workerContext.tempDir()),
+        MSQTasks.makeStorageConnector(workerContext.injector()),
         tmpDir,
         isQueryResults
     );

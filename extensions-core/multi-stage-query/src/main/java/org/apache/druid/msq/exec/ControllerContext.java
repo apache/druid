@@ -31,6 +31,7 @@ import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.storage.StorageConnector;
 
 import java.io.File;
 

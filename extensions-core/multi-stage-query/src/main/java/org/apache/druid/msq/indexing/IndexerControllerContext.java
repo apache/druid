@@ -39,6 +39,7 @@ import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.exec.WorkerManager;
+import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -56,6 +57,8 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
 import java.util.Map;
@@ -87,12 +90,16 @@ public class IndexerControllerContext implements ControllerContext
   {
     this.task = task;
     this.toolbox = toolbox;
-    this.injector = injector;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     this.tempDir = toolbox.getIndexingTmpDir();
+    final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
+    final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(tempDir);
+    this.injector = injector.createChildInjector(
+        binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
+              .toInstance(storageConnector));
   }
 
   @Override

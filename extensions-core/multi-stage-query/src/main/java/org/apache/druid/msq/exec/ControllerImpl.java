@@ -1682,7 +1682,7 @@ public class ControllerImpl implements Controller
       final String controllerDirName = DurableStorageUtils.getControllerDirectory(queryId());
       try {
         // Delete all temporary files as a failsafe
-        MSQTasks.makeStorageConnector(context.injector(), context.tempDir()).deleteRecursively(controllerDirName);
+        MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(controllerDirName);
       }
       catch (Exception e) {
         // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
@@ -2663,7 +2663,7 @@ public class ControllerImpl implements Controller
       if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
-            MSQTasks.makeStorageConnector(context.injector(), context.tempDir()),
+            MSQTasks.makeStorageConnector(context.injector()),
             closer,
             MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)
         );

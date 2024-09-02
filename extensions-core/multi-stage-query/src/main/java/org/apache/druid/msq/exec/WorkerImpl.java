@@ -858,7 +858,7 @@ public class WorkerImpl implements Worker
             case DURABLE_STORAGE_QUERY_RESULTS:
               return DurableStorageInputChannelFactory.createStandardImplementation(
                   task.getControllerTaskId(),
-                  MSQTasks.makeStorageConnector(context.injector(), context.tempDir()),
+                  MSQTasks.makeStorageConnector(context.injector()),
                   closer,
                   outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
               );
@@ -975,7 +975,7 @@ public class WorkerImpl implements Worker
         context.workerId()
     );
     try {
-      MSQTasks.makeStorageConnector(context.injector(), context.tempDir()).deleteRecursively(folderName);
+      MSQTasks.makeStorageConnector(context.injector()).deleteRecursively(folderName);
     }
     catch (Exception e) {
       // If an error is thrown while cleaning up a file, log it and try to continue with the cleanup
