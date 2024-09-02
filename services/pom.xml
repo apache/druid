@@ -326,8 +326,6 @@
                     <ignoredUsedUndeclaredDependencies>
                         <ignoredUsedUndeclaredDependency>jakarta.xml.bind:jakarta.xml.bind-api</ignoredUsedUndeclaredDependency>
                         <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
-<!--                        <ignoredUsedUndeclaredDependency>org.eclipse.aether:aether-util</ignoredUsedUndeclaredDependency>-->
-<!--                        <ignoredUsedUndeclaredDependency>org.eclipse.aether:aether-api</ignoredUsedUndeclaredDependency>-->
                     </ignoredUsedUndeclaredDependencies>
                 </configuration>
             </plugin>
