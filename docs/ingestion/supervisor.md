@@ -49,7 +49,7 @@ The `spec` section consists of three components:
 - [`ioConfig`](#ioconfig), which tells Druid how to connect to the [source system](./index.md#ingestion-methods) and how to parse data.
 - [`tuningConfig`](#tuningconfig), which controls performance-related settings for the supervisor and indexing tasks.
 
-For configuration properties shared across all ingestion methods supported by Druid, including the `dataSchema`, see [native ingestion specs](../ingestion/ingestion-spec.md#spec).
+For configuration properties shared across all ingestion methods supported by Druid, including the `dataSchema`, see [native ingestion specs](../ingestion/ingestion-spec.md).
 
 ### `ioConfig`
 
