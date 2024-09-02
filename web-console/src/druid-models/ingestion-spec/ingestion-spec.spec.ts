@@ -22,6 +22,7 @@ import type { IngestionSpec } from './ingestion-spec';
 import {
   adjustId,
   cleanSpec,
+  DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
   guessColumnTypeFromInput,
   guessColumnTypeFromSampleResponse,
   guessKafkaInputFormat,
@@ -857,10 +858,94 @@ describe('spec utils', () => {
   });
 
   describe('updateSchemaWithSample', () => {
+    it('works with when not forcing time, arrays', () => {
+      const updateSpec = updateSchemaWithSample(
+        ingestionSpec,
+        JSON_SAMPLE,
+        false,
+        'fixed',
+        'arrays',
+        true,
+      );
+      expect(updateSpec.spec).toMatchInlineSnapshot(`
+        {
+          "dataSchema": {
+            "dataSource": "wikipedia",
+            "dimensionsSpec": {
+              "dimensions": [
+                {
+                  "name": "__time",
+                  "type": "long",
+                },
+                "user",
+                "id",
+                {
+                  "castToType": "ARRAY<STRING>",
+                  "name": "tags",
+                  "type": "auto",
+                },
+                {
+                  "castToType": "ARRAY<LONG>",
+                  "name": "nums",
+                  "type": "auto",
+                },
+              ],
+              "forceSegmentSortByTime": false,
+            },
+            "granularitySpec": {
+              "queryGranularity": "hour",
+              "rollup": true,
+              "segmentGranularity": "day",
+            },
+            "metricsSpec": [
+              {
+                "name": "count",
+                "type": "count",
+              },
+              {
+                "fieldName": "followers",
+                "name": "sum_followers",
+                "type": "longSum",
+              },
+              {
+                "fieldName": "spend",
+                "name": "sum_spend",
+                "type": "doubleSum",
+              },
+            ],
+            "timestampSpec": {
+              "column": "timestamp",
+              "format": "iso",
+            },
+          },
+          "ioConfig": {
+            "inputFormat": {
+              "type": "json",
+            },
+            "inputSource": {
+              "type": "http",
+              "uris": [
+                "https://website.com/wikipedia.json.gz",
+              ],
+            },
+            "type": "index_parallel",
+          },
+          "tuningConfig": {
+            "forceGuaranteedRollup": true,
+            "partitionsSpec": {
+              "type": "hashed",
+            },
+            "type": "index_parallel",
+          },
+        }
+      `);
+    });
+
     it('works with rollup, arrays', () => {
       const updateSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
         'arrays',
         true,
@@ -938,6 +1023,7 @@ describe('spec utils', () => {
       const updateSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
         'multi-values',
         true,
@@ -1015,6 +1101,7 @@ describe('spec utils', () => {
       const updatedSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
         'arrays',
         false,
@@ -1083,6 +1170,7 @@ describe('spec utils', () => {
       const updatedSpec = updateSchemaWithSample(
         ingestionSpec,
         JSON_SAMPLE,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
         'fixed',
         'multi-values',
         false,

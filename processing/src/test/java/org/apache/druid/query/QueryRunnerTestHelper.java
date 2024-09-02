@@ -445,6 +445,10 @@ public class QueryRunnerTestHelper
             maker.apply(
                 "frontCodedMMappedTestIndex",
                 new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mMappedTestIndexCompressedComplex",
+                new QueryableIndexSegment(TestIndex.getMMappedTestIndexCompressedComplex(), SEGMENT_ID)
             )
         )
     );

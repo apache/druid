@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -30,6 +31,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
@@ -120,6 +122,18 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return index.getInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (final String column : Iterables.concat(index.getDimensionNames(true), index.getMetricNames())) {
+      builder.add(column, ColumnType.fromCapabilities(index.getColumnCapabilities(column)));
+    }
+
+    return builder.build();
   }
 
   @Override

@@ -264,12 +264,6 @@ public class FrameBasedIndexedTable implements IndexedTable
   }
 
   @Override
-  public boolean isCacheable()
-  {
-    return false;
-  }
-
-  @Override
   public void close()
   {
 

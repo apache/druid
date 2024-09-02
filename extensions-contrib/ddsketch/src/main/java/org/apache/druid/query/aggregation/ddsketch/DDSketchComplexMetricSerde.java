@@ -22,17 +22,9 @@ package org.apache.druid.query.aggregation.ddsketch;
 import com.datadoghq.sketch.ddsketch.DDSketch;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import java.nio.ByteBuffer;
 
 
 public class DDSketchComplexMetricSerde extends ComplexMetricSerde
@@ -85,30 +77,8 @@ public class DDSketchComplexMetricSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
-  {
-    final GenericIndexed<DDSketch> column = GenericIndexed.read(
-        buffer,
-        STRATEGY,
-        builder.getFileMapper()
-    );
-    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
-  }
-
-  @Override
   public ObjectStrategy<DDSketch> getObjectStrategy()
   {
     return STRATEGY;
   }
-
-  @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(
-        segmentWriteOutMedium,
-        column,
-        this.getObjectStrategy()
-    );
-  }
-
 }

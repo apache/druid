@@ -131,6 +131,7 @@ public class SuperSorter
   private final List<KeyColumn> sortKey;
   private final ListenableFuture<ClusterByPartitions> outputPartitionsFuture;
   private final FrameProcessorExecutor exec;
+  private final FrameProcessorDecorator processorDecorator;
   private final OutputChannelFactory outputChannelFactory;
   private final OutputChannelFactory intermediateOutputChannelFactory;
   private final int maxChannelsPerMerger;
@@ -224,6 +225,7 @@ public class SuperSorter
       final List<KeyColumn> sortKey,
       final ListenableFuture<ClusterByPartitions> outputPartitionsFuture,
       final FrameProcessorExecutor exec,
+      final FrameProcessorDecorator processorDecorator,
       final OutputChannelFactory outputChannelFactory,
       final OutputChannelFactory intermediateOutputChannelFactory,
       final int maxActiveProcessors,
@@ -239,6 +241,7 @@ public class SuperSorter
     this.sortKey = sortKey;
     this.outputPartitionsFuture = outputPartitionsFuture;
     this.exec = exec;
+    this.processorDecorator = processorDecorator;
     this.outputChannelFactory = outputChannelFactory;
     this.intermediateOutputChannelFactory = intermediateOutputChannelFactory;
     this.maxChannelsPerMerger = maxChannelsPerMerger;
@@ -743,7 +746,7 @@ public class SuperSorter
   private <T> void runWorker(final FrameProcessor<T> worker, final Consumer<T> outConsumer)
   {
     Futures.addCallback(
-        exec.runFully(worker, cancellationId),
+        exec.runFully(processorDecorator.decorate(worker), cancellationId),
         new FutureCallback<T>()
         {
           @Override

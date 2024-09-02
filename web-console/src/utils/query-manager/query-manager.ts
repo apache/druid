@@ -20,9 +20,11 @@ import type { Canceler, CancelToken } from 'axios';
 import axios from 'axios';
 import debounce from 'lodash.debounce';
 
-import { wait } from './general';
+import { wait } from '../general';
+
 import { IntermediateQueryState } from './intermediate-query-state';
 import { QueryState } from './query-state';
+import { ResultWithAuxiliaryWork } from './result-with-auxiliary-work';
 
 export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
   initState?: QueryState<R, E, I>;
@@ -30,12 +32,12 @@ export interface QueryManagerOptions<Q, R, I = never, E extends Error = Error> {
     query: Q,
     cancelToken: CancelToken,
     setIntermediateQuery: (intermediateQuery: any) => void,
-  ) => Promise<R | IntermediateQueryState<I>>;
+  ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
   backgroundStatusCheck?: (
     state: I,
     query: Q,
     cancelToken: CancelToken,
-  ) => Promise<R | IntermediateQueryState<I>>;
+  ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
   onStateChange?: (queryResolve: QueryState<R, E, I>) => void;
   debounceIdle?: number;
   debounceLoading?: number;
@@ -55,13 +57,13 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     query: Q,
     cancelToken: CancelToken,
     setIntermediateQuery: (intermediateQuery: any) => void,
-  ) => Promise<R | IntermediateQueryState<I>>;
+  ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
 
   private readonly backgroundStatusCheck?: (
     state: I,
     query: Q,
     cancelToken: CancelToken,
-  ) => Promise<R | IntermediateQueryState<I>>;
+  ) => Promise<R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>>;
 
   private readonly onStateChange?: (queryResolve: QueryState<R, E, I>) => void;
   private readonly backgroundStatusCheckInitDelay: number;
@@ -120,7 +122,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     });
 
     const query = this.lastQuery;
-    let data: R | IntermediateQueryState<I>;
+    let data: R | IntermediateQueryState<I> | ResultWithAuxiliaryWork<R>;
     try {
       data = await this.processQuery(query, cancelToken, (intermediateQuery: any) => {
         this.lastIntermediateQuery = intermediateQuery;
@@ -147,6 +149,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
           );
         }
         cancelToken.throwIfRequested();
+        if (this.currentQueryId !== myQueryId) return;
 
         this.setState(
           new QueryState<R, E, I>({
@@ -166,6 +169,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
         if (delay) {
           await wait(delay);
           cancelToken.throwIfRequested();
+          if (this.currentQueryId !== myQueryId) return;
         }
 
         data = await this.backgroundStatusCheck(data.state, query, cancelToken);
@@ -190,11 +194,53 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     }
 
     if (this.currentQueryId !== myQueryId) return;
+
+    if (data instanceof ResultWithAuxiliaryWork && !data.auxiliaryQueries.length) {
+      data = data.result;
+    }
+
+    const lastData = this.state.getSomeData();
+    if (data instanceof ResultWithAuxiliaryWork) {
+      const auxiliaryQueries = data.auxiliaryQueries;
+      const numAuxiliaryQueries = auxiliaryQueries.length;
+      data = data.result;
+
+      this.setState(
+        new QueryState<R, E>({
+          data,
+          auxiliaryLoading: true,
+          lastData,
+        }),
+      );
+
+      try {
+        for (let i = 0; i < numAuxiliaryQueries; i++) {
+          cancelToken.throwIfRequested();
+          if (this.currentQueryId !== myQueryId) return;
+
+          data = await auxiliaryQueries[i](data, cancelToken);
+
+          if (this.currentQueryId !== myQueryId) return;
+          if (i < numAuxiliaryQueries - 1) {
+            // Update data in intermediate state
+            this.setState(
+              new QueryState<R, E>({
+                data,
+                auxiliaryLoading: true,
+                lastData,
+              }),
+            );
+          }
+        }
+      } catch {}
+    }
+
+    if (this.currentQueryId !== myQueryId) return;
     this.currentRunCancelFn = undefined;
     this.setState(
       new QueryState<R, E>({
         data,
-        lastData: this.state.getSomeData(),
+        lastData,
       }),
     );
   }

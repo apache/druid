@@ -255,12 +255,12 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(6, index.getNumRows());
     Assert.assertEquals(
         ImmutableList.of(
-            ImmutableList.of(timestamp, "1", "2", 1L),
-            ImmutableList.of(timestamp, "1", "2", 1L),
-            ImmutableList.of(timestamp + 1, "1", "2", 1L),
-            ImmutableList.of(timestamp, "3", "4", 1L),
-            ImmutableList.of(timestamp, "3", "4", 1L),
-            ImmutableList.of(timestamp + 1, "3", "4", 1L)
+            ImmutableList.of("1", "2", timestamp, 1L),
+            ImmutableList.of("1", "2", timestamp, 1L),
+            ImmutableList.of("1", "2", timestamp + 1, 1L),
+            ImmutableList.of("3", "4", timestamp, 1L),
+            ImmutableList.of("3", "4", timestamp, 1L),
+            ImmutableList.of("3", "4", timestamp + 1, 1L)
         ),
         FrameTestUtil.readRowsFromAdapter(new QueryableIndexStorageAdapter(index), null, false).toList()
     );
@@ -325,10 +325,10 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     Assert.assertEquals(4, index.getNumRows());
     Assert.assertEquals(
         ImmutableList.of(
-            ImmutableList.of(timestamp, "1", "2", 2L),
-            ImmutableList.of(timestamp + 1, "1", "2", 1L),
-            ImmutableList.of(timestamp, "3", "4", 2L),
-            ImmutableList.of(timestamp + 1, "3", "4", 1L)
+            ImmutableList.of("1", "2", timestamp, 2L),
+            ImmutableList.of("1", "2", timestamp + 1, 1L),
+            ImmutableList.of("3", "4", timestamp, 2L),
+            ImmutableList.of("3", "4", timestamp + 1, 1L)
         ),
         FrameTestUtil.readRowsFromAdapter(new QueryableIndexStorageAdapter(index), null, false).toList()
     );

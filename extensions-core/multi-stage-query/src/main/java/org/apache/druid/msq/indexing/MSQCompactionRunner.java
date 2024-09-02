@@ -243,7 +243,8 @@ public class MSQCompactionRunner implements CompactionRunner
         dataSchema.getDimensionsSpec()
                   .getDimensions()
                   .stream()
-                  .collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
+                  .collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+        null
     );
   }
 

@@ -290,7 +290,8 @@ public class MSQCompactionRunnerTest
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
             Collections.singletonList(COMPACTION_INTERVAL),
-            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+            null
         ),
         actualMSQSpec.getDestination()
     );
@@ -360,7 +361,8 @@ public class MSQCompactionRunnerTest
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
             Collections.singletonList(COMPACTION_INTERVAL),
-            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity()))
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+            null
         ),
         actualMSQSpec.getDestination()
     );

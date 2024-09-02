@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.bloom;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.query.filter.BloomKFilter;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
@@ -58,7 +59,11 @@ public class BloomFilterSerde extends ComplexMetricSerde
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     throw new UnsupportedOperationException("Bloom filter aggregators are query-time only");
   }

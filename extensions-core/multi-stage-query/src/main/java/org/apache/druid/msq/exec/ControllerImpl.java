@@ -29,7 +29,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
@@ -38,10 +37,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
@@ -82,7 +78,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -102,6 +97,8 @@ import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
+import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
+import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.FaultsExceededChecker;
@@ -139,8 +136,6 @@ import org.apache.druid.msq.input.inline.InlineInputSpecSlicer;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpecSlicer;
 import org.apache.druid.msq.input.stage.InputChannels;
-import org.apache.druid.msq.input.stage.ReadablePartition;
-import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpec;
@@ -166,28 +161,21 @@ import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
-import org.apache.druid.msq.util.ArrayIngestMode;
-import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.msq.util.PassthroughAggregatorFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -195,7 +183,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.timeline.CompactionState;
@@ -205,7 +192,6 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -218,7 +204,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -1192,11 +1177,16 @@ public class ControllerImpl implements Controller
   {
     if (MSQControllerTask.isIngestion(querySpec) &&
         stageNumber == queryDef.getFinalStageDefinition().getStageNumber()) {
-      // noinspection unchecked,rawtypes
-      return (Int2ObjectMap) makeSegmentGeneratorWorkerFactoryInfos(workerInputs, segmentsToGenerate);
-    } else {
-      return null;
+      final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+      TerminalStageSpec terminalStageSpec = destination.getTerminalStageSpec();
+      if (destination.getTerminalStageSpec() instanceof SegmentGenerationStageSpec) {
+        return (Int2ObjectMap) ((SegmentGenerationStageSpec) terminalStageSpec).getWorkerInfo(
+            workerInputs,
+            segmentsToGenerate
+        );
+      }
     }
+    return null;
   }
 
   @SuppressWarnings("rawtypes")
@@ -1210,35 +1200,6 @@ public class ControllerImpl implements Controller
                     .build();
 
     return new MultiQueryKit(kitMap);
-  }
-
-  private Int2ObjectMap<List<SegmentIdWithShardSpec>> makeSegmentGeneratorWorkerFactoryInfos(
-      final WorkerInputs workerInputs,
-      final List<SegmentIdWithShardSpec> segmentsToGenerate
-  )
-  {
-    final Int2ObjectMap<List<SegmentIdWithShardSpec>> retVal = new Int2ObjectAVLTreeMap<>();
-
-    // Empty segments validation already happens when the stages are started -- so we cannot have both
-    // isFailOnEmptyInsertEnabled and segmentsToGenerate.isEmpty() be true here.
-    if (segmentsToGenerate.isEmpty()) {
-      return retVal;
-    }
-
-    for (final int workerNumber : workerInputs.workers()) {
-      // SegmentGenerator stage has a single input from another stage.
-      final StageInputSlice stageInputSlice =
-          (StageInputSlice) Iterables.getOnlyElement(workerInputs.inputsForWorker(workerNumber));
-
-      final List<SegmentIdWithShardSpec> workerSegments = new ArrayList<>();
-      retVal.put(workerNumber, workerSegments);
-
-      for (final ReadablePartition partition : stageInputSlice.getPartitions()) {
-        workerSegments.add(segmentsToGenerate.get(partition.getPartitionNumber()));
-      }
-    }
-
-    return retVal;
   }
 
   /**
@@ -1816,9 +1777,6 @@ public class ControllerImpl implements Controller
     }
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      final RowSignature querySignature = queryDef.getFinalStageDefinition().getSignature();
-      final ClusterBy queryClusterBy = queryDef.getFinalStageDefinition().getClusterBy();
-
       // Find the stage that provides shuffled input to the final segment-generation stage.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
 
@@ -1845,24 +1803,15 @@ public class ControllerImpl implements Controller
         }
       }
 
-      // Then, add a segment-generation stage.
-      final DataSchema dataSchema =
-          makeDataSchemaForIngestion(querySpec, querySignature, queryClusterBy, columnMappings, jsonMapper);
-
-      builder.add(
-          StageDefinition.builder(queryDef.getNextStageNumber())
-                         .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
-                         .maxWorkerCount(tuningConfig.getMaxNumWorkers())
-                         .processorFactory(
-                             new SegmentGeneratorFrameProcessorFactory(
-                                 dataSchema,
-                                 columnMappings,
-                                 tuningConfig
-                             )
-                         )
-      );
-
-      return builder.build();
+      final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
+      return builder.add(
+          destination.getTerminalStageSpec()
+                     .constructFinalStage(
+                         queryDef,
+                         querySpec,
+                         jsonMapper)
+                    )
+                    .build();
     } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
       return queryDef;
     } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
@@ -1931,112 +1880,6 @@ public class ControllerImpl implements Controller
   private static String getDataSourceForIngestion(final MSQSpec querySpec)
   {
     return ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource();
-  }
-
-  private static DataSchema makeDataSchemaForIngestion(
-      MSQSpec querySpec,
-      RowSignature querySignature,
-      ClusterBy queryClusterBy,
-      ColumnMappings columnMappings,
-      ObjectMapper jsonMapper
-  )
-  {
-    final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-    final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
-    final boolean forceSegmentSortByTime =
-        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
-
-    final Pair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
-        makeDimensionsAndAggregatorsForIngestion(
-            querySignature,
-            queryClusterBy,
-            destination.getSegmentSortOrder(),
-            forceSegmentSortByTime,
-            columnMappings,
-            isRollupQuery,
-            querySpec.getQuery(),
-            destination.getDimensionSchemas()
-        );
-
-    return new DataSchema(
-        destination.getDataSource(),
-        new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
-        dimensionsAndAggregators.lhs,
-        dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]),
-        makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper),
-        new TransformSpec(null, Collections.emptyList())
-    );
-  }
-
-  private static GranularitySpec makeGranularitySpecForIngestion(
-      final Query<?> query,
-      final ColumnMappings columnMappings,
-      final boolean isRollupQuery,
-      final ObjectMapper jsonMapper
-  )
-  {
-    if (isRollupQuery) {
-      final String queryGranularityString =
-          query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
-
-      if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
-        final Granularity queryGranularity;
-
-        try {
-          queryGranularity = jsonMapper.readValue(queryGranularityString, Granularity.class);
-        }
-        catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-
-        return new ArbitraryGranularitySpec(queryGranularity, true, Intervals.ONLY_ETERNITY);
-      }
-      return new ArbitraryGranularitySpec(Granularities.NONE, true, Intervals.ONLY_ETERNITY);
-    } else {
-      return new ArbitraryGranularitySpec(Granularities.NONE, false, Intervals.ONLY_ETERNITY);
-    }
-  }
-
-  /**
-   * Checks that a {@link GroupByQuery} is grouping on the primary time column.
-   * <p>
-   * The logic here is roundabout. First, we check which column in the {@link GroupByQuery} corresponds to the
-   * output column {@link ColumnHolder#TIME_COLUMN_NAME}, using our {@link ColumnMappings}. Then, we check for the
-   * presence of an optimization done in {@link DruidQuery#toGroupByQuery()}, where the context parameter
-   * {@link GroupByQuery#CTX_TIMESTAMP_RESULT_FIELD} and various related parameters are set when one of the dimensions
-   * is detected to be a time-floor. Finally, we check that the name of that dimension, and the name of our time field
-   * from {@link ColumnMappings}, are the same.
-   */
-  private static boolean timeIsGroupByDimension(GroupByQuery groupByQuery, ColumnMappings columnMappings)
-  {
-    final IntList positions = columnMappings.getOutputColumnsByName(ColumnHolder.TIME_COLUMN_NAME);
-
-    if (positions.size() == 1) {
-      final String queryTimeColumn = columnMappings.getQueryColumnName(positions.getInt(0));
-      return queryTimeColumn.equals(groupByQuery.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD));
-    } else {
-      return false;
-    }
-  }
-
-  /**
-   * Whether a native query represents an ingestion with rollup.
-   * <p>
-   * Checks for three things:
-   * <p>
-   * - The query must be a {@link GroupByQuery}, because rollup requires columns to be split into dimensions and
-   * aggregations.
-   * - The query must not finalize aggregations, because rollup requires inserting the intermediate type of
-   * complex aggregations, not the finalized type. (So further rollup is possible.)
-   * - The query must explicitly disable {@link GroupByQueryConfig#CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING}, because
-   * groupBy on multi-value dimensions implicitly unnests, which is not desired behavior for rollup at ingestion time
-   * (rollup expects multi-value dimensions to be treated as arrays).
-   */
-  private static boolean isRollupQuery(Query<?> query)
-  {
-    return query instanceof GroupByQuery
-           && !MultiStageQueryContext.isFinalizeAggregations(query.context())
-           && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
   }
 
   /**
@@ -2145,197 +1988,6 @@ public class ControllerImpl implements Controller
     }
 
     return new StringTuple(array);
-  }
-
-  private static DimensionSchema getDimensionSchema(
-      final String outputColumnName,
-      @Nullable final ColumnType queryType,
-      QueryContext context,
-      @Nullable Map<String, DimensionSchema> dimensionSchemas
-  )
-  {
-    if (dimensionSchemas != null && dimensionSchemas.containsKey(outputColumnName)) {
-      return dimensionSchemas.get(outputColumnName);
-    }
-    // In case of ingestion, or when metrics are converted to dimensions when compaction is performed without rollu
-
-    // we won't have an entry in the map. For those cases, use the default config.
-    return DimensionSchemaUtils.createDimensionSchema(
-        outputColumnName,
-        queryType,
-        MultiStageQueryContext.useAutoColumnSchemas(context),
-        MultiStageQueryContext.getArrayIngestMode(context)
-    );
-  }
-
-  private static Pair<DimensionsSpec, List<AggregatorFactory>> makeDimensionsAndAggregatorsForIngestion(
-      final RowSignature querySignature,
-      final ClusterBy queryClusterBy,
-      final List<String> contextSegmentSortOrder,
-      final boolean forceSegmentSortByTime,
-      final ColumnMappings columnMappings,
-      final boolean isRollupQuery,
-      final Query<?> query,
-      @Nullable final Map<String, DimensionSchema> dimensionSchemas
-  )
-  {
-    // Log a warning unconditionally if arrayIngestMode is MVD, since the behaviour is incorrect, and is subject to
-    // deprecation and removal in future
-    if (MultiStageQueryContext.getArrayIngestMode(query.context()) == ArrayIngestMode.MVD) {
-      log.warn(
-          "%s[mvd] is active for this task. This causes string arrays (VARCHAR ARRAY in SQL) to be ingested as "
-          + "multi-value strings rather than true arrays. This behavior may change in a future version of Druid. To be "
-          + "compatible with future behavior changes, we recommend setting %s to[array], which creates a clearer "
-          + "separation between multi-value strings and true arrays. In either[mvd] or[array] mode, you can write "
-          + "out multi-value string dimensions using ARRAY_TO_MV. "
-          + "See https://druid.apache.org/docs/latest/querying/arrays#arrayingestmode for more details.",
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-          MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
-      );
-    }
-
-    final List<DimensionSchema> dimensions = new ArrayList<>();
-    final List<AggregatorFactory> aggregators = new ArrayList<>();
-
-    // During ingestion, segment sort order is determined by the order of fields in the DimensionsSchema. We want
-    // this to match user intent as dictated by the declared segment sort order and CLUSTERED BY, so add things in
-    // that order.
-
-    // Start with segmentSortOrder.
-    final Set<String> outputColumnsInOrder = new LinkedHashSet<>(contextSegmentSortOrder);
-
-    // Then __time, if it's an output column and forceSegmentSortByTime is set.
-    if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME) && forceSegmentSortByTime) {
-      outputColumnsInOrder.add(ColumnHolder.TIME_COLUMN_NAME);
-    }
-
-    // Then the query-level CLUSTERED BY.
-    // Note: this doesn't work when CLUSTERED BY specifies an expression that is not being selected.
-    // Such fields in CLUSTERED BY still control partitioning as expected, but do not affect sort order of rows
-    // within an individual segment.
-    for (final KeyColumn clusterByColumn : queryClusterBy.getColumns()) {
-      final IntList outputColumns = columnMappings.getOutputColumnsForQueryColumn(clusterByColumn.columnName());
-      for (final int outputColumn : outputColumns) {
-        outputColumnsInOrder.add(columnMappings.getOutputColumnName(outputColumn));
-      }
-    }
-
-    // Then all other columns.
-    outputColumnsInOrder.addAll(columnMappings.getOutputColumnNames());
-
-    Map<String, AggregatorFactory> outputColumnAggregatorFactories = new HashMap<>();
-
-    if (isRollupQuery) {
-      // Populate aggregators from the native query when doing an ingest in rollup mode.
-      for (AggregatorFactory aggregatorFactory : ((GroupByQuery) query).getAggregatorSpecs()) {
-        for (final int outputColumn : columnMappings.getOutputColumnsForQueryColumn(aggregatorFactory.getName())) {
-          final String outputColumnName = columnMappings.getOutputColumnName(outputColumn);
-          if (outputColumnAggregatorFactories.containsKey(outputColumnName)) {
-            throw new ISE("There can only be one aggregation for column [%s].", outputColumn);
-          } else {
-            outputColumnAggregatorFactories.put(
-                outputColumnName,
-                aggregatorFactory.withName(outputColumnName).getCombiningFactory()
-            );
-          }
-        }
-      }
-    }
-
-    // Each column can be either a dimension or an aggregator.
-    // For non-complex columns, If the aggregator factory of the column is not available, we treat the column as
-    // a dimension. For complex columns, certains hacks are in place.
-    for (final String outputColumnName : outputColumnsInOrder) {
-      // CollectionUtils.getOnlyElement because this method is only called during ingestion, where we require
-      // that output names be unique.
-      final int outputColumn = CollectionUtils.getOnlyElement(
-          columnMappings.getOutputColumnsByName(outputColumnName),
-          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
-      );
-      final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
-      final ColumnType type =
-          querySignature.getColumnType(queryColumn)
-                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
-
-      if (!type.is(ValueType.COMPLEX)) {
-        // non complex columns
-        populateDimensionsAndAggregators(
-            dimensions,
-            aggregators,
-            outputColumnAggregatorFactories,
-            outputColumnName,
-            type,
-            query.context(),
-            dimensionSchemas
-        );
-      } else {
-        // complex columns only
-        if (DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-          dimensions.add(
-              getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas)
-          );
-        } else if (!isRollupQuery) {
-          aggregators.add(new PassthroughAggregatorFactory(outputColumnName, type.getComplexTypeName()));
-        } else {
-          populateDimensionsAndAggregators(
-              dimensions,
-              aggregators,
-              outputColumnAggregatorFactories,
-              outputColumnName,
-              type,
-              query.context(),
-              dimensionSchemas
-          );
-        }
-      }
-    }
-
-    final DimensionsSpec.Builder dimensionsSpecBuilder = DimensionsSpec.builder();
-
-    if (!dimensions.isEmpty() && dimensions.get(0).getName().equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      // Skip __time if it's in the first position, for compatibility with legacy dimensionSpecs.
-      dimensions.remove(0);
-      dimensionsSpecBuilder.setForceSegmentSortByTime(null);
-    } else {
-      // Store explicit forceSegmentSortByTime only if false, for compatibility with legacy dimensionSpecs.
-      dimensionsSpecBuilder.setForceSegmentSortByTime(forceSegmentSortByTime ? null : false);
-    }
-
-    return Pair.of(dimensionsSpecBuilder.setDimensions(dimensions).build(), aggregators);
-  }
-
-  /**
-   * If the output column is present in the outputColumnAggregatorFactories that means we already have the aggregator information for this column.
-   * else treat this column as a dimension.
-   *
-   * @param dimensions                      list is poulated if the output col is deemed to be a dimension
-   * @param aggregators                     list is populated with the aggregator if the output col is deemed to be a aggregation column.
-   * @param outputColumnAggregatorFactories output col -> AggregatorFactory map
-   * @param outputColumn                    column name
-   * @param type                            columnType
-   */
-  private static void populateDimensionsAndAggregators(
-      List<DimensionSchema> dimensions,
-      List<AggregatorFactory> aggregators,
-      Map<String, AggregatorFactory> outputColumnAggregatorFactories,
-      String outputColumn,
-      ColumnType type,
-      QueryContext context,
-      Map<String, DimensionSchema> dimensionSchemas
-  )
-  {
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(outputColumn)) {
-      if (!type.is(ValueType.LONG)) {
-        throw DruidException.defensive("Incorrect type[%s] for column[%s]", type, outputColumn);
-      }
-      dimensions.add(new LongDimensionSchema(outputColumn));
-    } else if (outputColumnAggregatorFactories.containsKey(outputColumn)) {
-      aggregators.add(outputColumnAggregatorFactories.get(outputColumn));
-    } else {
-      dimensions.add(
-          getDimensionSchema(outputColumn, type, context, dimensionSchemas)
-      );
-    }
   }
 
   private static DateTime getBucketDateTime(
@@ -2815,7 +2467,8 @@ public class ControllerImpl implements Controller
         for (final StageId stageId : newStageIds) {
           // Allocate segments, if this is the final stage of an ingestion.
           if (MSQControllerTask.isIngestion(querySpec)
-              && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()) {
+              && stageId.getStageNumber() == queryDef.getFinalStageDefinition().getStageNumber()
+              && (((DataSourceMSQDestination) querySpec.getDestination()).getTerminalStageSpec() instanceof SegmentGenerationStageSpec)) {
             populateSegmentsToGenerate();
           }
 
@@ -3052,6 +2705,7 @@ public class ControllerImpl implements Controller
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
             cancellationId,
+            null,
             MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context())
         );
 
