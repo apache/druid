@@ -179,9 +179,9 @@ A `timestampSpec` can have the following components:
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|column|Input row field to read the primary timestamp from.<br /><br />Regardless of the name of this input field, the primary timestamp will always be stored as a column named `__time` in your Druid datasource.|timestamp|
-|format|Timestamp format. Options are: <ul><li>`iso`: ISO8601 with 'T' separator, like "2000-01-01T01:02:03.456"</li><li>`posix`: seconds since epoch</li><li>`millis`: milliseconds since epoch</li><li>`micro`: microseconds since epoch</li><li>`nano`: nanoseconds since epoch</li><li>`auto`: automatically detects ISO (either 'T' or space separator) or millis format</li><li>any [Joda DateTimeFormat string](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html)</li></ul>|auto|
-|missingValue|Timestamp to use for input records that have a null or missing timestamp `column`. Should be in ISO8601 format, like `"2000-01-01T01:02:03.456"`, even if you have specified something else for `format`. Since Druid requires a primary timestamp, this setting can be useful for ingesting datasets that do not have any per-record timestamps at all. |none|
+|`column`|Input row field to read the primary timestamp from.<br /><br />Regardless of the name of this input field, the primary timestamp will always be stored as a column named `__time` in your Druid datasource.|timestamp|
+|`format`|Timestamp format. Options are: <ul><li>`iso`: ISO8601 with 'T' separator, like "2000-01-01T01:02:03.456"</li><li>`posix`: seconds since epoch</li><li>`millis`: milliseconds since epoch</li><li>`micro`: microseconds since epoch</li><li>`nano`: nanoseconds since epoch</li><li>`auto`: automatically detects ISO (either 'T' or space separator) or millis format</li><li>any [Joda DateTimeFormat string](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html)</li></ul>|auto|
+|`missingValue`|Timestamp to use for input records that have a null or missing timestamp `column`. Should be in ISO8601 format, like `"2000-01-01T01:02:03.456"`, even if you have specified something else for `format`. Since Druid requires a primary timestamp, this setting can be useful for ingesting datasets that do not have any per-record timestamps at all. |none|
 
 You can use the timestamp in a expression as `__time` because Druid parses the `timestampSpec` before applying [transforms](#transforms).  You can also set the expression `name` to `__time` to replace the value of the timestamp.
 
@@ -243,10 +243,10 @@ Dimension objects can have the following components:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| type | Either `auto`, `string`, `long`, `float`, `double`, or `json`. For the `auto` type, Druid determines the most appropriate type for the dimension and assigns one of the following: STRING, ARRAY<STRING\>, LONG, ARRAY<LONG\>, DOUBLE, ARRAY<DOUBLE\>, or COMPLEX<json\> columns, all sharing a common 'nested' format. When Druid infers the schema with schema auto-discovery, the type is `auto`. | `string` |
-| name | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br /><br />Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
-| createBitmapIndex | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
-| multiValueHandling | For `string` typed dimensions, specifies the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `array` (ingest string arrays as-is), `sorted_array` (sort string arrays during ingestion), and `sorted_set` (sort and de-duplicate string arrays during ingestion). This parameter is ignored for types other than `string`. | `sorted_array` |
+| `type` | Either `auto`, `string`, `long`, `float`, `double`, or `json`. For the `auto` type, Druid determines the most appropriate type for the dimension and assigns one of the following: STRING, ARRAY<STRING\>, LONG, ARRAY<LONG\>, DOUBLE, ARRAY<DOUBLE\>, or COMPLEX<json\> columns, all sharing a common 'nested' format. When Druid infers the schema with schema auto-discovery, the type is `auto`. | `string` |
+| `name` | The name of the dimension. This will be used as the field name to read from input records, as well as the column name stored in generated segments.<br /><br />Note that you can use a [`transformSpec`](#transformspec) if you want to rename columns during ingestion time. | none (required) |
+| `createBitmapIndex` | For `string` typed dimensions, whether or not bitmap indexes should be created for the column in generated segments. Creating a bitmap index requires more storage, but speeds up certain kinds of filtering (especially equality and prefix filtering). Only supported for `string` typed dimensions. | `true` |
+| `multiValueHandling` | For `string` typed dimensions, specifies the type of handling for [multi-value fields](../querying/multi-value-dimensions.md). Possible values are `array` (ingest string arrays as-is), `sorted_array` (sort string arrays during ingestion), and `sorted_set` (sort and de-duplicate string arrays during ingestion). This parameter is ignored for types other than `string`. | `sorted_array` |
 
 #### Inclusions and exclusions
 
@@ -329,10 +329,10 @@ A `granularitySpec` can have the following components:
 | Field | Description | Default |
 |-------|-------------|---------|
 | type |`uniform`| `uniform` |
-| segmentGranularity | [Time chunking](../design/storage.md) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br /><br />Avoid `WEEK` granularity for data partitioning because weeks don't align neatly with months and years, making it difficult to change partitioning by coarser granularity. Instead, opt for other partitioning options such as `DAY` or `MONTH`, which offer more flexibility.| `day` |
-| queryGranularity | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br /><br />Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
-| rollup | Whether to use ingestion-time [rollup](./rollup.md) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
-| intervals | A list of intervals defining time chunks for segments. Specify interval values using ISO8601 format. For example, `["2021-12-06T21:27:10+00:00/2021-12-07T00:00:00+00:00"]`. If you omit the time, the time defaults to "00:00:00".<br /><br />Druid breaks the list up and rounds off the list values based on the `segmentGranularity`.<br /><br />If `null` or not provided, batch ingestion tasks generally determine which time chunks to output based on the timestamps found in the input data.<br /><br />If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks throw away any records with timestamps outside of the specified intervals.<br /><br />Ignored for any form of streaming ingestion. | `null` |
+| `segmentGranularity` | [Time chunking](../design/storage.md) granularity for this datasource. Multiple segments can be created per time chunk. For example, when set to `day`, the events of the same day fall into the same time chunk which can be optionally further partitioned into multiple segments based on other configurations and input size. Any [granularity](../querying/granularities.md) can be provided here. Note that all segments in the same time chunk should have the same segment granularity.<br /><br />Avoid `WEEK` granularity for data partitioning because weeks don't align neatly with months and years, making it difficult to change partitioning by coarser granularity. Instead, opt for other partitioning options such as `DAY` or `MONTH`, which offer more flexibility.| `day` |
+| `queryGranularity` | The resolution of timestamp storage within each segment. This must be equal to, or finer, than `segmentGranularity`. This will be the finest granularity that you can query at and still receive sensible results, but note that you can still query at anything coarser than this granularity. E.g., a value of `minute` will mean that records will be stored at minutely granularity, and can be sensibly queried at any multiple of minutes (including minutely, 5-minutely, hourly, etc).<br /><br />Any [granularity](../querying/granularities.md) can be provided here. Use `none` to store timestamps as-is, without any truncation. Note that `rollup` will be applied if it is set even when the `queryGranularity` is set to `none`. | `none` |
+| `rollup` | Whether to use ingestion-time [rollup](./rollup.md) or not. Note that rollup is still effective even when `queryGranularity` is set to `none`. Your data will be rolled up if they have the exactly same timestamp. | `true` |
+| `intervals` | A list of intervals defining time chunks for segments. Specify interval values using ISO8601 format. For example, `["2021-12-06T21:27:10+00:00/2021-12-07T00:00:00+00:00"]`. If you omit the time, the time defaults to "00:00:00".<br /><br />Druid breaks the list up and rounds off the list values based on the `segmentGranularity`.<br /><br />If `null` or not provided, batch ingestion tasks generally determine which time chunks to output based on the timestamps found in the input data.<br /><br />If specified, batch ingestion tasks may be able to skip a determining-partitions phase, which can result in faster ingestion. Batch ingestion tasks may also be able to request all their locks up-front instead of one by one. Batch ingestion tasks throw away any records with timestamps outside of the specified intervals.<br /><br />Ignored for any form of streaming ingestion. | `null` |
 
 ### `transformSpec`
 
@@ -455,11 +455,13 @@ See [Flatten spec](./data-formats.md#flattenspec) for more details.
 
 ## `ioConfig`
 
-The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
-filesystem, or any other supported source system. The `inputFormat` property applies to all
-[ingestion method](./index.md#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still
-uses the [`parser`](#parser-deprecated) in the legacy `dataSchema`.
-The rest of `ioConfig` is specific to each individual ingestion method.
+The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
+
+The `inputFormat` property applies to all
+[ingestion methods](./index.md#ingestion-methods) except for Hadoop ingestion. The Hadoop ingestion still uses the [`parser`](#parser-deprecated) in the legacy `dataSchema`.
+
+The rest of `ioConfig` is specific to each individual ingestion method. For details, see the documentation for `ioConfig` for each [ingestion method](./index.md#ingestion-methods).
+
 An example `ioConfig` to read JSON data is:
 
 ```json
@@ -472,24 +474,23 @@ An example `ioConfig` to read JSON data is:
 }
 ```
 
-For details, see the documentation provided by each [ingestion method](./index.md#ingestion-methods).
-
 ## `tuningConfig`
 
-You specify tuning properties in a `tuningConfig` object, which goes at the top level of an ingestion spec.
-Some properties apply to all [ingestion methods](./index.md#ingestion-methods), but most are specific to each individual ingestion method.
+Specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
 
-The following table lists the common tuning properties shared among ingestion methods:
+For details, see the documentation for `tuningConfig`  for each [ingestion method](./index.md#ingestion-methods).
+
+The following table lists the common tuning properties shared by all ingestion methods:
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|type|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
-|maxRowsInMemory|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
-|maxBytesInMemory|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
-|skipBytesInMemoryOverheadCheck|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
-|indexSpec|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
-|indexSpecForIntermediatePersists|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
-|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuning-configuration), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuning-configuration), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
+|`type`|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
+|`maxRowsInMemory`|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
+|`maxBytesInMemory`|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
+|`skipBytesInMemoryOverheadCheck`|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
+|[`indexSpec`](#indexspec)|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
+|[`indexSpecForIntermediatePersists`](#indexspec)|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
+|Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuningconfig), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 The following example shows a `tuningConfig` object that sets all of the shared common properties to their defaults:
 
@@ -515,13 +516,13 @@ For information on defining an `indexSpec` in a query context, see [SQL-based in
 
 |Field|Description|Default|
 |-----|-----------|-------|
-|bitmap|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`.|`{"type": "roaring"}`|
-|dimensionCompression|Compression format for dimension columns. One of `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
-|stringDictionaryEncoding|Encoding format for string value dictionaries used by STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. To enable front coding, set `stringDictionaryEncoding.type` to `frontCoded`. Optionally, you can specify the `bucketSize` and `formatVersion` properties. See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
-|metricCompression|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
-|longEncoding|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
-|complexMetricCompression|Compression format for complex type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`. Options other than `uncompressed` are not compatible with Druid versions older than 31, and only applies to complex metrics which do not have specialized column formats.|`uncompressed`|
-|jsonCompression|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
+|`bitmap`|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`.|`{"type": "roaring"}`|
+|`dimensionCompression`|Compression format for dimension columns. One of `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
+|`stringDictionaryEncoding`|Encoding format for string value dictionaries used by STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. To enable front coding, set `stringDictionaryEncoding.type` to `frontCoded`. Optionally, you can specify the `bucketSize` and `formatVersion` properties. See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
+|`metricCompression`|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
+|`longEncoding`|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
+|`complexMetricCompression`|Compression format for complex type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`. Options other than `uncompressed` are not compatible with Druid versions older than 31, and only applies to complex metrics which do not have specialized column formats.|`uncompressed`|
+|`jsonCompression`|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
 #### Front coding
 

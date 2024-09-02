@@ -24,30 +24,40 @@ sidebar_label: Supervisor
   -->
 
 A supervisor manages streaming ingestion from external streaming sources into Apache Druid.
-Supervisors oversee the state of indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained.
 
-This topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+Supervisors oversee the state of indexing tasks to coordinate [handoffs](../design/storage#indexing-and-handoff), manage failures, and ensure that the scalability and replication requirements are maintained.
 
-## Supervisor spec
+:::info
+This topic uses the Apache Kafka term _offset_ to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is _sequence number_.
+:::
 
-Druid uses a JSON specification, often referred to as the supervisor spec, to define streaming ingestion tasks.
-The supervisor spec specifies how Druid should consume, process, and index streaming data.
+Druid uses a JSON document, often referred to as a supervisor spec, to specify how Druid should consume, process, and index streaming data. A supervisor spec is a type of [native ingestion spec](../ingestion/ingestion-spec.md).
 
 The following table outlines the high-level configuration options for a supervisor spec:
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|String|The supervisor type. One of `kafka`or `kinesis`.|Yes|
-|`spec`|Object|The container object for the supervisor configuration.|Yes|
-|`spec.dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
-|`spec.ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
-|`spec.tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
+|`type`|String|The type of ingestion to supervise, one of [`kafka`](kafka-ingestion.md) or [`kinesis`](kinesis-ingestion.md).|Yes|
+|[`spec`](#spec)|Object|The container object for the supervisor configuration.|Yes|
 |`suspended`|Boolean|Puts the supervisor in a suspended state|No|
 
-### I/O configuration
+## `spec`
 
-The following table outlines the `ioConfig` configuration properties that apply to both Apache Kafka and Amazon Kinesis ingestion methods.
-For configuration properties specific to Kafka and Kinesis, see [Kafka I/O configuration](kafka-ingestion.md#io-configuration) and [Kinesis I/O configuration](kinesis-ingestion.md#io-configuration) respectively.
+The `spec` section consists of three components:
+
+- `dataSchema`. The schema for the indexing task to use during ingestion.
+- [`ioConfig`](#ioconfig), which tells Druid how to connect to the [source system](./index.md#ingestion-methods) and how to parse data.
+- [`tuningConfig`](#tuningconfig), which controls performance-related settings for the supervisor and indexing tasks.
+
+For configuration properties shared across all ingestion methods supported by Druid, including the `dataSchema`, see [native ingestion specs](../ingestion/ingestion-spec.md#spec).
+
+### `ioConfig`
+
+The `ioConfig` influences how data is read from a source system. See native ingestion specification documentation on the [`ioConfig`](../ingestion/ingestion-spec.md#ioconfig) for more information.
+
+The following table outlines the configuration properties that apply to supervisor-led ingestion methods, including Apache Kafka and Amazon Kinesis.
+
+For configuration properties specific to Apache Kafka and Amazon Kinesis, see [Kafka `ioConfig`](kafka-ingestion.md#ioconfig) and [Kinesis `ioConfig`](kinesis-ingestion.md#ioconfig) respectively.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -182,12 +192,16 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 ```
 </details>
 
-### Tuning configuration
+### `tuningConfig`
+
+The `tuningConfig` controls various tuning parameters specific to each ingestion method. See native ingestion specification documentation on the [`tuningConfig`](../ingestion/ingestion-spec.md#tuningconfig) for more information.
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
-The following table outlines the `tuningConfig` configuration properties that apply to both Kafka and Kinesis ingestion methods.
-For configuration properties specific to Kafka and Kinesis, see [Kafka tuning configuration](kafka-ingestion.md#tuning-configuration) and [Kinesis tuning configuration](kinesis-ingestion.md#tuning-configuration) respectively.
+For configuration properties specific to Kafka and Kinesis, see [Kafka  `tuningConfig`](kafka-ingestion.md#tuningconfig) and [Kinesis `tuningConfig`](kinesis-ingestion.md#tuningconfig) respectively.
+
+The following table outlines the tuning properties that apply to supervisor-led ingestion methods, including Apache Kafka and Amazon Kinesis.
+
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|

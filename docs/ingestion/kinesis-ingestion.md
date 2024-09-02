@@ -27,9 +27,13 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+When you enable the Amazon Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks.
 
-This topic contains configuration information for the Kinesis indexing service supervisor for Apache Druid.
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+
+Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. 
+
+This topic contains configuration information for the Amazon Kinesis indexing service supervisor for Apache Druid.
 
 ## Setup
 
@@ -37,9 +41,11 @@ To use the Kinesis indexing service, you must first load the `druid-kinesis-inde
 
 Review [Known issues](#known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
-## Supervisor spec configuration
+## `spec`
 
-This section outlines the configuration properties that are specific to the Amazon Kinesis streaming ingestion method. For configuration properties shared across all streaming ingestion methods supported by Druid, see [Supervisor spec](supervisor.md#supervisor-spec).
+This section outlines the configuration properties that are specific to supervisor-led streaming ingestion for Amazon Kinesis.
+
+For configuration properties shared across all streaming ingestion methods supported by Druid, see [supervisor spec](supervisor.md#spec).
 
 The following example shows a supervisor spec for a stream with the name `KinesisStream`:
 
@@ -119,10 +125,13 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
 ```
 </details>
 
-### I/O configuration
+### `ioConfig`
 
-The following table outlines the `ioConfig` configuration properties specific to Kinesis.
-For configuration properties shared across all streaming ingestion methods, refer to [Supervisor I/O configuration](supervisor.md#io-configuration).
+The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
+
+The following table outlines the `ioConfig` configuration properties specific to Amazon Kinesis.
+
+For configuration properties shared across all supervisor-led ingestion, refer to the [supervisor `ioConfig`](supervisor.md#ioconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -148,10 +157,13 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
 
-### Tuning configuration
+### `tuningConfig`
 
-The following table outlines the `tuningConfig` configuration properties specific to Kinesis.
-For configuration properties shared across all streaming ingestion methods, refer to [Supervisor tuning configuration](supervisor.md#tuning-configuration).
+Specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
+
+The following table outlines the `tuningConfig` configuration properties specific to Amazon Kinesis.
+
+For configuration properties shared across all supervisor-led ingestion, refer to the [supervisor `tuningConfig`](supervisor.md#tuningconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
