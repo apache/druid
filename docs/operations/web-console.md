@@ -87,7 +87,7 @@ It is equivalent to the **Task** view in the **Ingestion** view with the filter 
 9. The **Preview** button appears when you enter an INSERT/REPLACE query. It runs the query inline without the INSERT/REPLACE clause and with an added LIMIT to give you a preview of the data that would be ingested if you click **Run**.
 The added LIMIT makes the query run faster but provides incomplete results.
 10. The engine selector lets you choose which engine (API endpoint) to send a query to. By default, it automatically picks which endpoint to use based on an analysis of the query, but you can select a specific engine explicitly. You can also configure the engine specific context parameters from this menu.
-11. The **Max tasks** picker appears when you have the **sql-msq-task** engine selected. It lets you configure the degree of parallelism.
+11. The **Max tasks** picker appears when you have the **SQL MSQ-task** engine selected. It lets you configure the degree of parallelism.
 12. The More menu (**...**) contains the following helpful tools:
 - **Explain SQL query** shows you the logical plan returned by `EXPLAIN PLAN FOR` for a SQL query.
 - **Query history** shows you previously executed queries.

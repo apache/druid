@@ -80,6 +80,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -424,7 +425,7 @@ public class GroupingEngine
   /**
    * Merges a variety of single-segment query runners into a combined runner. Used by
    * {@link GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
-   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
+   * that sense, it is intended to go along with {@link #process} (the runners created
    * by that method will be fed into this method).
    *
    * This is primarily called on the data servers, to merge the results from processing on the segments. This method can
@@ -464,14 +465,16 @@ public class GroupingEngine
    *
    * This method is only called on data servers, like Historicals (not the Broker).
    *
-   * @param query          the groupBy query
-   * @param storageAdapter storage adatper for the segment in question
+   * @param query                 the groupBy query
+   * @param storageAdapter        storage adatper for the segment in question
+   * @param timeBoundaryInspector time boundary inspector for the segment in question
    *
    * @return result sequence for the storage adapter
    */
   public Sequence<ResultRow> process(
       GroupByQuery query,
       StorageAdapter storageAdapter,
+      @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable GroupByQueryMetrics groupByQueryMetrics
   )
   {
@@ -515,6 +518,7 @@ public class GroupingEngine
         result = VectorGroupByEngine.process(
             query,
             storageAdapter,
+            timeBoundaryInspector,
             cursorHolder,
             bufferHolder.get(),
             fudgeTimestamp,
@@ -526,6 +530,7 @@ public class GroupingEngine
         result = GroupByQueryEngine.process(
             query,
             storageAdapter,
+            timeBoundaryInspector,
             cursorHolder,
             buildSpec,
             bufferHolder.get(),

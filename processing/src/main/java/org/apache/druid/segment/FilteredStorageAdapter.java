@@ -23,9 +23,9 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -71,6 +71,12 @@ public class FilteredStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public RowSignature getRowSignature()
+  {
+    return baseStorageAdapter.getRowSignature();
+  }
+
+  @Override
   public Indexed<String> getAvailableDimensions()
   {
     return baseStorageAdapter.getAvailableDimensions();
@@ -86,18 +92,6 @@ public class FilteredStorageAdapter implements StorageAdapter
   public int getDimensionCardinality(String column)
   {
     return baseStorageAdapter.getDimensionCardinality(column);
-  }
-
-  @Override
-  public DateTime getMinTime()
-  {
-    return baseStorageAdapter.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return baseStorageAdapter.getMaxTime();
   }
 
   @Nullable
@@ -125,12 +119,6 @@ public class FilteredStorageAdapter implements StorageAdapter
   public int getNumRows()
   {
     return 0;
-  }
-
-  @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return baseStorageAdapter.getMaxIngestedEventTime();
   }
 
   @Nullable

@@ -23,6 +23,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
+import junitparams.converters.Nullable;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
@@ -323,20 +324,6 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_getMinTime()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Intervals.ETERNITY.getStart(), adapter.getMinTime());
-  }
-
-  @Test
-  public void test_getMaxTime()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Intervals.ETERNITY.getEnd().minus(1), adapter.getMaxTime());
-  }
-
-  @Test
   public void test_getMinValue()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
@@ -474,13 +461,6 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
     assertThrows(UnsupportedOperationException.class, () -> adapter.getMetadata());
-  }
-
-  @Test
-  public void test_getMaxIngestedEventTime()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Intervals.ETERNITY.getEnd().minus(1), adapter.getMaxIngestedEventTime());
   }
 
   @Test
@@ -665,7 +645,6 @@ public class RowBasedStorageAdapterTest
                                                      .setInterval(Intervals.of("1970/1971"))
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T00"), "0"),
@@ -674,7 +653,7 @@ public class RowBasedStorageAdapterTest
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
               ImmutableList.of(DateTimes.of("1970-01-01T03"), "3")
           ),
-          walkCursorGranularized(adapter, cursor, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
+          walkCursorGranularized(cursorHolder, null, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
       );
     }
 
@@ -691,15 +670,13 @@ public class RowBasedStorageAdapterTest
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
-
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2")
           ),
-          walkCursorGranularized(adapter, cursor, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
+          walkCursorGranularized(cursorHolder, null, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
       );
     }
 
@@ -717,14 +694,13 @@ public class RowBasedStorageAdapterTest
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      final Cursor cursor = cursorHolder.asCursor();
       Assert.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1")
           ),
-          walkCursorGranularized(adapter, cursor, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
+          walkCursorGranularized(cursorHolder, null, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
       );
     }
 
@@ -890,19 +866,21 @@ public class RowBasedStorageAdapterTest
   }
 
   private static List<List<Object>> walkCursorGranularized(
-      final StorageAdapter adapter,
-      final Cursor cursor,
+      final CursorHolder cursorHolder,
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
       final CursorBuildSpec buildSpec,
       final Granularity granularity,
       final List<BiFunction<Cursor, CursorGranularizer, Supplier<Object>>> processors
   )
   {
+    final Cursor cursor = cursorHolder.asCursor();
+
     CursorGranularizer granularizer = CursorGranularizer.create(
-        adapter,
         cursor,
+        timeBoundaryInspector,
+        Cursors.getTimeOrdering(cursorHolder.getOrdering()),
         granularity,
-        buildSpec.getInterval(),
-        Cursors.preferDescendingTimeOrdering(buildSpec)
+        buildSpec.getInterval()
     );
 
     final List<Supplier<Object>> suppliers = new ArrayList<>();

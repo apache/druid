@@ -20,9 +20,12 @@
 package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.calcite.rel.RelCollation;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.core.Project;
@@ -33,16 +36,19 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.dialect.CalciteSqlDialect;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -61,7 +67,6 @@ import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
 
 import javax.annotation.Nullable;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -82,15 +87,24 @@ public class MSQTaskSqlEngine implements SqlEngine
 
   private final OverlordClient overlordClient;
   private final ObjectMapper jsonMapper;
+  private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   @Inject
+  public MSQTaskSqlEngine(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
+  {
+    this(overlordClient, jsonMapper, new MSQTerminalStageSpecFactory());
+  }
+
+  @VisibleForTesting
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
-      final ObjectMapper jsonMapper
+      final ObjectMapper jsonMapper,
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.overlordClient = overlordClient;
     this.jsonMapper = jsonMapper;
+    this.terminalStageSpecFactory = terminalStageSpecFactory;
   }
 
   @Override
@@ -159,7 +173,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        terminalStageSpecFactory
     );
   }
 
@@ -176,8 +191,7 @@ public class MSQTaskSqlEngine implements SqlEngine
   )
   {
     validateInsert(
-        relRoot.rel,
-        relRoot.fields,
+        relRoot,
         destination instanceof TableDestination
         ? plannerContext.getPlannerToolbox()
                         .rootSchema()
@@ -193,7 +207,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         overlordClient,
         plannerContext,
         jsonMapper,
-        relRoot.fields
+        relRoot.fields,
+        terminalStageSpecFactory
     );
   }
 
@@ -221,35 +236,38 @@ public class MSQTaskSqlEngine implements SqlEngine
    * Engine-specific validation that happens after the query is planned.
    */
   private static void validateInsert(
-      final RelNode rootRel,
-      final List<Entry<Integer, String>> fieldMappings,
+      final RelRoot relRoot,
       @Nullable Table targetTable,
       final PlannerContext plannerContext
   )
   {
-    final int timeColumnIndex = getTimeColumnIndex(fieldMappings);
+    final Map<String, Integer> outputFieldMap = validateNoDuplicateAliases(relRoot.fields);
+    final int timeColumnIndex = getTimeColumnIndex(outputFieldMap);
     final Granularity segmentGranularity = getSegmentGranularity(plannerContext);
-
-    validateNoDuplicateAliases(fieldMappings);
-    validateTimeColumnType(rootRel, timeColumnIndex);
+    validateTimeColumnType(relRoot.rel, timeColumnIndex);
     validateTimeColumnExistsIfNeeded(timeColumnIndex, segmentGranularity);
-    validateLimitAndOffset(rootRel, Granularities.ALL.equals(segmentGranularity));
-    validateTypeChanges(rootRel, fieldMappings, targetTable, plannerContext);
+    validateLimitAndOffset(relRoot.rel, Granularities.ALL.equals(segmentGranularity));
+    validateTypeChanges(relRoot.rel, relRoot.fields, targetTable, plannerContext);
+    validateSortOrderBeginsWithTimeIfRequired(relRoot.fields, relRoot.collation, plannerContext);
   }
 
   /**
    * SQL allows multiple output columns with the same name. However, we don't allow this for INSERT or REPLACE
    * queries, because we use these output names to generate columns in segments. They must be unique.
+   *
+   * @return map of output alias (rhs of the Pair) to position in the {@link RelRoot#rel} (lhs of the Pair)
    */
-  private static void validateNoDuplicateAliases(final List<Entry<Integer, String>> fieldMappings)
+  private static Map<String, Integer> validateNoDuplicateAliases(final List<Entry<Integer, String>> fieldMappings)
   {
-    final Set<String> aliasesSeen = new HashSet<>();
+    final Map<String, Integer> retVal = new Object2IntOpenHashMap<>();
 
     for (final Entry<Integer, String> field : fieldMappings) {
-      if (!aliasesSeen.add(field.getValue())) {
+      if (retVal.put(field.getValue(), field.getKey()) != null) {
         throw InvalidSqlInput.exception("Duplicate field in SELECT: [%s]", field.getValue());
       }
     }
+
+    return retVal;
   }
 
   /**
@@ -347,7 +365,7 @@ public class MSQTaskSqlEngine implements SqlEngine
    * MVDs and arrays are mixed. So, we detect them as invalid.
    *
    * @param rootRel        root rel
-   * @param fieldMappings  field mappings from {@link #validateInsert(RelNode, List, Table, PlannerContext)}
+   * @param fieldMappings  field mappings from {@link #validateInsert(RelRoot, Table, PlannerContext)}
    * @param targetTable    table we are inserting (or replacing) into, if any
    * @param plannerContext planner context
    */
@@ -422,20 +440,87 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   /**
-   * Returns the index of {@link ColumnHolder#TIME_COLUMN_NAME} within a list of field mappings from
-   * {@link #validateInsert(RelNode, List, Table, PlannerContext)}.
+   * Validate that the sort order given by CLUSTERED BY or {@link MultiStageQueryContext#getSortOrder(QueryContext)}
+   * begins with {@link ColumnHolder#TIME_COLUMN_NAME}, unless {@link MultiStageQueryContext#CTX_FORCE_TIME_SORT}
+   * is set.
    *
-   * Returns -1 if the list does not contain a time column.
+   * @param fieldMappings  field mappings from {@link #validateInsert(RelRoot, Table, PlannerContext)}
+   * @param rootCollation  collation of the root rel. Corresponds to the CLUSTERED BY
+   * @param plannerContext planner context
    */
-  private static int getTimeColumnIndex(final List<Entry<Integer, String>> fieldMappings)
+  private static void validateSortOrderBeginsWithTimeIfRequired(
+      final List<Entry<Integer, String>> fieldMappings,
+      final RelCollation rootCollation,
+      final PlannerContext plannerContext
+  )
   {
-    for (final Entry<Integer, String> field : fieldMappings) {
-      if (field.getValue().equals(ColumnHolder.TIME_COLUMN_NAME)) {
-        return field.getKey();
-      }
+    // Segment sort order is determined by the segmentSortOrder parameter if set. Otherwise it's determined by
+    // the rootCollation.
+
+    final QueryContext context = plannerContext.queryContext();
+
+    if (!MultiStageQueryContext.isForceSegmentSortByTime(context)) {
+      // Any sort order is allowed. Skip check.
+      return;
     }
 
-    return -1;
+    final List<String> contextSortOrder = MultiStageQueryContext.getSortOrder(context);
+
+    if (!contextSortOrder.isEmpty()) {
+      final boolean timeIsFirst = ColumnHolder.TIME_COLUMN_NAME.equals(contextSortOrder.get(0));
+
+      if (!timeIsFirst) {
+        throw InvalidSqlInput.exception(
+            "Context parameter[%s] must start with[%s] unless context parameter[%s] is set to[false]. %s",
+            MultiStageQueryContext.CTX_SORT_ORDER,
+            ColumnHolder.TIME_COLUMN_NAME,
+            MultiStageQueryContext.CTX_FORCE_TIME_SORT,
+            DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
+        );
+      }
+    } else if (!rootCollation.getFieldCollations().isEmpty()) {
+      int timePositionInRow = -1;
+      for (int i = 0; i < fieldMappings.size(); i++) {
+        Entry<Integer, String> entry = fieldMappings.get(i);
+        if (ColumnHolder.TIME_COLUMN_NAME.equals(entry.getValue())) {
+          timePositionInRow = i;
+          break;
+        }
+      }
+
+      int timePositionInCollation = -1;
+      for (int i = 0; i < rootCollation.getFieldCollations().size(); i++) {
+        if (rootCollation.getFieldCollations().get(i).getFieldIndex() == timePositionInRow) {
+          timePositionInCollation = i;
+          break;
+        }
+      }
+
+      if (timePositionInCollation > 0) {
+        throw InvalidSqlInput.exception(
+            "Sort order (CLUSTERED BY) cannot include[%s] in position[%d] unless context parameter[%s] "
+            + "is set to[false]. %s",
+            ColumnHolder.TIME_COLUMN_NAME,
+            timePositionInCollation,
+            MultiStageQueryContext.CTX_FORCE_TIME_SORT,
+            DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
+        );
+      }
+    }
+  }
+
+  /**
+   * Returns the index of {@link ColumnHolder#TIME_COLUMN_NAME} within a list of field mappings from
+   * {@link #validateInsert(RelRoot, Table, PlannerContext)}.
+   *
+   * @param outputFieldMapping mapping from {@link #validateNoDuplicateAliases(List)}
+   *
+   * @return field position, or -1 if the list does not contain a time column.
+   */
+  private static int getTimeColumnIndex(final Map<String, Integer> outputFieldMapping)
+  {
+    final Integer position = outputFieldMapping.get(ColumnHolder.TIME_COLUMN_NAME);
+    return position != null ? position : -1;
   }
 
   /**

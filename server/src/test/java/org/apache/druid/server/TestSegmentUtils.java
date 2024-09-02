@@ -27,9 +27,11 @@ import com.google.common.io.Files;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -46,7 +48,6 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
@@ -175,6 +176,12 @@ public class TestSegmentUtils
       }
 
       @Override
+      public List<OrderBy> getOrdering()
+      {
+        return Cursors.ascendingTimeOrder();
+      }
+
+      @Override
       public void close()
       {
 
@@ -265,19 +272,6 @@ public class TestSegmentUtils
         }
 
         @Override
-        public DateTime getMinTime()
-        {
-          return interval.getStart();
-        }
-
-
-        @Override
-        public DateTime getMaxTime()
-        {
-          return interval.getEnd();
-        }
-
-        @Override
         public Indexed<String> getAvailableDimensions()
         {
           return null;
@@ -314,12 +308,6 @@ public class TestSegmentUtils
         public int getNumRows()
         {
           return 0;
-        }
-
-        @Override
-        public DateTime getMaxIngestedEventTime()
-        {
-          return null;
         }
 
         @Override

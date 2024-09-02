@@ -33,7 +33,7 @@ import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { MenuCheckbox, MenuTristate } from '../../../components';
+import { ENABLE_DISABLE_OPTIONS_TEXT, MenuBoolean, MenuCheckbox } from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
 import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
 import type {
@@ -76,27 +76,51 @@ const NAMED_TIMEZONES: string[] = [
   'Australia/Sydney', // +11.0
 ];
 
+const ARRAY_INGEST_MODE_LABEL: Record<ArrayIngestMode, string> = {
+  array: 'Array',
+  mvd: 'MVD',
+};
 const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
   array: (
     <>
-      array: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid{' '}
+      Array: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid{' '}
       <Tag minimal>ARRAY&lt;STRING&gt;</Tag>
     </>
   ),
   mvd: (
     <>
-      mvd: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid multi-value <Tag minimal>STRING</Tag>
+      MVD: Load SQL <Tag minimal>VARCHAR ARRAY</Tag> as Druid multi-value <Tag minimal>STRING</Tag>
     </>
   ),
 };
 
-const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
-  if (!engine) return { text: 'auto' };
-  return {
-    text: engine,
-    label: engine === 'sql-msq-task' ? 'multi-stage-query' : undefined,
-  };
+const SQL_JOIN_ALGORITHM_LABEL: Record<SqlJoinAlgorithm, string> = {
+  broadcast: 'Broadcast',
+  sortMerge: 'Sort merge',
 };
+
+const SELECT_DESTINATION_LABEL: Record<SelectDestination, string> = {
+  taskReport: 'Task report',
+  durableStorage: 'Durable storage',
+};
+
+const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
+  switch (engine) {
+    case 'native':
+      return { text: 'Native' };
+
+    case 'sql-native':
+      return { text: 'SQL native' };
+
+    case 'sql-msq-task':
+      return { text: 'SQL MSQ-task', label: 'multi-stage-query' };
+
+    default:
+      return { text: 'Auto' };
+  }
+};
+
+const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
 
 export interface RunPanelProps
   extends Pick<MaxTasksButtonProps, 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'> {
@@ -166,6 +190,11 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   );
   const useConcurrentLocks = getQueryContextKey(
     'useConcurrentLocks',
+    queryContext,
+    defaultQueryContext,
+  );
+  const forceSegmentSortByTime = getQueryContextKey(
+    'forceSegmentSortByTime',
     queryContext,
     defaultQueryContext,
   );
@@ -313,13 +342,13 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 )}
                 <MenuItem
                   icon={IconNames.PROPERTIES}
-                  text="Edit context"
+                  text="Edit query context..."
                   onClick={() => setEditContextDialogOpen(true)}
                   label={pluralIfNeeded(numContextKeys, 'key')}
                 />
                 <MenuItem
                   icon={IconNames.HELP}
-                  text="Define parameters"
+                  text="Define parameters..."
                   onClick={() => setEditParametersDialogOpen(true)}
                   label={queryParameters ? pluralIfNeeded(queryParameters.length, 'parameter') : ''}
                 />
@@ -365,37 +394,52 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 {effectiveEngine === 'sql-msq-task' ? (
                   <>
                     <MenuItem icon={IconNames.BRING_DATA} text="INSERT / REPLACE specific context">
-                      <MenuCheckbox
-                        checked={useConcurrentLocks}
-                        text="Use concurrent locks"
-                        onChange={() =>
+                      <MenuBoolean
+                        text="Force segment sort by time"
+                        value={forceSegmentSortByTime}
+                        onValueChange={forceSegmentSortByTime =>
                           changeQueryContext({
                             ...queryContext,
-                            useConcurrentLocks: !useConcurrentLocks,
+                            forceSegmentSortByTime,
                           })
                         }
+                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                        optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
                       />
-                      <MenuTristate
-                        icon={IconNames.DISABLE}
+                      <MenuBoolean
+                        text="Use concurrent locks"
+                        value={useConcurrentLocks}
+                        onValueChange={useConcurrentLocks =>
+                          changeQueryContext({
+                            ...queryContext,
+                            useConcurrentLocks,
+                          })
+                        }
+                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                        optionsLabelElement={{ true: EXPERIMENTAL_ICON }}
+                      />
+                      <MenuBoolean
                         text="Fail on empty insert"
                         value={failOnEmptyInsert}
+                        showUndefined
                         undefinedEffectiveValue={false}
                         onValueChange={failOnEmptyInsert =>
                           changeQueryContext({ ...queryContext, failOnEmptyInsert })
                         }
+                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                       />
-                      <MenuTristate
-                        icon={IconNames.STOPWATCH}
+                      <MenuBoolean
                         text="Wait until segments have loaded"
                         value={waitUntilSegmentsLoad}
+                        showUndefined
                         undefinedEffectiveValue={ingestMode}
                         onValueChange={waitUntilSegmentsLoad =>
                           changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
                         }
+                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                       />
                       <MenuItem
-                        icon={IconNames.TH_DERIVED}
-                        text="Edit index spec"
+                        text="Edit index spec..."
                         label={summarizeIndexSpec(indexSpec)}
                         shouldDismissPopover={false}
                         onClick={() => {
@@ -420,34 +464,41 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         />
                       ))}
                     </MenuItem>
-                    <MenuTristate
+                    <MenuBoolean
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
                       value={finalizeAggregations}
+                      showUndefined
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={finalizeAggregations =>
                         changeQueryContext({ ...queryContext, finalizeAggregations })
                       }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
-                    <MenuTristate
+                    <MenuBoolean
                       icon={IconNames.FORK}
-                      text="Enable GroupBy multi-value unnesting"
+                      text="GROUP BY multi-value unnesting"
                       value={groupByEnableMultiValueUnnesting}
+                      showUndefined
                       undefinedEffectiveValue={!ingestMode}
                       onValueChange={groupByEnableMultiValueUnnesting =>
                         changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })
                       }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
                     <MenuItem
                       icon={IconNames.INNER_JOIN}
                       text="Join algorithm"
-                      label={sqlJoinAlgorithm}
+                      label={
+                        SQL_JOIN_ALGORITHM_LABEL[sqlJoinAlgorithm as SqlJoinAlgorithm] ??
+                        sqlJoinAlgorithm
+                      }
                     >
                       {(['broadcast', 'sortMerge'] as SqlJoinAlgorithm[]).map(o => (
                         <MenuItem
                           key={o}
                           icon={tickIcon(sqlJoinAlgorithm === o)}
-                          text={o}
+                          text={SQL_JOIN_ALGORITHM_LABEL[o]}
                           shouldDismissPopover={false}
                           onClick={() =>
                             changeQueryContext({ ...queryContext, sqlJoinAlgorithm: o })
@@ -458,14 +509,17 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuItem
                       icon={IconNames.MANUALLY_ENTERED_DATA}
                       text="SELECT destination"
-                      label={selectDestination}
+                      label={
+                        SELECT_DESTINATION_LABEL[selectDestination as SelectDestination] ??
+                        selectDestination
+                      }
                       intent={intent}
                     >
                       {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
                         <MenuItem
                           key={o}
                           icon={tickIcon(selectDestination === o)}
-                          text={o}
+                          text={SELECT_DESTINATION_LABEL[o]}
                           shouldDismissPopover={false}
                           onClick={() =>
                             changeQueryContext({ ...queryContext, selectDestination: o })
@@ -486,52 +540,60 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         }}
                       />
                     </MenuItem>
-                    <MenuCheckbox
-                      checked={durableShuffleStorage}
+                    <MenuBoolean
+                      icon={IconNames.CLOUD_TICK}
                       text="Durable shuffle storage"
-                      onChange={() =>
+                      value={durableShuffleStorage}
+                      onValueChange={durableShuffleStorage =>
                         changeQueryContext({
                           ...queryContext,
-                          durableShuffleStorage: !durableShuffleStorage,
+                          durableShuffleStorage,
                         })
                       }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
                   </>
                 ) : (
                   <>
-                    <MenuCheckbox
-                      checked={useCache}
+                    <MenuBoolean
+                      icon={IconNames.DATA_CONNECTION}
                       text="Use cache"
-                      onChange={() =>
+                      value={useCache}
+                      onValueChange={useCache =>
                         changeQueryContext({
                           ...queryContext,
-                          useCache: !useCache,
-                          populateCache: !useCache,
+                          useCache,
+                          populateCache: useCache,
                         })
                       }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
-                    <MenuCheckbox
-                      checked={useApproximateTopN}
-                      text="Use approximate TopN"
-                      onChange={() =>
+                    <MenuBoolean
+                      icon={IconNames.HORIZONTAL_BAR_CHART_DESC}
+                      text="Approximate TopN"
+                      value={useApproximateTopN}
+                      onValueChange={useApproximateTopN =>
                         changeQueryContext({
                           ...queryContext,
-                          useApproximateTopN: !useApproximateTopN,
+                          useApproximateTopN,
                         })
                       }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
                   </>
                 )}
                 {effectiveEngine !== 'native' && (
-                  <MenuCheckbox
-                    checked={useApproximateCountDistinct}
-                    text="Use approximate COUNT(DISTINCT)"
-                    onChange={() =>
+                  <MenuBoolean
+                    icon={IconNames.ROCKET_SLANT}
+                    text="Approximate COUNT(DISTINCT)"
+                    value={useApproximateCountDistinct}
+                    onValueChange={useApproximateCountDistinct =>
                       changeQueryContext({
                         ...queryContext,
-                        useApproximateCountDistinct: !useApproximateCountDistinct,
+                        useApproximateCountDistinct,
                       })
                     }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                   />
                 )}
                 {effectiveEngine === 'sql-native' && (
@@ -603,7 +665,9 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               }
             >
               <Button
-                text={`Array ingest mode: ${arrayIngestMode ?? '(server default)'}`}
+                text={`Array ingest mode: ${
+                  arrayIngestMode ? ARRAY_INGEST_MODE_LABEL[arrayIngestMode] : '(server default)'
+                }`}
                 rightIcon={IconNames.CARET_DOWN}
               />
             </Popover>

@@ -35,6 +35,8 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
@@ -49,7 +51,6 @@ import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -150,11 +151,10 @@ public class UnnestStorageAdapter implements StorageAdapter
         );
       }
 
-      @Nullable
       @Override
       public List<OrderBy> getOrdering()
       {
-        return cursorHolderSupplier.get().getOrdering();
+        return computeOrdering(cursorHolderSupplier.get().getOrdering());
       }
 
       @Override
@@ -169,6 +169,22 @@ public class UnnestStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return baseAdapter.getInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    final RowSignature baseSignature = baseAdapter.getRowSignature();
+    for (int i = 0; i < baseSignature.size(); i++) {
+      final String column = baseSignature.getColumnName(i);
+      if (!outputColumnName.equals(column)) {
+        builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
+      }
+    }
+
+    return builder.add(outputColumnName, ColumnType.fromCapabilities(getColumnCapabilities(outputColumnName))).build();
   }
 
   @Override
@@ -202,18 +218,6 @@ public class UnnestStorageAdapter implements StorageAdapter
       return baseAdapter.getDimensionCardinality(column);
     }
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-  }
-
-  @Override
-  public DateTime getMinTime()
-  {
-    return baseAdapter.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return baseAdapter.getMaxTime();
   }
 
   @Nullable
@@ -253,12 +257,6 @@ public class UnnestStorageAdapter implements StorageAdapter
   public int getNumRows()
   {
     return 0;
-  }
-
-  @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return baseAdapter.getMaxIngestedEventTime();
   }
 
   @Nullable
@@ -577,6 +575,23 @@ public class UnnestStorageAdapter implements StorageAdapter
     } else {
       return null;
     }
+  }
+
+  /**
+   * Computes ordering of a join {@link CursorHolder} based on the ordering of an underlying {@link CursorHolder}.
+   */
+  private List<OrderBy> computeOrdering(final List<OrderBy> baseOrdering)
+  {
+    // Sorted the same way as the base segment, unless the unnested column shadows one of the base columns.
+    int limit = 0;
+    for (; limit < baseOrdering.size(); limit++) {
+      final String columnName = baseOrdering.get(limit).getColumnName();
+      if (columnName.equals(outputColumnName) || columnName.equals(unnestColumn.getOutputName())) {
+        break;
+      }
+    }
+
+    return limit == baseOrdering.size() ? baseOrdering : baseOrdering.subList(0, limit);
   }
 
   /**

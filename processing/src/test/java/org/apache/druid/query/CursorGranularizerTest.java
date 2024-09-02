@@ -33,8 +33,11 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -55,6 +58,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private StorageAdapter adapter;
+  private TimeBoundaryInspector timeBoundaryInspector;
 
   @Before
   public void setup() throws IOException
@@ -147,7 +151,9 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                     )
                     .tmpDir(temporaryFolder.newFolder());
 
-    adapter = new QueryableIndexStorageAdapter(bob.buildMMappedIndex());
+    final QueryableIndex index = bob.buildMMappedIndex();
+    adapter = new QueryableIndexStorageAdapter(index);
+    timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
   }
 
   @Test
@@ -156,11 +162,11 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
     try (CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       CursorGranularizer granularizer = CursorGranularizer.create(
-          adapter,
           cursor,
+          timeBoundaryInspector,
+          Order.ASCENDING,
           Granularities.HOUR,
-          adapter.getInterval(),
-          false
+          adapter.getInterval()
       );
 
       final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
@@ -209,11 +215,11 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
     try (CursorHolder cursorHolder = adapter.makeCursorHolder(descending)) {
       final Cursor cursor = cursorHolder.asCursor();
       CursorGranularizer granularizer = CursorGranularizer.create(
-          adapter,
           cursor,
+          timeBoundaryInspector,
+          Order.DESCENDING,
           Granularities.HOUR,
-          adapter.getInterval(),
-          true
+          adapter.getInterval()
       );
 
       final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();

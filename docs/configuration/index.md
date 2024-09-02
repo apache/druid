@@ -363,6 +363,8 @@ Coordinator and Overlord log changes to lookups, segment load/drop rules, and dy
 
 |Property|Description|Default|
 |--------|-----------|-------|
+|`druid.audit.manager.type`|Type of audit manager used for handling audited events. Audited events are logged when set to `log` or persisted in metadata store when set to `sql`.|sql|
+|`druid.audit.manager.logLevel`|Log level of audit events with possible values DEBUG, INFO, WARN. This property is used only when `druid.audit.manager.type` is set to `log`.|INFO|
 |`druid.audit.manager.auditHistoryMillis`|Default duration for querying audit history.|1 week|
 |`druid.audit.manager.includePayloadAsDimensionInMetric`|Boolean flag on whether to add `payload` column in service metric.|false|
 |`druid.audit.manager.maxPayloadSizeBytes`|The maximum size of audit payload to store in Druid's metadata store audit table. If the size of audit payload exceeds this value, the audit log would be stored with a message indicating that the payload was omitted instead. Setting `maxPayloadSizeBytes` to -1 (default value) disables this check, meaning Druid will always store audit payload regardless of it's size. Setting to any negative number other than `-1` is invalid. Human-readable format is supported, see [here](human-readable-byte.md).  |-1|
@@ -594,7 +596,9 @@ need arises.
 |`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building in the Coordinator, this should be specified in the common runtime properties.|false|No.|
 |`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the MiddleManager runtime properties.|false|No.|
 
-For, stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#metadata-management).
+If you enable this feature, you can query datasources that are only stored in deep storage and are not loaded on a Historical. For more information, see [Query from deep storage](../querying/query-from-deep-storage.md).
+
+For stale schema cleanup configs, refer to properties with the prefix `druid.coordinator.kill.segmentSchema` in [Metadata Management](#metadata-management). 
 
 ### Ingestion security configuration
 
@@ -1527,7 +1531,7 @@ The following types of medium exist for the buffers:
 This type of medium may do unnecessary disk I/O and requires some disk space to be available.
 
 * **Off-heap memory** (`offHeapMemory`) creates buffers in off-heap memory of a JVM process that is running a task.
-This type of medium is preferred, but it may require to allow the JVM to have more off-heap memory, by changing `-XX:MaxDirectMemorySize` configuration. It is not yet understood how does the required off-heap memory size relates to the size of the segments being created. But definitely it doesn't make sense to add more extra off-heap memory, than the configured maximum _heap_ size (`-Xmx`) for the same JVM.
+This type of medium is preferred, but it may require you to allow the JVM to have more off-heap memory by changing the `-XX:MaxDirectMemorySize` configuration. It's not understood yet how the required off-heap memory size relates to the size of the segments being created. But you shouldn't add more extra off-heap memory than the configured maximum _heap_ size (`-Xmx`) for the same JVM.
 
 * **On-heap memory** (`onHeapMemory`) creates buffers using the allocated heap memory of the JVM process running a task. Using on-heap memory introduces garbage collection overhead and so is not recommended in most cases. This type of medium is most helpful for tasks run on external clusters where it may be difficult to allocate and work with direct memory effectively.
 
