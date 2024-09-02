@@ -24,7 +24,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorHolder;
 
 /**
  * Cursor is an interface for iteration over a range of data points, used during query execution. Cursors are available
- * from {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} via {@link CursorHolder#asCursor()}.
+ * from {@link CursorFactory#makeCursorHolder(CursorBuildSpec)} via {@link CursorHolder#asCursor()}.
  * <p>
  * A typical usage pattern might look something like this:
  * <pre>

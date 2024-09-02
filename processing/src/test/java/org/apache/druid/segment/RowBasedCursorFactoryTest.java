@@ -51,7 +51,6 @@ import org.junit.Test;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -61,9 +60,7 @@ import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertThrows;
-
-public class RowBasedStorageAdapterTest
+public class RowBasedCursorFactoryTest
 {
   private static final String UNKNOWN_TYPE_NAME = "unknownType";
 
@@ -246,14 +243,14 @@ public class RowBasedStorageAdapterTest
 
   public final AtomicLong numCloses = new AtomicLong();
 
-  private RowBasedStorageAdapter<Integer> createIntAdapter(final int... ints)
+  private RowBasedCursorFactory<Integer> createIntAdapter(final int... ints)
   {
     return createIntAdapter(ROW_ADAPTER, ints);
   }
 
-  private RowBasedStorageAdapter<Integer> createIntAdapter(RowAdapter<Integer> adapter, final int... ints)
+  private RowBasedCursorFactory<Integer> createIntAdapter(RowAdapter<Integer> adapter, final int... ints)
   {
-    return new RowBasedStorageAdapter<>(
+    return new RowBasedCursorFactory<>(
         Sequences.simple(Arrays.stream(ints).boxed().collect(Collectors.toList()))
                  .withBaggage(numCloses::incrementAndGet),
         adapter,
@@ -262,112 +259,16 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_getInterval()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter();
-    Assert.assertEquals(Intervals.ETERNITY, adapter.getInterval());
-  }
-
-  @Test
-  public void test_getAvailableDimensions()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter();
-
-    // Sort them for comparison purposes.
-    Assert.assertEquals(
-        ROW_SIGNATURE.getColumnNames().stream().sorted().collect(Collectors.toList()),
-        Lists.newArrayList(adapter.getAvailableDimensions()).stream().sorted().collect(Collectors.toList())
-    );
-  }
-
-  @Test
-  public void test_getAvailableMetrics()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter();
-
-    Assert.assertEquals(
-        Collections.emptyList(),
-        Lists.newArrayList(adapter.getAvailableMetrics())
-    );
-  }
-
-  @Test
   public void test_getRowSignature()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter();
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter();
     Assert.assertEquals(ROW_SIGNATURE, adapter.getRowSignature());
-  }
-
-  @Test
-  public void test_getDimensionCardinality_knownColumns()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursor is called).
-    for (String column : ROW_SIGNATURE.getColumnNames()) {
-      Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
-    }
-  }
-
-  @Test
-  public void test_getDimensionCardinality_unknownColumn()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality("unknown"));
-  }
-
-  @Test
-  public void test_getDimensionCardinality_timeColumn()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality("__time"));
-  }
-
-  @Test
-  public void test_getMinValue()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    // Row based adapters don't know min/max values, so they always return null.
-    // Test both known and unknown columns.
-    final List<String> columns =
-        ImmutableList.<String>builder().addAll(ROW_SIGNATURE.getColumnNames()).add("unknown", "__time").build();
-
-    for (String column : columns) {
-      Assert.assertNull(column, adapter.getMinValue(column));
-    }
-  }
-
-  @Test
-  public void test_getMaxValue()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    // Row based adapters don't know min/max values, so they always return null.
-    // Test both known and unknown columns.
-    final List<String> columns =
-        ImmutableList.<String>builder().addAll(ROW_SIGNATURE.getColumnNames()).add("unknown", "__time").build();
-
-    for (String column : columns) {
-      Assert.assertNull(column, adapter.getMaxValue(column));
-    }
-  }
-
-  @Test
-  public void test_getCapabilities()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursor is called).
-    for (String column : ROW_SIGNATURE.getColumnNames()) {
-      Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
-    }
   }
 
   @Test
   public void test_getColumnCapabilities_float()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.FLOAT.name());
     Assert.assertEquals(ValueType.FLOAT, capabilities.getType());
@@ -377,7 +278,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_getColumnCapabilities_double()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.DOUBLE.name());
     Assert.assertEquals(ValueType.DOUBLE, capabilities.getType());
@@ -387,7 +288,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_getColumnCapabilities_long()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.LONG.name());
     Assert.assertEquals(ValueType.LONG, capabilities.getType());
@@ -397,7 +298,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_getColumnCapabilities_string()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.STRING.name());
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
@@ -411,7 +312,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_getColumnCapabilities_complex()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.COMPLEX.name());
 
@@ -425,7 +326,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_getColumnCapabilities_unknownType()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(UNKNOWN_TYPE_NAME);
     Assert.assertNull(capabilities);
@@ -434,14 +335,14 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_getColumnCapabilities_nonexistent()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
     Assert.assertNull(adapter.getColumnCapabilities("nonexistent"));
   }
 
   @Test
   public void test_getColumnTypeString()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     for (String columnName : ROW_SIGNATURE.getColumnNames()) {
       if (UNKNOWN_TYPE_NAME.equals(columnName)) {
@@ -457,23 +358,9 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_getNumRows()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    assertThrows(UnsupportedOperationException.class, () -> adapter.getMetadata());
-  }
-
-  @Test
-  public void test_getMetadata()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    assertThrows(UnsupportedOperationException.class, () -> adapter.getMetadata());
-  }
-
-  @Test
   public void test_makeCursor()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .build();
@@ -495,7 +382,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_filterOnLong()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter(ValueType.LONG.name(), "1.0", null).toFilter())
@@ -518,7 +405,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_filterOnNonexistentColumnEqualsNull()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter("nonexistent", null, null).toFilter())
@@ -541,7 +428,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_filterOnVirtualColumn()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter("vc", "2", null).toFilter())
@@ -576,7 +463,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_descending()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setPreferredOrdering(Cursors.descendingTimeOrder())
@@ -599,7 +486,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_intervalDoesNotMatch()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("2000/P1D"))
@@ -618,7 +505,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_intervalPartiallyMatches()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT1H"))
@@ -639,7 +526,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_hourGranularity()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970/1971"))
@@ -663,7 +550,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_hourGranularityWithInterval()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT2H"))
@@ -686,7 +573,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_hourGranularityWithIntervalDescending()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970-01-01T01/PT2H"))
@@ -710,7 +597,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_allProcessors()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1);
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
@@ -815,7 +702,7 @@ public class RowBasedStorageAdapterTest
   @Test
   public void test_makeCursor_filterOnNonexistentColumnEqualsNonnull()
   {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+    final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new SelectorDimFilter("nonexistent", "abc", null).toFilter())

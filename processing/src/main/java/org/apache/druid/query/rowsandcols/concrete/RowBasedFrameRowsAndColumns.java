@@ -25,12 +25,10 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.CloseableShapeshifter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -94,8 +92,8 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
   @Override
   public <T> T as(Class<T> clazz)
   {
-    if (StorageAdapter.class.equals(clazz)) {
-      return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
+    if (CursorFactory.class.equals(clazz)) {
+      return (T) FrameReader.create(signature).makeCursorFactory(frame);
     }
     return null;
   }

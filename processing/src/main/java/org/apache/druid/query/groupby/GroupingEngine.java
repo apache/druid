@@ -77,9 +77,9 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -459,30 +459,30 @@ public class GroupingEngine
   }
 
   /**
-   * Process a groupBy query on a single {@link StorageAdapter}. This is used by
+   * Process a groupBy query on a single {@link CursorFactory}. This is used by
    * {@link GroupByQueryRunnerFactory#createRunner} to create per-segment
    * QueryRunners.
    *
    * This method is only called on data servers, like Historicals (not the Broker).
    *
    * @param query                 the groupBy query
-   * @param storageAdapter        storage adatper for the segment in question
+   * @param cursorFactory         cursor factory for the segment in question
    * @param timeBoundaryInspector time boundary inspector for the segment in question
    *
    * @return result sequence for the storage adapter
    */
   public Sequence<ResultRow> process(
       GroupByQuery query,
-      StorageAdapter storageAdapter,
+      CursorFactory cursorFactory,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
 
-    if (storageAdapter == null) {
+    if (cursorFactory == null) {
       throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 
@@ -505,9 +505,9 @@ public class GroupingEngine
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
       final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
-      final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
+      final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
-      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
+      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(cursorFactory);
 
       // group by specific vectorization check
       final boolean canVectorize = cursorHolder.canVectorize() &&
@@ -517,7 +517,6 @@ public class GroupingEngine
       if (shouldVectorize) {
         result = VectorGroupByEngine.process(
             query,
-            storageAdapter,
             timeBoundaryInspector,
             cursorHolder,
             bufferHolder.get(),
@@ -529,7 +528,6 @@ public class GroupingEngine
       } else {
         result = GroupByQueryEngine.process(
             query,
-            storageAdapter,
             timeBoundaryInspector,
             cursorHolder,
             buildSpec,
@@ -874,7 +872,7 @@ public class GroupingEngine
   public static int getCardinalityForArrayAggregation(
       GroupByQueryConfig querySpecificConfig,
       GroupByQuery query,
-      StorageAdapter storageAdapter,
+      ColumnInspector inspector,
       ByteBuffer buffer
   )
   {
@@ -905,8 +903,8 @@ public class GroupingEngine
       }
 
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
-      columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
-      cardinality = storageAdapter.getDimensionCardinality(columnName);
+      columnCapabilities = inspector.getColumnCapabilities(columnName);
+      cardinality = inspector.getColumnValueCardinality(columnName);
     } else {
       // Cannot use array-based aggregation with more than one dimension.
       return -1;

@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -59,8 +59,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  final IncrementalIndexStorageAdapter adapter =
-      new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+  final IncrementalIndexCursorFactory cursorFactory =
+      new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
   ExecutorService executorService = Execs.singleThreaded("input-stream-fetcher-test");
 
@@ -76,10 +76,10 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     );
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
         FrameTestUtil.readRowsFromFrameChannel(
             readableInputStreamFrameChannel,
-            FrameReader.create(adapter.getRowSignature())
+            FrameReader.create(cursorFactory.getRowSignature())
         )
     );
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
@@ -101,7 +101,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
     Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
         readableInputStreamFrameChannel,
-        FrameReader.create(adapter.getRowSignature())
+        FrameReader.create(cursorFactory.getRowSignature())
     ).toList().size(), 0);
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
     readableInputStreamFrameChannel.close();
@@ -127,7 +127,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         () ->
             FrameTestUtil.readRowsFromFrameChannel(
                 readableInputStreamFrameChannel,
-                FrameReader.create(adapter.getRowSignature())
+                FrameReader.create(cursorFactory.getRowSignature())
             ).toList()
     );
 
@@ -143,11 +143,11 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     final int allocatorSize = 64000;
     final int truncatedSize = 30000; // Holds two full frames + one partial frame, after compression.
 
-    final IncrementalIndexStorageAdapter adapter =
-        new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+    final IncrementalIndexCursorFactory cursorFactory =
+        new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
     final File file = FrameTestUtil.writeFrameFile(
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
                             .frameType(FrameType.ROW_BASED)
                             .frames(),
@@ -173,7 +173,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
     Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
         readableInputStreamFrameChannel,
-        FrameReader.create(adapter.getRowSignature())
+        FrameReader.create(cursorFactory.getRowSignature())
     ).toList().size(), 0);
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
     readableInputStreamFrameChannel.close();
@@ -199,7 +199,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
     Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
         readableInputStreamFrameChannel,
-        FrameReader.create(adapter.getRowSignature())
+        FrameReader.create(cursorFactory.getRowSignature())
     ).toList().size(), 0);
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
     readableInputStreamFrameChannel.close();
@@ -222,10 +222,10 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     expectedException.expect(ISE.class);
     expectedException.expectMessage("Found error while reading input stream");
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
         FrameTestUtil.readRowsFromFrameChannel(
             readableInputStreamFrameChannel,
-            FrameReader.create(adapter.getRowSignature())
+            FrameReader.create(cursorFactory.getRowSignature())
         )
     );
     Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
@@ -260,7 +260,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   {
     try {
       final File file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromAdapter(adapter).maxRowsPerFrame(10).frameType(FrameType.ROW_BASED).frames(),
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory).maxRowsPerFrame(10).frameType(FrameType.ROW_BASED).frames(),
           temporaryFolder.newFile()
       );
       return Files.newInputStream(file.toPath());

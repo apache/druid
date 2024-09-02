@@ -85,7 +85,6 @@ import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNMetricSpec;
 import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -933,7 +932,8 @@ public class DruidQuery
     for (final Interval filtrationInterval : filtration.getIntervals()) {
       // Query may be using RowBasedStorageAdapter. We don't know for sure, so check
       // RowBasedStorageAdapter#isQueryGranularityAllowed to be safe.
-      if (!RowBasedStorageAdapter.isQueryGranularityAllowed(filtrationInterval, queryGranularity)) {
+
+      if (!Granularities.ALL.equals(queryGranularity) || Intervals.ETERNITY.equals(filtrationInterval)) {
         return false;
       }
 

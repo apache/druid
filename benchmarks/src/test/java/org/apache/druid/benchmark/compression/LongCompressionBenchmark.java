@@ -23,7 +23,7 @@ import com.google.common.base.Supplier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -118,7 +118,7 @@ public class LongCompressionBenchmark
   @Benchmark
   public void readVectorizedContinuous(Blackhole bh)
   {
-    long[] vector = new long[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
+    long[] vector = new long[QueryContexts.DEFAULT_VECTOR_SIZE];
     ColumnarLongs columnarLongs = supplier.get();
     int count = columnarLongs.size();
     for (int i = 0; i < count; i++) {

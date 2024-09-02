@@ -43,7 +43,7 @@ public class ReferenceCountingSegmentTest
   private final SegmentId segmentId = SegmentId.dummy("test_segment");
   private final Interval dataInterval = new Interval(DateTimes.nowUtc().minus(Days.days(1)), DateTimes.nowUtc());
   private QueryableIndex index;
-  private StorageAdapter adapter;
+  private CursorFactory cursorFactory;
   private IndexedTable indexedTable;
   private int underlyingSegmentClosedCount;
 
@@ -52,7 +52,7 @@ public class ReferenceCountingSegmentTest
   {
     underlyingSegmentClosedCount = 0;
     index = EasyMock.createNiceMock(QueryableIndex.class);
-    adapter = EasyMock.createNiceMock(StorageAdapter.class);
+    cursorFactory = EasyMock.createNiceMock(CursorFactory.class);
     indexedTable = EasyMock.createNiceMock(IndexedTable.class);
 
     segment = ReferenceCountingSegment.wrapRootGenerationSegment(
@@ -77,9 +77,9 @@ public class ReferenceCountingSegmentTest
           }
 
           @Override
-          public StorageAdapter asStorageAdapter()
+          public CursorFactory asCursorFactory()
           {
-            return adapter;
+            return cursorFactory;
           }
 
           @Override
@@ -87,8 +87,8 @@ public class ReferenceCountingSegmentTest
           {
             if (clazz.equals(QueryableIndex.class)) {
               return (T) asQueryableIndex();
-            } else if (clazz.equals(StorageAdapter.class)) {
-              return (T) asStorageAdapter();
+            } else if (clazz.equals(CursorFactory.class)) {
+              return (T) asCursorFactory();
             } else if (clazz.equals(IndexedTable.class)) {
               return (T) indexedTable;
             }
@@ -172,14 +172,14 @@ public class ReferenceCountingSegmentTest
     Assert.assertEquals(segmentId, segment.getId());
     Assert.assertEquals(dataInterval, segment.getDataInterval());
     Assert.assertEquals(index, segment.asQueryableIndex());
-    Assert.assertEquals(adapter, segment.asStorageAdapter());
+    Assert.assertEquals(cursorFactory, segment.asCursorFactory());
   }
 
   @Test
   public void testSegmentAs()
   {
     Assert.assertSame(index, segment.as(QueryableIndex.class));
-    Assert.assertSame(adapter, segment.as(StorageAdapter.class));
+    Assert.assertSame(cursorFactory, segment.as(CursorFactory.class));
     Assert.assertSame(indexedTable, segment.as(IndexedTable.class));
     Assert.assertNull(segment.as(String.class));
   }

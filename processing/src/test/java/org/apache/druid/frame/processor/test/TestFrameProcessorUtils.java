@@ -28,11 +28,11 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 
@@ -44,7 +44,7 @@ public final class TestFrameProcessorUtils
   {
   }
 
-  public static StorageAdapter toStorageAdapter(List<InputRow> inputRows)
+  public static CursorFactory toCursorFactory(List<InputRow> inputRows)
   {
     final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
@@ -70,13 +70,13 @@ public final class TestFrameProcessorUtils
       throw new RuntimeException(e);
     }
 
-    return new IncrementalIndexStorageAdapter(index);
+    return new IncrementalIndexCursorFactory(index);
   }
 
   public static Frame toFrame(List<InputRow> inputRows)
   {
-    final StorageAdapter storageAdapter = toStorageAdapter(inputRows);
-    return Iterables.getOnlyElement(FrameSequenceBuilder.fromAdapter(storageAdapter)
+    final CursorFactory cursorFactory = toCursorFactory(inputRows);
+    return Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                                                         .frameType(FrameType.ROW_BASED)
                                                         .frames()
                                                         .toList());

@@ -80,7 +80,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -99,7 +99,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -1702,11 +1702,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
@@ -1830,11 +1830,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
@@ -1964,8 +1964,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final File segmentFile = segmentCacheManager.getSegmentFiles(compactSegment);
 
     final QueryableIndex queryableIndex = testUtils.getTestIndexIO().loadIndex(segmentFile);
-    final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-        new QueryableIndexStorageAdapter(queryableIndex),
+    final WindowedCursorFactory windowed = new WindowedCursorFactory(
+        new QueryableIndexCursorFactory(queryableIndex),
         compactSegment.getInterval()
     );
     Assert.assertEquals(
@@ -1980,7 +1980,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     try (final CursorHolder cursorHolder =
-             adapter.getAdapter()
+             windowed.getCursorFactory()
                     .makeCursorHolder(CursorBuildSpec.builder().setInterval(compactSegment.getInterval()).build())) {
       final Cursor cursor = cursorHolder.asCursor();
       cursor.reset();
@@ -2210,11 +2210,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();

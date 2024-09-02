@@ -32,8 +32,8 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -51,7 +51,7 @@ public class JavaScriptFilterTest extends BaseFilterTest
   public JavaScriptFilterTest(
       String testName,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )

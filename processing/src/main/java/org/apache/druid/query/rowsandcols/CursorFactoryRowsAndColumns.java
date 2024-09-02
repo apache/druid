@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
@@ -30,8 +32,8 @@ import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nonnull;
@@ -39,24 +41,25 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * Provides {@link RowsAndColumns} on top of a {@link StorageAdapter}.
+ * Provides {@link RowsAndColumns} on top of a {@link CursorFactory}.
  */
-public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, RowsAndColumns
+public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsAndColumns
 {
-  private final StorageAdapter storageAdapter;
-  private RowsAndColumns materialized;
+  private final CursorFactory cursorFactory;
+  private final Supplier<RowsAndColumns> materialized;
 
-  public StorageAdapterRowsAndColumns(StorageAdapter storageAdapter)
+  public CursorFactoryRowsAndColumns(CursorFactory cursorFactory)
   {
-    this.storageAdapter = storageAdapter;
+    this.cursorFactory = cursorFactory;
+    this.materialized = Suppliers.memoize(() -> materialize(cursorFactory));
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public <T> T as(Class<T> clazz)
   {
-    if (StorageAdapter.class == clazz) {
-      return (T) storageAdapter;
+    if (CursorFactory.class == clazz) {
+      return (T) cursorFactory;
     }
     return null;
   }
@@ -64,19 +67,19 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   @Override
   public Collection<String> getColumnNames()
   {
-    return storageAdapter.getRowSignature().getColumnNames();
+    return cursorFactory.getRowSignature().getColumnNames();
   }
 
   @Override
   public int numRows()
   {
-    return storageAdapter.getNumRows();
+    return materialized.get().numRows();
   }
 
   @Override
   public Column findColumn(String name)
   {
-    return getRealRAC().findColumn(name);
+    return materialized.get().findColumn(name);
   }
 
   @Override
@@ -84,25 +87,16 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
   {
   }
 
-  protected RowsAndColumns getRealRAC()
-  {
-    if (materialized == null) {
-      materialized = materialize(storageAdapter);
-    }
-    return materialized;
-  }
-
   @Nonnull
-  private static RowsAndColumns materialize(StorageAdapter as)
+  private static RowsAndColumns materialize(CursorFactory cursorFactory)
   {
-    try (final CursorHolder cursorHolder = as.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
+      final RowSignature rowSignature = cursorFactory.getRowSignature();
 
       if (cursor == null) {
         return new EmptyRowsAndColumns();
       }
-      
-      final RowSignature rowSignature = as.getRowSignature();
 
       final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 

@@ -28,6 +28,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -54,7 +55,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandlingTest
+public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlingTest
 {
   public static JoinFilterRewriteConfig DEFAULT_JOIN_FILTER_REWRITE_CONFIG = new JoinFilterRewriteConfig(
       true,
@@ -223,17 +224,18 @@ public class BaseHashJoinSegmentStorageAdapterTest extends InitializedNullHandli
 
   /**
    * Creates a fact-to-country join segment without a {@link JoinFilterPreAnalysis}. This means it cannot
-   * have {@link org.apache.druid.segment.StorageAdapter#makeCursorHolder(CursorBuildSpec)} called on it.
+   * have {@link org.apache.druid.segment.CursorFactory#makeCursorHolder(CursorBuildSpec)} called on it.
    */
-  protected HashJoinSegmentStorageAdapter makeFactToCountrySegment()
+  protected HashJoinSegment makeFactToCountrySegment()
   {
     return makeFactToCountrySegment(JoinType.LEFT);
   }
 
-  protected HashJoinSegmentStorageAdapter makeFactToCountrySegment(JoinType joinType)
+  protected HashJoinSegment makeFactToCountrySegment(JoinType joinType)
   {
-    return new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    return new HashJoinSegment(
+        ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
+        null,
         ImmutableList.of(factToCountryOnIsoCode(joinType)),
         null
     );

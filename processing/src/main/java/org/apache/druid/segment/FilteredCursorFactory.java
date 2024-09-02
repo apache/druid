@@ -24,22 +24,20 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.filter.AndFilter;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-public class FilteredStorageAdapter implements StorageAdapter
+public class FilteredCursorFactory implements CursorFactory
 {
+  private final CursorFactory delegate;
   @Nullable
-  private final DimFilter filterOnDataSource;
-  private final StorageAdapter baseStorageAdapter;
+  private final DimFilter filter;
 
-  public FilteredStorageAdapter(final StorageAdapter adapter, @Nullable final DimFilter filter)
+  public FilteredCursorFactory(CursorFactory delegate, @Nullable DimFilter filter)
   {
-    this.baseStorageAdapter = adapter;
-    this.filterOnDataSource = filter;
+    this.delegate = delegate;
+    this.filter = filter;
   }
 
   @Override
@@ -48,89 +46,32 @@ public class FilteredStorageAdapter implements StorageAdapter
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
     final Filter newFilter;
     if (spec.getFilter() == null) {
-      if (filterOnDataSource != null) {
-        newFilter = filterOnDataSource.toFilter();
+      if (filter != null) {
+        newFilter = filter.toFilter();
       } else {
         newFilter = null;
       }
     } else {
-      if (filterOnDataSource != null) {
-        newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filterOnDataSource.toFilter()));
+      if (filter != null) {
+        newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filter.toFilter()));
       } else {
         newFilter = spec.getFilter();
       }
     }
     buildSpecBuilder.setFilter(newFilter);
-    return baseStorageAdapter.makeCursorHolder(buildSpecBuilder.build());
-  }
-
-  @Override
-  public Interval getInterval()
-  {
-    return baseStorageAdapter.getInterval();
+    return delegate.makeCursorHolder(buildSpecBuilder.build());
   }
 
   @Override
   public RowSignature getRowSignature()
   {
-    return baseStorageAdapter.getRowSignature();
-  }
-
-  @Override
-  public Indexed<String> getAvailableDimensions()
-  {
-    return baseStorageAdapter.getAvailableDimensions();
-  }
-
-  @Override
-  public Iterable<String> getAvailableMetrics()
-  {
-    return baseStorageAdapter.getAvailableMetrics();
-  }
-
-  @Override
-  public int getDimensionCardinality(String column)
-  {
-    return baseStorageAdapter.getDimensionCardinality(column);
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMinValue(String column)
-  {
-    return null;
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMaxValue(String column)
-  {
-    return null;
+    return delegate.getRowSignature();
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return baseStorageAdapter.getColumnCapabilities(column);
-  }
-
-  @Override
-  public int getNumRows()
-  {
-    return 0;
-  }
-
-  @Nullable
-  @Override
-  public Metadata getMetadata()
-  {
-    return baseStorageAdapter.getMetadata();
-  }
-
-  @Override
-  public boolean isFromTombstone()
-  {
-    return baseStorageAdapter.isFromTombstone();
+    return delegate.getColumnCapabilities(column);
   }
 }

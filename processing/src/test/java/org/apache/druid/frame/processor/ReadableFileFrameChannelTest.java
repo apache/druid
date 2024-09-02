@@ -26,8 +26,8 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -55,16 +55,16 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   @Before
   public void setUp() throws IOException
   {
-    final StorageAdapter adapter = new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
+    final CursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
     final File file = FrameTestUtil.writeFrameFile(
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .frameType(FrameType.ROW_BASED)
                             .maxRowsPerFrame(ROWS_PER_FRAME)
                             .frames(),
         temporaryFolder.newFile()
     );
-    allRows = FrameTestUtil.readRowsFromAdapter(adapter, adapter.getRowSignature(), false).toList();
-    frameReader = FrameReader.create(adapter.getRowSignature());
+    allRows = FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList();
+    frameReader = FrameReader.create(cursorFactory.getRowSignature());
     frameFile = FrameFile.open(file, null, FrameFile.Flag.DELETE_ON_CLOSE);
   }
 

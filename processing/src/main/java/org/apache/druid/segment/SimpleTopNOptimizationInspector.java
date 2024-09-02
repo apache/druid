@@ -17,38 +17,20 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime;
+package org.apache.druid.segment;
 
-import org.apache.druid.segment.StorageAdapter;
-import org.joda.time.Interval;
-
-public class WindowedStorageAdapter
+public class SimpleTopNOptimizationInspector implements TopNOptimizationInspector
 {
-  private final StorageAdapter adapter;
-  private final Interval interval;
+  private final boolean isFiltered;
 
-  public WindowedStorageAdapter(StorageAdapter adapter, Interval interval)
+  public SimpleTopNOptimizationInspector(boolean isFiltered)
   {
-    this.adapter = adapter;
-    this.interval = interval;
-  }
-
-  public StorageAdapter getAdapter()
-  {
-    return adapter;
-  }
-
-  public Interval getInterval()
-  {
-    return interval;
+    this.isFiltered = isFiltered;
   }
 
   @Override
-  public String toString()
+  public boolean isFiltered()
   {
-    return "WindowedStorageAdapter{" +
-           "adapter=" + adapter +
-           ", interval=" + interval +
-           '}';
+    return isFiltered;
   }
 }

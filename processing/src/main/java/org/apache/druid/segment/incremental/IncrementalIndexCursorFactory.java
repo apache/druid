@@ -21,27 +21,17 @@ package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterables;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.DimensionIndexer;
-import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedDataColumnIndexerV4;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.data.ListIndexed;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 
-/**
- *
- */
-public class IncrementalIndexStorageAdapter implements StorageAdapter
+public class IncrementalIndexCursorFactory implements CursorFactory
 {
   private static final ColumnCapabilities.CoercionLogic STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
@@ -77,51 +67,17 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         }
       };
 
-  private static final ColumnCapabilities.CoercionLogic SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
-      new ColumnCapabilities.CoercionLogic()
-      {
-        @Override
-        public boolean dictionaryEncoded()
-        {
-          return true;
-        }
+  private final IncrementalIndex index;
 
-        @Override
-        public boolean dictionaryValuesSorted()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean dictionaryValuesUnique()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean multipleValues()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return false;
-        }
-      };
-
-  final IncrementalIndex index;
-
-  public IncrementalIndexStorageAdapter(IncrementalIndex index)
+  public IncrementalIndexCursorFactory(IncrementalIndex index)
   {
     this.index = index;
   }
 
   @Override
-  public Interval getInterval()
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return index.getInterval();
+    return new IncrementalIndexCursorHolder(index, spec);
   }
 
   @Override
@@ -136,67 +92,14 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return builder.build();
   }
 
-  @Override
-  public Indexed<String> getAvailableDimensions()
-  {
-    return new ListIndexed<>(index.getDimensionNames(false));
-  }
-
-  @Override
-  public Iterable<String> getAvailableMetrics()
-  {
-    return index.getMetricNames();
-  }
-
-  @Override
-  public int getDimensionCardinality(String dimension)
-  {
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-    }
-
-    IncrementalIndex.DimensionDesc desc = index.getDimension(dimension);
-    if (desc == null) {
-      return 0;
-    }
-
-    return desc.getIndexer().getCardinality();
-  }
-
-  @Override
-  public int getNumRows()
-  {
-    return index.size();
-  }
-
   @Nullable
-  @Override
-  public Comparable getMinValue(String column)
-  {
-    IncrementalIndex.DimensionDesc desc = index.getDimension(column);
-    if (desc == null) {
-      return null;
-    }
-
-    DimensionIndexer indexer = desc.getIndexer();
-    return indexer.getMinValue();
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMaxValue(String column)
-  {
-    IncrementalIndex.DimensionDesc desc = index.getDimension(column);
-    if (desc == null) {
-      return null;
-    }
-
-    DimensionIndexer indexer = desc.getIndexer();
-    return indexer.getMaxValue();
-  }
-
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return snapshotColumnCapabilities(index, column);
+  }
+
+  static ColumnCapabilities snapshotColumnCapabilities(IncrementalIndex index, String column)
   {
     IncrementalIndex.DimensionDesc desc = index.getDimension(column);
     // nested column indexer is a liar, and behaves like any type if it only processes unnested literals of a single
@@ -204,6 +107,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     if (desc != null && desc.getIndexer() instanceof NestedDataColumnIndexerV4) {
       return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
     }
+
+    // todo (clint): with the refactor we can in fact snapshot this at cursor creation time i think...
 
     // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
     // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
@@ -222,31 +127,5 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         index.getColumnCapabilities(column),
         STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
     );
-  }
-
-  /**
-   * Sad workaround for {@link org.apache.druid.query.metadata.SegmentAnalyzer} to deal with the fact that the
-   * response from {@link #getColumnCapabilities} is not accurate for string columns, in that it reports all string
-   * columns as having multiple values. This method returns the actual capabilities of the underlying
-   * {@link IncrementalIndex} at the time this method is called.
-   */
-  public ColumnCapabilities getSnapshotColumnCapabilities(String column)
-  {
-    return ColumnCapabilitiesImpl.snapshot(
-        index.getColumnCapabilities(column),
-        SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
-    );
-  }
-
-  @Override
-  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
-  {
-    return new IncrementalIndexCursorHolder(this, index, spec);
-  }
-
-  @Override
-  public Metadata getMetadata()
-  {
-    return index.getMetadata();
   }
 }

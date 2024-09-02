@@ -34,8 +34,8 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -49,7 +49,7 @@ import java.util.NoSuchElementException;
  */
 public class FrameSequenceBuilder
 {
-  private final StorageAdapter adapter;
+  private final CursorFactory cursorFactory;
 
   private FrameType frameType = null;
   private MemoryAllocator allocator = HeapMemoryAllocator.unlimited();
@@ -57,14 +57,14 @@ public class FrameSequenceBuilder
   private int maxRowsPerFrame = Integer.MAX_VALUE;
   private boolean populateRowNumber = false;
 
-  private FrameSequenceBuilder(StorageAdapter adapter)
+  private FrameSequenceBuilder(CursorFactory cursorFactory)
   {
-    this.adapter = adapter;
+    this.cursorFactory = cursorFactory;
   }
 
-  public static FrameSequenceBuilder fromAdapter(final StorageAdapter adapter)
+  public static FrameSequenceBuilder fromCursorFactory(final CursorFactory cursorFactory)
   {
-    return new FrameSequenceBuilder(adapter);
+    return new FrameSequenceBuilder(cursorFactory);
   }
 
   public FrameSequenceBuilder frameType(final FrameType frameType)
@@ -109,11 +109,11 @@ public class FrameSequenceBuilder
 
     if (populateRowNumber) {
       baseSignature = RowSignature.builder()
-                                  .addAll(adapter.getRowSignature())
+                                  .addAll(cursorFactory.getRowSignature())
                                   .add(FrameTestUtil.ROW_NUMBER_COLUMN, ColumnType.LONG)
                                   .build();
     } else {
-      baseSignature = adapter.getRowSignature();
+      baseSignature = cursorFactory.getRowSignature();
     }
 
     return FrameWriters.sortableSignature(baseSignature, keyColumns);
@@ -139,7 +139,7 @@ public class FrameSequenceBuilder
       throw DruidException.defensive("Unrecognized frame type");
     }
 
-    final CursorHolder cursorHolder = FrameTestUtil.makeCursorForAdapter(adapter, populateRowNumber);
+    final CursorHolder cursorHolder = FrameTestUtil.makeCursorForCursorFactory(cursorFactory, populateRowNumber);
     final Cursor cursor = cursorHolder.asCursor();
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<Frame, Iterator<Frame>>()

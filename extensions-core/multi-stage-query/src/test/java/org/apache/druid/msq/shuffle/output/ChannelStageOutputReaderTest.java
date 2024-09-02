@@ -32,7 +32,7 @@ import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -71,9 +71,9 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     final IncrementalIndex index = TestIndex.getIncrementalTestIndex();
-    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    frameReader = FrameReader.create(adapter.getRowSignature());
-    frameList = FrameSequenceBuilder.fromAdapter(adapter)
+    final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    frameReader = FrameReader.create(cursorFactory.getRowSignature());
+    frameList = FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                                     .frameType(FrameType.ROW_BASED)
                                     .maxRowsPerFrame(IntMath.divide(index.size(), MAX_FRAMES, RoundingMode.CEILING))
                                     .frames()

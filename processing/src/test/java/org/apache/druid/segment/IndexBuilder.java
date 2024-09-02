@@ -394,7 +394,7 @@ public class IndexBuilder
   {
     // Determine row signature by building an mmapped index first.
     try (final QueryableIndex index = buildMMappedIndex()) {
-      final RowSignature signature = new QueryableIndexStorageAdapter(index).getRowSignature();
+      final RowSignature signature = new QueryableIndexCursorFactory(index).getRowSignature();
 
       return new RowBasedSegment<>(
           SegmentId.dummy("IndexBuilder"),
@@ -409,8 +409,8 @@ public class IndexBuilder
   {
     // Build mmapped index first, then copy over.
     try (final QueryableIndex index = buildMMappedIndex()) {
-      return FrameTestUtil.adapterToFrameSegment(
-          new QueryableIndexStorageAdapter(index),
+      return FrameTestUtil.cursorFactoryToFrameSegment(
+          new QueryableIndexCursorFactory(index),
           frameType,
           SegmentId.dummy("IndexBuilder")
       );

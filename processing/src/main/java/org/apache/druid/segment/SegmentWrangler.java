@@ -40,7 +40,7 @@ public interface SegmentWrangler
    * @return Segments that, collectively, contain data for dataSource. May be empty if dataSource does not exist or
    * has no data in the provided intervals. May contain data outside the provided intervals, so callers should
    * filter it down further, e.g. through the "interval" parameter of {@link CursorBuildSpec} for
-   * {@link StorageAdapter#makeCursorHolder(CursorBuildSpec)}
+   * {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
    */
   Iterable<Segment> getSegmentsForIntervals(DataSource dataSource, Iterable<Interval> intervals);
 }

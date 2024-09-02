@@ -61,9 +61,9 @@ public class TestSegmentForAs implements Segment
   }
 
   @Override
-  public StorageAdapter asStorageAdapter()
+  public CursorFactory asCursorFactory()
   {
-    return as(StorageAdapter.class);
+    return as(CursorFactory.class);
   }
 
   @SuppressWarnings("unchecked")

@@ -26,7 +26,7 @@ import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -64,7 +64,7 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
 
-    assumeNotNull("skipping: StorageAdapter not supported", base.as(StorageAdapter.class));
+    assumeNotNull("skipping: CursorFactory not supported", base.as(CursorFactory.class));
 
     LazilyDecoratedRowsAndColumns ras = new LazilyDecoratedRowsAndColumns(
         base,

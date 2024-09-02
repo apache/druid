@@ -38,10 +38,10 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -75,18 +75,18 @@ public class ScanQueryEngine
     if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(Order.NONE)) {
       return Sequences.empty();
     }
-    final boolean hasTimeout = query.context().hasTimeout();
-    final Long timeoutAt = responseContext.getTimeoutTime();
-    final StorageAdapter adapter = segment.asStorageAdapter();
-
-    if (adapter == null) {
-      throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-      );
+    if (segment.isTombstone()) {
+      return Sequences.empty();
     }
 
-    if (adapter.isFromTombstone()) {
-      return Sequences.empty();
+    final boolean hasTimeout = query.context().hasTimeout();
+    final Long timeoutAt = responseContext.getTimeoutTime();
+    final CursorFactory cursorFactory = segment.asCursorFactory();
+
+    if (cursorFactory == null) {
+      throw new ISE(
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+      );
     }
 
     final List<String> allColumns = new ArrayList<>();
@@ -99,7 +99,7 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              adapter.getRowSignature().getColumnNames(),
+              cursorFactory.getRowSignature().getColumnNames(),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
@@ -118,7 +118,7 @@ public class ScanQueryEngine
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
     if (Order.NONE != query.getTimeOrder()
         && Cursors.getTimeOrdering(cursorHolder.getOrdering()) != query.getTimeOrder()) {
       final String failureReason = StringUtils.format(

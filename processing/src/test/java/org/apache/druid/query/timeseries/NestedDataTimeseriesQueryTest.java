@@ -666,7 +666,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
                                           s -> {
-                                            final CursorHolder cursorHolder = s.asStorageAdapter()
+                                            final CursorHolder cursorHolder = s.asCursorFactory()
                                                                                .makeCursorHolder(spec);
                                             final boolean canVectorize = cursorHolder.canVectorize();
                                             cursorHolder.close();

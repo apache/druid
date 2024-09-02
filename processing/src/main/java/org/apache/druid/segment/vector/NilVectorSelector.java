@@ -20,8 +20,8 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -29,12 +29,12 @@ import java.util.Arrays;
 public class NilVectorSelector
     implements VectorValueSelector, VectorObjectSelector, SingleValueDimensionVectorSelector, IdLookup
 {
-  private static final boolean[] DEFAULT_NULLS_VECTOR = new boolean[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
-  private static final int[] DEFAULT_INT_VECTOR = new int[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
-  private static final long[] DEFAULT_LONG_VECTOR = new long[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
-  private static final float[] DEFAULT_FLOAT_VECTOR = new float[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
-  private static final double[] DEFAULT_DOUBLE_VECTOR = new double[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
-  private static final Object[] DEFAULT_OBJECT_VECTOR = new Object[QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE];
+  private static final boolean[] DEFAULT_NULLS_VECTOR = new boolean[QueryContexts.DEFAULT_VECTOR_SIZE];
+  private static final int[] DEFAULT_INT_VECTOR = new int[QueryContexts.DEFAULT_VECTOR_SIZE];
+  private static final long[] DEFAULT_LONG_VECTOR = new long[QueryContexts.DEFAULT_VECTOR_SIZE];
+  private static final float[] DEFAULT_FLOAT_VECTOR = new float[QueryContexts.DEFAULT_VECTOR_SIZE];
+  private static final double[] DEFAULT_DOUBLE_VECTOR = new double[QueryContexts.DEFAULT_VECTOR_SIZE];
+  private static final Object[] DEFAULT_OBJECT_VECTOR = new Object[QueryContexts.DEFAULT_VECTOR_SIZE];
 
   static {
     Arrays.fill(DEFAULT_NULLS_VECTOR, NullHandling.sqlCompatible());
@@ -69,7 +69,7 @@ public class NilVectorSelector
 
   public static NilVectorSelector create(final VectorSizeInspector vectorSizeInspector)
   {
-    if (vectorSizeInspector.getMaxVectorSize() <= QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE) {
+    if (vectorSizeInspector.getMaxVectorSize() <= QueryContexts.DEFAULT_VECTOR_SIZE) {
       // Reuse static vars when possible.
       return new NilVectorSelector(
           vectorSizeInspector,

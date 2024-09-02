@@ -26,10 +26,10 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -45,13 +45,13 @@ import java.util.function.Supplier;
 
 public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHandlingTest
 {
-  private StorageAdapter adapter;
+  private CursorFactory cursorFactory;
 
   @Before
   public void setUp()
   {
     final QueryableIndex index = TestIndex.getMMappedTestIndex();
-    adapter = new QueryableIndexStorageAdapter(index);
+    cursorFactory = new QueryableIndexCursorFactory(index);
   }
 
   @Test
@@ -180,7 +180,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
                                                          )
                                                      )
                                                      .build();
-    return adapter.makeCursorHolder(buildSpec);
+    return cursorFactory.makeCursorHolder(buildSpec);
   }
 
   private List<Object> readColumn(final String column, final int limit)

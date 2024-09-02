@@ -35,7 +35,6 @@ import org.apache.druid.query.monomorphicprocessing.StringRuntimeShape;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.FilteredOffset;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.Offset;
@@ -212,12 +211,12 @@ public class PooledTopNAlgorithm
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
-      StorageAdapter storageAdapter,
       TopNQuery query,
+      TopNCursorInspector cursorInspector,
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    super(storageAdapter);
+    super(cursorInspector);
     this.query = query;
     this.bufferPool = bufferPool;
   }
@@ -232,11 +231,7 @@ public class PooledTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
     }
 
-    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(
-        dimSelector,
-        query,
-        storageAdapter
-    )
+    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(dimSelector, query, cursorInspector)
     {
       private final int[] positions = new int[cardinality];
 

@@ -97,8 +97,8 @@ public interface VectorColumnProcessorFactory<T>
   T makeObjectProcessor(@SuppressWarnings("unused") ColumnCapabilities capabilities, VectorObjectSelector selector);
 
   /**
-   * The processor factory can influence the decision on whether or not to prefer a dictionary encoded column value
-   * selector over a an object selector by examining the {@link ColumnCapabilities}.
+   * The processor factory can influence the decision on whether to prefer a dictionary encoded column value selector
+   * over an object selector by examining the {@link ColumnCapabilities}.
    *
    * By default, all processor factories prefer to use a dictionary encoded selector if the column has a dictionary
    * available ({@link ColumnCapabilities#isDictionaryEncoded()} is true), and there is a unique mapping of dictionary

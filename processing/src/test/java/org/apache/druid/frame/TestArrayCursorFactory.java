@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame;
 
-import com.google.common.collect.Iterables;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -32,7 +31,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -44,11 +43,12 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 /**
- * Storage adapter around {@link QueryableIndex} that transforms all multi-value strings columns into string arrays.
+ * {@link org.apache.druid.segment.CursorFactory} around {@link QueryableIndex} that transforms all multi-value strings
+ * columns into string arrays.
  */
-public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
+public class TestArrayCursorFactory extends QueryableIndexCursorFactory
 {
-  public TestArrayStorageAdapter(QueryableIndex index)
+  public TestArrayCursorFactory(QueryableIndex index)
   {
     super(index);
   }
@@ -88,7 +88,7 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
     final RowSignature.Builder builder = RowSignature.builder();
     builder.addTimeColumn();
 
-    for (final String column : Iterables.concat(super.getAvailableDimensions(), super.getAvailableMetrics())) {
+    for (final String column : super.getRowSignature().getColumnNames()) {
       ColumnCapabilities columnCapabilities = super.getColumnCapabilities(column);
       ColumnType columnType = columnCapabilities == null ? null : columnCapabilities.toColumnType();
       //change MV strings columns to Array<String>
@@ -188,7 +188,7 @@ public class TestArrayStorageAdapter extends QueryableIndexStorageAdapter
         @Override
         public ColumnCapabilities getColumnCapabilities(String column)
         {
-          return TestArrayStorageAdapter.this.getColumnCapabilities(column);
+          return TestArrayCursorFactory.this.getColumnCapabilities(column);
         }
       };
     }

@@ -45,8 +45,8 @@ import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinTestHelper;
@@ -1491,17 +1491,17 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
             signature
         )
     )) {
-      final StorageAdapter adapter = segment.asStorageAdapter();
-      return makeChannelFromAdapter(adapter, keyColumns);
+      final CursorFactory cursorFactory = segment.asCursorFactory();
+      return makeChannelFromCursorFactory(cursorFactory, keyColumns);
     }
   }
 
-  private ReadableInput makeChannelFromAdapter(
-      final StorageAdapter adapter,
+  private ReadableInput makeChannelFromCursorFactory(
+      final CursorFactory cursorFactory,
       final List<KeyColumn> keyColumns
   ) throws IOException
   {
-    return makeChannelFromAdapter(adapter, keyColumns, rowsPerInputFrame);
+    return makeChannelFromCursorFactory(cursorFactory, keyColumns, rowsPerInputFrame);
   }
 
   private FrameWriterFactory makeFrameWriterFactory(final RowSignature signature)

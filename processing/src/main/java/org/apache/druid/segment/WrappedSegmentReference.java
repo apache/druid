@@ -28,25 +28,21 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * This class is used as a wrapper for other classes that just want to
  * modify the storage adapter for a datasource. Examples include:
  * {@link org.apache.druid.query.UnnestDataSource}, {@link FilteredDataSource}
  */
-public class WrappedSegmentReference implements SegmentReference
+public abstract class WrappedSegmentReference implements SegmentReference
 {
-  private final SegmentReference delegate;
-  private final Function<StorageAdapter, StorageAdapter> storageAdapterWrapperFunction;
+  protected final SegmentReference delegate;
 
   public WrappedSegmentReference(
-      SegmentReference delegate,
-      Function<StorageAdapter, StorageAdapter> storageAdapterWrapperFunction
+      SegmentReference delegate
   )
   {
     this.delegate = delegate;
-    this.storageAdapterWrapperFunction = storageAdapterWrapperFunction;
   }
 
   @Override
@@ -74,12 +70,6 @@ public class WrappedSegmentReference implements SegmentReference
     return delegate.asQueryableIndex();
   }
 
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return storageAdapterWrapperFunction.apply(delegate.asStorageAdapter());
-  }
-
   @Nullable
   @Override
   public <T> T as(@Nonnull Class<T> clazz)
@@ -92,9 +82,21 @@ public class WrappedSegmentReference implements SegmentReference
   }
 
   @Override
+  public boolean isTombstone()
+  {
+    return delegate.isTombstone();
+  }
+
+  @Override
   public void close() throws IOException
   {
     delegate.close();
+  }
+
+  @Override
+  public String asString()
+  {
+    return delegate.asString();
   }
 }
 

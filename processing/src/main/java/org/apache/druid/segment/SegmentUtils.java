@@ -28,6 +28,9 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -41,8 +44,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Utility methods useful for implementing deep storage extensions.
@@ -104,6 +110,31 @@ public class SegmentUtils
         segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
     );
     return intervalToSegments;
+  }
+
+  /**
+   * Uses {@link Segment#asCursorFactory()} to get {@link CursorFactory#getRowSignature()} and {@link Segment#as(Class)}
+   * to try to get a {@link Metadata} to return the list of all column names which are not present in
+   * {@link Metadata#getAggregators()}
+   */
+  public static Iterable<String> getDimensionColumnNames(Segment segment)
+  {
+    final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+    final Set<String> dims = new LinkedHashSet<>();
+    final Set<String> ignore = new HashSet<>();
+    ignore.add(ColumnHolder.TIME_COLUMN_NAME);
+    final Metadata metadata = segment.as(Metadata.class);
+    if (metadata != null && metadata.getAggregators() != null) {
+      for (AggregatorFactory factory : metadata.getAggregators()) {
+        ignore.add(factory.getName());
+      }
+    }
+    for (String columnName : rowSignature.getColumnNames()) {
+      if (!ignore.contains(columnName)) {
+        dims.add(columnName);
+      }
+    }
+    return dims;
   }
 
   private SegmentUtils()

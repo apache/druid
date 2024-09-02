@@ -25,7 +25,7 @@ import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.segment.FrameFilteredOffset;
-import org.apache.druid.frame.segment.row.RowFrameCursorHolderFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorFactory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.Order;
@@ -35,11 +35,12 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.CursorHolderFactory;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
@@ -54,19 +55,19 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A {@link CursorHolderFactory} implementation based on a single columnar {@link Frame}.
+ * A {@link CursorFactory} implementation based on a single columnar {@link Frame}.
  *
  * This class is only used for columnar frames. It is not used for row-based frames.
  *
- * @see RowFrameCursorHolderFactory the row-based version
+ * @see RowFrameCursorFactory the row-based version
  */
-public class ColumnarFrameCursorHolderFactory implements CursorHolderFactory
+public class ColumnarFrameCursorFactory implements CursorFactory
 {
   private final Frame frame;
   private final RowSignature signature;
   private final List<FrameColumnReader> columnReaders;
 
-  public ColumnarFrameCursorHolderFactory(
+  public ColumnarFrameCursorFactory(
       final Frame frame,
       final RowSignature signature,
       final List<FrameColumnReader> columnReaders
@@ -178,5 +179,26 @@ public class ColumnarFrameCursorHolderFactory implements CursorHolderFactory
         CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    return signature;
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    final int columnNumber = signature.indexOf(column);
+
+    if (columnNumber < 0) {
+      return null;
+    } else {
+      // Better than frameReader.frameSignature().getColumnCapabilities(columnName), because this method has more
+      // insight into what's actually going on with this column (nulls, multivalue, etc).
+      return columnReaders.get(columnNumber).readColumn(frame).getCapabilities();
+    }
   }
 }

@@ -46,9 +46,10 @@ import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -62,11 +63,11 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
   @Test
   public void test_runWithInputChannel() throws Exception
   {
-    final IncrementalIndexStorageAdapter adapter =
-        new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+    final CursorFactory cursorFactory =
+        new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
     final FrameSequenceBuilder frameSequenceBuilder =
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(5)
                             .frameType(FrameType.ROW_BASED)
                             .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
@@ -86,7 +87,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         Druids.newScanQueryBuilder()
               .dataSource("test")
               .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
-              .columns(adapter.getRowSignature().getColumnNames())
+              .columns(cursorFactory.getRowSignature().getColumnNames())
               .build();
 
     final StagePartition stagePartition = new StagePartition(new StageId("query", 0), 0);
@@ -138,7 +139,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     );
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, signature, false),
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory, signature, false),
         rowsFromProcessor
     );
 

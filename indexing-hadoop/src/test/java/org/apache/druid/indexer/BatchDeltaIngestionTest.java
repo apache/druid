@@ -44,12 +44,11 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -401,10 +400,9 @@ public class BatchDeltaIngestionTest
     new LocalDataSegmentPuller().getSegmentFiles(indexZip, tmpUnzippedSegmentDir);
 
     QueryableIndex index = INDEX_IO.loadIndex(tmpUnzippedSegmentDir);
-    StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
     DatasourceRecordReader.SegmentReader segmentReader = new DatasourceRecordReader.SegmentReader(
-        ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
+        ImmutableList.of(new WindowedCursorFactory(new QueryableIndexCursorFactory(index), windowedDataSegment.getInterval())),
         TransformSpec.NONE,
         expectedDimensions,
         expectedMetrics,

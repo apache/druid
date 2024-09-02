@@ -42,9 +42,8 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -160,7 +159,8 @@ public class ExpressionSelectorBenchmark
                                                          )
                                                      )
                                                      .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
@@ -171,7 +171,8 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFloorUsingExtractionFn(Blackhole blackhole)
   {
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       final DimensionSelector selector = cursor
@@ -190,15 +191,15 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFloorUsingCursor(Blackhole blackhole)
   {
-    final StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final CursorGranularizer granularizer = CursorGranularizer.create(
           cursor,
           QueryableIndexTimeBoundaryInspector.create(index),
           Cursors.getTimeOrdering(index.getOrdering()),
           Granularities.HOUR,
-          adapter.getInterval()
+          index.getDataInterval()
       );
       final Sequence<Long> results =
           Sequences.simple(granularizer.getBucketIterable())
@@ -241,7 +242,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor.getColumnSelectorFactory().makeDimensionSelector(
           DefaultDimensionSpec.of("v")
@@ -253,7 +255,8 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void timeFormatUsingExtractionFn(Blackhole blackhole)
   {
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -284,7 +287,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -307,7 +311,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -320,7 +325,8 @@ public class ExpressionSelectorBenchmark
   @Benchmark
   public void strlenUsingExtractionFn(Blackhole blackhole)
   {
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -346,7 +352,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -368,7 +375,8 @@ public class ExpressionSelectorBenchmark
                                                          )
                                                      )
                                                      .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -390,7 +398,8 @@ public class ExpressionSelectorBenchmark
                                                          )
                                                      )
                                                      .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -412,7 +421,8 @@ public class ExpressionSelectorBenchmark
                                                          )
                                                      )
                                                      .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -447,7 +457,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -476,7 +487,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);
@@ -513,7 +525,8 @@ public class ExpressionSelectorBenchmark
                                                      )
                                                      .build();
 
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("v");
       consumeLong(cursor, selector, blackhole);

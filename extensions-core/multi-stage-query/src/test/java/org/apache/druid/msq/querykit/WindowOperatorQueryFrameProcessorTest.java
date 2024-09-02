@@ -47,8 +47,8 @@ import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.query.operator.window.ranking.WindowRowNumberProcessor;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
@@ -222,14 +222,14 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         signature
     );
 
-    return makeChannelFromAdapter(segment.asStorageAdapter(), keyColumns);
+    return makeChannelFromCursorFactory(segment.asCursorFactory(), keyColumns);
   }
 
-  private ReadableInput makeChannelFromAdapter(
-      final StorageAdapter adapter,
+  private ReadableInput makeChannelFromCursorFactory(
+      final CursorFactory cursorFactory,
       final List<KeyColumn> keyColumns
   ) throws IOException
   {
-    return makeChannelFromAdapter(adapter, keyColumns, 1000);
+    return makeChannelFromCursorFactory(cursorFactory, keyColumns, 1000);
   }
 }

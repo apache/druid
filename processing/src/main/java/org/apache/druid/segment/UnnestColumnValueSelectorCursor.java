@@ -203,7 +203,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
       public ColumnCapabilities getColumnCapabilities(String column)
       {
         if (outputName.equals(column)) {
-          return UnnestStorageAdapter.computeOutputColumnCapabilities(baseColumnSelectorFactory, unnestColumn);
+          return UnnestCursorFactory.computeOutputColumnCapabilities(baseColumnSelectorFactory, unnestColumn);
         }
 
         return baseColumnSelectorFactory.getColumnCapabilities(column);

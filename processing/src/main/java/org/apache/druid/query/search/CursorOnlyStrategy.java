@@ -26,10 +26,10 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.search.SearchQueryRunner.SearchColumnSelectorStrategy;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.Filters;
 
 import java.util.List;
@@ -51,13 +51,14 @@ public class CursorOnlyStrategy extends SearchStrategy
   @Override
   public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
-    final StorageAdapter adapter = segment.asStorageAdapter();
-    final List<DimensionSpec> dimensionSpecs = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
-    return ImmutableList.of(new CursorBasedExecutor(
-        query,
-        segment,
-        dimensionSpecs
-    ));
+    final List<DimensionSpec> dimensionSpecs = getDimsToSearch(segment, query.getDimensions());
+    return ImmutableList.of(
+        new CursorBasedExecutor(
+            query,
+            segment,
+            dimensionSpecs
+        )
+    );
   }
 
   public static class CursorBasedExecutor extends SearchQueryExecutor
@@ -74,7 +75,7 @@ public class CursorOnlyStrategy extends SearchStrategy
     @Override
     public Object2IntRBTreeMap<SearchHit> execute(final int limit)
     {
-      final StorageAdapter adapter = segment.asStorageAdapter();
+      final CursorFactory adapter = segment.asCursorFactory();
       final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                        .setInterval(query.getSingleInterval())
                                                        .setFilter(

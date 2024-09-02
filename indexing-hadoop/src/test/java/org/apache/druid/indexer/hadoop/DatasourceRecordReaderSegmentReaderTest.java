@@ -36,22 +36,22 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.filter.SpatialDimFilter;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,8 +61,10 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  */
@@ -134,10 +136,12 @@ public class DatasourceRecordReaderSegmentReaderTest
             .setMaxRowCount(5000)
             .build()
     ) {
-      final StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
-      final WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
+      final WindowedCursorFactory ws = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(qi),
+          qi.getDataInterval()
+      );
       final DatasourceRecordReader.SegmentReader segmentReader = new DatasourceRecordReader.SegmentReader(
-          ImmutableList.of(wsa, wsa),
+          ImmutableList.of(ws, ws),
           TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),
@@ -162,15 +166,19 @@ public class DatasourceRecordReaderSegmentReaderTest
 
       // Check the index
       Assert.assertEquals(9, index.size());
-      final IncrementalIndexStorageAdapter queryable = new IncrementalIndexStorageAdapter(index);
-      Assert.assertEquals(2, queryable.getAvailableDimensions().size());
-      Assert.assertEquals("host", queryable.getAvailableDimensions().get(0));
-      Assert.assertEquals("spatial", queryable.getAvailableDimensions().get(1));
-      Assert.assertEquals(ImmutableList.of("visited_sum", "unique_hosts"), queryable.getAvailableMetrics());
+      final IncrementalIndexSegment queryable = new IncrementalIndexSegment(index, SegmentId.dummy("test"));
+      final List<String> dimensions = index.getDimensionNames(false);
+      Assert.assertEquals(2, dimensions.size());
+      Assert.assertEquals("host", dimensions.get(0));
+      Assert.assertEquals("spatial", dimensions.get(1));
+      Assert.assertEquals(
+          ImmutableList.of("visited_sum", "unique_hosts"),
+          Arrays.stream(index.getMetricAggs()).map(AggregatorFactory::getName).collect(Collectors.toList())
+      );
 
       // Do a spatial filter
       final DatasourceRecordReader.SegmentReader segmentReader2 = new DatasourceRecordReader.SegmentReader(
-          ImmutableList.of(new WindowedStorageAdapter(queryable, Intervals.of("2000/3000"))),
+          ImmutableList.of(new WindowedCursorFactory(queryable.asCursorFactory(), Intervals.of("2000/3000"))),
           TransformSpec.NONE,
           ImmutableList.of("host", "spatial"),
           ImmutableList.of("visited_sum", "unique_hosts"),

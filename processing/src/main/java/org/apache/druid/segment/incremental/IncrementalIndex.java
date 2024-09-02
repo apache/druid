@@ -98,11 +98,11 @@ import java.util.stream.Collectors;
 
 /**
  * In-memory, row-based data structure used to hold data during ingestion. Realtime tasks query this index using
- * {@link IncrementalIndexStorageAdapter}.
+ * {@link IncrementalIndexCursorFactory}.
  *
  * Concurrency model: {@link #add(InputRow)} and {@link #add(InputRow, boolean)} are not thread-safe, and must be
  * called from a single thread or externally synchronized. However, the methods that support
- * {@link IncrementalIndexStorageAdapter} are thread-safe, and may be called concurrently with each other, and with
+ * {@link IncrementalIndexCursorFactory} are thread-safe, and may be called concurrently with each other, and with
  * the "add" methods. This concurrency model supports real-time queries of the data in the index.
  */
 public abstract class IncrementalIndex implements Iterable<Row>, Closeable, ColumnInspector

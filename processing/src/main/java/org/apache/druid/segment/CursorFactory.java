@@ -19,100 +19,36 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.segment.vector.VectorCursor;
-import org.joda.time.Interval;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 
-/**
- * Interface extended by {@link StorageAdapter}, which gives them the power to create cursors.
- *
- * @see StorageAdapter
- *
- * @deprecated This interface is deprecated and no longer implemented by any built-in {@link StorageAdapter}. Callers
- * should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead. Implementors should implement
- * {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead.
- */
-@Deprecated
-public interface CursorFactory
+public interface CursorFactory extends ColumnInspector
 {
-  /**
-   * Returns true if the provided combination of parameters can be handled by "makeVectorCursor".
-   *
-   * Query engines should use this before running in vectorized mode, and be prepared to fall back to non-vectorized
-   * mode if this method returns false.
-   *
-   * @deprecated Callers should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} and call
-   * {@link CursorHolder#canVectorize()}.
-   * Implementors should implement {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead.  This method is
-   * no longer implemented by any built-in factories.
-   */
-  @Deprecated
-  default boolean canVectorize(
-      @Nullable Filter filter,
-      VirtualColumns virtualColumns,
-      boolean descending
-  )
-  {
-    throw DruidException.defensive(
-        "CursorFactory.canVectorize is no longer supported, use CursorHolderFactory.makeCursorHolder instead"
-    );
-  }
+  CursorHolder makeCursorHolder(CursorBuildSpec spec);
 
   /**
-   * Creates a sequence of Cursors, one for each time-granular bucket (based on the provided Granularity).
-   *
-   * @deprecated Callers should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} and call
-   * {@link CursorHolder#asCursor()}.
-   * Implementors should implement {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead.
-   * This method is no longer implemented by any built-in factories.
+   * Returns the {@link RowSignature} of the data available from this cursor factory. For mutable segments, even though
+   * the signature may evolve over time, any particular object returned by this method is an immutable snapshot.
    */
-  @Deprecated
-  default Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    throw DruidException.defensive(
-        "CursorFactory.makeCursors is no longer supported, use CursorHolderFactory.makeCursorHolder instead"
-    );
-  }
+  RowSignature getRowSignature();
 
   /**
-   * Creates a VectorCursor. Unlike the Cursor returned by "makeCursor", there is just one of these. Hence, this method
-   * does not take a "granularity" parameter. Before calling this method, check "canVectorize" to see if the call you
-   * are about to make will throw an error or not.
+   * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
+   * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
+   * columns.
    *
-   * Returns null if there is no data to walk over (for example, if the "interval" does not overlap the data interval
-   * of this segment).
+   * Note that CursorFactory are representations of "real" segments, so they are not aware of any virtual columns
+   * that may be involved in a query. In general, query engines should instead use the method
+   * {@link ColumnSelectorFactory#getColumnCapabilities(String)}, which returns capabilities for virtual columns as
+   * well.
    *
-   * @deprecated Callers should use {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} and call
-   * {@link CursorHolder#asVectorCursor()}. Implementors should implement
-   * {@link CursorHolderFactory#makeCursorHolder(CursorBuildSpec)} instead. This method is no longer implemented by any
-   * built-in factories.
+   * @param column column name
+   *
+   * @return capabilities, or null
    */
-  @Deprecated
+  @Override
   @Nullable
-  default VectorCursor makeVectorCursor(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      boolean descending,
-      int vectorSize,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    throw DruidException.defensive(
-        "CursorFactory.makeVectorCursor is no longer supported, use CursorHolderFactory.makeCursorHolder instead"
-    );
-  }
+  ColumnCapabilities getColumnCapabilities(String column);
 }

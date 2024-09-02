@@ -17,13 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.segment.realtime;
 
-/**
- * @deprecated use {@link Segment} directly as this does nothing
- */
-@Deprecated
-public abstract class AbstractSegment implements Segment
+import org.apache.druid.segment.CursorFactory;
+import org.joda.time.Interval;
+
+public class WindowedCursorFactory
 {
-  // i used to have a purpose
+  private final CursorFactory cursorFactory;
+  private final Interval interval;
+
+  public WindowedCursorFactory(CursorFactory cursorFactory, Interval interval)
+  {
+    this.cursorFactory = cursorFactory;
+    this.interval = interval;
+  }
+
+  public CursorFactory getCursorFactory()
+  {
+    return cursorFactory;
+  }
+
+  public Interval getInterval()
+  {
+    return interval;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "WindowedCursorFactory{" +
+           "cursorFactory=" + cursorFactory +
+           ", interval=" + interval +
+           '}';
+  }
 }

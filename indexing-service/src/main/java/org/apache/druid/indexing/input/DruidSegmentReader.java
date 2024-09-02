@@ -49,15 +49,17 @@ import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
@@ -118,18 +120,18 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator() throws IOException
   {
     final CleanableFile segmentFile = source().fetch(temporaryDirectory, null);
-    final WindowedStorageAdapter storageAdapter = new WindowedStorageAdapter(
-        new QueryableIndexStorageAdapter(
-            indexIO.loadIndex(segmentFile.file())
-        ),
+    final QueryableIndex queryableIndex = indexIO.loadIndex(segmentFile.file());
+    final WindowedCursorFactory windowedCursorFactory = new WindowedCursorFactory(
+        new QueryableIndexCursorFactory(queryableIndex),
         intervalFilter
     );
     final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
                                                            .setFilter(Filters.toFilter(dimFilter))
-                                                           .setInterval(storageAdapter.getInterval())
+                                                           .setInterval(windowedCursorFactory.getInterval())
                                                            .build();
 
-    final CursorHolder cursorHolder = storageAdapter.getAdapter().makeCursorHolder(cursorBuildSpec);
+    final CursorFactory cursorFactory = windowedCursorFactory.getCursorFactory();
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(cursorBuildSpec);
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return CloseableIterators.wrap(Collections.emptyIterator(), cursorHolder);
@@ -138,10 +140,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
     // Retain order of columns from the original segments. Useful for preserving dimension order if we're in
     // schemaless mode.
     final Set<String> columnsToRead = Sets.newLinkedHashSet(
-        Iterables.filter(
-            storageAdapter.getAdapter().getRowSignature().getColumnNames(),
-            columnsFilter::apply
-        )
+        Iterables.filter(cursorFactory.getRowSignature().getColumnNames(), columnsFilter::apply)
     );
 
     final Sequence<Map<String, Object>> sequence = cursorToSequence(cursor, columnsToRead).withBaggage(cursorHolder);

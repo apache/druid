@@ -25,10 +25,8 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.segment.columnar.FrameQueryableIndex;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -39,6 +37,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
@@ -114,22 +113,22 @@ public class FrameBasedIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    final Sequence<FrameStorageAdapter> storageAdapters = Sequences.simple(
+    final Sequence<CursorFactory> cursorFactories = Sequences.simple(
         frameBasedInlineDataSource
             .getFrames()
             .stream()
             .map(frameSignaturePair -> {
               Frame frame = frameSignaturePair.getFrame();
               RowSignature rowSignature = frameSignaturePair.getRowSignature();
-              return new FrameStorageAdapter(frame, FrameReader.create(rowSignature), Intervals.ETERNITY);
+              return FrameReader.create(rowSignature).makeCursorFactory(frame);
             })
             .collect(Collectors.toList())
     );
 
     final Sequence<Integer> sequence = Sequences.map(
-        storageAdapters,
-        storageAdapter -> {
-          try (final CursorHolder holder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        cursorFactories,
+        cursorFactory -> {
+          try (final CursorHolder holder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
             final Cursor cursor = holder.asCursor();
             if (cursor == null) {
               return 0;

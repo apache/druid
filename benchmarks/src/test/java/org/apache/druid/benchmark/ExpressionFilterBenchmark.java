@@ -35,7 +35,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -148,7 +148,9 @@ public class ExpressionFilterBenchmark
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(expressionFilter.toFilter())
                                                      .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
 
 
@@ -166,7 +168,9 @@ public class ExpressionFilterBenchmark
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(nativeFilter.toFilter())
                                                      .build();
-    try (final CursorHolder cursorHolder = new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       final ColumnValueSelector selector = cursor.getColumnSelectorFactory().makeColumnValueSelector("x");
       while (!cursor.isDone()) {

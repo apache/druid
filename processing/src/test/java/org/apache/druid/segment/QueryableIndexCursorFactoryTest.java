@@ -40,7 +40,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 
-public class QueryableIndexStorageAdapterTest
+public class QueryableIndexCursorFactoryTest
 {
   @RunWith(Parameterized.class)
   public static class DimensionDictionarySelectorTest extends InitializedNullHandlingTest
@@ -68,9 +68,9 @@ public class QueryableIndexStorageAdapterTest
     public void setUp()
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
-      final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
+      final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
       if (vectorize) {
-        final VectorCursor cursor = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)).asVectorCursor();
+        final VectorCursor cursor = closer.register(cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)).asVectorCursor();
 
         final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -81,7 +81,7 @@ public class QueryableIndexStorageAdapterTest
         partialNullSelector =
             columnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of("partial_null_column"));
       } else {
-        final CursorHolder cursorHolder = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+        final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
         final Cursor cursor = cursorHolder.asCursor();
         final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
@@ -225,8 +225,8 @@ public class QueryableIndexStorageAdapterTest
     public void setUp()
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
-      final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index);
-      final CursorHolder cursorHolder = closer.register(adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
+      final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+      final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN));
       cursor = cursorHolder.asCursor();
       columnSelectorFactory = cursor.getColumnSelectorFactory();
     }

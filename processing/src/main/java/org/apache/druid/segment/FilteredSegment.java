@@ -19,7 +19,38 @@
 
 package org.apache.druid.segment;
 
-public interface CursorHolderFactory
+import org.apache.druid.query.filter.DimFilter;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class FilteredSegment extends WrappedSegmentReference
 {
-  CursorHolder makeCursorHolder(CursorBuildSpec spec);
+  @Nullable
+  private final DimFilter filter;
+
+  public FilteredSegment(
+      SegmentReference delegate,
+      @Nullable DimFilter filter
+  )
+  {
+    super(delegate);
+    this.filter = filter;
+  }
+
+  @Override
+  public CursorFactory asCursorFactory()
+  {
+    return new FilteredCursorFactory(delegate.asCursorFactory(), filter);
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(@Nonnull Class<T> clazz)
+  {
+    if (TopNOptimizationInspector.class.equals(clazz)) {
+      return (T) new SimpleTopNOptimizationInspector(filter != null);
+    }
+    return super.as(clazz);
+  }
 }

@@ -34,9 +34,9 @@ import java.util.Map;
 
 /**
  * Direct interface to memory mapped segments. Not a public API for extensions; site specific queries should be
- * using {@link StorageAdapter}.
+ * using {@link CursorFactory}.
  *
- * @see QueryableIndexStorageAdapter for query path adapter
+ * @see QueryableIndexCursorFactory for query path adapter
  * @see QueryableIndexIndexableAdapter for indexing path adapter
  */
 public interface QueryableIndex extends Closeable, ColumnInspector
@@ -48,7 +48,8 @@ public interface QueryableIndex extends Closeable, ColumnInspector
    */
   Indexed<String> getAvailableDimensions();
   BitmapFactory getBitmapFactoryForDimensions();
-  @Nullable Metadata getMetadata();
+  @Nullable
+  Metadata getMetadata();
 
   /**
    * Map of column name to {@link DimensionHandler}, whose contents and iteration order matches

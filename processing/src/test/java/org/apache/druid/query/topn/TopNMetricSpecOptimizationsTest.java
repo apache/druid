@@ -30,17 +30,11 @@ import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -76,15 +70,13 @@ public class TopNMetricSpecOptimizationsTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
-    StorageAdapter adapter =
-        makeFakeStorageAdapter("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality);
     DimensionSelector dimSelector = makeFakeDimSelector(cardinality);
 
     BaseTopNAlgorithm.AggregatorArrayProvider arrayProviderToTest = new BaseTopNAlgorithm.AggregatorArrayProvider(
         dimSelector,
         query,
-        cardinality,
-        adapter
+        makeCursorInspector("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality),
+        cardinality
     );
 
     arrayProviderToTest.ignoreAfterThreshold();
@@ -110,16 +102,14 @@ public class TopNMetricSpecOptimizationsTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
-    StorageAdapter adapter =
-        makeFakeStorageAdapter("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality);
     DimensionSelector dimSelector = makeFakeDimSelector(cardinality);
 
 
     BaseTopNAlgorithm.AggregatorArrayProvider arrayProviderToTest = new BaseTopNAlgorithm.AggregatorArrayProvider(
         dimSelector,
         query,
-        cardinality,
-        adapter
+        makeCursorInspector("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality),
+        cardinality
     );
 
     arrayProviderToTest.ignoreAfterThreshold();
@@ -145,16 +135,14 @@ public class TopNMetricSpecOptimizationsTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
-    StorageAdapter adapter =
-        makeFakeStorageAdapter("2018-05-30T00:00:00Z", "2018-05-31T00:00:00Z", cardinality);
     DimensionSelector dimSelector = makeFakeDimSelector(cardinality);
 
 
     BaseTopNAlgorithm.AggregatorArrayProvider arrayProviderToTest = new BaseTopNAlgorithm.AggregatorArrayProvider(
         dimSelector,
         query,
-        cardinality,
-        adapter
+        makeCursorInspector("2018-05-30T00:00:00Z", "2018-05-31T00:00:00Z", cardinality),
+        cardinality
     );
 
     arrayProviderToTest.ignoreAfterThreshold();
@@ -181,15 +169,13 @@ public class TopNMetricSpecOptimizationsTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
-    StorageAdapter adapter =
-        makeFakeStorageAdapter("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality);
     DimensionSelector dimSelector = makeFakeDimSelector(cardinality);
 
     BaseTopNAlgorithm.AggregatorArrayProvider arrayProviderToTest = new BaseTopNAlgorithm.AggregatorArrayProvider(
         dimSelector,
         query,
-        cardinality,
-        adapter
+        makeCursorInspector("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality),
+        cardinality
     );
 
     arrayProviderToTest.ignoreAfterThreshold();
@@ -215,17 +201,13 @@ public class TopNMetricSpecOptimizationsTest
         .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
         .build();
 
-
-    StorageAdapter adapter =
-        makeFakeStorageAdapter("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality);
-
     DimensionSelector dimSelector = makeFakeDimSelector(cardinality);
 
     BaseTopNAlgorithm.AggregatorArrayProvider arrayProviderToTest = new BaseTopNAlgorithm.AggregatorArrayProvider(
         dimSelector,
         query,
-        cardinality,
-        adapter
+        makeCursorInspector("2018-05-30T00:00:00Z", "2018-05-30T01:00:00Z", cardinality),
+        cardinality
     );
 
     Pair<Integer, Integer> thePair = arrayProviderToTest.computeStartEnd(cardinality);
@@ -233,85 +215,22 @@ public class TopNMetricSpecOptimizationsTest
     Assert.assertEquals(new Integer(cardinality), thePair.rhs);
   }
 
-  private StorageAdapter makeFakeStorageAdapter(String start, String end, int cardinality)
+  private TopNCursorInspector makeCursorInspector(String start, String end, int cardinality)
   {
-    StorageAdapter adapter = new StorageAdapter()
-    {
-      @Override
-      public Interval getInterval()
-      {
-        return Intervals.of(start + "/" + end);
-      }
-
-      @Override
-      public int getDimensionCardinality(String column)
-      {
-        return cardinality;
-      }
-
-      // stubs below this line not important for tests
-
-      @Override
-      public Indexed<String> getAvailableDimensions()
-      {
-        return null;
-      }
-
-      @Override
-      public Iterable<String> getAvailableMetrics()
-      {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Comparable getMinValue(String column)
-      {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public Comparable getMaxValue(String column)
-      {
-        return null;
-      }
-
-      @Nullable
-      @Override
-      public ColumnCapabilities getColumnCapabilities(String column)
-      {
-        return null;
-      }
-
-      @Override
-      public int getNumRows()
-      {
-        return 0;
-      }
-
-      @Override
-      public Metadata getMetadata()
-      {
-        return null;
-      }
-
-      @Override
-      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
-      {
-        return new CursorHolder()
+    return new TopNCursorInspector(
+        new ColumnInspector()
         {
           @Nullable
           @Override
-          public Cursor asCursor()
+          public ColumnCapabilities getColumnCapabilities(String column)
           {
             return null;
           }
-        };
-      }
-    };
-
-    return adapter;
+        },
+        null,
+        Intervals.of(start + "/" + end),
+        cardinality
+    );
   }
 
   private DimensionSelector makeFakeDimSelector(int cardinality)

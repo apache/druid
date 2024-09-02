@@ -37,6 +37,11 @@ public interface ColumnInspector extends Expr.InputBindingInspector
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
 
+  default int getColumnValueCardinality(String column)
+  {
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+  }
+
   @Nullable
   @Override
   default ExpressionType getType(String name)

@@ -85,7 +85,7 @@ public class DataSourceMetadataQueryRunnerFactory
 
     public DataSourceMetadataQueryRunner(Segment segment)
     {
-      this.segmentInterval = segment.asStorageAdapter().getInterval();
+      this.segmentInterval = segment.getDataInterval();
       this.inspector = segment.as(MaxIngestedEventTimeInspector.class);
     }
 

@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 import java.util.function.ToLongFunction;
 
 /**
- * A {@link Cursor} that is based on a stream of objects. Generally created by a {@link RowBasedStorageAdapter}.
+ * A {@link Cursor} that is based on a stream of objects. Generally created by a {@link RowBasedCursorFactory}.
  *
  * @see RowBasedSegment#RowBasedSegment for implementation notes
  */

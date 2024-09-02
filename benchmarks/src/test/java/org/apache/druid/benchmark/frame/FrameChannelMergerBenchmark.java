@@ -284,7 +284,7 @@ public class FrameChannelMergerBenchmark
               signature
           );
       final Sequence<Frame> frameSequence =
-          FrameSequenceBuilder.fromAdapter(segment.asStorageAdapter())
+          FrameSequenceBuilder.fromCursorFactory(segment.asCursorFactory())
                               .allocator(ArenaMemoryAllocator.createOnHeap(10_000_000))
                               .frameType(FrameType.ROW_BASED)
                               .frames();

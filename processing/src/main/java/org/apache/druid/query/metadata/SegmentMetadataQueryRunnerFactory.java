@@ -117,7 +117,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Map<String, AggregatorFactory> aggregators;
         Metadata metadata = null;
         if (updatedQuery.hasAggregators()) {
-          metadata = segment.asStorageAdapter().getMetadata();
+          metadata = segment.as(Metadata.class);
           if (metadata != null && metadata.getAggregators() != null) {
             aggregators = new HashMap<>();
             for (AggregatorFactory aggregator : metadata.getAggregators()) {
@@ -133,7 +133,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final TimestampSpec timestampSpec;
         if (updatedQuery.hasTimestampSpec()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = segment.as(Metadata.class);
           }
           timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
         } else {
@@ -143,7 +143,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Granularity queryGranularity;
         if (updatedQuery.hasQueryGranularity()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = segment.as(Metadata.class);
           }
           queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
         } else {
@@ -153,7 +153,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         Boolean rollup = null;
         if (updatedQuery.hasRollup()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = segment.as(Metadata.class);
           }
           rollup = metadata != null ? metadata.isRollup() : null;
           if (rollup == null) {

@@ -20,14 +20,14 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -76,10 +76,16 @@ public class FireHydrant
 
   public int getSegmentNumDimensionColumns()
   {
-    final Segment segment = adapter.get().getBaseSegment();
-    if (segment != null) {
-      final StorageAdapter storageAdapter = segment.asStorageAdapter();
-      return storageAdapter.getAvailableDimensions().size();
+    if (hasSwapped()) {
+      final Segment segment = adapter.get().getBaseSegment();
+      if (segment != null) {
+        QueryableIndex queryableIndex = segment.asQueryableIndex();
+        if (queryableIndex != null) {
+          return queryableIndex.getAvailableDimensions().size();
+        }
+      }
+    } else {
+      return index.getDimensions().size();
     }
     return 0;
   }
@@ -88,8 +94,8 @@ public class FireHydrant
   {
     final Segment segment = adapter.get().getBaseSegment();
     if (segment != null) {
-      final StorageAdapter storageAdapter = segment.asStorageAdapter();
-      return Iterables.size(storageAdapter.getAvailableMetrics());
+      final Metadata metadata = segment.as(Metadata.class);
+      return metadata != null && metadata.getAggregators() != null ? metadata.getAggregators().length : 0;
     }
     return 0;
   }

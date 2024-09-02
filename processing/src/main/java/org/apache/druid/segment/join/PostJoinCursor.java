@@ -30,7 +30,7 @@ import org.apache.druid.segment.VirtualColumns;
 import javax.annotation.Nullable;
 
 /**
- * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#makeCursorHolder(CursorBuildSpec)} to add post-join
+ * A Cursor decorator used by {@link HashJoinSegmentCursorFactory#makeCursorHolder(CursorBuildSpec)} to add post-join
  * virtual columns and filters.
  */
 public class PostJoinCursor implements Cursor

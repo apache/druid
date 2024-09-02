@@ -53,7 +53,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -220,10 +220,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   @Test
   public void testCoordinatorReturnsAllDSSchema() throws InterruptedException
   {
-    final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
-    final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
-    final RowSignature someDataSourceRowSignature = new QueryableIndexStorageAdapter(indexAuto1).getRowSignature();
-    final RowSignature foo3RowSignature = new QueryableIndexStorageAdapter(indexAuto2).getRowSignature();
+    final RowSignature dataSource1RowSignature = new QueryableIndexCursorFactory(index1).getRowSignature();
+    final RowSignature dataSource2RowSignature = new QueryableIndexCursorFactory(index2).getRowSignature();
+    final RowSignature someDataSourceRowSignature = new QueryableIndexCursorFactory(indexAuto1).getRowSignature();
+    final RowSignature foo3RowSignature = new QueryableIndexCursorFactory(indexAuto2).getRowSignature();
 
     NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient() {
       @Override
@@ -272,9 +272,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   @Test
   public void testCoordinatorReturnsFewDSSchema() throws InterruptedException
   {
-    final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
-    final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
-    final RowSignature someDataSourceRowSignature = new QueryableIndexStorageAdapter(indexAuto1).getRowSignature();
+    final RowSignature dataSource1RowSignature = new QueryableIndexCursorFactory(index1).getRowSignature();
+    final RowSignature dataSource2RowSignature = new QueryableIndexCursorFactory(index2).getRowSignature();
+    final RowSignature someDataSourceRowSignature = new QueryableIndexCursorFactory(indexAuto1).getRowSignature();
 
     NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient() {
       @Override

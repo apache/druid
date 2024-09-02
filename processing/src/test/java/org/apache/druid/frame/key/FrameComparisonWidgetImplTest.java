@@ -26,8 +26,8 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -50,7 +50,7 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
   @Before
   public void setUp()
   {
-    final StorageAdapter rowBasedAdapterWithoutComplexColumn = new RowBasedSegment<>(
+    final CursorFactory rowBasedAdapterWithoutComplexColumn = new RowBasedSegment<>(
         SegmentId.dummy("test"),
         Sequences.simple(ByteRowKeyComparatorTest.KEY_OBJECTS_WITHOUT_COMPLEX_COLUMN),
         columnName -> {
@@ -62,16 +62,16 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           }
         },
         ByteRowKeyComparatorTest.NO_COMPLEX_SIGNATURE
-    ).asStorageAdapter();
+    ).asCursorFactory();
 
     frameWithoutComplexColumns = Iterables.getOnlyElement(
-        FrameSequenceBuilder.fromAdapter(rowBasedAdapterWithoutComplexColumn)
+        FrameSequenceBuilder.fromCursorFactory(rowBasedAdapterWithoutComplexColumn)
                             .frameType(FrameType.ROW_BASED)
                             .frames()
                             .toList()
     );
 
-    final StorageAdapter rowBasedAdapterWithComplexColumn = new RowBasedSegment<>(
+    final CursorFactory rowBasedAdapterWithComplexColumn = new RowBasedSegment<>(
         SegmentId.dummy("test"),
         Sequences.simple(ByteRowKeyComparatorTest.ALL_KEY_OBJECTS),
         columnName -> {
@@ -83,10 +83,10 @@ public class FrameComparisonWidgetImplTest extends InitializedNullHandlingTest
           }
         },
         ByteRowKeyComparatorTest.SIGNATURE
-    ).asStorageAdapter();
+    ).asCursorFactory();
 
     frameWithComplexColumns = Iterables.getOnlyElement(
-        FrameSequenceBuilder.fromAdapter(rowBasedAdapterWithComplexColumn)
+        FrameSequenceBuilder.fromCursorFactory(rowBasedAdapterWithComplexColumn)
                             .frameType(FrameType.ROW_BASED)
                             .frames()
                             .toList()

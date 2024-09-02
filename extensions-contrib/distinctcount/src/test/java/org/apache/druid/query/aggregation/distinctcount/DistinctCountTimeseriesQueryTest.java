@@ -35,8 +35,8 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
@@ -104,7 +104,7 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
     final Iterable<Result<TimeseriesResultValue>> results =
         engine.process(
             query,
-            new IncrementalIndexStorageAdapter(index),
+            new IncrementalIndexCursorFactory(index),
             new IncrementalIndexTimeBoundaryInspector(index),
             new DefaultTimeseriesQueryMetrics()
         ).toList();

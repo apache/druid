@@ -16085,7 +16085,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.CANNOT_RETRIEVE_ROWS)
   @Test
   public void testWindowingOverJoin()
   {

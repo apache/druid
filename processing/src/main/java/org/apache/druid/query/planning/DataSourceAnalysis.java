@@ -64,7 +64,7 @@ import java.util.Optional;
  * for the base or leaf datasources to include additional joins.
  *
  * The base datasource is the one that will be considered by the core Druid query stack for scanning via
- * {@link org.apache.druid.segment.Segment} and {@link org.apache.druid.segment.StorageAdapter}. The other leaf
+ * {@link org.apache.druid.segment.Segment} and {@link org.apache.druid.segment.CursorFactory}. The other leaf
  * datasources must be joinable onto the base data.
  *
  * The idea here is to keep things simple and dumb. So we focus only on identifying left-leaning join trees, which map
