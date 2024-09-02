@@ -688,7 +688,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   @Test
   public void testCombinedDataSchemaSetsMultiValuedColumnsInfo()
   {
-    Set<String> multiValuedColumnsInfo = ImmutableSet.of("dimA");
+    Set<String> multiValuedDimensions = ImmutableSet.of("dimA");
 
     CombinedDataSchema schema = new CombinedDataSchema(
         IdUtilsTest.VALID_ID_CHARS,
@@ -702,7 +702,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         null,
         new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
         null,
-        multiValuedColumnsInfo
+        multiValuedDimensions
     );
     Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
   }

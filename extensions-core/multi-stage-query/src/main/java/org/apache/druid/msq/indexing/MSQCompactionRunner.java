@@ -113,9 +113,10 @@ public class MSQCompactionRunner implements CompactionRunner
 
 
   @JsonCreator
-  public MSQCompactionRunner(@JacksonInject final ObjectMapper jsonMapper,
-                             @JacksonInject final ExprMacroTable exprMacroTable,
-                             @JacksonInject final Injector injector
+  public MSQCompactionRunner(
+      @JacksonInject final ObjectMapper jsonMapper,
+      @JacksonInject final ExprMacroTable exprMacroTable,
+      @JacksonInject final Injector injector
   )
   {
     this.jsonMapper = jsonMapper;
