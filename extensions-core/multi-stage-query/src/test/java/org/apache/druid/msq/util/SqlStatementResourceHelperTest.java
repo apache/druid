@@ -376,6 +376,7 @@ public class SqlStatementResourceHelperTest
             Granularities.DAY,
             null,
             null,
+            null,
             null
         )
     );

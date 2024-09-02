@@ -51,6 +51,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -111,6 +112,23 @@ public class TestIndex
       new StringDimensionSchema("null_column")
   );
 
+  public static final List<DimensionSchema> DIMENSION_SCHEMAS_NON_TIME_ORDERED = Arrays.asList(
+      new StringDimensionSchema("market"),
+      new StringDimensionSchema("quality"),
+      new LongDimensionSchema("__time"),
+      new LongDimensionSchema("qualityLong"),
+      new FloatDimensionSchema("qualityFloat"),
+      new DoubleDimensionSchema("qualityDouble"),
+      new StringDimensionSchema("qualityNumericString"),
+      new LongDimensionSchema("longNumericNull"),
+      new FloatDimensionSchema("floatNumericNull"),
+      new DoubleDimensionSchema("doubleNumericNull"),
+      new StringDimensionSchema("placement"),
+      new StringDimensionSchema("placementish"),
+      new StringDimensionSchema("partial_null_column"),
+      new StringDimensionSchema("null_column")
+  );
+
   public static final List<DimensionSchema> DIMENSION_SCHEMAS_NO_BITMAP = Arrays.asList(
       new StringDimensionSchema("market", null, false),
       new StringDimensionSchema("quality", null, false),
@@ -128,7 +146,8 @@ public class TestIndex
   );
 
   public static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(DIMENSION_SCHEMAS);
-
+  public static final DimensionsSpec DIMENSIONS_SPEC_NON_TIME_ORDERED =
+      new DimensionsSpec(DIMENSION_SCHEMAS_NON_TIME_ORDERED);
   public static final DimensionsSpec DIMENSIONS_SPEC_NO_BITMAPS = new DimensionsSpec(DIMENSION_SCHEMAS_NO_BITMAP);
 
   public static final String[] DOUBLE_METRICS = new String[]{"index", "indexMin", "indexMaxPlusTen"};
@@ -162,14 +181,33 @@ public class TestIndex
   private static Supplier<IncrementalIndex> realtimeIndex = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv")
   );
+  private static Supplier<IncrementalIndex> nonTimeOrderedRealtimeIndex = Suppliers.memoize(
+      () -> makeRealtimeIndex("druid.sample.numeric.tsv", true, DIMENSIONS_SPEC_NON_TIME_ORDERED)
+  );
+  private static Supplier<IncrementalIndex> nonTimeOrderedNoRollupRealtimeIndex = Suppliers.memoize(
+      () -> makeRealtimeIndex("druid.sample.numeric.tsv", false, DIMENSIONS_SPEC_NON_TIME_ORDERED)
+  );
   private static Supplier<IncrementalIndex> noRollupRealtimeIndex = Suppliers.memoize(
       () -> makeRealtimeIndex("druid.sample.numeric.tsv", false)
   );
   private static Supplier<IncrementalIndex> noBitmapRealtimeIndex = Suppliers.memoize(
-      () -> makeRealtimeIndex("druid.sample.numeric.tsv", false, false)
+      () -> makeRealtimeIndex("druid.sample.numeric.tsv", false, DIMENSIONS_SPEC_NO_BITMAPS)
   );
   private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
       () -> persistRealtimeAndLoadMMapped(realtimeIndex.get())
+  );
+
+  private static Supplier<QueryableIndex> mmappedIndexCompressedComplex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(
+          realtimeIndex.get(),
+          IndexSpec.builder().withComplexMetricCompression(CompressionStrategy.LZ4).build()
+      )
+  );
+  private static Supplier<QueryableIndex> nonTimeOrderedMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(nonTimeOrderedRealtimeIndex.get())
+  );
+  private static Supplier<QueryableIndex> nonTimeOrderedNoRollupMmappedIndex = Suppliers.memoize(
+      () -> persistRealtimeAndLoadMMapped(nonTimeOrderedNoRollupRealtimeIndex.get())
   );
   private static Supplier<QueryableIndex> noRollupMmappedIndex = Suppliers.memoize(
       () -> persistRealtimeAndLoadMMapped(noRollupRealtimeIndex.get())
@@ -264,6 +302,26 @@ public class TestIndex
     return noBitmapMmappedIndex.get();
   }
 
+  public static IncrementalIndex getNonTimeOrderedRealtimeTestIndex()
+  {
+    return nonTimeOrderedRealtimeIndex.get();
+  }
+
+  public static IncrementalIndex getNonTimeOrderedNoRollupRealtimeTestIndex()
+  {
+    return nonTimeOrderedNoRollupRealtimeIndex.get();
+  }
+
+  public static QueryableIndex getNonTimeOrderedMMappedTestIndex()
+  {
+    return nonTimeOrderedMmappedIndex.get();
+  }
+
+  public static QueryableIndex getNonTimeOrderedNoRollupMMappedTestIndex()
+  {
+    return nonTimeOrderedNoRollupMmappedIndex.get();
+  }
+
   public static QueryableIndex mergedRealtimeIndex()
   {
     return mergedRealtime.get();
@@ -274,6 +332,11 @@ public class TestIndex
     return frontCodedMmappedIndex.get();
   }
 
+  public static QueryableIndex getMMappedTestIndexCompressedComplex()
+  {
+    return mmappedIndexCompressedComplex.get();
+  }
+
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
   {
     return makeRealtimeIndex(resourceFilename, true);
@@ -281,13 +344,17 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup)
   {
-    return makeRealtimeIndex(resourceFilename, rollup, true);
+    return makeRealtimeIndex(resourceFilename, rollup, DIMENSIONS_SPEC);
   }
 
-  public static IncrementalIndex makeRealtimeIndex(final String resourceFilename, boolean rollup, boolean bitmap)
+  public static IncrementalIndex makeRealtimeIndex(
+      final String resourceFilename,
+      boolean rollup,
+      DimensionsSpec dimensionsSpec
+  )
   {
     CharSource stream = getResourceCharSource(resourceFilename);
-    return makeRealtimeIndex(stream, rollup, bitmap);
+    return makeRealtimeIndex(stream, rollup, dimensionsSpec);
   }
 
   public static CharSource getResourceCharSource(final String resourceFilename)
@@ -302,15 +369,19 @@ public class TestIndex
 
   public static IncrementalIndex makeRealtimeIndex(final CharSource source)
   {
-    return makeRealtimeIndex(source, true, true);
+    return makeRealtimeIndex(source, true, DIMENSIONS_SPEC);
   }
 
-  public static IncrementalIndex makeRealtimeIndex(final CharSource source, boolean rollup, boolean bitmap)
+  public static IncrementalIndex makeRealtimeIndex(
+      final CharSource source,
+      boolean rollup,
+      DimensionsSpec dimensionsSpec
+  )
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
         .withTimestampSpec(new TimestampSpec("ds", "auto", null))
-        .withDimensionsSpec(bitmap ? DIMENSIONS_SPEC : DIMENSIONS_SPEC_NO_BITMAPS)
+        .withDimensionsSpec(dimensionsSpec)
         .withVirtualColumns(VIRTUAL_COLUMNS)
         .withMetrics(METRIC_AGGS)
         .withRollup(rollup)

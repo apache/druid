@@ -65,7 +65,8 @@ public class TimeSeriesUnionQueryRunnerTest extends InitializedNullHandlingTest
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            false
         ),
         // descending?
         Arrays.asList(false, true)

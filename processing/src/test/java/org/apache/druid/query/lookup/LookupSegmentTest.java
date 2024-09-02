@@ -32,6 +32,8 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.RowBasedStorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
@@ -117,6 +119,18 @@ public class LookupSegmentTest
   public void test_asQueryableIndex()
   {
     Assert.assertNull(LOOKUP_SEGMENT.asQueryableIndex());
+  }
+
+  @Test
+  public void test_asStorageAdapter_getRowSignature()
+  {
+    Assert.assertEquals(
+        RowSignature.builder()
+                    .add("k", ColumnType.STRING)
+                    .add("v", ColumnType.STRING)
+                    .build(),
+        LOOKUP_SEGMENT.asStorageAdapter().getRowSignature()
+    );
   }
 
   @Test

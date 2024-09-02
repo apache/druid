@@ -205,10 +205,14 @@ public class ExpressionSelectors
       final String column = plan.getSingleInputName();
       final ColumnType inputType = plan.getSingleInputType();
       if (inputType.is(ValueType.LONG)) {
+        // Skip LRU cache when the underlying data is sorted by __time. Note: data is not always sorted by __time; when
+        // forceSegmentSortByTime: false, segments can be written in non-__time order. However, this
+        // information is not currently available here, so we assume the common case, which is __time-sortedness.
+        final boolean useLruCache = !ColumnHolder.TIME_COLUMN_NAME.equals(column);
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
-            !ColumnHolder.TIME_COLUMN_NAME.equals(column), // __time doesn't need an LRU cache since it is sorted.
+            useLruCache,
             rowIdSupplier
         );
       } else if (inputType.is(ValueType.STRING)) {

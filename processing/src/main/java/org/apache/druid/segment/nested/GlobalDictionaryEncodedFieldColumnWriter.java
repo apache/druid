@@ -40,6 +40,7 @@ import org.apache.druid.segment.data.FixedIndexedIntWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -293,7 +294,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         }
       }
     };
-    final String fieldFileName = NestedCommonFormatColumnSerializer.getInternalFileName(columnName, fieldName);
+    final String fieldFileName = ColumnSerializerUtils.getInternalFileName(columnName, fieldName);
     final long size = fieldSerializer.getSerializedSize();
     log.debug("Column [%s] serializing [%s] field of size [%d].", columnName, fieldName, size);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(fieldFileName, size)) {

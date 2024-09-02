@@ -408,6 +408,7 @@ public class WorkerImpl implements Worker
 
     final QueryContext queryContext = task != null ? QueryContext.of(task.getContext()) : QueryContext.empty();
     final RunWorkOrder runWorkOrder = new RunWorkOrder(
+        task.getControllerTaskId(),
         workOrder,
         inputChannelFactory,
         stageCounters.computeIfAbsent(
