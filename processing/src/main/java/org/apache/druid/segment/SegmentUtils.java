@@ -112,31 +112,6 @@ public class SegmentUtils
     return intervalToSegments;
   }
 
-  /**
-   * Uses {@link Segment#asCursorFactory()} to get {@link CursorFactory#getRowSignature()} and {@link Segment#as(Class)}
-   * to try to get a {@link Metadata} to return the list of all column names which are not present in
-   * {@link Metadata#getAggregators()}
-   */
-  public static Iterable<String> getDimensionColumnNames(Segment segment)
-  {
-    final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
-    final Set<String> dims = new LinkedHashSet<>();
-    final Set<String> ignore = new HashSet<>();
-    ignore.add(ColumnHolder.TIME_COLUMN_NAME);
-    final Metadata metadata = segment.as(Metadata.class);
-    if (metadata != null && metadata.getAggregators() != null) {
-      for (AggregatorFactory factory : metadata.getAggregators()) {
-        ignore.add(factory.getName());
-      }
-    }
-    for (String columnName : rowSignature.getColumnNames()) {
-      if (!ignore.contains(columnName)) {
-        dims.add(columnName);
-      }
-    }
-    return dims;
-  }
-
   private SegmentUtils()
   {
     // no instantiation

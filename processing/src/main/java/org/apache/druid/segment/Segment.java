@@ -62,7 +62,6 @@ public interface Segment extends Closeable
 
   default CursorFactory asCursorFactory()
   {
-    // todo (clint): should we just tear off the bandaid and make everyone implement this?
     final StorageAdapter storageAdapter = asStorageAdapter();
     return new CursorFactory()
     {
@@ -70,7 +69,7 @@ public interface Segment extends Closeable
       public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
         // For backwards compatibility, the default implementation assumes the underlying rows are sorted by __time.
-        // Built-in implementations of StorageAdapter must override this method.
+        // Built-in implementations of Segment must override this method.
         final List<OrderBy> ordering;
         final boolean descending;
         if (Cursors.preferDescendingTimeOrdering(spec)) {

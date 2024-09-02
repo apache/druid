@@ -469,7 +469,7 @@ public class GroupingEngine
    * @param cursorFactory         cursor factory for the segment in question
    * @param timeBoundaryInspector time boundary inspector for the segment in question
    *
-   * @return result sequence for the storage adapter
+   * @return result sequence for the cursor factory
    */
   public Sequence<ResultRow> process(
       GroupByQuery query,
@@ -891,7 +891,7 @@ public class GroupingEngine
     } else if (dimensions.size() == 1) {
       // Only real columns can use array-based aggregation, since virtual columns cannot currently report their
       // cardinality. We need to check if a virtual column exists with the same name, since virtual columns can shadow
-      // real columns, and we might miss that since we're going directly to the StorageAdapter (which only knows about
+      // real columns, and we might miss that since we're going directly to the CursorFactory (which only knows about
       // real columns).
       if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
         return -1;

@@ -410,7 +410,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
 
   private static int countRows(final CursorFactory cursorFactory)
   {
-    // Not using adapter.getNumRows(), because RowBasedStorageAdapter doesn't support it.
+    // Not using adapter.getNumRows(), because RowBasedCursorFactory doesn't support it.
     return FrameTestUtil.readRowsFromCursorFactory(cursorFactory, RowSignature.empty(), false)
                         .accumulate(0, (i, in) -> i + 1);
   }

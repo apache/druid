@@ -89,7 +89,7 @@ public class SegmentAnalyzer
     Preconditions.checkNotNull(segment, "segment");
     final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
 
-    // index is null for incremental-index-based segments, but storageAdapter is always available
+    // index is null for incremental-index-based segments, but segmentInspector should always be available
     final QueryableIndex index = segment.asQueryableIndex();
 
     final int numRows = segmentInspector != null ? segmentInspector.getNumRows() : 0;

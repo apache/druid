@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -30,9 +29,8 @@ import java.io.IOException;
 import java.util.Optional;
 
 /**
- * This class is used as a wrapper for other classes that just want to
- * modify the storage adapter for a datasource. Examples include:
- * {@link org.apache.druid.query.UnnestDataSource}, {@link FilteredDataSource}
+ * Simple {@link SegmentReference} implementation for a segment that wraps a base segment such as
+ * {@link UnnestSegment} or {@link FilteredSegment}
  */
 public abstract class WrappedSegmentReference implements SegmentReference
 {

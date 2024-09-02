@@ -915,12 +915,12 @@ public class DruidQuery
   )
   {
     if (Granularities.ALL.equals(queryGranularity)) {
-      // Always OK: no storage adapter has problem with ALL.
+      // Always OK: no cursor factory has problem with ALL.
       return true;
     }
 
     if (dataSource.getAnalysis().isConcreteAndTableBased()) {
-      // Always OK: queries on concrete tables (regular Druid datasources) use segment-based storage adapters
+      // Always OK: queries on concrete tables (regular Druid datasources) use segment-based cursors
       // (IncrementalIndex or QueryableIndex). These clip query interval to data interval, making wide query
       // intervals safer. They do not have special checks for granularity and interval safety.
       return true;
@@ -930,10 +930,9 @@ public class DruidQuery
     // count on interval-clipping to save us.
 
     for (final Interval filtrationInterval : filtration.getIntervals()) {
-      // Query may be using RowBasedStorageAdapter. We don't know for sure, so check
-      // RowBasedStorageAdapter#isQueryGranularityAllowed to be safe.
+      // Query may be using RowBasedCursorFactory. We don't know for sure, so check if the interval is too big
 
-      if (!Granularities.ALL.equals(queryGranularity) || Intervals.ETERNITY.equals(filtrationInterval)) {
+      if (Intervals.ETERNITY.equals(filtrationInterval)) {
         return false;
       }
 

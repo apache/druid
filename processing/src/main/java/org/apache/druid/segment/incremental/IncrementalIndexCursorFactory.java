@@ -108,15 +108,13 @@ public class IncrementalIndexCursorFactory implements CursorFactory
       return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
     }
 
-    // todo (clint): with the refactor we can in fact snapshot this at cursor creation time i think...
-
     // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
     // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
     // represented by an empty array; see StringDimensionIndexer.IndexerDimensionSelector's getRow method.)
     //
     // We don't want to represent this as having-multiple-values in index.getCapabilities, because that's used
     // at index-persisting time to determine if we need a multi-value column or not. However, that means we
-    // need to tweak the capabilities here in the StorageAdapter (a query-time construct), so at query time
+    // need to tweak the capabilities here in the CursorFactory (a query-time construct), so at query time
     // they appear multi-valued.
     //
     // Note that this could be improved if we snapshot the capabilities at cursor creation time and feed those through

@@ -94,7 +94,7 @@ public class TimeseriesQueryEngine
   {
     if (cursorFactory == null) {
       throw new SegmentMissingException(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 

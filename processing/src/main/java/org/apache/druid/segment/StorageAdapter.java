@@ -45,6 +45,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
    * and call {@link CursorHolder#canVectorize()} instead.
    */
+  @Deprecated
   default boolean canVectorize(
       @Nullable Filter filter,
       VirtualColumns virtualColumns,
@@ -60,6 +61,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
    * and call {@link CursorHolder#asCursor()} instead.
    */
+  @Deprecated
   default Sequence<Cursor> makeCursors(
       @Nullable Filter filter,
       Interval interval,
@@ -78,6 +80,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
    * and call {@link CursorHolder#asVectorCursor()} instead.
    */
+  @Deprecated
   @Nullable
   default VectorCursor makeVectorCursor(
       @Nullable Filter filter,
@@ -96,6 +99,7 @@ public interface StorageAdapter extends ColumnInspector
   /**
    * @deprecated Callers should use {@link Segment#getDataInterval()} instead.
    */
+  @Deprecated
   default Interval getInterval()
   {
     throw DruidException.defensive(
@@ -106,6 +110,7 @@ public interface StorageAdapter extends ColumnInspector
   /**
    * @deprecated Callers should use {@link Segment#as(Class)} to construct a {@link Metadata} instead.
    */
+  @Deprecated
   default Indexed<String> getAvailableDimensions()
   {
     throw DruidException.defensive(
@@ -117,6 +122,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Callers should use {@link Segment#as(Class)} to construct a {@link Metadata} if available and check
    * {@link Metadata#getAggregators()} instead.
    */
+  @Deprecated
   default Iterable<String> getAvailableMetrics()
   {
     throw DruidException.defensive(
@@ -127,6 +133,7 @@ public interface StorageAdapter extends ColumnInspector
   /**
    * @deprecated use {@link Segment#asCursorFactory()} and {@link CursorFactory#getRowSignature()} instead.
    */
+  @Deprecated
   default RowSignature getRowSignature()
   {
     throw DruidException.defensive(
@@ -138,6 +145,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Callers should use {@link Segment#as(Class)} to construct a {@link PhysicalSegmentInspector} if
    * available and call {@link PhysicalSegmentInspector#getDimensionCardinality(String)} instead.
    */
+  @Deprecated
   default int getDimensionCardinality(String column)
   {
     throw DruidException.defensive(
@@ -149,6 +157,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link TimeBoundaryInspector} if available and call
    * {@link TimeBoundaryInspector#getMinTime()} instead.
    */
+  @Deprecated
   default DateTime getMinTime()
   {
     throw DruidException.defensive(
@@ -160,6 +169,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link TimeBoundaryInspector} if available and call
    * {@link TimeBoundaryInspector#getMaxTime()} instead.
    */
+  @Deprecated
   default DateTime getMaxTime()
   {
     throw DruidException.defensive(
@@ -171,6 +181,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link PhysicalSegmentInspector} if available and call
    * {@link PhysicalSegmentInspector#getMinValue(String)}
    */
+  @Deprecated
   @Nullable
   default Comparable getMinValue(String column)
   {
@@ -183,6 +194,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link PhysicalSegmentInspector} if available and call
    * {@link PhysicalSegmentInspector#getMaxValue(String)}
    */
+  @Deprecated
   @Nullable
   default Comparable getMaxValue(String column)
   {
@@ -195,6 +207,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#getColumnCapabilities(String)}
    * instead.
    */
+  @Deprecated
   @Override
   @Nullable
   default ColumnCapabilities getColumnCapabilities(String column)
@@ -208,6 +221,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link PhysicalSegmentInspector} if available then call
    * {@link PhysicalSegmentInspector#getNumRows()} instead.
    */
+  @Deprecated
   default int getNumRows()
   {
     throw DruidException.defensive(
@@ -219,6 +233,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link MaxIngestedEventTimeInspector} if available and call
    * {@link MaxIngestedEventTimeInspector#getMaxIngestedEventTime()} instead.
    */
+  @Deprecated
   default DateTime getMaxIngestedEventTime()
   {
     throw DruidException.defensive(
@@ -229,6 +244,7 @@ public interface StorageAdapter extends ColumnInspector
   /**
    * @deprecated Use {@link Segment#as(Class)} to fetch a {@link Metadata} if available
    */
+  @Deprecated
   @Nullable
   default Metadata getMetadata()
   {
@@ -241,6 +257,7 @@ public interface StorageAdapter extends ColumnInspector
    * @deprecated Use {@link Segment#as(Class)} to get a {@link TopNOptimizationInspector} if available and call
    * {@link TopNOptimizationInspector#isFiltered()} instead.
    */
+  @Deprecated
   default boolean hasBuiltInFilters()
   {
     throw DruidException.defensive(
@@ -251,6 +268,7 @@ public interface StorageAdapter extends ColumnInspector
   /**
    * @deprecated Use {@link Segment#isTombstone()}
    */
+  @Deprecated
   default boolean isFromTombstone()
   {
     throw DruidException.defensive(

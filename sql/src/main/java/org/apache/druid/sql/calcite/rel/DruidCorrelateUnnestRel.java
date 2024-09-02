@@ -463,7 +463,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   )
   {
     // Compute signature of the correlation operation. It's like a join: the left and right sides are concatenated.
-    // On the native query side, this is what is ultimately emitted by the UnnestStorageAdapter.
+    // On the native query side, this is what is ultimately emitted by the UnnestSegment.
     //
     // Ignore prefix (lhs) from computeJoinRowSignature; we don't need this since we will declare the name of the
     // single output column directly. (And we know it's the last column in the signature.)
