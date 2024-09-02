@@ -121,6 +121,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
+   * <li>maxRowsPerSegment in DimensionRangePartitionsSpec.</li>
    * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
    * Null is treated as true if metricsSpec exist and false if empty.</li>
    * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
