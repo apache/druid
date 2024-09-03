@@ -193,7 +193,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
     private Yielder<InputRow> rowYielder;
 
     public SegmentReader(
-        final List<WindowedCursorFactory> adapters,
+        final List<WindowedCursorFactory> cursorFactories,
         final TransformSpec transformSpec,
         final List<String> dims,
         final List<String> metrics,
@@ -204,18 +204,18 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
       Sequence<InputRow> rows = Sequences.concat(
           Iterables.transform(
-              adapters,
+              cursorFactories,
               new Function<WindowedCursorFactory, Sequence<InputRow>>()
               {
                 @Nullable
                 @Override
-                public Sequence<InputRow> apply(WindowedCursorFactory segment)
+                public Sequence<InputRow> apply(WindowedCursorFactory windowed)
                 {
                   final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                                    .setFilter(Filters.toFilter(dimFilter))
-                                                                   .setInterval(segment.getInterval())
+                                                                   .setInterval(windowed.getInterval())
                                                                    .build();
-                  final CursorHolder cursorHolder = segment.getCursorFactory().makeCursorHolder(buildSpec);
+                  final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(buildSpec);
                   final Cursor cursor = cursorHolder.asCursor();
                   if (cursor == null) {
                     return Sequences.empty();

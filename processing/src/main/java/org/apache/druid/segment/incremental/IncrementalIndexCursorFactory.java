@@ -33,7 +33,7 @@ import javax.annotation.Nullable;
 
 public class IncrementalIndexCursorFactory implements CursorFactory
 {
-  private static final ColumnCapabilities.CoercionLogic STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
+  private static final ColumnCapabilities.CoercionLogic COERCE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
       {
         @Override
@@ -123,7 +123,7 @@ public class IncrementalIndexCursorFactory implements CursorFactory
     // be removed.
     return ColumnCapabilitiesImpl.snapshot(
         index.getColumnCapabilities(column),
-        STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+        COERCE_LOGIC
     );
   }
 }

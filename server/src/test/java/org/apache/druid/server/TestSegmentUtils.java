@@ -33,12 +33,10 @@ import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -50,7 +48,6 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
@@ -245,50 +242,6 @@ public class TestSegmentUtils
     public CursorFactory asCursorFactory()
     {
       return new QueryableIndexCursorFactory(index);
-    }
-
-    @Nullable
-    @Override
-    public <T> T as(@Nonnull Class<T> clazz)
-    {
-      if (PhysicalSegmentInspector.class.equals(clazz)) {
-        return (T) new PhysicalSegmentInspector()
-        {
-          @Nullable
-          @Override
-          public ColumnCapabilities getColumnCapabilities(String column)
-          {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Comparable getMinValue(String column)
-          {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Comparable getMaxValue(String column)
-          {
-            return null;
-          }
-
-          @Override
-          public int getDimensionCardinality(String column)
-          {
-            return 0;
-          }
-
-          @Override
-          public int getNumRows()
-          {
-            return 0;
-          }
-        };
-      }
-      return Segment.super.as(clazz);
     }
 
     @Override

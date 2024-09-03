@@ -30,6 +30,40 @@ import javax.annotation.Nullable;
 
 public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegmentInspector
 {
+  private static final ColumnCapabilities.CoercionLogic SNAPSHOT_COERCE_LOGIC =
+      new ColumnCapabilities.CoercionLogic()
+      {
+        @Override
+        public boolean dictionaryEncoded()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesSorted()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean dictionaryValuesUnique()
+        {
+          return true;
+        }
+
+        @Override
+        public boolean multipleValues()
+        {
+          return false;
+        }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return false;
+        }
+      };
+
   private final IncrementalIndex index;
 
   public IncrementalIndexPhysicalSegmentInspector(IncrementalIndex index)
@@ -85,7 +119,7 @@ public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegment
   {
     return ColumnCapabilitiesImpl.snapshot(
         index.getColumnCapabilities(column),
-        SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC
+        SNAPSHOT_COERCE_LOGIC
     );
   }
 
@@ -94,38 +128,4 @@ public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegment
   {
     return index.size();
   }
-
-  private static final ColumnCapabilities.CoercionLogic SNAPSHOT_STORAGE_ADAPTER_CAPABILITIES_COERCE_LOGIC =
-      new ColumnCapabilities.CoercionLogic()
-      {
-        @Override
-        public boolean dictionaryEncoded()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean dictionaryValuesSorted()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean dictionaryValuesUnique()
-        {
-          return true;
-        }
-
-        @Override
-        public boolean multipleValues()
-        {
-          return false;
-        }
-
-        @Override
-        public boolean hasNulls()
-        {
-          return false;
-        }
-      };
 }
