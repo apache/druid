@@ -19,34 +19,17 @@
 import type { ButtonProps } from '@blueprintjs/core';
 import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { JSX, ReactNode } from 'react';
+import type { JSX } from 'react';
 import React, { useState } from 'react';
 
 import { NumericInputDialog } from '../../../dialogs';
-import type { QueryContext, TaskAssignment } from '../../../druid-models';
+import type { QueryContext } from '../../../druid-models';
 import { getQueryContextKey } from '../../../druid-models';
 import { getLink } from '../../../links';
 import { capitalizeFirst, deleteKeys, formatInteger, tickIcon } from '../../../utils';
 
 const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
-const TASK_ASSIGNMENT_OPTIONS: TaskAssignment[] = ['max', 'auto'];
-
-const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
-  max: 'uses the maximum possible tasks up to the specified limit.',
-  auto: 'maximizes the number of tasks while staying within 512 MiB or 10,000 files per task, unless more tasks are needed to stay under the max task limit.',
-};
-
-const TASK_ASSIGNMENT_LABEL_ELEMENT: Record<string, ReactNode> = {
-  auto: (
-    <Button
-      icon={IconNames.HELP}
-      minimal
-      onClick={() =>
-        window.open(`${getLink('DOCS')}/multi-stage-query/reference#context-parameters`, '_blank')
-      }
-    />
-  ),
-};
+const TASK_DOCUMENTATION_LINK = `${getLink('DOCS')}/multi-stage-query/reference#context-parameters`;
 
 const DEFAULT_MAX_NUM_TASKS_LABEL_FN = (maxNum: number) => {
   if (maxNum === 2) return { text: formatInteger(maxNum), label: '(1 controller + 1 worker)' };
@@ -136,21 +119,36 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               label={capitalizeFirst(taskAssigment)}
               submenuProps={{ style: { width: 300 } }}
             >
-              {TASK_ASSIGNMENT_OPTIONS.map(t => (
-                <MenuItem
-                  key={String(t)}
-                  icon={tickIcon(t === taskAssigment)}
-                  text={
-                    <>
-                      <strong>{capitalizeFirst(t)}</strong>: {TASK_ASSIGNMENT_DESCRIPTION[t]}
-                    </>
-                  }
-                  labelElement={TASK_ASSIGNMENT_LABEL_ELEMENT[t]}
-                  shouldDismissPopover={false}
-                  multiline
-                  onClick={() => changeQueryContext({ ...queryContext, taskAssignment: t })}
-                />
-              ))}
+              <MenuItem
+                icon={tickIcon(taskAssigment === 'max')}
+                text={
+                  <>
+                    <strong>Max</strong>: uses the maximum possible tasks up to the specified limit.
+                  </>
+                }
+                shouldDismissPopover
+                multiline
+                onClick={() => changeQueryContext({ ...queryContext, taskAssignment: 'max' })}
+              />
+
+              <MenuItem
+                icon={tickIcon(taskAssigment === 'auto')}
+                text={
+                  <>
+                    <strong>Auto</strong>: Use the minimum number of tasks while{' '}
+                    <a
+                      href={TASK_DOCUMENTATION_LINK}
+                      target="_blank"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      staying within constrain.
+                    </a>
+                  </>
+                }
+                shouldDismissPopover
+                multiline
+                onClick={() => changeQueryContext({ ...queryContext, taskAssignment: 'auto' })}
+              />
             </MenuItem>
           </Menu>
         }
