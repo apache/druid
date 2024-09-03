@@ -200,6 +200,7 @@ public class SuperSorterTest
           Collections.emptyList(),
           Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
           exec,
+          FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           2,
