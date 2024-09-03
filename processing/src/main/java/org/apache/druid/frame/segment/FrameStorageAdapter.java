@@ -31,7 +31,6 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -87,18 +86,6 @@ public class FrameStorageAdapter implements StorageAdapter
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
-  @Override
-  public DateTime getMinTime()
-  {
-    return getInterval().getStart();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return getInterval().getEnd().minus(1);
-  }
-
   @Nullable
   @Override
   public Comparable getMinValue(String column)
@@ -126,12 +113,6 @@ public class FrameStorageAdapter implements StorageAdapter
   public int getNumRows()
   {
     return frame.numRows();
-  }
-
-  @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return getMaxTime();
   }
 
   @Override

@@ -19,20 +19,33 @@
 import type { ButtonProps } from '@blueprintjs/core';
 import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 import React, { useState } from 'react';
 
 import { NumericInputDialog } from '../../../dialogs';
 import type { QueryContext, TaskAssignment } from '../../../druid-models';
 import { getQueryContextKey } from '../../../druid-models';
-import { deleteKeys, formatInteger, tickIcon } from '../../../utils';
+import { getLink } from '../../../links';
+import { capitalizeFirst, deleteKeys, formatInteger, tickIcon } from '../../../utils';
 
 const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
 const TASK_ASSIGNMENT_OPTIONS: TaskAssignment[] = ['max', 'auto'];
 
 const TASK_ASSIGNMENT_DESCRIPTION: Record<string, string> = {
-  max: 'Use as many tasks as possible, up to the maximum.',
-  auto: `Use as few tasks as possible without exceeding 512 MiB or 10,000 files per task, unless exceeding these limits is necessary to stay within 'maxNumTasks'. When calculating the size of files, the weighted size is used, which considers the file format and compression format used if any. When file sizes cannot be determined through directory listing (for example: http), behaves the same as 'max'.`,
+  max: 'uses the maximum possible tasks up to the specified limit.',
+  auto: 'maximizes the number of tasks while staying within 512 MiB or 10,000 files per task, unless more tasks are needed to stay under the max task limit.',
+};
+
+const TASK_ASSIGNMENT_LABEL_ELEMENT: Record<string, ReactNode> = {
+  auto: (
+    <Button
+      icon={IconNames.HELP}
+      minimal
+      onClick={() =>
+        window.open(`${getLink('DOCS')}/multi-stage-query/reference#context-parameters`, '_blank')
+      }
+    />
+  ),
 };
 
 const DEFAULT_MAX_NUM_TASKS_LABEL_FN = (maxNum: number) => {
@@ -113,16 +126,22 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
               onClick={() => setCustomMaxNumTasksDialogOpen(true)}
             />
             <MenuDivider />
-            <MenuItem icon={IconNames.FLOW_BRANCH} text="Task assignment" label={taskAssigment}>
+            <MenuItem
+              icon={IconNames.FLOW_BRANCH}
+              text="Task assignment"
+              label={capitalizeFirst(taskAssigment)}
+              submenuProps={{ style: { width: 300 } }}
+            >
               {TASK_ASSIGNMENT_OPTIONS.map(t => (
                 <MenuItem
                   key={String(t)}
                   icon={tickIcon(t === taskAssigment)}
                   text={
                     <>
-                      <strong>{t}</strong>: {TASK_ASSIGNMENT_DESCRIPTION[t]}
+                      <strong>{capitalizeFirst(t)}</strong>: {TASK_ASSIGNMENT_DESCRIPTION[t]}
                     </>
                   }
+                  labelElement={TASK_ASSIGNMENT_LABEL_ELEMENT[t]}
                   shouldDismissPopover={false}
                   multiline
                   onClick={() => changeQueryContext({ ...queryContext, taskAssignment: t })}

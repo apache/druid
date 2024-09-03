@@ -573,6 +573,7 @@ public class ParallelMergeCombiningSequenceTest
   public void testTimeoutExceptionDueToStoppedReader() throws InterruptedException
   {
     final int someSize = 150_000;
+    final int timeout = 5_000;
     List<TestingReporter> reporters = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
       List<Sequence<IntPair>> input = new ArrayList<>();
@@ -588,7 +589,7 @@ public class ParallelMergeCombiningSequenceTest
           INT_PAIR_ORDERING,
           INT_PAIR_MERGE_FN,
           true,
-          1000,
+          timeout,
           0,
           TEST_POOL_SIZE,
           512,
@@ -605,7 +606,7 @@ public class ParallelMergeCombiningSequenceTest
     }
 
     // sleep until timeout
-    Thread.sleep(5000);
+    Thread.sleep(timeout);
     Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
     Assert.assertTrue(pool.isQuiescent());
     Assert.assertFalse(pool.hasQueuedSubmissions());

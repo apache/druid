@@ -34,7 +34,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -57,7 +56,8 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   public RowBasedStorageAdapter(
       final Sequence<RowType> rowSequence,
       final RowAdapter<RowType> rowAdapter,
-      final RowSignature rowSignature)
+      final RowSignature rowSignature
+  )
   {
     this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
     this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
@@ -105,18 +105,6 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
-  @Override
-  public DateTime getMinTime()
-  {
-    return getInterval().getStart();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return getInterval().getEnd().minus(1);
-  }
-
   @Nullable
   @Override
   public Comparable getMinValue(String column)
@@ -155,12 +143,6 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   }
 
   @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return getMaxTime();
-  }
-
-  @Override
   public Metadata getMetadata()
   {
     throw new UnsupportedOperationException("Cannot retrieve metadata");
@@ -169,7 +151,9 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
+    // It's in principle incorrect for sort order to be __time based here, but for historical reasons, we're keeping
+    // this in place for now. The handling of "interval" in "RowBasedCursor", which has been in place for some time,
+    // suggests we think the data is always sorted by time.
     final List<OrderBy> ordering;
     final boolean descending;
     if (Cursors.preferDescendingTimeOrdering(spec)) {

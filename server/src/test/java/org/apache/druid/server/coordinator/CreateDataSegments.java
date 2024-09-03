@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
@@ -49,6 +50,9 @@ public class CreateDataSegments
   private Granularity granularity = Granularities.DAY;
   private int numPartitions = 1;
   private int numIntervals = 1;
+
+  private String version = "1";
+  private CompactionState compactionState = null;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -85,7 +89,24 @@ public class CreateDataSegments
     return this;
   }
 
+  public CreateDataSegments withCompactionState(CompactionState compactionState)
+  {
+    this.compactionState = compactionState;
+    return this;
+  }
+
+  public CreateDataSegments withVersion(String version)
+  {
+    this.version = version;
+    return this;
+  }
+
   public List<DataSegment> eachOfSizeInMb(long sizeMb)
+  {
+    return eachOfSize(sizeMb * 1_000_000);
+  }
+
+  public List<DataSegment> eachOfSize(long sizeInBytes)
   {
     boolean isEternityInterval = Objects.equals(granularity, Granularities.ALL);
     if (isEternityInterval) {
@@ -105,9 +126,11 @@ public class CreateDataSegments
             new NumberedDataSegment(
                 datasource,
                 nextInterval,
+                version,
                 new NumberedShardSpec(numPartition, numPartitions),
                 ++uniqueIdInInterval,
-                sizeMb << 20
+                compactionState,
+                sizeInBytes
             )
         );
       }
@@ -128,23 +151,26 @@ public class CreateDataSegments
     private NumberedDataSegment(
         String datasource,
         Interval interval,
+        String version,
         NumberedShardSpec shardSpec,
-        int uinqueId,
+        int uniqueId,
+        CompactionState compactionState,
         long size
     )
     {
       super(
           datasource,
           interval,
-          "1",
+          version,
           Collections.emptyMap(),
           Collections.emptyList(),
           Collections.emptyList(),
           shardSpec,
+          compactionState,
           IndexIO.CURRENT_VERSION_ID,
           size
       );
-      this.uniqueId = uinqueId;
+      this.uniqueId = uniqueId;
     }
 
     @Override

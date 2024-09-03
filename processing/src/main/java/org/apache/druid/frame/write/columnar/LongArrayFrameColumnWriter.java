@@ -51,7 +51,6 @@ public class LongArrayFrameColumnWriter extends NumericArrayFrameColumnWriter
   @Override
   void putArrayElement(WritableMemory memory, long offset, Number element)
   {
-    // The element is of type Long, and non-null, therefore it can be casted safely
-    memory.putLong(offset, (long) element);
+    memory.putLong(offset, element.longValue());
   }
 }

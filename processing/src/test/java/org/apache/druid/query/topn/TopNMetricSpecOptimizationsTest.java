@@ -21,7 +21,6 @@ package org.apache.druid.query.topn;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -41,7 +40,6 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -251,19 +249,6 @@ public class TopNMetricSpecOptimizationsTest
         return cardinality;
       }
 
-      @Override
-      public DateTime getMinTime()
-      {
-        return DateTimes.of(start);
-      }
-
-
-      @Override
-      public DateTime getMaxTime()
-      {
-        return DateTimes.of(end);
-      }
-
       // stubs below this line not important for tests
 
       @Override
@@ -303,12 +288,6 @@ public class TopNMetricSpecOptimizationsTest
       public int getNumRows()
       {
         return 0;
-      }
-
-      @Override
-      public DateTime getMaxIngestedEventTime()
-      {
-        return null;
       }
 
       @Override

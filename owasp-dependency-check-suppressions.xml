@@ -692,4 +692,11 @@
     <cve>CVE-2023-50386</cve>
     <cve>CVE-2023-50292</cve>
   </suppress>
+  <suppress>
+    <!-- Transitive dependency from Apache Hadoop Common, which does not have a fix that can be upgraded to yet -->
+    <notes><![CDATA[
+    file name: dnsjava-2.1.7.jar
+    ]]></notes>
+    <vulnerabilityName>CVE-2024-25638</vulnerabilityName>
+  </suppress>
 </suppressions>

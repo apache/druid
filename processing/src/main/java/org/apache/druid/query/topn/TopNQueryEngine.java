@@ -35,6 +35,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.Types;
@@ -66,7 +67,8 @@ public class TopNQueryEngine
   public Sequence<Result<TopNResultValue>> query(
       final TopNQuery query,
       final StorageAdapter adapter,
-      final @Nullable TopNQueryMetrics queryMetrics
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      @Nullable final TopNQueryMetrics queryMetrics
   )
   {
     if (adapter == null) {
@@ -84,11 +86,11 @@ public class TopNQueryEngine
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
     final CursorGranularizer granularizer = CursorGranularizer.create(
-        adapter,
         cursor,
+        timeBoundaryInspector,
+        cursorHolder.getTimeOrder(),
         query.getGranularity(),
-        buildSpec.getInterval(),
-        false
+        buildSpec.getInterval()
     );
     if (granularizer == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);

@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -206,9 +205,6 @@ public interface SegmentsMetadataManager
       int limit,
       DateTime maxUsedStatusLastUpdatedTime
   );
-
-  @VisibleForTesting
-  void poll();
 
   /**
    * Populates used_status_last_updated column in the segments table iteratively until there are no segments with a NULL

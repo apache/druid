@@ -51,7 +51,8 @@ public class QueryDefinitionTest
                         new GlobalSortMaxCountShuffleSpec(
                             new ClusterBy(ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING)), 0),
                             2,
-                            false
+                            false,
+                            ShuffleSpec.UNLIMITED
                         )
                     )
                     .maxWorkerCount(3)
