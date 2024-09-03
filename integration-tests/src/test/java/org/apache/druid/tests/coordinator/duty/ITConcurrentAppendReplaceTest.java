@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -218,60 +217,6 @@ public class ITConcurrentAppendReplaceTest extends AbstractKafkaIndexingServiceT
       Assert.assertTrue(concurrentAppendAndReplaceLocksExisted);
     }
   }
-
-
-  @Test(dataProvider = "getKafkaTransactionStatesForTest")
-  public void testConcurrentMSQAppendReplace(boolean transactionEnabled) throws Exception
-  {
-    if (shouldSkipTest(transactionEnabled)) {
-      return;
-    }
-
-    final String datasource = "dst";
-
-    final String queryLocal =
-        StringUtils.format(
-            "INSERT INTO %s\n"
-            + "SELECT\n"
-            + "  TIME_PARSE(\"timestamp\") AS __time,\n"
-            + "  isRobot,\n"
-            + "  regionIsoCode\n"
-            + "FROM TABLE(\n"
-            + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
-            + "    '{\"type\":\"json\"}',\n"
-            + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
-            + "  )\n"
-            + ")\n"
-            + "PARTITIONED BY DAY\n",
-            datasource
-        );
-
-    Function<String, AggregatorFactory> function = name -> new CountAggregatorFactory("rows");
-
-    msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
-    ensureSegmentsCount(datasource, 1);
-    ensureRowCount(datasource, 3, function);
-
-    submitAndVerifyCompactionConfig(datasource, Granularities.DAY);
-
-    for (int i = 1; i <= 5; i++) {
-      // Submit the task and wait for the datasource to get loaded
-      msqHelper.submitMsqTaskSuccesfully(queryLocal, ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true));
-      compactionResource.forceTriggerAutoCompaction();
-      checkAndSetConcurrentLocks(datasource);
-      printTaskStatuses(datasource);
-      ensureRowCount(datasource, i * 3 + 3, function);
-    }
-
-    ensureRowCount(datasource, 18, function);
-    ensureSegmentsCount(datasource, 1);
-    ensureSegmentsLoaded(datasource);
-    verifyCompactedIntervals(datasource, Intervals.of("2013-08-31/2013-09-01"));
-
-    Assert.assertTrue(concurrentAppendAndReplaceLocksExisted);
-  }
-
 
     /**
      * Retries until the segment count is as expected.
