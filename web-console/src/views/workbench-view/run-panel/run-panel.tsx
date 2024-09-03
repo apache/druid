@@ -41,7 +41,6 @@ import type {
   DruidEngine,
   IndexSpec,
   QueryContext,
-  SelectDestination,
   SqlJoinAlgorithm,
   WorkbenchQuery,
 } from '../../../druid-models';
@@ -97,11 +96,6 @@ const ARRAY_INGEST_MODE_DESCRIPTION: Record<ArrayIngestMode, JSX.Element> = {
 const SQL_JOIN_ALGORITHM_LABEL: Record<SqlJoinAlgorithm, string> = {
   broadcast: 'Broadcast',
   sortMerge: 'Sort merge',
-};
-
-const SELECT_DESTINATION_LABEL: Record<SelectDestination, string> = {
-  taskReport: 'Task report',
-  durableStorage: 'Durable storage',
 };
 
 const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
@@ -468,6 +462,40 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         />
                       ))}
                     </MenuItem>
+                    <MenuItem
+                      icon={IconNames.INNER_JOIN}
+                      text="Join algorithm"
+                      label={
+                        SQL_JOIN_ALGORITHM_LABEL[sqlJoinAlgorithm as SqlJoinAlgorithm] ??
+                        sqlJoinAlgorithm
+                      }
+                    >
+                      {(['broadcast', 'sortMerge'] as SqlJoinAlgorithm[]).map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(sqlJoinAlgorithm === o)}
+                          text={SQL_JOIN_ALGORITHM_LABEL[o]}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext({ ...queryContext, sqlJoinAlgorithm: o })
+                          }
+                        />
+                      ))}
+                    </MenuItem>
+
+                    <MenuBoolean
+                      icon={IconNames.ROCKET_SLANT}
+                      text="Approximate COUNT(DISTINCT)"
+                      value={useApproximateCountDistinct}
+                      onValueChange={useApproximateCountDistinct =>
+                        changeQueryContext({
+                          ...queryContext,
+                          useApproximateCountDistinct,
+                        })
+                      }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    />
+
                     <MenuBoolean
                       icon={IconNames.TRANSLATE}
                       text="Finalize aggregations"
@@ -490,60 +518,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       }
                       optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
-                    <MenuItem
-                      icon={IconNames.INNER_JOIN}
-                      text="Join algorithm"
-                      label={
-                        SQL_JOIN_ALGORITHM_LABEL[sqlJoinAlgorithm as SqlJoinAlgorithm] ??
-                        sqlJoinAlgorithm
-                      }
-                    >
-                      {(['broadcast', 'sortMerge'] as SqlJoinAlgorithm[]).map(o => (
-                        <MenuItem
-                          key={o}
-                          icon={tickIcon(sqlJoinAlgorithm === o)}
-                          text={SQL_JOIN_ALGORITHM_LABEL[o]}
-                          shouldDismissPopover={false}
-                          onClick={() =>
-                            changeQueryContext({ ...queryContext, sqlJoinAlgorithm: o })
-                          }
-                        />
-                      ))}
-                    </MenuItem>
-                    <MenuItem
-                      icon={IconNames.MANUALLY_ENTERED_DATA}
-                      text="SELECT destination"
-                      label={
-                        SELECT_DESTINATION_LABEL[selectDestination as SelectDestination] ??
-                        selectDestination
-                      }
-                      intent={intent}
-                    >
-                      {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
-                        <MenuItem
-                          key={o}
-                          icon={tickIcon(selectDestination === o)}
-                          text={SELECT_DESTINATION_LABEL[o]}
-                          shouldDismissPopover={false}
-                          onClick={() =>
-                            changeQueryContext({ ...queryContext, selectDestination: o })
-                          }
-                        />
-                      ))}
-                      <MenuDivider />
-                      <MenuCheckbox
-                        checked={selectDestination === 'taskReport' ? !query.unlimited : false}
-                        intent={intent}
-                        disabled={selectDestination !== 'taskReport'}
-                        text="Limit SELECT results in taskReport"
-                        labelElement={
-                          query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
-                        }
-                        onChange={() => {
-                          onQueryChange(query.toggleUnlimited());
-                        }}
-                      />
-                    </MenuItem>
                     <MenuBoolean
                       icon={IconNames.CLOUD_TICK}
                       text="Durable shuffle storage"
