@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -53,11 +54,12 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
 
   @Override
   @SuppressWarnings("unchecked")
-  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
+  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor, CursorGranularizer granularizer)
   {
     return new TopNParams(
         selectorPlus,
         cursor,
+        granularizer,
         Integer.MAX_VALUE
     );
   }
@@ -88,6 +90,7 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
   )
   {
     final Cursor cursor = params.getCursor();
+    final CursorGranularizer granularizer = params.getGranularizer();
     final DimensionSelector dimSelector = params.getDimSelector();
 
     long processedRows = 0;
@@ -102,9 +105,10 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
       for (Aggregator aggregator : theAggregators) {
         aggregator.aggregate();
       }
-
-      cursor.advance();
       processedRows++;
+      if (!granularizer.advanceCursorWithinBucket()) {
+        break;
+      }
     }
     return processedRows;
   }

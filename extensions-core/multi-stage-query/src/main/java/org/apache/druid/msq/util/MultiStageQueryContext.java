@@ -25,16 +25,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.rpc.ControllerResource;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -165,9 +168,23 @@ public class MultiStageQueryContext
   public static final boolean DEFAULT_USE_AUTO_SCHEMAS = false;
 
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
-  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.MVD;
+  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.ARRAY;
 
-  public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
+  /**
+   * Whether new counters (anything other than channel, sortProgress, warnings, segmentGenerationProgress) should
+   * be included in reports. This parameter is necessary because prior to Druid 31, we lacked
+   * {@link NilQueryCounterSnapshot} as a default counter, which means that {@link SqlStatementResourceHelper} and
+   * {@link ControllerResource#httpPostCounters} would throw errors when encountering new counter types that they do
+   * not yet recognize. This causes problems during rolling updates.
+   *
+   * Once all servers are on Druid 31 or later, this can safely be flipped to "true". At that point, unknown counters
+   * are represented on the deserialization side using {@link NilQueryCounterSnapshot}.
+   */
+  public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
+  public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = false;
+
+  public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
+  private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
@@ -361,6 +378,19 @@ public class MultiStageQueryContext
   public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
   {
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
+  }
+
+  /**
+   * See {@link #CTX_INCLUDE_ALL_COUNTERS}.
+   */
+  public static boolean getIncludeAllCounters(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_INCLUDE_ALL_COUNTERS, DEFAULT_INCLUDE_ALL_COUNTERS);
+  }
+
+  public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)

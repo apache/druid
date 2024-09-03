@@ -21,7 +21,6 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ModelProperties;
@@ -78,12 +77,6 @@ public class DatasourceDefn extends TableDefn
       super(SEGMENT_GRANULARITY_PROPERTY);
     }
 
-    @Override
-    public void validate(Object value, ObjectMapper jsonMapper)
-    {
-      String gran = decode(value, jsonMapper);
-      CatalogUtils.validateGranularity(gran);
-    }
   }
 
   public static class HiddenColumnsDefn extends StringListPropertyDefn

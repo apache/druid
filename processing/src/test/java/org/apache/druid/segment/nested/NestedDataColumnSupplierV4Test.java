@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -61,6 +61,7 @@ import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.serde.ColumnPartSerde;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -141,7 +142,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   @BeforeClass
   public static void staticSetup()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
@@ -247,7 +248,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
         baseBuffer,
         bob,
         ColumnConfig.SELECTION_SIZE,
-        NestedDataComplexTypeSerde.OBJECT_MAPPER
+        ColumnSerializerUtils.SMILE_MAPPER
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

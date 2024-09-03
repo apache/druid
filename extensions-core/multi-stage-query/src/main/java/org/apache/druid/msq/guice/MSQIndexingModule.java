@@ -27,6 +27,9 @@ import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
+import org.apache.druid.msq.counters.CpuCounter;
+import org.apache.druid.msq.counters.CpuCounters;
+import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
@@ -60,6 +63,7 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
@@ -128,6 +132,7 @@ public class MSQIndexingModule implements DruidModule
       TooManyColumnsFault.class,
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
+      TooManyRowsInAWindowFault.class,
       TooManyRowsWithSameKeyFault.class,
       TooManySegmentsInTimeChunkFault.class,
       TooManyWarningsFault.class,
@@ -173,6 +178,9 @@ public class MSQIndexingModule implements DruidModule
         SuperSorterProgressTrackerCounter.Snapshot.class,
         WarningCounters.Snapshot.class,
         SegmentGenerationProgressCounter.Snapshot.class,
+        CpuCounters.Snapshot.class,
+        CpuCounter.Snapshot.class,
+        NilQueryCounterSnapshot.class,
 
         // InputSpec classes
         ExternalInputSpec.class,

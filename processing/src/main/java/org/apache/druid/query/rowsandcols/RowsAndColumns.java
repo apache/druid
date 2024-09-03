@@ -42,14 +42,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
 /**
  * An interface representing a chunk of RowsAndColumns.  Essentially a RowsAndColumns is just a batch of rows
@@ -92,31 +88,6 @@ public interface RowsAndColumns
     }
     return retVal;
   }
-
-  static <T> Map<Class<?>, Function<T, ?>> makeAsMap(Class<T> clazz)
-  {
-    Map<Class<?>, Function<T, ?>> retVal = new HashMap<>();
-
-    for (Method method : clazz.getMethods()) {
-      if (method.isAnnotationPresent(SemanticCreator.class)) {
-        if (method.getParameterCount() != 0) {
-          throw DruidException.defensive("Method [%s] annotated with SemanticCreator was not 0-argument.", method);
-        }
-
-        retVal.put(method.getReturnType(), arg -> {
-          try {
-            return method.invoke(arg);
-          }
-          catch (InvocationTargetException | IllegalAccessException e) {
-            throw DruidException.defensive().build(e, "Problem invoking method [%s]", method);
-          }
-        });
-      }
-    }
-
-    return retVal;
-  }
-
 
   /**
    * The set of column names available from the RowsAndColumns

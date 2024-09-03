@@ -22,11 +22,13 @@ package org.apache.druid.sql.calcite.rule;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -67,6 +69,16 @@ public class GroupByRules
   {
     if (!call.getCollation().getFieldCollations().isEmpty()) {
       return null;
+    }
+
+    if (call.isDistinct() && call.getAggregation().getKind() != SqlKind.COUNT) {
+      if (!call.getAggregation().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
+        plannerContext.setPlanningError(
+            "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
+            call.getAggregation().getName()
+        );
+        return null;
+      }
     }
 
     final DimFilter filter;

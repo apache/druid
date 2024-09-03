@@ -43,6 +43,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
@@ -141,9 +142,8 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         segment.getTotalSpace()
     );
     backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false, SegmentLazyLoadFailCallback.NOOP);
-
-    columnNames = ImmutableList.<String>builder().add(ColumnHolder.TIME_COLUMN_NAME)
-                                                 .addAll(backingSegment.asQueryableIndex().getColumnNames()).build();
+    columnNames =
+        new QueryableIndexStorageAdapter(backingSegment.asQueryableIndex()).getRowSignature().getColumnNames();
     broadcastTable = new BroadcastSegmentIndexedTable(backingSegment, keyColumns, dataSegment.getVersion());
   }
 
@@ -326,7 +326,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
       closer.register(theColumn);
       final BaseObjectColumnValueSelector<?> selector = theColumn.makeColumnValueSelector(offset);
 
-      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, false, closer);
+      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, closer);
       final BaseObjectColumnValueSelector<?> tableSelector = tableFactory.makeColumnValueSelector(columnName);
 
       // compare with base segment selector to make sure tables selector can read correct values

@@ -62,7 +62,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
@@ -229,7 +228,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public Comparator<Result<TimeseriesResultValue>> createResultComparator(Query<Result<TimeseriesResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
+    return ResultGranularTimestampComparator.create(query.getGranularity(), ((TimeseriesQuery) query).isDescending());
   }
 
   private Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
@@ -384,6 +383,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               timestamp = granularity.toDateTime(Preconditions.checkNotNull(timestampNumber, "timestamp").longValue());
             }
 
+            // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+            // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+            // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
+            if (StringUtils.isNotEmpty(query.getTimestampResultField()) && timestamp != null) {
+              retVal.put(query.getTimestampResultField(), timestamp.getMillis());
+            }
+
             CacheStrategy.fetchAggregatorsFromCache(
                 aggs,
                 resultIter,
@@ -439,14 +445,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    rowSignatureBuilder.addTimeColumn();
-    if (StringUtils.isNotEmpty(query.getTimestampResultField())) {
-      rowSignatureBuilder.add(query.getTimestampResultField(), ColumnType.LONG);
-    }
-    rowSignatureBuilder.addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN);
-    rowSignatureBuilder.addPostAggregators(query.getPostAggregatorSpecs());
-    return rowSignatureBuilder.build();
+    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -486,7 +485,10 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = resultArraySignature(query);
+    final RowSignature rowSignature =
+        query.getResultSignature(
+            query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
+        );
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature

@@ -30,7 +30,7 @@ import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprEval;
@@ -1760,7 +1760,7 @@ public class EqualityFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       f1 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
       f1_2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
       f2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3, 4)), null);

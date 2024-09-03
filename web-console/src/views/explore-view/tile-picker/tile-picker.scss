@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
+@import '../../../variables';
+
 .tile-picker {
-  .picker-button .bp4-button-text {
+  .picker-button .#{$ns}-button-text {
     flex: 1 1 auto;
   }
 
-  .more-button.bp4-popover2-target {
+  .more-button.#{$ns}-popover-target {
     flex: 0;
   }
 }

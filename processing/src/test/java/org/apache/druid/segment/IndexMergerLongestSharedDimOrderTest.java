@@ -78,14 +78,14 @@ public class IndexMergerLongestSharedDimOrderTest
     QueryableIndexIndexableAdapter index2 = makeIndexWithDimensionList(ImmutableList.of("b", "c"));
     List<String> actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), null);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual);
+    Assert.assertEquals(ImmutableList.of("__time", "a", "b", "c"), actual);
 
     //  Valid ordering as although second index has gap, it is still same ordering
     index1 = makeIndexWithDimensionList(ImmutableList.of("a", "b", "c"));
     index2 = makeIndexWithDimensionList(ImmutableList.of("a", "c"));
     actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), null);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual);
+    Assert.assertEquals(ImmutableList.of("__time", "a", "b", "c"), actual);
   }
 
   @Test
@@ -131,7 +131,7 @@ public class IndexMergerLongestSharedDimOrderTest
     QueryableIndexIndexableAdapter index2 = makeIndexWithDimensionList(ImmutableList.of("b", "c"));
     List<String> actual = IndexMerger.getLongestSharedDimOrder(ImmutableList.of(index1, index2), valid);
     Assert.assertNotNull(actual);
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), actual);
+    Assert.assertEquals(ImmutableList.of("__time", "a", "b", "c"), actual);
   }
 
   @Test
@@ -167,11 +167,15 @@ public class IndexMergerLongestSharedDimOrderTest
             mockBitmapFactory,
             ImmutableMap.of(ColumnHolder.TIME_COLUMN_NAME, mockSupplier),
             mockSmooshedFileMapper,
-            null,
             true
         )
+        {
+          @Override
+          public Metadata getMetadata()
+          {
+            return null;
+          }
+        }
     );
   }
 }
-
-

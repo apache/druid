@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.TestQueryRunner;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.ordering.StringComparators;
@@ -79,12 +80,13 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
         QueryRunnerTestHelper.makeQueryRunners(
-            new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+            new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER),
+            true
         )
     );
   }
 
-  private final QueryRunner runner;
+  private final TestQueryRunner<Result<TimeBoundaryResultValue>> runner;
   private static final QueryRunnerFactory FACTORY = new TimeBoundaryQueryRunnerFactory(
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
@@ -92,7 +94,7 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
   private static Segment segment1;
 
   public TimeBoundaryQueryRunnerTest(
-      QueryRunner runner
+      TestQueryRunner<Result<TimeBoundaryResultValue>> runner
   )
   {
     this.runner = runner;

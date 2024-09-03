@@ -49,7 +49,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                     .virtualColumns(
                         expressionVirtualColumn("v0", "null", null)
                     )
-                    .legacy(false)
                     .build(),
                 Druids.newScanQueryBuilder()
                     .dataSource(CalciteTests.DATASOURCE3)
@@ -57,7 +56,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                     .columns("dim1", "dim4")
                     .context(QUERY_CONTEXT_DEFAULT)
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .legacy(false)
                     .build()
             )
         )
@@ -94,7 +92,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .columns("d1", "dim1", "dim4", "f1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -137,7 +134,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .filters(equality("dim1", "2", ColumnType.STRING))
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -165,7 +161,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .columns("dim1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(
@@ -196,7 +191,6 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
                 .columns("dim3")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectedResults(

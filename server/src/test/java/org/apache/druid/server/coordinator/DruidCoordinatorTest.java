@@ -136,11 +136,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
     EasyMock.expect(
         configManager.watch(
-            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+            EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+    ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     setupServerAndCurator();
     curator.start();
@@ -734,11 +734,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
     EasyMock.expect(
         configManager.watch(
-            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+            EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+    ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
     DataSegment dataSegment = new DataSegment(

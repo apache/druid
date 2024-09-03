@@ -33,9 +33,7 @@ public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
     super(ColumnBasedFrameRowsAndColumns.class);
   }
 
-  public static Function<MapOfColumnsRowsAndColumns, ColumnBasedFrameRowsAndColumns> MAKER = input -> {
-    return buildFrame(input);
-  };
+  public static Function<MapOfColumnsRowsAndColumns, ColumnBasedFrameRowsAndColumns> MAKER = ColumnBasedFrameRowsAndColumnsTest::buildFrame;
 
   public static ColumnBasedFrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
@@ -50,7 +48,6 @@ public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
     );
 
     rac.numRows(); // materialize
-
     return (ColumnBasedFrameRowsAndColumns) rac.getBase();
   }
 }

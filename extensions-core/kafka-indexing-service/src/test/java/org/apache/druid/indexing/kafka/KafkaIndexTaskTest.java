@@ -52,6 +52,7 @@ import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.data.input.kafkainput.KafkaStringHeaderFormat;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
@@ -1617,6 +1618,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1696,6 +1701,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNull(newDataSchemaMetadata());
 
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
+    Assert.assertNotNull(reportData.getErrorMsg());
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -2908,10 +2917,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     .put(
                         ScanQuery.class,
                         new ScanQueryRunnerFactory(
-                            new ScanQueryQueryToolChest(
-                                new ScanQueryConfig(),
-                                new DefaultGenericQueryMetricsFactory()
-                            ),
+                            new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                             new ScanQueryEngine(),
                             new ScanQueryConfig()
                         )
@@ -3060,9 +3066,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         newDataSchemaMetadata()
     );
 
-    // Verify unparseable data
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
+    // Verify unparseable data
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
@@ -3193,9 +3203,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
     Assert.assertNull(newDataSchemaMetadata());
 
+    // Verify ingestion state and error message
+    final IngestionStatsAndErrors reportData = getTaskReportData();
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
+    Assert.assertNotNull(reportData.getErrorMsg());
+
     // Verify there is no unparseable data in the report since we've 0 saved parse exceptions
     ParseExceptionReport parseExceptionReport =
-        ParseExceptionReport.forPhase(getTaskReportData(), RowIngestionMeters.BUILD_SEGMENTS);
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     Assert.assertEquals(ImmutableList.of(), parseExceptionReport.getErrorMessages());
   }
@@ -3234,6 +3249,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
+    // Verify report metrics
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 1);
     Assert.assertEquals(reportData.getRecordsProcessed().values().iterator().next(), (Long) 6L);
   }
@@ -3282,6 +3303,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
+    // Verify report metrics
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 2);
     Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
   }

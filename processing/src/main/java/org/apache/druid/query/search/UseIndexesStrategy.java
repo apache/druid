@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
@@ -34,6 +35,7 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
 import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
@@ -98,7 +100,8 @@ public class UseIndexesStrategy extends SearchStrategy
         // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
-        if (filter == null || filter.getBitmapColumnIndex(selector) != null) {
+        if ((filter == null || filter.getBitmapColumnIndex(selector) != null)
+            && Cursors.getTimeOrdering(index.getOrdering()) == Order.ASCENDING) {
           final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(
               index,
               segment,
@@ -114,10 +117,10 @@ public class UseIndexesStrategy extends SearchStrategy
       }
 
       if (nonBitmapSuppDims.size() > 0) {
-        builder.add(new CursorBasedExecutor(query, segment, filter, interval, nonBitmapSuppDims));
+        builder.add(new CursorBasedExecutor(query, segment, nonBitmapSuppDims));
       }
     } else {
-      builder.add(new CursorBasedExecutor(query, segment, filter, interval, searchDims));
+      builder.add(new CursorBasedExecutor(query, segment, searchDims));
     }
 
     return builder.build();

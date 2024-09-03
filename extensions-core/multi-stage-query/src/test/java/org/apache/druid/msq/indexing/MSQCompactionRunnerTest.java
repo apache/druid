@@ -48,12 +48,14 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -73,6 +75,8 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class MSQCompactionRunnerTest
 {
@@ -85,13 +89,9 @@ public class MSQCompactionRunnerTest
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
   private static List<String> PARTITION_DIMENSIONS;
 
-  private static final StringDimensionSchema DIM1 = new StringDimensionSchema(
-      "string_dim",
-      null,
-      null
-  );
-  private static final LongDimensionSchema LONG_DIMENSION_SCHEMA = new LongDimensionSchema("long_dim");
-  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(DIM1, LONG_DIMENSION_SCHEMA);
+  private static final StringDimensionSchema STRING_DIMENSION = new StringDimensionSchema("string_dim", null, null);
+  private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
+  private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(STRING_DIMENSION, LONG_DIMENSION);
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
   private static final AggregatorFactory AGG2 = new LongSumAggregatorFactory("sum_added", "sum_added");
@@ -196,6 +196,19 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testRollupTrueWithoutMetricsSpecIsInValid()
+  {
+    CompactionTask compactionTask = createCompactionTask(
+        new DynamicPartitionsSpec(3, null),
+        null,
+        Collections.emptyMap(),
+        new ClientCompactionTaskGranularitySpec(null, null, true),
+        null
+    );
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
+  }
+
+  @Test
   public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
   {
     // Aggregators having different input and ouput column names are unsupported.
@@ -211,7 +224,7 @@ public class MSQCompactionRunnerTest
     CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask);
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
         validationResult.getReason()
     );
   }
@@ -276,7 +289,9 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+            null
         ),
         actualMSQSpec.getDestination()
     );
@@ -288,6 +303,10 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertNull(msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY));
     Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assert.assertEquals(
+        PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        ((ScanQuery) actualMSQSpec.getQuery()).getOrderBys()
+    );
   }
 
   @Test
@@ -341,7 +360,9 @@ public class MSQCompactionRunnerTest
             DATA_SOURCE,
             SEGMENT_GRANULARITY.getDefaultGranularity(),
             null,
-            Collections.singletonList(COMPACTION_INTERVAL)
+            Collections.singletonList(COMPACTION_INTERVAL),
+            DIMENSIONS.stream().collect(Collectors.toMap(DimensionSchema::getName, Function.identity())),
+            null
         ),
         actualMSQSpec.getDestination()
     );

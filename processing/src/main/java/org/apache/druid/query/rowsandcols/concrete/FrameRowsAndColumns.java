@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.concrete;
 
 import com.google.common.base.Objects;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
@@ -69,26 +70,6 @@ public abstract class FrameRowsAndColumns implements RowsAndColumns, AutoCloseab
   public int numRows()
   {
     return frame.numRows();
-  }
-
-  @Nullable
-  @Override
-  public Column findColumn(String name)
-  {
-    // Use contains so that we can negative cache.
-    if (!colCache.containsKey(name)) {
-      final int columnIndex = signature.indexOf(name);
-      if (columnIndex < 0) {
-        colCache.put(name, null);
-      } else {
-        final ColumnType columnType = signature
-            .getColumnType(columnIndex)
-            .orElseThrow(() -> new ISE("just got the id, why is columnType not there?"));
-
-        colCache.put(name, FrameColumnReaders.create(name, columnIndex, columnType).readRACColumn(frame));
-      }
-    }
-    return colCache.get(name);
   }
 
   @SuppressWarnings("unchecked")

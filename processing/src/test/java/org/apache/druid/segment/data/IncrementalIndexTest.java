@@ -33,7 +33,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -104,7 +104,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   public IncrementalIndexTest(String indexType, String mode, boolean isPreserveExistingMetrics) throws JsonProcessingException
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.isPreserveExistingMetrics = isPreserveExistingMetrics;
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
         .setSimpleTestingIndexSchema("rollup".equals(mode), isPreserveExistingMetrics, (AggregatorFactory[]) args[0])
@@ -231,7 +231,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     IncrementalIndex index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
 
     populateIndex(timestamp, index);
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2"), index.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames(false));
     Assert.assertEquals(2, index.size());
 
     final Iterator<Row> rows = index.iterator();
@@ -286,7 +287,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2", "dim3"), index.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames(false));
     Assert.assertEquals(
         Arrays.asList(
             "count",
@@ -649,7 +651,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             .build()
     );
 
-    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim0", "dim1"), incrementalIndex.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames(false));
   }
 
   @Test

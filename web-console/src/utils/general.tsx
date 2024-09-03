@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Classes, Intent } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
@@ -240,7 +240,7 @@ export function formatInteger(n: NumberLike): string {
 }
 
 export function formatNumber(n: NumberLike): string {
-  return n.toLocaleString('en-US', { maximumFractionDigits: 20 });
+  return (n || 0).toLocaleString('en-US', { maximumFractionDigits: 20 });
 }
 
 export function formatRate(n: NumberLike) {
@@ -381,12 +381,26 @@ export function findMap<T, Q>(
   return filterMap(xs, f)[0];
 }
 
+export function changeByIndex<T>(
+  xs: readonly T[],
+  i: number,
+  f: (x: T, i: number) => T | undefined,
+): T[] {
+  return filterMap(xs, (x, j) => (j === i ? f(x, i) : x));
+}
+
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return compact(xs);
+}
+
+export function removeUndefinedValues<T extends Record<string, any>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined),
+  ) as Partial<T>;
 }
 
 export function moveToEnd<T>(
@@ -554,7 +568,7 @@ export function objectHash(obj: any): string {
 }
 
 export function hasPopoverOpen(): boolean {
-  return Boolean(document.querySelector('.bp4-portal .bp4-overlay .bp4-popover2'));
+  return Boolean(document.querySelector(`${Classes.PORTAL} ${Classes.OVERLAY} ${Classes.POPOVER}`));
 }
 
 export function checkedCircleIcon(checked: boolean): IconName {

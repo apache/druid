@@ -22,7 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnDescriptor;
@@ -212,7 +212,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             );
             break;
           default:
-            throw new ISE(
+            throw DruidException.defensive(
                 "How did we get here? Column [%s] with type [%s] does not have specialized serializer",
                 name,
                 logicalType
@@ -349,7 +349,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   @Override
   public ColumnDescriptor makeColumnDescriptor()
   {
-    ColumnDescriptor.Builder descriptorBuilder = new ColumnDescriptor.Builder();
+    ColumnDescriptor.Builder descriptorBuilder = ColumnDescriptor.builder();
 
     final NestedCommonFormatColumnPartSerde partSerde =
         NestedCommonFormatColumnPartSerde.serializerBuilder()
@@ -445,11 +445,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       return counter;
     }
 
-    @Override
-    public void remove()
-    {
-      throw new UnsupportedOperationException("remove");
-    }
   }
 
   public static class IdLookupArrayIterator implements Iterator<int[]>

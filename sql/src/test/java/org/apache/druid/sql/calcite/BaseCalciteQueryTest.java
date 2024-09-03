@@ -608,8 +608,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                        .legacy(false);
+    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST);
   }
 
   protected static DruidExceptionMatcher invalidSqlIs(String s)
@@ -885,6 +884,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public CalciteTestConfig(boolean isRunningMSQ)
     {
       this();
+      this.isRunningMSQ = isRunningMSQ;
+    }
+
+    public CalciteTestConfig(Map<String, Object> baseQueryContext, boolean isRunningMSQ)
+    {
+      this(baseQueryContext);
       this.isRunningMSQ = isRunningMSQ;
     }
 
@@ -1210,6 +1215,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
+  }
+
+  protected void sqlNativeIncompatible()
+  {
+    assumeTrue(testBuilder().config.isRunningMSQ(), "test case is not SQL native compatible");
   }
 
   protected void msqIncompatible()

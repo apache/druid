@@ -40,6 +40,7 @@ import org.apache.druid.segment.data.FixedIndexedIntWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -117,8 +118,8 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   }
 
   /**
-   * Hook to allow implementors the chance to do additional operations during {@link #addValue(int, Object)}, such as
-   * writing an additional value column
+   * Hook to allow implementors the chance to do additional operations during {@link #writeTo(int, FileSmoosher)}, such
+   * as writing an additional value column
    */
   void writeValue(@Nullable T value) throws IOException
   {
@@ -159,7 +160,6 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       localId = localDictionary.add(globalId);
     }
     intermediateValueWriter.write(localId);
-    writeValue(value);
     cursorPosition++;
   }
 
@@ -168,11 +168,9 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
    */
   private void fillNull(int row) throws IOException
   {
-    final T value = processValue(row, null);
     final int localId = localDictionary.add(0);
     while (cursorPosition < row) {
       intermediateValueWriter.write(localId);
-      writeValue(value);
       cursorPosition++;
     }
   }
@@ -252,6 +250,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       final int unsortedLocalId = rows.nextInt();
       final int sortedLocalId = unsortedToSorted[unsortedLocalId];
       encodedValueSerializer.addValue(sortedLocalId);
+      writeValue((T) globalDictionaryIdLookup.getDictionaryValue(unsortedToGlobal[unsortedLocalId]));
       bitmaps[sortedLocalId].add(rowCount++);
     }
 
@@ -295,7 +294,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
         }
       }
     };
-    final String fieldFileName = NestedCommonFormatColumnSerializer.getInternalFileName(columnName, fieldName);
+    final String fieldFileName = ColumnSerializerUtils.getInternalFileName(columnName, fieldName);
     final long size = fieldSerializer.getSerializedSize();
     log.debug("Column [%s] serializing [%s] field of size [%d].", columnName, fieldName, size);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(fieldFileName, size)) {
@@ -307,7 +306,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     }
   }
 
-  private void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
+  public void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
   {
     if (indexSpec.getDimensionCompression() != CompressionStrategy.UNCOMPRESSED) {
       this.version = DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED;

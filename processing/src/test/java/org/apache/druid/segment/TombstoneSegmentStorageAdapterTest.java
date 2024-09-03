@@ -19,13 +19,8 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.Indexed;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,15 +36,17 @@ public class TombstoneSegmentStorageAdapterTest
     StorageAdapter sa = new StorageAdapter()
     {
       @Override
-      public Sequence<Cursor> makeCursors(
-          @Nullable Filter filter,
-          Interval interval,
-          VirtualColumns virtualColumns,
-          Granularity gran,
-          boolean descending,
-          @Nullable QueryMetrics<?> queryMetrics)
+      public CursorHolder makeCursorHolder(CursorBuildSpec spec)
       {
-        return null;
+        return new CursorHolder()
+        {
+          @Nullable
+          @Override
+          public Cursor asCursor()
+          {
+            return null;
+          }
+        };
       }
 
       @Override
@@ -62,12 +59,6 @@ public class TombstoneSegmentStorageAdapterTest
       public int getNumRows()
       {
         return 0;
-      }
-
-      @Override
-      public DateTime getMaxIngestedEventTime()
-      {
-        return null;
       }
 
       @Override
@@ -86,18 +77,6 @@ public class TombstoneSegmentStorageAdapterTest
       public int getDimensionCardinality(String column)
       {
         return 0;
-      }
-
-      @Override
-      public DateTime getMinTime()
-      {
-        return null;
-      }
-
-      @Override
-      public DateTime getMaxTime()
-      {
-        return null;
       }
 
       @Nullable
@@ -127,7 +106,6 @@ public class TombstoneSegmentStorageAdapterTest
       {
         return null;
       }
-
     };
 
     Assert.assertFalse(sa.isFromTombstone());

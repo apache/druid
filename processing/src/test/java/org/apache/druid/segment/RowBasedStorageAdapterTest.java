@@ -19,18 +19,22 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.math.LongMath;
+import junitparams.converters.Nullable;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -38,16 +42,20 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
@@ -78,10 +86,10 @@ public class RowBasedStorageAdapterTest
           }
       );
 
-  private static final List<Function<Cursor, Supplier<Object>>> READ_TIME_AND_STRING =
+  private static final List<BiFunction<Cursor, CursorGranularizer, Supplier<Object>>> READ_TIME_AND_STRING_GRAN =
       ImmutableList.of(
-          cursor -> cursor::getTime,
-          cursor -> {
+          (cursor, granularizer) -> granularizer::getBucketStart,
+          (cursor, granularizer) -> {
             final BaseObjectColumnValueSelector selector =
                 cursor.getColumnSelectorFactory().makeColumnValueSelector(ValueType.STRING.name());
             return selector::getObject;
@@ -97,11 +105,6 @@ public class RowBasedStorageAdapterTest
     NullHandling.initializeForTests();
 
     PROCESSORS.clear();
-
-    PROCESSORS.put(
-        "cursor-time",
-        cursor -> cursor::getTime
-    );
 
     // Read all the types as all the other types.
 
@@ -173,7 +176,7 @@ public class RowBasedStorageAdapterTest
 
   /**
    * A RowAdapter for Integers where:
-   *
+   * <p>
    * 1) timestampFunction returns a timestamp where the millis instant is equal to that integer as a number of hours
    * since the epoch (1970).
    * 2) columnFunction provides columns named after value types where each one equal to the cast to that type. All
@@ -208,14 +211,52 @@ public class RowBasedStorageAdapterTest
         }
       };
 
+  private static final RowAdapter<Integer> SAME_TIME_ROW_ADAPTER =
+      new RowAdapter<Integer>()
+      {
+        private DateTime startTime = DateTimes.nowUtc();
+        @Override
+        public ToLongFunction<Integer> timestampFunction()
+        {
+          return i -> {
+            long div = LongMath.divide(i, 3, RoundingMode.FLOOR);
+            return startTime.plus(div).getMillis();
+          };
+        }
+
+        @Override
+        public Function<Integer, Object> columnFunction(String columnName)
+        {
+          if (UNKNOWN_TYPE_NAME.equals(columnName)) {
+            return i -> i;
+          } else {
+            final ValueType valueType = GuavaUtils.getEnumIfPresent(ValueType.class, columnName);
+
+            if (valueType == null || valueType == ValueType.COMPLEX) {
+              return i -> null;
+            } else {
+              return i -> DimensionHandlerUtils.convertObjectToType(
+                  i,
+                  ROW_SIGNATURE.getColumnType(columnName).orElse(null)
+              );
+            }
+          }
+        }
+      };
+
   public final AtomicLong numCloses = new AtomicLong();
 
   private RowBasedStorageAdapter<Integer> createIntAdapter(final int... ints)
   {
+    return createIntAdapter(ROW_ADAPTER, ints);
+  }
+
+  private RowBasedStorageAdapter<Integer> createIntAdapter(RowAdapter<Integer> adapter, final int... ints)
+  {
     return new RowBasedStorageAdapter<>(
         Sequences.simple(Arrays.stream(ints).boxed().collect(Collectors.toList()))
                  .withBaggage(numCloses::incrementAndGet),
-        ROW_ADAPTER,
+        adapter,
         ROW_SIGNATURE
     );
   }
@@ -262,7 +303,7 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
+    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursor is called).
     for (String column : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
     }
@@ -280,20 +321,6 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
     Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality("__time"));
-  }
-
-  @Test
-  public void test_getMinTime()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Intervals.ETERNITY.getStart(), adapter.getMinTime());
-  }
-
-  @Test
-  public void test_getMaxTime()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Intervals.ETERNITY.getEnd().minus(1), adapter.getMaxTime());
   }
 
   @Test
@@ -331,7 +358,7 @@ public class RowBasedStorageAdapterTest
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursors is called).
+    // Row based adapters don't know cardinality (they don't walk their Iterables until makeCursor is called).
     for (String column : ROW_SIGNATURE.getColumnNames()) {
       Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, adapter.getDimensionCardinality(column));
     }
@@ -437,13 +464,6 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_getMaxIngestedEventTime()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertEquals(Intervals.ETERNITY.getEnd().minus(1), adapter.getMaxIngestedEventTime());
-  }
-
-  @Test
   public void test_getMetadata()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
@@ -451,418 +471,445 @@ public class RowBasedStorageAdapterTest
   }
 
   @Test
-  public void test_makeCursors_filterOnLong()
+  public void test_makeCursor()
   {
     final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        new SelectorDimFilter(ValueType.LONG.name(), "1.0", null).toFilter(),
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of("1")
-        ),
-        walkCursors(cursors, READ_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_filterOnNonexistentColumnEqualsNull()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        new SelectorDimFilter("nonexistent", null, null).toFilter(),
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of("0"),
-            ImmutableList.of("1")
-        ),
-        walkCursors(cursors, READ_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_filterOnVirtualColumn()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        new SelectorDimFilter("vc", "2", null).toFilter(),
-        Intervals.ETERNITY,
-        VirtualColumns.create(
-            ImmutableList.of(
-                new ExpressionVirtualColumn(
-                    "vc",
-                    "\"LONG\" + 1",
-                    ColumnType.LONG,
-                    ExprMacroTable.nil()
-                )
-            )
-        ),
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of("1")
-        ),
-        walkCursors(cursors, READ_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_descending()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        true,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of("2"),
-            ImmutableList.of("1"),
-            ImmutableList.of("0")
-        ),
-        walkCursors(cursors, READ_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_intervalDoesNotMatch()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.of("2000/P1D"),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(),
-        walkCursors(cursors, READ_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_intervalPartiallyMatches()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.of("1970-01-01T01/PT1H"),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of("1")
-        ),
-        walkCursors(cursors, READ_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_hourGranularity()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.of("1970/1971"),
-        VirtualColumns.EMPTY,
-        Granularities.HOUR,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of(DateTimes.of("1970-01-01T00"), "0"),
-            ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
-            ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
-            ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
-            ImmutableList.of(DateTimes.of("1970-01-01T03"), "3")
-        ),
-        walkCursors(cursors, READ_TIME_AND_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_hourGranularityWithInterval()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.of("1970-01-01T01/PT2H"),
-        VirtualColumns.EMPTY,
-        Granularities.HOUR,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
-            ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
-            ImmutableList.of(DateTimes.of("1970-01-01T02"), "2")
-        ),
-        walkCursors(cursors, READ_TIME_AND_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_hourGranularityWithIntervalDescending()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.of("1970-01-01T01/PT2H"),
-        VirtualColumns.EMPTY,
-        Granularities.HOUR,
-        true,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
-            ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
-            ImmutableList.of(DateTimes.of("1970-01-01T01"), "1")
-        ),
-        walkCursors(cursors, READ_TIME_AND_STRING)
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_allProcessors()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(
-            Lists.newArrayList(
-                Intervals.ETERNITY.getStart(),
-
-                // FLOAT
-                0f,
-                0d,
-                0L,
-                "0.0",
-                0f,
-
-                // DOUBLE
-                0f,
-                0d,
-                0L,
-                "0.0",
-                0d,
-
-                // LONG
-                0f,
-                0d,
-                0L,
-                "0",
-                0L,
-
-                // STRING
-                0f,
-                0d,
-                0L,
-                "0",
-                "0",
-
-                // COMPLEX
-                NullHandling.defaultFloatValue(),
-                NullHandling.defaultDoubleValue(),
-                NullHandling.defaultLongValue(),
-                null,
-                null,
-
-                // unknownType
-                0f,
-                0d,
-                0L,
-                "0",
-                0
-            ),
-            Lists.newArrayList(
-                Intervals.ETERNITY.getStart(),
-
-                // FLOAT
-                1f,
-                1d,
-                1L,
-                "1.0",
-                1f,
-
-                // DOUBLE
-                1f,
-                1d,
-                1L,
-                "1.0",
-                1d,
-
-                // LONG
-                1f,
-                1d,
-                1L,
-                "1",
-                1L,
-
-                // STRING
-                1f,
-                1d,
-                1L,
-                "1",
-                "1",
-
-                // COMPLEX
-                NullHandling.defaultFloatValue(),
-                NullHandling.defaultDoubleValue(),
-                NullHandling.defaultLongValue(),
-                null,
-                null,
-
-                // unknownType
-                1f,
-                1d,
-                1L,
-                "1",
-                1
-            )
-        ),
-        walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_filterOnNonexistentColumnEqualsNonnull()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
-
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        new SelectorDimFilter("nonexistent", "abc", null).toFilter(),
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-
-    Assert.assertEquals(
-        ImmutableList.of(),
-        walkCursors(cursors, new ArrayList<>(PROCESSORS.values()))
-    );
-
-    Assert.assertEquals(1, numCloses.get());
-  }
-
-  @Test
-  public void test_makeCursors_eternityIntervalWithMonthGranularity()
-  {
-    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
-    Assert.assertThrows(IAE.class, () -> {
-      adapter.makeCursors(
-          null,
-          Intervals.ETERNITY,
-          VirtualColumns.EMPTY,
-          Granularities.MONTH,
-          false,
-          null
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("0"),
+              ImmutableList.of("1"),
+              ImmutableList.of("2")
+          ),
+          walkCursor(cursor, READ_STRING)
       );
-    });
+    }
+
+    Assert.assertEquals(2, numCloses.get());
   }
 
-  private static List<List<Object>> walkCursors(
-      final Sequence<Cursor> cursors,
+  @Test
+  public void test_makeCursor_filterOnLong()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(new SelectorDimFilter(ValueType.LONG.name(), "1.0", null).toFilter())
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("1")
+          ),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_filterOnNonexistentColumnEqualsNull()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(new SelectorDimFilter("nonexistent", null, null).toFilter())
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("0"),
+              ImmutableList.of("1")
+          ),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_filterOnVirtualColumn()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(new SelectorDimFilter("vc", "2", null).toFilter())
+                                                     .setVirtualColumns(
+                                                         VirtualColumns.create(
+                                                             ImmutableList.of(
+                                                                 new ExpressionVirtualColumn(
+                                                                     "vc",
+                                                                     "\"LONG\" + 1",
+                                                                     ColumnType.LONG,
+                                                                     ExprMacroTable.nil()
+                                                                 )
+                                                             )
+                                                         )
+                                                     )
+                                                     .build();
+
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("1")
+          ),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+
+  @Test
+  public void test_makeCursor_descending()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setPreferredOrdering(Cursors.descendingTimeOrder())
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("2"),
+              ImmutableList.of("1"),
+              ImmutableList.of("0")
+          ),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+    Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_intervalDoesNotMatch()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.of("2000/P1D"))
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_intervalPartiallyMatches()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 2);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.of("1970-01-01T01/PT1H"))
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("1")
+          ),
+          walkCursor(cursor, READ_STRING)
+      );
+    }
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_hourGranularity()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.of("1970/1971"))
+                                                     .build();
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of(DateTimes.of("1970-01-01T00"), "0"),
+              ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
+              ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
+              ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
+              ImmutableList.of(DateTimes.of("1970-01-01T03"), "3")
+          ),
+          walkCursorGranularized(cursorHolder, null, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
+      );
+    }
+
+    Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_hourGranularityWithInterval()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.of("1970-01-01T01/PT2H"))
+                                                     .build();
+
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
+              ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
+              ImmutableList.of(DateTimes.of("1970-01-01T02"), "2")
+          ),
+          walkCursorGranularized(cursorHolder, null, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
+      );
+    }
+
+    Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_hourGranularityWithIntervalDescending()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1, 1, 2, 3);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setInterval(Intervals.of("1970-01-01T01/PT2H"))
+                                                     .setPreferredOrdering(Cursors.descendingTimeOrder())
+                                                     .build();
+
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
+              ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
+              ImmutableList.of(DateTimes.of("1970-01-01T01"), "1")
+          ),
+          walkCursorGranularized(cursorHolder, null, buildSpec, Granularities.HOUR, READ_TIME_AND_STRING_GRAN)
+      );
+    }
+
+    Assert.assertEquals(1, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_allProcessors()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(
+              Lists.newArrayList(
+
+                  // FLOAT
+                  0f,
+                  0d,
+                  0L,
+                  "0.0",
+                  0f,
+
+                  // DOUBLE
+                  0f,
+                  0d,
+                  0L,
+                  "0.0",
+                  0d,
+
+                  // LONG
+                  0f,
+                  0d,
+                  0L,
+                  "0",
+                  0L,
+
+                  // STRING
+                  0f,
+                  0d,
+                  0L,
+                  "0",
+                  "0",
+
+                  // COMPLEX
+                  NullHandling.defaultFloatValue(),
+                  NullHandling.defaultDoubleValue(),
+                  NullHandling.defaultLongValue(),
+                  null,
+                  null,
+
+                  // unknownType
+                  0f,
+                  0d,
+                  0L,
+                  "0",
+                  0
+              ),
+              Lists.newArrayList(
+
+                  // FLOAT
+                  1f,
+                  1d,
+                  1L,
+                  "1.0",
+                  1f,
+
+                  // DOUBLE
+                  1f,
+                  1d,
+                  1L,
+                  "1.0",
+                  1d,
+
+                  // LONG
+                  1f,
+                  1d,
+                  1L,
+                  "1",
+                  1L,
+
+                  // STRING
+                  1f,
+                  1d,
+                  1L,
+                  "1",
+                  "1",
+
+                  // COMPLEX
+                  NullHandling.defaultFloatValue(),
+                  NullHandling.defaultDoubleValue(),
+                  NullHandling.defaultLongValue(),
+                  null,
+                  null,
+
+                  // unknownType
+                  1f,
+                  1d,
+                  1L,
+                  "1",
+                  1
+              )
+          ),
+          walkCursor(cursor, new ArrayList<>(PROCESSORS.values()))
+      );
+    }
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+  @Test
+  public void test_makeCursor_filterOnNonexistentColumnEqualsNonnull()
+  {
+    final RowBasedStorageAdapter<Integer> adapter = createIntAdapter(0, 1);
+
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setFilter(new SelectorDimFilter("nonexistent", "abc", null).toFilter())
+                                                     .build();
+
+    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Assert.assertEquals(
+          ImmutableList.of(),
+          walkCursor(cursor, new ArrayList<>(PROCESSORS.values()))
+      );
+    }
+
+    Assert.assertEquals(2, numCloses.get());
+  }
+
+  private static List<List<Object>> walkCursor(
+      final Cursor cursor,
       final List<Function<Cursor, Supplier<Object>>> processors
   )
   {
-    return cursors.flatMap(
-        cursor -> {
-          // Gather test-value suppliers together.
-          final List<Supplier<Object>> suppliers = new ArrayList<>();
-          for (Function<Cursor, Supplier<Object>> processor : processors) {
-            suppliers.add(processor.apply(cursor));
-          }
+    final List<Supplier<Object>> suppliers = new ArrayList<>();
+    for (Function<Cursor, Supplier<Object>> processor : processors) {
+      suppliers.add(processor.apply(cursor));
+    }
 
-          final List<List<Object>> retVal = new ArrayList<>();
+    final List<List<Object>> retVal = new ArrayList<>();
 
-          while (!cursor.isDone()) {
-            final List<Object> row = new ArrayList<>();
+    // test cursor reset
+    while (!cursor.isDone()) {
+      cursor.advanceUninterruptibly();
+    }
 
-            for (Supplier<Object> supplier : suppliers) {
-              row.add(supplier.get());
-            }
+    cursor.reset();
 
-            retVal.add(row);
-            cursor.advanceUninterruptibly();
-          }
+    while (!cursor.isDone()) {
+      final List<Object> row = new ArrayList<>();
 
-          return Sequences.simple(retVal);
-        }
-    ).toList();
+      for (Supplier<Object> supplier : suppliers) {
+        row.add(supplier.get());
+      }
+
+      retVal.add(row);
+      cursor.advanceUninterruptibly();
+    }
+
+    return retVal;
+  }
+
+  private static List<List<Object>> walkCursorGranularized(
+      final CursorHolder cursorHolder,
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      final CursorBuildSpec buildSpec,
+      final Granularity granularity,
+      final List<BiFunction<Cursor, CursorGranularizer, Supplier<Object>>> processors
+  )
+  {
+    final Cursor cursor = cursorHolder.asCursor();
+
+    CursorGranularizer granularizer = CursorGranularizer.create(
+        cursor,
+        timeBoundaryInspector,
+        Cursors.getTimeOrdering(cursorHolder.getOrdering()),
+        granularity,
+        buildSpec.getInterval()
+    );
+
+    final List<Supplier<Object>> suppliers = new ArrayList<>();
+    for (BiFunction<Cursor, CursorGranularizer, Supplier<Object>> processor : processors) {
+      suppliers.add(processor.apply(cursor, granularizer));
+    }
+
+    final Sequence<List<Object>> theSequence =
+        Sequences.simple(granularizer.getBucketIterable())
+                 .flatMap(bucketInterval -> {
+                   if (!granularizer.advanceToBucket(bucketInterval)) {
+                     return Sequences.empty();
+                   }
+                   final List<List<Object>> retVal = new ArrayList<>();
+                   while (!cursor.isDone()) {
+                     final List<Object> row = new ArrayList<>();
+
+                     for (Supplier<Object> supplier : suppliers) {
+                       row.add(supplier.get());
+                     }
+
+                     retVal.add(row);
+                     if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+                       break;
+                     }
+                   }
+                   return Sequences.simple(retVal);
+                 })
+                 .filter(Predicates.notNull());
+    return theSequence.toList();
   }
 }

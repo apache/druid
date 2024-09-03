@@ -87,7 +87,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
   final Query<?> nestedQuery = new FakeQuery(
@@ -105,7 +106,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
   final Query nestedNestedQuery = new FakeQuery(
@@ -123,7 +125,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
   final Query unionQuery = new FakeQuery(
@@ -141,7 +144,8 @@ public class LoggingRequestLoggerTest
         {
           return null;
         }
-      }, false, queryContext
+      },
+      queryContext
   );
 
 
@@ -215,7 +219,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertEquals("false", map.get("isNested"));
     Assert.assertNull(map.get("foo"));
   }
@@ -231,7 +234,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertEquals("false", map.get("isNested"));
     Assert.assertEquals("bar", map.get("foo"));
   }
@@ -252,7 +254,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertEquals("true", map.get("isNested"));
     Assert.assertNull(map.get("foo"));
   }
@@ -274,7 +275,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
     Assert.assertEquals("true", map.get("isNested"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertNull(map.get("foo"));
   }
 
@@ -295,7 +295,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("false", map.get("hasFilters"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("descending"));
     Assert.assertNull(map.get("foo"));
   }
 
@@ -325,11 +324,10 @@ class FakeQuery extends BaseQuery<Object>
   public FakeQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
-      boolean descending,
       Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context);
+    super(dataSource, querySegmentSpec, context);
   }
 
   @Override

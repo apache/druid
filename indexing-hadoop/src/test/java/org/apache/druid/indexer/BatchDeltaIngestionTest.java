@@ -26,13 +26,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.hadoop.DatasourceRecordReader;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -49,8 +49,7 @@ import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
-import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -404,7 +403,7 @@ public class BatchDeltaIngestionTest
     QueryableIndex index = INDEX_IO.loadIndex(tmpUnzippedSegmentDir);
     StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
-    Firehose firehose = new IngestSegmentFirehose(
+    DatasourceRecordReader.SegmentReader segmentReader = new DatasourceRecordReader.SegmentReader(
         ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
         TransformSpec.NONE,
         expectedDimensions,
@@ -413,11 +412,12 @@ public class BatchDeltaIngestionTest
     );
 
     List<InputRow> rows = new ArrayList<>();
-    while (firehose.hasMore()) {
-      rows.add(firehose.nextRow());
+    while (segmentReader.hasMore()) {
+      rows.add(segmentReader.nextRow());
     }
 
     verifyRows(expectedRowsGenerated, rows, expectedDimensions, expectedMetrics);
+    segmentReader.close();
   }
 
   private HadoopDruidIndexerConfig makeHadoopDruidIndexerConfig(Map<String, Object> inputSpec, File tmpDir)

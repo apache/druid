@@ -106,7 +106,8 @@ public interface Filter
       matcherBundle = new FilterBundle.SimpleMatcherBundle(
           new FilterBundle.MatcherBundleInfo(this::toString, null, null),
           this::makeMatcher,
-          this::makeVectorMatcher
+          this::makeVectorMatcher,
+          this.canVectorizeMatcher(columnIndexSelector)
       );
     } else {
       matcherBundle = null;
