@@ -24,6 +24,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
+import org.apache.druid.segment.ColumnCardinalityInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.DimensionDictionarySelector;
@@ -41,7 +42,7 @@ import javax.annotation.Nullable;
  *
  * @see org.apache.druid.segment.ColumnSelectorFactory the non-vectorized version.
  */
-public interface VectorColumnSelectorFactory extends ColumnInspector
+public interface VectorColumnSelectorFactory extends ColumnCardinalityInspector
 {
   /**
    * Returns a {@link ReadableVectorInspector} for the {@link VectorCursor} that generated this object.

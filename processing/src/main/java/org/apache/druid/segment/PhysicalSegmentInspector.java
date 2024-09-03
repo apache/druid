@@ -43,7 +43,7 @@ public interface PhysicalSegmentInspector extends ColumnInspector
 
   /**
    * Returns the number of distinct values in a column, if known, or
-   * {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN} if not
+   * {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN} if not.}
    */
   int getDimensionCardinality(String column);
 

@@ -19,32 +19,14 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.math.expr.Expr;
-import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.column.ColumnCapabilities;
-
-import javax.annotation.Nullable;
-
-public interface ColumnInspector extends Expr.InputBindingInspector
+/**
+ * {@link ColumnInspector} + value cardinality. This can probably be merged into {@link ColumnInspector} at some point
+ * in the future.
+ */
+public interface ColumnCardinalityInspector extends ColumnInspector
 {
-  /**
-   * Returns capabilities of a particular column.
-   *
-   * @param column column name
-   *
-   * @return capabilities, or null
-   */
-  @Nullable
-  ColumnCapabilities getColumnCapabilities(String column);
-
-  @Nullable
-  @Override
-  default ExpressionType getType(String name)
+  default int getColumnValueCardinality(String column)
   {
-    ColumnCapabilities capabilities = getColumnCapabilities(name);
-    if (capabilities != null) {
-      return ExpressionType.fromColumnType(capabilities);
-    }
-    return null;
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 }
