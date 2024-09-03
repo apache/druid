@@ -79,7 +79,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    if (AggregatorUtil.shouldUseObjectColumnAggregatorWrapper(fieldName, metricFactory)) {
+    if (AggregatorUtil.shouldUseGetObjectForNumbers(fieldName, metricFactory)) {
       return new ObjectColumnLongAggregatorWrapper(
           selector,
           SimpleLongAggregatorFactory.this::buildAggregator,
@@ -96,7 +96,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
       ColumnValueSelector selector
   )
   {
-    if (AggregatorUtil.shouldUseObjectColumnAggregatorWrapper(fieldName, metricFactory)) {
+    if (AggregatorUtil.shouldUseGetObjectForNumbers(fieldName, metricFactory)) {
       return new ObjectColumnLongBufferAggregatorWrapper(
           selector,
           SimpleLongAggregatorFactory.this::buildBufferAggregator,
@@ -127,7 +127,7 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   @Override
   protected boolean useGetObject(ColumnSelectorFactory columnSelectorFactory)
   {
-    return AggregatorUtil.shouldUseObjectColumnAggregatorWrapper(fieldName, columnSelectorFactory);
+    return AggregatorUtil.shouldUseGetObjectForNumbers(fieldName, columnSelectorFactory);
   }
 
   @Override

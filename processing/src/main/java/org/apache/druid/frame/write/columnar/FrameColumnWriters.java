@@ -21,6 +21,7 @@ package org.apache.druid.frame.write.columnar;
 
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.frame.write.cast.TypeCastSelectors;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -102,7 +103,8 @@ public class FrameColumnWriters
   )
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.LONG);
     return new LongFrameColumnWriter(selector, allocator, hasNullsForNumericWriter(capabilities));
   }
 
@@ -113,7 +115,8 @@ public class FrameColumnWriters
   )
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.FLOAT);
     return new FloatFrameColumnWriter(selector, allocator, hasNullsForNumericWriter(capabilities));
   }
 
@@ -124,7 +127,8 @@ public class FrameColumnWriters
   )
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.DOUBLE);
     return new DoubleFrameColumnWriter(selector, allocator, hasNullsForNumericWriter(capabilities));
   }
 
@@ -149,7 +153,8 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.STRING_ARRAY);
     return new StringArrayFrameColumnWriterImpl(selector, allocator);
   }
 
@@ -159,7 +164,8 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.LONG_ARRAY);
     return new LongArrayFrameColumnWriter(selector, allocator);
   }
 
@@ -169,7 +175,8 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.FLOAT_ARRAY);
     return new FloatArrayFrameColumnWriter(selector, allocator);
   }
 
@@ -179,7 +186,8 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.DOUBLE_ARRAY);
     return new DoubleArrayFrameColumnWriter(selector, allocator);
   }
 
@@ -199,7 +207,8 @@ public class FrameColumnWriters
       throw new ISE("No serde for complexTypeName[%s], cannot write column [%s]", columnTypeName, columnName);
     }
 
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.ofComplex(columnTypeName));
     return new ComplexFrameColumnWriter(selector, allocator, serde);
   }
 

@@ -440,7 +440,7 @@ public class AggregatorUtil
    * @param fieldName field name, or null if the aggregator is expression-based
    * @param columnSelectorFactory column selector factory
    */
-  public static boolean shouldUseObjectColumnAggregatorWrapper(
+  public static boolean shouldUseGetObjectForNumbers(
       @Nullable final String fieldName,
       final ColumnSelectorFactory columnSelectorFactory
   )
