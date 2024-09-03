@@ -738,7 +738,7 @@ public class RunWorkOrder
                 makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
                 memoryParameters.getSuperSorterMaxActiveProcessors(),
                 memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
-                -1,
+                stageDefinition.getShuffleSpec().limitHint(),
                 cancellationId,
                 counterTracker.sortProgress(),
                 removeNullBytes
@@ -871,7 +871,7 @@ public class RunWorkOrder
                         makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
                         1,
                         2,
-                        -1,
+                        ShuffleSpec.UNLIMITED,
                         cancellationId,
 
                         // Tracker is not actually tracked, since it doesn't quite fit into the way we report counters.
