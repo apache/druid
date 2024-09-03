@@ -811,13 +811,11 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       Map<String, ColumnType> columnMapping = segmentSchema.getColumnTypeMap();
 
       // column type to be updated is not present in the existing schema
-      boolean missingUpdateColumns = false;
-      // new column to be added is already present in the existing schema
-      boolean existingNewColumns = false;
+      Set<String> missingUpdateColumns = new HashSet<>();
 
       for (String column : segmentSchema.getUpdatedColumns()) {
         if (!mergedColumnTypes.containsKey(column)) {
-          missingUpdateColumns = true;
+          missingUpdateColumns.add(column);
           mergedColumnTypes.put(column, columnMapping.get(column));
         } else {
           mergedColumnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnMapping.get(column)));
@@ -826,22 +824,20 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
 
       for (String column : segmentSchema.getNewColumns()) {
         if (mergedColumnTypes.containsKey(column)) {
-          existingNewColumns = true;
           mergedColumnTypes.compute(column, (c, existingType) -> columnTypeMergePolicy.merge(existingType, columnMapping.get(column)));
         } else {
           mergedColumnTypes.put(column, columnMapping.get(column));
         }
       }
 
-      if (missingUpdateColumns || existingNewColumns) {
+      if (!missingUpdateColumns.isEmpty()) {
         log.makeAlert(
-            "Error merging delta schema update with existing row signature. segmentId [%s], "
-            + "existingSignature [%s], deltaSchema [%s], missingUpdateColumns [%s], existingNewColumns [%s].",
-            segmentId,
+            "Realtime schema merge: datasource [%s] is missing columns to be updated. "
+            + "ExistingSignature [%s], deltaSchema [%s], missingUpdateColumns [%s].",
+            segmentId.getDataSource(),
             existingSignature,
             segmentSchema,
-            missingUpdateColumns,
-            existingNewColumns
+            missingUpdateColumns
         ).emit();
       }
 
