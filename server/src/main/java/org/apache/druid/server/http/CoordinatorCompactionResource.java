@@ -22,13 +22,19 @@ package org.apache.druid.server.http;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.rpc.HttpResponseException;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -39,16 +45,19 @@ import javax.ws.rs.core.Response;
 import java.util.Collection;
 
 @Path("/druid/coordinator/v1/compaction")
-public class CompactionResource
+public class CoordinatorCompactionResource
 {
   private final DruidCoordinator coordinator;
+  private final OverlordClient overlordClient;
 
   @Inject
-  public CompactionResource(
-      DruidCoordinator coordinator
+  public CoordinatorCompactionResource(
+      DruidCoordinator coordinator,
+      OverlordClient overlordClient
   )
   {
     this.coordinator = coordinator;
+    this.overlordClient = overlordClient;
   }
 
   /**
@@ -72,11 +81,21 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
-    final Long notCompactedSegmentSizeBytes = coordinator.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
-    if (notCompactedSegmentSizeBytes == null) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+    if (dataSource == null || dataSource.isEmpty()) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of("error", "No DataSource specified"))
+                     .build();
+    }
+
+    if (isCompactionSupervisorEnabled()) {
+      return buildResponse(overlordClient.getBytesAwaitingCompaction(dataSource));
+    }
+
+    final AutoCompactionSnapshot snapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
+    if (snapshot == null) {
+      return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "Unknown DataSource")).build();
     } else {
-      return Response.ok(ImmutableMap.of("remainingSegmentSize", notCompactedSegmentSizeBytes)).build();
+      return Response.ok(ImmutableMap.of("remainingSegmentSize", snapshot.getBytesAwaitingCompaction())).build();
     }
   }
 
@@ -88,16 +107,66 @@ public class CompactionResource
       @QueryParam("dataSource") String dataSource
   )
   {
+    if (isCompactionSupervisorEnabled()) {
+      return buildResponse(overlordClient.getCompactionSnapshots(dataSource));
+    }
+
     final Collection<AutoCompactionSnapshot> snapshots;
     if (dataSource == null || dataSource.isEmpty()) {
       snapshots = coordinator.getAutoCompactionSnapshot().values();
     } else {
       AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
       if (autoCompactionSnapshot == null) {
-        return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "unknown dataSource")).build();
+        return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "Unknown DataSource")).build();
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
     return Response.ok(ImmutableMap.of("latestStatus", snapshots)).build();
+  }
+
+  @POST
+  @Path("/simulate")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
+  public Response simulateWithClusterConfigUpdate(
+      ClusterCompactionConfig updatePayload
+  )
+  {
+    return Response.ok().entity(
+        coordinator.simulateRunWithConfigUpdate(updatePayload)
+    ).build();
+  }
+
+  private <T> Response buildResponse(ListenableFuture<T> future)
+  {
+    try {
+      return Response.ok(FutureUtils.getUnchecked(future, true)).build();
+    }
+    catch (Exception e) {
+      if (e.getCause() instanceof HttpResponseException) {
+        final HttpResponseException cause = (HttpResponseException) e.getCause();
+        return Response.status(cause.getResponse().getStatus().getCode())
+                       .entity(cause.getResponse().getContent())
+                       .build();
+      } else {
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                       .entity(ImmutableMap.of("error", e.getMessage()))
+                       .build();
+      }
+    }
+  }
+
+  /**
+   * Check if compaction supervisors are enabled on the Overlord. 
+   */
+  private boolean isCompactionSupervisorEnabled()
+  {
+    try {
+      return FutureUtils.getUnchecked(overlordClient.isCompactionSupervisorEnabled(), true);
+    }
+    catch (Exception e) {
+      // Overlord is probably on an older version, assume that compaction supervisor is not enabled
+      return false;
+    }
   }
 }

@@ -112,13 +112,25 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
     boolean partitionBoost;
 
+    // limitHint to use for the shuffle after the post-aggregation stage.
+    // Don't apply limitHint pre-aggregation, because results from pre-aggregation may not be fully grouped.
+    final long postAggregationLimitHint;
+
+    if (doLimitOrOffset) {
+      final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+      postAggregationLimitHint =
+          limitSpec.isLimited() ? limitSpec.getOffset() + limitSpec.getLimit() : ShuffleSpec.UNLIMITED;
+    } else {
+      postAggregationLimitHint = ShuffleSpec.UNLIMITED;
+    }
+
     if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
       // This condition will be triggered when we don't have a grouping dimension, no partitioning granularity
       // (PARTITIONED BY ALL) and no ordering/clustering dimensions
       // For example: INSERT INTO foo SELECT COUNT(*) FROM bar PARTITIONED BY ALL
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
-      shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
+      shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
       partitionBoost = false;
     } else if (doOrderBy) {
       // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
@@ -130,9 +142,13 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
                                          ? ShuffleSpecFactories.singlePartition()
                                          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
-      shuffleSpecFactoryPostAggregation = doLimitOrOffset
-                                          ? ShuffleSpecFactories.singlePartition()
-                                          : resultShuffleSpecFactory;
+
+      if (doLimitOrOffset) {
+        shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
+      } else {
+        shuffleSpecFactoryPostAggregation = resultShuffleSpecFactory;
+      }
+
       partitionBoost = true;
     } else {
       shuffleSpecFactoryPreAggregation = doLimitOrOffset

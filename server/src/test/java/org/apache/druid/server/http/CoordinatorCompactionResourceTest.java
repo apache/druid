@@ -21,6 +21,11 @@ package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
@@ -29,14 +34,18 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
-public class CompactionResourceTest
+public class CoordinatorCompactionResourceTest
 {
   private DruidCoordinator mock;
-  private String dataSourceName = "datasource_1";
-  private AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
+  private OverlordClient overlordClient;
+  private final String dataSourceName = "datasource_1";
+  private final AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
       dataSourceName,
       AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
       1,
@@ -54,6 +63,14 @@ public class CompactionResourceTest
   public void setUp()
   {
     mock = EasyMock.createStrictMock(DruidCoordinator.class);
+    overlordClient = new NoopOverlordClient()
+    {
+      @Override
+      public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
+      {
+        return Futures.immediateFuture(false);
+      }
+    };
   }
 
   @After
@@ -73,7 +90,8 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource("");
+    final Response response = new CoordinatorCompactionResource(mock, overlordClient)
+        .getCompactionSnapshotForDataSource("");
     Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -90,7 +108,8 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshot()).andReturn(expected).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(null);
+    final Response response = new CoordinatorCompactionResource(mock, overlordClient)
+        .getCompactionSnapshotForDataSource(null);
     Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -103,7 +122,8 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(expectedSnapshot).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
+    final Response response = new CoordinatorCompactionResource(mock, overlordClient)
+        .getCompactionSnapshotForDataSource(dataSourceName);
     Assert.assertEquals(ImmutableMap.of("latestStatus", ImmutableList.of(expectedSnapshot)), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
@@ -116,7 +136,54 @@ public class CompactionResourceTest
     EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(null).once();
     EasyMock.replay(mock);
 
-    final Response response = new CompactionResource(mock).getCompactionSnapshotForDataSource(dataSourceName);
+    final Response response = new CoordinatorCompactionResource(mock, overlordClient)
+        .getCompactionSnapshotForDataSource(dataSourceName);
     Assert.assertEquals(404, response.getStatus());
+  }
+
+  @Test
+  public void testGetProgressForNullDatasourceReturnsBadRequest()
+  {
+    EasyMock.replay(mock);
+
+    final Response response = new CoordinatorCompactionResource(mock, overlordClient)
+        .getCompactionProgress(null);
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "No DataSource specified"),
+        response.getEntity()
+    );
+  }
+
+  @Test
+  public void testGetSnapshotWhenCompactionSupervisorIsEnabled()
+  {
+    EasyMock.replay(mock);
+
+    AutoCompactionSnapshot.Builder snapshotBuilder = AutoCompactionSnapshot.builder(dataSourceName);
+    snapshotBuilder.incrementCompactedStats(CompactionStatistics.create(100L, 10L, 1L));
+    final AutoCompactionSnapshot snapshotFromOverlord = snapshotBuilder.build();
+
+    overlordClient = new NoopOverlordClient() {
+      @Override
+      public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
+      {
+        return Futures.immediateFuture(true);
+      }
+
+      @Override
+      public ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource)
+      {
+        return Futures.immediateFuture(Collections.singletonList(snapshotFromOverlord));
+      }
+    };
+
+    final Response response = new CoordinatorCompactionResource(mock, overlordClient)
+        .getCompactionSnapshotForDataSource(dataSourceName);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(
+        Collections.singletonList(snapshotFromOverlord),
+        response.getEntity()
+    );
   }
 }

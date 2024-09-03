@@ -37,6 +37,8 @@ import org.apache.druid.frame.key.ClusterBy;
 })
 public interface ShuffleSpec
 {
+  long UNLIMITED = -1;
+
   /**
    * The nature of this shuffle: hash vs. range based partitioning; whether the data are sorted or not.
    *
@@ -68,4 +70,17 @@ public interface ShuffleSpec
    * @throws IllegalStateException if kind is {@link ShuffleKind#GLOBAL_SORT} with more than one target partition
    */
   int partitionCount();
+
+  /**
+   * Limit that can be applied during shuffling. This is provided to enable performance optimizations.
+   *
+   * Implementations may apply this limit to each partition individually, or may apply it to the entire resultset
+   * (across all partitions). Either approach is valid, so downstream logic must handle either one.
+   *
+   * Implementations may also ignore this hint completely, or may apply a limit that is somewhat higher than this hint.
+   */
+  default long limitHint()
+  {
+    return UNLIMITED;
+  }
 }

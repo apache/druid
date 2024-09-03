@@ -46,6 +46,7 @@
             <Or>
                 <Class name="org.apache.druid.jackson.DefaultTrueJsonIncludeFilter"/>
                 <Class name="org.apache.druid.java.util.common.StringEncodingDefaultUTF16LEJsonIncludeFilter"/>
+                <Class name="org.apache.druid.msq.kernel.LimitHintJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.scan.ScanQuery$ScanRowsLimitJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.scan.ScanQuery$ScanTimeOrderJsonIncludeFilter"/>
                 <Class name="org.apache.druid.query.scan.ScanQuery$BatchSizeJsonIncludeFilter"/>

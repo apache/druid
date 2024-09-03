@@ -86,17 +86,16 @@ public class CoordinatorDutyUtils
   }
 
   /**
-   * Return the number of active tasks that match the task predicate provided. The number of active tasks returned
-   * may be an overestimate, as tasks that return status's with null types will be conservatively counted to match the
-   * predicate provided.
+   * Fetches active task statuses that match the given predicate.
+   * Task statuses with null types are considered to satisfy the predicate too.
    *
    * @param overlordClient The overlord client to use to retrieve the list of active tasks.
-   * @param taskPredicate  The predicate to match against the list of retreived task status.
+   * @param taskPredicate  The predicate to match against the list of retrieved task statuses.
    *                       This predicate will never be called with a null task status.
    *
-   * @return the number of active tasks that match the task predicate provided
+   * @return Active task statuses that match the given predicate.
    */
-  public static List<TaskStatusPlus> getNumActiveTaskSlots(
+  public static List<TaskStatusPlus> getStatusOfActiveTasks(
       @Nonnull final OverlordClient overlordClient,
       final Predicate<TaskStatusPlus> taskPredicate
   )

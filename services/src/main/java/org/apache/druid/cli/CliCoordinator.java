@@ -97,12 +97,11 @@ import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -113,8 +112,8 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
-import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
+import org.apache.druid.server.http.CoordinatorCompactionResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
 import org.apache.druid.server.http.CoordinatorResource;
@@ -252,6 +251,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(CoordinatorConfigManager.class);
             binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
+            binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
@@ -260,7 +260,7 @@ public class CliCoordinator extends ServerRunnable
                   .to(CoordinatorJettyServerInitializer.class);
 
             Jerseys.addResource(binder, CoordinatorResource.class);
-            Jerseys.addResource(binder, CompactionResource.class);
+            Jerseys.addResource(binder, CoordinatorCompactionResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);
@@ -285,9 +285,6 @@ public class CliCoordinator extends ServerRunnable
                   + "for more details about compaction."
               );
             }
-
-            //TODO: make this configurable when there are multiple search policies
-            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
 
             bindAnnouncer(
                 binder,
