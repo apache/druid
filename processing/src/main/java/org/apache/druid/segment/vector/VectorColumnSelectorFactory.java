@@ -25,7 +25,6 @@ import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnCardinalityInspector;
-import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
