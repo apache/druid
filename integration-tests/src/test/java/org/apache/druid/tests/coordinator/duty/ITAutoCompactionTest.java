@@ -684,9 +684,9 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
         submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
         // 3 segments for both 2013-08-31 and 2013-09-01. (Note that numShards guarantees max shards but not exact
         // number of final shards, since some shards may end up empty.)
-        forceTriggerAutoCompaction(5);
+        forceTriggerAutoCompaction(6);
         verifyQuery(INDEX_QUERIES_RESOURCE);
-        verifySegmentsCompacted(hashedPartitionsSpec, 5);
+        verifySegmentsCompacted(hashedPartitionsSpec, 6);
         checkCompactionIntervals(intervalsBeforeCompaction);
       }
 
