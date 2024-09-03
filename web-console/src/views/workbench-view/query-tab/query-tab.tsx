@@ -73,7 +73,11 @@ const queryRunner = new QueryRunner({
 export interface QueryTabProps
   extends Pick<
     RunPanelProps,
-    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
+    | 'maxTasksMenuHeader'
+    | 'enginesLabelFn'
+    | 'maxTasksLabelFn'
+    | 'fullClusterCapacityLabelFn'
+    | 'maxNumTaskOptions'
   > {
   query: WorkbenchQuery;
   id: string;
@@ -110,6 +114,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     maxTasksMenuHeader,
     enginesLabelFn,
     maxTasksLabelFn,
+    maxNumTaskOptions,
     fullClusterCapacityLabelFn,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
@@ -419,6 +424,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               maxTasksMenuHeader={maxTasksMenuHeader}
               enginesLabelFn={enginesLabelFn}
               maxTasksLabelFn={maxTasksLabelFn}
+              maxNumTaskOptions={maxNumTaskOptions}
               fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
             />
             {executionState.isLoading() && (

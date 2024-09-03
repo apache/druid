@@ -99,7 +99,11 @@ function externalDataTabId(tabId: string | undefined): boolean {
 export interface WorkbenchViewProps
   extends Pick<
     QueryTabProps,
-    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
+    | 'maxTasksMenuHeader'
+    | 'enginesLabelFn'
+    | 'maxTasksLabelFn'
+    | 'fullClusterCapacityLabelFn'
+    | 'maxNumTaskOptions'
   > {
   capabilities: Capabilities;
   tabId: string | undefined;
@@ -669,6 +673,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       maxTasksMenuHeader,
       enginesLabelFn,
       maxTasksLabelFn,
+      maxNumTaskOptions,
       fullClusterCapacityLabelFn,
     } = this.props;
     const { columnMetadataState } = this.state;
@@ -699,6 +704,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           maxTasksMenuHeader={maxTasksMenuHeader}
           enginesLabelFn={enginesLabelFn}
           maxTasksLabelFn={maxTasksLabelFn}
+          maxNumTaskOptions={maxNumTaskOptions}
           fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
           runMoreMenu={
             <Menu>

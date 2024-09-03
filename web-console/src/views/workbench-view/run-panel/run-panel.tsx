@@ -123,7 +123,10 @@ const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
 const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
 
 export interface RunPanelProps
-  extends Pick<MaxTasksButtonProps, 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'> {
+  extends Pick<
+    MaxTasksButtonProps,
+    'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxNumTaskOptions'
+  > {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
   running: boolean;
@@ -149,6 +152,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     maxTasksMenuHeader,
     enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
     maxTasksLabelFn,
+    maxNumTaskOptions,
     fullClusterCapacityLabelFn,
   } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
@@ -630,6 +634,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               defaultQueryContext={defaultQueryContext}
               menuHeader={maxTasksMenuHeader}
               maxTasksLabelFn={maxTasksLabelFn}
+              maxNumTaskOptions={maxNumTaskOptions}
               fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
             />
           )}
