@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.query.Order;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionHandler;
@@ -67,7 +68,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
         new IncrementalIndexColumnSelectorFactory(
             new IncrementalIndexStorageAdapter(incrementalIndex),
             VirtualColumns.EMPTY,
-            false,
+            incrementalIndex.timePosition == 0 ? Order.ASCENDING : Order.NONE,
             rowHolder
         );
     ColumnValueSelector[] dimensionSelectors = incrementalIndex
@@ -91,6 +92,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
 
     return new RowPointer(
         rowHolder,
+        incrementalIndex.timePosition,
         dimensionSelectors,
         dimensionHandlers,
         metricSelectors,

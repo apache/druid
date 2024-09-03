@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
@@ -58,7 +59,11 @@ public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerial
   }
 
   @Override
-  public GenericColumnSerializer<SerializablePairLongDouble> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer<SerializablePairLongDouble> getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     return new SerializablePairLongDoubleColumnSerializer(
         segmentWriteOutMedium,
@@ -107,6 +112,12 @@ public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerial
       public byte[] toBytes(@Nullable SerializablePairLongDouble inPair)
       {
         return SERDE.serialize(inPair);
+      }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
       }
     };
   }

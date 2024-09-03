@@ -21,6 +21,7 @@ package org.apache.druid.server.coordinator.balancer;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -44,7 +45,7 @@ public class SegmentToMoveCalculatorTest
    * 100 days x 100 partitions = 10,000 segments.
    */
   private static final List<DataSegment> WIKI_SEGMENTS
-      = CreateDataSegments.ofDatasource("wiki")
+      = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(100, Granularities.DAY)
                           .withNumPartitions(100)
                           .eachOfSizeInMb(500);
@@ -53,7 +54,7 @@ public class SegmentToMoveCalculatorTest
    * 10 days * 1 partitions = 10 segments.
    */
   private static final List<DataSegment> KOALA_SEGMENTS
-      = CreateDataSegments.ofDatasource("koala")
+      = CreateDataSegments.ofDatasource(TestDataSource.KOALA)
                           .forIntervals(10, Granularities.DAY)
                           .eachOfSizeInMb(500);
 
@@ -82,6 +83,10 @@ public class SegmentToMoveCalculatorTest
   @Test
   public void testMaxSegmentsToMoveIncreasesWithCoordinatorPeriod()
   {
+    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(0)));
+    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(10_000)));
+    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(20_000)));
+
     Assert.assertEquals(5_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(30_000)));
     Assert.assertEquals(10_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(60_000)));
     Assert.assertEquals(15_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(90_000)));

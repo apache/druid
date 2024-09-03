@@ -24,6 +24,7 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
@@ -98,6 +99,12 @@ public class FrameQueryableIndex implements QueryableIndex
   public Indexed<String> getAvailableDimensions()
   {
     return new ListIndexed<>(signature.getColumnNames());
+  }
+
+  @Override
+  public List<OrderBy> getOrdering()
+  {
+    return Collections.emptyList();
   }
 
   @Override

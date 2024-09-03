@@ -61,6 +61,7 @@ import org.apache.druid.segment.index.semantic.DruidPredicateIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.serde.ColumnPartSerde;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -247,7 +248,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
         baseBuffer,
         bob,
         ColumnConfig.SELECTION_SIZE,
-        NestedDataComplexTypeSerde.OBJECT_MAPPER
+        ColumnSerializerUtils.SMILE_MAPPER
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

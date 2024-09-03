@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.CursorGranularizer;
-import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -47,6 +46,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
@@ -88,6 +88,7 @@ public class TimeseriesQueryEngine
   public Sequence<Result<TimeseriesResultValue>> process(
       final TimeseriesQuery query,
       final StorageAdapter adapter,
+      @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
@@ -100,16 +101,14 @@ public class TimeseriesQueryEngine
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
 
-
     final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
-    Cursors.requireTimeOrdering(cursorHolder, query.isDescending() ? Order.DESCENDING : Order.ASCENDING);
     try {
       final Sequence<Result<TimeseriesResultValue>> result;
 
       if (query.context().getVectorize().shouldVectorize(cursorHolder.canVectorize())) {
-        result = processVectorized(query, adapter, cursorHolder, interval, gran);
+        result = processVectorized(query, cursorHolder, timeBoundaryInspector, interval, gran);
       } else {
-        result = processNonVectorized(query, adapter, cursorHolder, interval, gran);
+        result = processNonVectorized(query, cursorHolder, timeBoundaryInspector, interval, gran);
       }
 
       final int limit = query.getLimit();
@@ -127,8 +126,8 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processVectorized(
       final TimeseriesQuery query,
-      final StorageAdapter adapter,
       final CursorHolder cursorHolder,
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
       final Interval queryInterval,
       final Granularity gran
   )
@@ -145,8 +144,9 @@ public class TimeseriesQueryEngine
     final Closer closer = Closer.create();
     try {
       final VectorCursorGranularizer granularizer = VectorCursorGranularizer.create(
-          adapter,
           cursor,
+          timeBoundaryInspector,
+          cursorHolder.getTimeOrder(),
           gran,
           queryInterval
       );
@@ -243,8 +243,8 @@ public class TimeseriesQueryEngine
 
   private Sequence<Result<TimeseriesResultValue>> processNonVectorized(
       final TimeseriesQuery query,
-      final StorageAdapter adapter,
       final CursorHolder cursorHolder,
+      @Nullable TimeBoundaryInspector timeBoundaryInspector,
       final Interval queryInterval,
       final Granularity gran
   )
@@ -256,11 +256,11 @@ public class TimeseriesQueryEngine
       return Sequences.empty();
     }
     final CursorGranularizer granularizer = CursorGranularizer.create(
-        adapter,
         cursor,
+        timeBoundaryInspector,
+        cursorHolder.getTimeOrder(),
         gran,
-        queryInterval,
-        query.isDescending()
+        queryInterval
     );
     if (granularizer == null) {
       return Sequences.empty();

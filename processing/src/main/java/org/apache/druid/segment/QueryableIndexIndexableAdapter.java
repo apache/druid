@@ -21,7 +21,10 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -60,13 +63,49 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   private final QueryableIndex input;
   private final ImmutableList<String> availableDimensions;
   private final Metadata metadata;
+  private final int timePositionForComparator;
 
   public QueryableIndexIndexableAdapter(QueryableIndex input)
   {
     this.input = input;
     numRows = input.getNumRows();
     availableDimensions = ImmutableList.copyOf(input.getAvailableDimensions());
+    if (availableDimensions.contains(ColumnHolder.TIME_COLUMN_NAME)) {
+      throw DruidException.defensive("Unexpectedly encountered dimension[%s]", ColumnHolder.TIME_COLUMN_NAME);
+    }
     this.metadata = input.getMetadata();
+
+    final List<OrderBy> inputOrdering = input.getOrdering();
+
+    int foundTimePosition = -1;
+    int i = 0;
+
+    // Some sort columns may not exist in the index, for example if they are omitted due to being 100% nulls.
+    // Locate the __time column in the sort order, skipping any nonexistent columns. This will be the position of
+    // the __time column within the dimension handlers.
+    for (final OrderBy orderBy : inputOrdering) {
+      final String columnName = orderBy.getColumnName();
+
+      if (orderBy.getOrder() != Order.ASCENDING) {
+        throw DruidException.defensive("Order[%s] for column[%s] is not supported", orderBy.getOrder(), columnName);
+      }
+
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+        foundTimePosition = i;
+        break;
+      } else if (input.getDimensionHandlers().containsKey(columnName)) {
+        i++;
+      }
+    }
+
+    if (foundTimePosition >= 0) {
+      this.timePositionForComparator = foundTimePosition;
+    } else {
+      // Sort order is set, but does not contain __time. Indexable adapters involve all columns in TimeAndDimsPointer
+      // comparators, so we need to put the __time column somewhere. Put it immediately after the ones in the
+      // sort order.
+      this.timePositionForComparator = inputOrdering.size();
+    }
   }
 
   public QueryableIndex getQueryableIndex()
@@ -87,16 +126,23 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public List<String> getDimensionNames()
+  public List<String> getDimensionNames(final boolean includeTime)
   {
-    return availableDimensions;
+    if (includeTime) {
+      final List<String> retVal = new ArrayList<>(availableDimensions.size() + 1);
+      retVal.add(ColumnHolder.TIME_COLUMN_NAME);
+      retVal.addAll(availableDimensions);
+      return retVal;
+    } else {
+      return availableDimensions;
+    }
   }
 
   @Override
   public List<String> getMetricNames()
   {
     final Set<String> columns = Sets.newLinkedHashSet(input.getColumnNames());
-    final HashSet<String> dimensions = Sets.newHashSet(getDimensionNames());
+    final HashSet<String> dimensions = Sets.newHashSet(availableDimensions);
     return ImmutableList.copyOf(Sets.difference(columns, dimensions));
   }
 
@@ -262,7 +308,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
       final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
           VirtualColumns.EMPTY,
-          false,
+          timePositionForComparator == 0 ? Order.ASCENDING : Order.NONE,
           offset,
           columnCache
       );
@@ -292,6 +338,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
 
       rowPointer = new RowPointer(
           rowTimestampSelector,
+          timePositionForComparator,
           rowDimensionValueSelectors,
           dimensionHandlers,
           rowMetricSelectors,
@@ -309,6 +356,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           .toArray(SettableColumnValueSelector[]::new);
       markedRowPointer = new TimeAndDimsPointer(
           markedTimestampSelector,
+          timePositionForComparator,
           markedDimensionValueSelectors,
           dimensionHandlers,
           markedMetricSelectors,

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -38,14 +40,17 @@ public class DruidCompactionConfig
 {
   public static final String CONFIG_KEY = "coordinator.compaction.config";
 
+  private static final CompactionCandidateSearchPolicy DEFAULT_COMPACTION_POLICY
+      = new NewestSegmentFirstPolicy(null);
   private static final DruidCompactionConfig EMPTY_INSTANCE
-      = new DruidCompactionConfig(Collections.emptyList(), null, null, null, null);
+      = new DruidCompactionConfig(Collections.emptyList(), null, null, null, null, null);
 
   private final List<DataSourceCompactionConfig> compactionConfigs;
   private final double compactionTaskSlotRatio;
   private final int maxCompactionTaskSlots;
   private final boolean useAutoScaleSlots;
   private final CompactionEngine engine;
+  private final CompactionCandidateSearchPolicy compactionPolicy;
 
   public DruidCompactionConfig withDatasourceConfigs(
       List<DataSourceCompactionConfig> compactionConfigs
@@ -56,7 +61,8 @@ public class DruidCompactionConfig
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         useAutoScaleSlots,
-        engine
+        engine,
+        compactionPolicy
     );
   }
 
@@ -69,7 +75,8 @@ public class DruidCompactionConfig
         Configs.valueOrDefault(update.getCompactionTaskSlotRatio(), compactionTaskSlotRatio),
         Configs.valueOrDefault(update.getMaxCompactionTaskSlots(), maxCompactionTaskSlots),
         Configs.valueOrDefault(update.getUseAutoScaleSlots(), useAutoScaleSlots),
-        Configs.valueOrDefault(update.getEngine(), engine)
+        Configs.valueOrDefault(update.getEngine(), engine),
+        Configs.valueOrDefault(update.getCompactionPolicy(), compactionPolicy)
     );
   }
 
@@ -91,7 +98,8 @@ public class DruidCompactionConfig
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("engine") @Nullable CompactionEngine compactionEngine
+      @JsonProperty("engine") @Nullable CompactionEngine compactionEngine,
+      @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy
   )
   {
     this.compactionConfigs = Configs.valueOrDefault(compactionConfigs, Collections.emptyList());
@@ -99,6 +107,7 @@ public class DruidCompactionConfig
     this.maxCompactionTaskSlots = Configs.valueOrDefault(maxCompactionTaskSlots, Integer.MAX_VALUE);
     this.useAutoScaleSlots = Configs.valueOrDefault(useAutoScaleSlots, false);
     this.engine = Configs.valueOrDefault(compactionEngine, CompactionEngine.NATIVE);
+    this.compactionPolicy = Configs.valueOrDefault(compactionPolicy, DEFAULT_COMPACTION_POLICY);
   }
 
   @JsonProperty
@@ -139,7 +148,8 @@ public class DruidCompactionConfig
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         useAutoScaleSlots,
-        engine
+        engine,
+        compactionPolicy
     );
   }
 
@@ -160,6 +170,12 @@ public class DruidCompactionConfig
     return Optional.absent();
   }
 
+  @JsonProperty
+  public CompactionCandidateSearchPolicy getCompactionPolicy()
+  {
+    return compactionPolicy;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -174,6 +190,7 @@ public class DruidCompactionConfig
            maxCompactionTaskSlots == that.maxCompactionTaskSlots &&
            useAutoScaleSlots == that.useAutoScaleSlots &&
            engine == that.engine &&
+           Objects.equals(compactionPolicy, that.compactionPolicy) &&
            Objects.equals(compactionConfigs, that.compactionConfigs);
   }
 
@@ -185,7 +202,8 @@ public class DruidCompactionConfig
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         useAutoScaleSlots,
-        engine
+        engine,
+        compactionPolicy
     );
   }
 
@@ -198,6 +216,7 @@ public class DruidCompactionConfig
            ", maxCompactionTaskSlots=" + maxCompactionTaskSlots +
            ", useAutoScaleSlots=" + useAutoScaleSlots +
            ", engine=" + engine +
+           ", compactionPolicy=" + compactionPolicy +
            '}';
   }
 }

@@ -59,6 +59,7 @@ public class MSQControllerTaskTest
           Granularities.DAY,
           null,
           INTERVALS,
+          null,
           null
       ))
       .query(new Druids.ScanQueryBuilder()

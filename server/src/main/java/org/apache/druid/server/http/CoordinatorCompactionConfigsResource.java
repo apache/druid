@@ -146,6 +146,7 @@ public class CoordinatorCompactionConfigsResource
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
             useAutoScaleSlots,
+            null,
             null
         ),
         req

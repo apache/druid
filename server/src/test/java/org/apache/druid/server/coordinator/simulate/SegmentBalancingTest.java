@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -37,7 +38,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   private DruidServer historicalT11;
   private DruidServer historicalT12;
 
-  private final String datasource = DS.WIKI;
+  private final String datasource = TestDataSource.WIKI;
   private final List<DataSegment> segments = Segments.WIKI_10X1D;
 
   @Override
@@ -245,7 +246,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
         CoordinatorSimulation.builder()
                              .withSegments(Segments.KOALA_100X100D)
                              .withServers(historicals)
-                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.KOALA, Load.on(Tier.T1, 1).forever())
                              .build();
 
     startSimulation(sim);

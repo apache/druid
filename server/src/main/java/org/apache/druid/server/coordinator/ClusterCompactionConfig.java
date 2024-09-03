@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -37,18 +38,21 @@ public class ClusterCompactionConfig
   private final Integer maxCompactionTaskSlots;
   private final Boolean useAutoScaleSlots;
   private final CompactionEngine engine;
+  private final CompactionCandidateSearchPolicy compactionPolicy;
 
   @JsonCreator
   public ClusterCompactionConfig(
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("engine") @Nullable CompactionEngine engine
+      @JsonProperty("engine") @Nullable CompactionEngine engine,
+      @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy
   )
   {
     this.compactionTaskSlotRatio = compactionTaskSlotRatio;
     this.maxCompactionTaskSlots = maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots;
+    this.compactionPolicy = compactionPolicy;
     this.engine = engine;
   }
 
@@ -80,6 +84,13 @@ public class ClusterCompactionConfig
     return engine;
   }
 
+  @Nullable
+  @JsonProperty
+  public CompactionCandidateSearchPolicy getCompactionPolicy()
+  {
+    return compactionPolicy;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -93,12 +104,19 @@ public class ClusterCompactionConfig
     return Objects.equals(compactionTaskSlotRatio, that.compactionTaskSlotRatio)
            && Objects.equals(maxCompactionTaskSlots, that.maxCompactionTaskSlots)
            && Objects.equals(useAutoScaleSlots, that.useAutoScaleSlots)
+           && Objects.equals(compactionPolicy, that.compactionPolicy)
            && engine == that.engine;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(compactionTaskSlotRatio, maxCompactionTaskSlots, useAutoScaleSlots, engine);
+    return Objects.hash(
+        compactionTaskSlotRatio,
+        maxCompactionTaskSlots,
+        useAutoScaleSlots,
+        compactionPolicy,
+        engine
+    );
   }
 }

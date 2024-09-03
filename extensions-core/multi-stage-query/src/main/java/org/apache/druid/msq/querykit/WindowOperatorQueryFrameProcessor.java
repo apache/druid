@@ -80,7 +80,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final WritableFrameChannel outputChannel;
   private final FrameWriterFactory frameWriterFactory;
   private final FrameReader frameReader;
-  private final ArrayList<ResultRow> objectsOfASingleRac;
   private final int maxRowsMaterialized;
   private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
@@ -94,6 +93,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   // List of type strategies to compare the partition columns across rows.
   // Type strategies are pushed in the same order as column types in frameReader.signature()
   private final NullableTypeStrategy[] typeStrategies;
+
+  private final ArrayList<ResultRow> rowsToProcess;
+  private int lastPartitionIndex = -1;
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -116,7 +118,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.query = query;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
-    this.objectsOfASingleRac = new ArrayList<>();
+    this.rowsToProcess = new ArrayList<>();
     this.maxRowsMaterialized = maxRowsMaterializedInWindow;
     this.partitionColumnNames = partitionColumnNames;
 
@@ -153,188 +155,117 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs)
   {
     /*
-     *
-     * PARTITION BY A ORDER BY B
-     *
-     * Frame 1   -> rac1
-     * A  B
-     * 1, 2
-     * 1, 3
-     * 2, 1 --> key changed
-     * 2, 2
-     *
-     *
-     * Frame 2 -> rac2
-     * 3, 1 --> key changed
-     * 3, 2
-     * 3, 3
-     * 3, 4
-     *
-     * Frame 3 -> rac3
-     *
-     * 3, 5
-     * 3, 6
-     * 4, 1 --> key changed
-     * 4, 2
-     *
-     * In case of empty OVER clause, all these racs need to be added to a single rows and columns
-     * to be processed. The way we can do this is to use a ConcatRowsAndColumns
-     * ConcatRC [rac1, rac2, rac3]
-     * Run all ops on this
-     *
-     *
-     * The flow would look like:
-     * 1. Validate if the operator doesn't have any OVER() clause with PARTITION BY for this stage.
-     * 2. If 1 is true make a giant rows and columns (R&C) using concat as shown above
-     *    Let all operators run amok on that R&C
-     * 3. If 1 is false
-     *    Read a frame
-     *    keep the older row in a class variable
-     *    check row by row and compare current with older row to check if partition boundary is reached
-     *    when frame partition by changes
-     *    create R&C for those particular set of columns, they would have the same partition key
-     *    output will be a single R&C
-     *    write to output channel
-     *
-     *
-     *  Future thoughts: {@link https://github.com/apache/druid/issues/16126}
-     *
-     *  1. We are writing 1 partition to each frame in this way. In case of high cardinality data
-     *      we will be making a large number of small frames. We can have a check to keep size of frame to a value
-     *      say 20k rows and keep on adding to the same pending frame and not create a new frame
-     *
-     *  2. Current approach with R&C and operators materialize a single R&C for processing. In case of data
-     *     with low cardinality a single R&C might be too big to consume. Same for the case of empty OVER() clause
-     *     Most of the window operations like SUM(), RANK(), RANGE() etc. can be made with 2 passes of the data.
-     *     We might think to reimplement them in the MSQ way so that we do not have to materialize so much data
+     There are 2 scenarios:
+
+     *** Scenario 1: Query has atleast one window function with an OVER() clause without a PARTITION BY ***
+
+     In this scenario, we add all the RACs to a single RowsAndColumns to be processed. We do it via ConcatRowsAndColumns, and run all the operators on the ConcatRowsAndColumns.
+     This is done because we anyway need to run the operators on the entire set of rows when we have an OVER() clause without a PARTITION BY.
+     This scenario corresponds to partitionColumnNames.isEmpty()=true code flow.
+
+     *** Scenario 2: All window functions in the query have OVER() clause with a PARTITION BY ***
+
+     In this scenario, we need to process rows for each PARTITION BY group together, but we can batch multiple PARTITION BY keys into the same RAC before passing it to the operators for processing.
+     Batching is fine since the operators list would have the required NaivePartitioningOperatorFactory to segregate each PARTITION BY group during the processing.
+
+     The flow for this scenario can be summarised as following:
+     1. Frame Reading and Cursor Initialization: We start by reading a frame from the inputChannel and initializing frameCursor to iterate over the rows in that frame.
+     2. Row Comparison: For each row in the frame, we decide whether it belongs to the same PARTITION BY group as the previous row.
+                        This is determined by comparePartitionKeys() method.
+                        Please refer to the Javadoc of that method for further details and an example illustration.
+        2.1. If the PARTITION BY columns of current row matches the PARTITION BY columns of the previous row,
+             they belong to the same PARTITION BY group, and gets added to rowsToProcess.
+             If the number of total rows materialized exceed maxRowsMaterialized, we process the pending batch via processRowsUpToLastPartition() method.
+        2.2. If they don't match, then we have reached a partition boundary.
+             In this case, we update the value for lastPartitionIndex.
+     3. End of Input: If the input channel is finished, any remaining rows in rowsToProcess are processed.
+
+     *Illustration of Row Comparison step*
+
+     Let's say we have window_function() OVER (PARTITION BY A ORDER BY B) in our query, and we get 3 frames in the input channel to process.
+
+     Frame 1
+     A, B
+     1, 2
+     1, 3
+     2, 1 --> PARTITION BY key (column A) changed from 1 to 2.
+     2, 2
+
+     Frame 2
+     A, B
+     3, 1 --> PARTITION BY key (column A) changed from 2 to 3.
+     3, 2
+     3, 3
+     3, 4
+
+     Frame 3
+     A, B
+     3, 5
+     3, 6
+     4, 1 --> PARTITION BY key (column A) changed from 3 to 4.
+     4, 2
+
+     *Why batching?*
+     We batch multiple PARTITION BY keys for processing together to avoid the overhead of creating different RACs for each PARTITION BY keys, as that would be unnecessary in scenarios where we have a large number of PARTITION BY keys, but each key having a single row.
+
+     *Future thoughts: https://github.com/apache/druid/issues/16126*
+     Current approach with R&C and operators materialize a single R&C for processing. In case of data with low cardinality a single R&C might be too big to consume. Same for the case of empty OVER() clause.
+     Most of the window operations like SUM(), RANK(), RANGE() etc. can be made with 2 passes of the data. We might think to reimplement them in the MSQ way so that we do not have to materialize so much data.
      */
 
     if (partitionColumnNames.isEmpty()) {
-      // If we do not have any OVER() clause with PARTITION BY for this stage.
-      // Bring all data to a single executor for processing.
-      // Convert each frame to RAC.
-      // Concatenate all the racs to make a giant RAC.
-      // Let all operators run on the giant RAC until channel is finished.
+      // Scenario 1: Query has atleast one window function with an OVER() clause without a PARTITION BY.
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         convertRowFrameToRowsAndColumns(frame);
+        return ReturnOrAwait.runAgain();
       } else if (inputChannel.isFinished()) {
         runAllOpsOnMultipleRac(frameRowsAndCols);
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.awaitAll(inputChannels().size());
       }
-      return ReturnOrAwait.runAgain();
-    } else {
-      // Aha, you found a PARTITION BY and maybe ORDER BY TO
-      // PARTITION BY can also be on multiple keys
-      // typically the last stage would already partition and sort for you
-      // figure out frame boundaries and convert each distinct group to a rac
-      // then run the windowing operator only on each rac
-      if (frameCursor == null || frameCursor.isDone()) {
-        if (readableInputs.isEmpty()) {
-          return ReturnOrAwait.awaitAll(1);
-        } else if (inputChannel.canRead()) {
-          final Frame frame = inputChannel.read();
-          frameCursor = FrameProcessors.makeCursor(frame, frameReader);
-          final ColumnSelectorFactory frameColumnSelectorFactory = frameCursor.getColumnSelectorFactory();
-          final Supplier<Object>[] fieldSuppliers = new Supplier[frameReader.signature().size()];
-          for (int i = 0; i < fieldSuppliers.length; i++) {
-            final ColumnValueSelector<?> selector =
-                frameColumnSelectorFactory.makeColumnValueSelector(frameReader.signature().getColumnName(i));
-            fieldSuppliers[i] = selector::getObject;
+    }
 
-          }
-          rowSupplierFromFrameCursor = () -> {
-            final ResultRow row = ResultRow.create(fieldSuppliers.length);
-            for (int i = 0; i < fieldSuppliers.length; i++) {
-              row.set(i, fieldSuppliers[i].get());
-            }
-            return row;
-          };
-        } else if (inputChannel.isFinished()) {
-          // reaached end of channel
-          // if there is data remaining
-          // write it into a rac
-          // and run operators on it
-          if (!objectsOfASingleRac.isEmpty()) {
-            if (objectsOfASingleRac.size() > maxRowsMaterialized) {
-              throw new MSQException(new TooManyRowsInAWindowFault(objectsOfASingleRac.size(), maxRowsMaterialized));
-            }
-            RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
-                objectsOfASingleRac,
-                frameReader.signature()
-            );
-            runAllOpsOnSingleRac(rac);
-            objectsOfASingleRac.clear();
-          }
-          return ReturnOrAwait.returnObject(Unit.instance());
-        } else {
-          return ReturnOrAwait.runAgain();
-        }
-      }
-      while (!frameCursor.isDone()) {
-        final ResultRow currentRow = rowSupplierFromFrameCursor.get();
-        if (outputRow == null) {
-          outputRow = currentRow;
-          objectsOfASingleRac.add(currentRow);
-        } else if (comparePartitionKeys(outputRow, currentRow, partitionColumnNames)) {
-          // if they have the same partition key
-          // keep adding them after checking
-          // guardrails
-          objectsOfASingleRac.add(currentRow);
-          if (objectsOfASingleRac.size() > maxRowsMaterialized) {
-            throw new MSQException(new TooManyRowsInAWindowFault(
-                objectsOfASingleRac.size(),
-                maxRowsMaterialized
-            ));
-          }
-        } else {
-          // key change noted
-          // create rac from the rows seen before
-          // run the operators on these rows and columns
-          // clean up the object to hold the new rows only
-          if (objectsOfASingleRac.size() > maxRowsMaterialized) {
-            throw new MSQException(new TooManyRowsInAWindowFault(
-                objectsOfASingleRac.size(),
-                maxRowsMaterialized
-            ));
-          }
-          RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromResultRow(
-              objectsOfASingleRac,
-              frameReader.signature()
-          );
-          runAllOpsOnSingleRac(rac);
-          objectsOfASingleRac.clear();
-          outputRow = currentRow.copy();
-          return ReturnOrAwait.runAgain();
-        }
-        frameCursor.advance();
+    // Scenario 2: All window functions in the query have OVER() clause with a PARTITION BY
+    if (frameCursor == null || frameCursor.isDone()) {
+      if (readableInputs.isEmpty()) {
+        return ReturnOrAwait.awaitAll(1);
+      } else if (inputChannel.canRead()) {
+        final Frame frame = inputChannel.read();
+        frameCursor = FrameProcessors.makeCursor(frame, frameReader);
+        makeRowSupplierFromFrameCursor();
+      } else if (inputChannel.isFinished()) {
+        // Handle any remaining data.
+        lastPartitionIndex = rowsToProcess.size() - 1;
+        processRowsUpToLastPartition();
+        return ReturnOrAwait.returnObject(Unit.instance());
+      } else {
+        return ReturnOrAwait.runAgain();
       }
     }
-    return ReturnOrAwait.runAgain();
-  }
 
-  /**
-   * @param singleRac Use this {@link RowsAndColumns} as a single input for the operators to be run
-   */
-  private void runAllOpsOnSingleRac(RowsAndColumns singleRac)
-  {
-    Operator op = new Operator()
-    {
-      @Nullable
-      @Override
-      public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
-      {
-        receiver.push(singleRac);
-        if (singleRac.numRows() > maxRowsMaterialized) {
-          throw new MSQException(new TooManyRowsInAWindowFault(singleRac.numRows(), maxRowsMaterialized));
+    while (!frameCursor.isDone()) {
+      final ResultRow currentRow = rowSupplierFromFrameCursor.get();
+      if (outputRow == null) {
+        outputRow = currentRow;
+        rowsToProcess.add(currentRow);
+      } else if (comparePartitionKeys(outputRow, currentRow, partitionColumnNames)) {
+        // Add current row to the same batch of rows for processing.
+        rowsToProcess.add(currentRow);
+        if (rowsToProcess.size() > maxRowsMaterialized) {
+          // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
+          processRowsUpToLastPartition();
         }
-        receiver.completed();
-        return null;
+        ensureMaxRowsInAWindowConstraint(rowsToProcess.size());
+      } else {
+        lastPartitionIndex = rowsToProcess.size() - 1;
+        outputRow = currentRow.copy();
+        return ReturnOrAwait.runAgain();
       }
-    };
-    runOperatorsAfterThis(op);
+      frameCursor.advance();
+    }
+    return ReturnOrAwait.runAgain();
   }
 
   /**
@@ -349,9 +280,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
       {
         RowsAndColumns rac = new ConcatRowsAndColumns(listOfRacs);
-        if (rac.numRows() > maxRowsMaterialized) {
-          throw new MSQException(new TooManyRowsInAWindowFault(rac.numRows(), maxRowsMaterialized));
-        }
+        ensureMaxRowsInAWindowConstraint(rac.numRows());
         receiver.push(rac);
         receiver.completed();
         return null;
@@ -496,12 +425,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null
     );
     // check if existing + newly added rows exceed guardrails
-    if (frameRowsAndCols.size() + ldrc.numRows() > maxRowsMaterialized) {
-      throw new MSQException(new TooManyRowsInAWindowFault(
-          frameRowsAndCols.size() + ldrc.numRows(),
-          maxRowsMaterialized
-      ));
-    }
+    ensureMaxRowsInAWindowConstraint(frameRowsAndCols.size() + ldrc.numRows());
     frameRowsAndCols.add(ldrc);
   }
 
@@ -532,5 +456,58 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       }
     }
     return match == partitionColumnNames.size();
+  }
+
+  private void makeRowSupplierFromFrameCursor()
+  {
+    final ColumnSelectorFactory frameColumnSelectorFactory = frameCursor.getColumnSelectorFactory();
+    final Supplier<Object>[] fieldSuppliers = new Supplier[frameReader.signature().size()];
+    for (int i = 0; i < fieldSuppliers.length; i++) {
+      final ColumnValueSelector<?> selector =
+          frameColumnSelectorFactory.makeColumnValueSelector(frameReader.signature().getColumnName(i));
+      fieldSuppliers[i] = selector::getObject;
+    }
+    rowSupplierFromFrameCursor = () -> {
+      final ResultRow row = ResultRow.create(fieldSuppliers.length);
+      for (int i = 0; i < fieldSuppliers.length; i++) {
+        row.set(i, fieldSuppliers[i].get());
+      }
+      return row;
+    };
+  }
+
+  /**
+   * Process rows from rowsToProcess[0, lastPartitionIndex].
+   */
+  private void processRowsUpToLastPartition()
+  {
+    if (lastPartitionIndex == -1) {
+      return;
+    }
+
+    RowsAndColumns singleRac = MapOfColumnsRowsAndColumns.fromResultRowTillIndex(
+        rowsToProcess,
+        frameReader.signature(),
+        lastPartitionIndex
+    );
+    ArrayList<RowsAndColumns> rowsAndColumns = new ArrayList<>();
+    rowsAndColumns.add(singleRac);
+    runAllOpsOnMultipleRac(rowsAndColumns);
+
+    // Remove elements in the range [0, lastPartitionIndex] from the list.
+    // The call to list.subList(a, b).clear() deletes the elements in the range [a, b - 1],
+    // causing the remaining elements to shift and start from index 0.
+    rowsToProcess.subList(0, lastPartitionIndex + 1).clear();
+    lastPartitionIndex = -1;
+  }
+
+  private void ensureMaxRowsInAWindowConstraint(int numRowsInWindow)
+  {
+    if (numRowsInWindow > maxRowsMaterialized) {
+      throw new MSQException(new TooManyRowsInAWindowFault(
+          numRowsInWindow,
+          maxRowsMaterialized
+      ));
+    }
   }
 }

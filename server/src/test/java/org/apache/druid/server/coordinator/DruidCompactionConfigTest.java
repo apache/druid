@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,19 +52,20 @@ public class DruidCompactionConfigTest
         Arrays.asList(
             DataSourceCompactionConfig
                 .builder()
-                .forDataSource(DS.WIKI)
+                .forDataSource(TestDataSource.WIKI)
                 .withSkipOffsetFromLatest(Period.hours(1))
                 .build(),
             DataSourceCompactionConfig
                 .builder()
-                .forDataSource(DS.KOALA)
+                .forDataSource(TestDataSource.KOALA)
                 .withSkipOffsetFromLatest(Period.hours(2))
                 .build()
         ),
         null,
         null,
         null,
-        CompactionEngine.MSQ
+        CompactionEngine.MSQ,
+        null
     );
 
     final String json = MAPPER.writeValueAsString(config);
@@ -75,7 +78,13 @@ public class DruidCompactionConfigTest
   {
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
 
-    final ClusterCompactionConfig clusterConfig = new ClusterCompactionConfig(0.5, 10, false, CompactionEngine.MSQ);
+    final ClusterCompactionConfig clusterConfig = new ClusterCompactionConfig(
+        0.5,
+        10,
+        false,
+        CompactionEngine.MSQ,
+        new NewestSegmentFirstPolicy(null)
+    );
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
     Assert.assertEquals(clusterConfig, copy.clusterConfig());
@@ -88,17 +97,15 @@ public class DruidCompactionConfigTest
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
     Assert.assertTrue(config.getCompactionConfigs().isEmpty());
 
-    final DataSourceCompactionConfig dataSourceConfig
-        = DataSourceCompactionConfig.builder().forDataSource(DS.WIKI).withEngine(CompactionEngine.NATIVE).build();
-    final DruidCompactionConfig copy = config.withDatasourceConfigs(Collections.singletonList(dataSourceConfig));
+    final DataSourceCompactionConfig dataSourceConfig = DataSourceCompactionConfig
+        .builder()
+        .forDataSource(TestDataSource.WIKI)
+        .withEngine(CompactionEngine.NATIVE)
+        .build();
+    final DruidCompactionConfig copy
+        = config.withDatasourceConfigs(Collections.singletonList(dataSourceConfig));
 
     Assert.assertEquals(1, copy.getCompactionConfigs().size());
-    Assert.assertEquals(dataSourceConfig, copy.findConfigForDatasource(DS.WIKI).orNull());
-  }
-
-  private static class DS
-  {
-    static final String WIKI = "wiki";
-    static final String KOALA = "koala";
+    Assert.assertEquals(dataSourceConfig, copy.findConfigForDatasource(TestDataSource.WIKI).orNull());
   }
 }

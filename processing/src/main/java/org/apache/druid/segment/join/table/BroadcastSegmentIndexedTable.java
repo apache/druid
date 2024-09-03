@@ -30,6 +30,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
@@ -38,7 +39,6 @@ import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -87,12 +87,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         segment.getId()
     );
 
-    RowSignature.Builder sigBuilder = RowSignature.builder();
-    sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
-    for (String column : queryableIndex.getColumnNames()) {
-      sigBuilder.add(column, adapter.getColumnCapabilities(column).toColumnType());
-    }
-    this.rowSignature = sigBuilder.build();
+    this.rowSignature = adapter.getRowSignature();
 
     // initialize keycolumn index builders
     final ArrayList<RowBasedIndexBuilder> indexBuilders = new ArrayList<>(rowSignature.size());
@@ -222,11 +217,11 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
 
   @Nullable
   @Override
-  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
+  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, Closer closer)
   {
     return new QueryableIndexColumnSelectorFactory(
         VirtualColumns.EMPTY,
-        descending,
+        Cursors.getTimeOrdering(queryableIndex.getOrdering()),
         offset,
         new ColumnCache(queryableIndex, closer)
     );
