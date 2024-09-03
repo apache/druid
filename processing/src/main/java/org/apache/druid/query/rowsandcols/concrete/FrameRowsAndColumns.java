@@ -20,18 +20,14 @@
 package org.apache.druid.query.rowsandcols.concrete;
 
 import com.google.common.base.Objects;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.read.columnar.FrameColumnReaders;
 import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
