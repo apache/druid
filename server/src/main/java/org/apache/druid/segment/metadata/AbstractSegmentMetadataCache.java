@@ -808,6 +808,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     return retVal;
   }
 
+  /**
+   * Log the segment details for a datasource to be refreshed for debugging purpose.
+   */
   void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
   {
     // no-op

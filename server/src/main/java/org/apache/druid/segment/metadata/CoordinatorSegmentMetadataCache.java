@@ -533,7 +533,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   @Override
   void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
   {
-    log.info("Refreshing segments [%s] for datasource [%s]", Iterables.limit(ids, 10), dataSource);
+    log.info("Refreshing segments [%s] for datasource [%s]", Iterables.limit(ids, 5), dataSource);
   }
 
   private void filterRealtimeSegments(Set<SegmentId> segmentIds)
