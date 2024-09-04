@@ -48,6 +48,19 @@ def config_spark_with_delta_lake():
 
 
 def create_dataset_with_complex_types(num_records):
+    """
+    Create a mock dataset with records containing complex types like arrays, structs and maps.
+    Parameters:
+    - num_records (int): Number of records to generate.
+    Returns:
+    - Tuple: A tuple containing a list of records and the corresponding schema.
+      - List of Records: Each record is a tuple representing a row of data.
+      - StructType: The schema defining the structure of the records.
+    Example:
+    ```python
+    data, schema = create_dataset_with_complex_types(10)
+    ```
+"""
     schema = StructType([
         StructField("id", LongType(), False),
         StructField("array_info", ArrayType(IntegerType(), True), True),
@@ -80,7 +93,18 @@ def create_dataset_with_complex_types(num_records):
     return data, schema
 
 
-def create_dataset_for_snapshot(num_records):
+def create_snapshots_table(num_records):
+    """
+    Create a mock dataset for snapshots.
+    Parameters:
+    - num_records (int): Number of records to generate.
+    Returns:
+    - Tuple: A tuple containing a list of records and the corresponding schema pertaining to a single snapshot.
+    Example:
+    ```python
+    data, schema = create_snapshots_table(5)
+    ```
+    """
     schema = StructType([
         StructField("id", LongType(), False),
         StructField("map_info", MapType(StringType(), IntegerType()))
@@ -98,6 +122,10 @@ def create_dataset_for_snapshot(num_records):
 
 
 def update_table(spark, schema, delta_table_path):
+    """
+    Update table at the specified delta path with updates: deletion, partial upsert, and insertion.
+    Each update generates a distinct snapshot for the Delta table.
+    """
     delta_table = DeltaTable.forPath(spark, delta_table_path)
 
     # Snapshot 1: remove record with id = 2; result : (id=0, id=2)
@@ -168,6 +196,7 @@ def create_dataset(num_records):
         data.append(record)
     return data, schema
 
+
 def main():
     parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -196,7 +225,7 @@ def main():
     elif delta_table_type == TableType.COMPLEX:
         data, schema = create_dataset_with_complex_types(num_records=num_records)
     elif delta_table_type == TableType.SNAPSHOTS:
-        data, schema = create_dataset_for_snapshot(num_records)
+        data, schema = create_snapshots_table(num_records)
     else:
         args.print_help()
         raise Exception("Unknown value specified for --delta_table_type")
