@@ -77,7 +77,7 @@ export interface QueryTabProps
     | 'enginesLabelFn'
     | 'maxTasksLabelFn'
     | 'fullClusterCapacityLabelFn'
-    | 'maxNumTaskOptions'
+    | 'maxTasksOptions'
   > {
   query: WorkbenchQuery;
   id: string;
@@ -114,7 +114,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     maxTasksMenuHeader,
     enginesLabelFn,
     maxTasksLabelFn,
-    maxNumTaskOptions,
+    maxTasksOptions,
     fullClusterCapacityLabelFn,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
@@ -424,7 +424,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               maxTasksMenuHeader={maxTasksMenuHeader}
               enginesLabelFn={enginesLabelFn}
               maxTasksLabelFn={maxTasksLabelFn}
-              maxNumTaskOptions={maxNumTaskOptions}
+              maxTasksOptions={maxTasksOptions}
               fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
             />
             {executionState.isLoading() && (

@@ -28,7 +28,7 @@ import { getQueryContextKey } from '../../../druid-models';
 import { getLink } from '../../../links';
 import { capitalizeFirst, deleteKeys, formatInteger, tickIcon } from '../../../utils';
 
-const MAX_NUM_TASK_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
+const DEFAULT_MAX_TASKS_OPTIONS = [2, 3, 4, 5, 7, 9, 11, 17, 33, 65, 129];
 const TASK_DOCUMENTATION_LINK = `${getLink('DOCS')}/multi-stage-query/reference#context-parameters`;
 
 const DEFAULT_MAX_NUM_TASKS_LABEL_FN = (maxNum: number) => {
@@ -46,7 +46,7 @@ export interface MaxTasksButtonProps extends Omit<ButtonProps, 'text' | 'rightIc
   defaultQueryContext: QueryContext;
   menuHeader?: JSX.Element;
   maxTasksLabelFn?: (maxNum: number) => { text: string; label?: string };
-  maxNumTaskOptions?: number[];
+  maxTasksOptions?: number[];
   fullClusterCapacityLabelFn?: (clusterCapacity: number) => string;
 }
 
@@ -59,7 +59,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
     menuHeader,
     maxTasksLabelFn = DEFAULT_MAX_NUM_TASKS_LABEL_FN,
     fullClusterCapacityLabelFn = DEFAULT_FULL_CLUSTER_CAPACITY_LABEL_FN,
-    maxNumTaskOptions = MAX_NUM_TASK_OPTIONS,
+    maxTasksOptions = DEFAULT_MAX_TASKS_OPTIONS,
     ...rest
   } = props;
   const [customMaxNumTasksDialogOpen, setCustomMaxNumTasksDialogOpen] = useState(false);
@@ -71,8 +71,8 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
     typeof clusterCapacity === 'number' ? fullClusterCapacityLabelFn(clusterCapacity) : undefined;
 
   const shownMaxNumTaskOptions = clusterCapacity
-    ? maxNumTaskOptions.filter(_ => _ <= clusterCapacity)
-    : maxNumTaskOptions;
+    ? maxTasksOptions.filter(_ => _ <= clusterCapacity)
+    : maxTasksOptions;
 
   return (
     <>

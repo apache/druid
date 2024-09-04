@@ -119,7 +119,7 @@ const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimenta
 export interface RunPanelProps
   extends Pick<
     MaxTasksButtonProps,
-    'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxNumTaskOptions'
+    'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxTasksOptions'
   > {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
@@ -146,7 +146,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     maxTasksMenuHeader,
     enginesLabelFn = DEFAULT_ENGINES_LABEL_FN,
     maxTasksLabelFn,
-    maxNumTaskOptions,
+    maxTasksOptions,
     fullClusterCapacityLabelFn,
   } = props;
   const [editContextDialogOpen, setEditContextDialogOpen] = useState(false);
@@ -608,7 +608,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               defaultQueryContext={defaultQueryContext}
               menuHeader={maxTasksMenuHeader}
               maxTasksLabelFn={maxTasksLabelFn}
-              maxNumTaskOptions={maxNumTaskOptions}
+              maxTasksOptions={maxTasksOptions}
               fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
             />
           )}
