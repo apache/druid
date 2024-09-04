@@ -732,7 +732,7 @@ Returns the following:
 
 ## CONTAINS_STRING
 
-Returns true if `str` is a substring of `expr`, case-sensitive. Otherwise returns false.
+Returns true if `str` is a substring of `expr`, case-sensitive. Otherwise, returns false.
 
 * **Syntax:** `CONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
@@ -1277,7 +1277,7 @@ Returns the following:
 
 ## ICONTAINS_STRING
 
-Returns true if `str` is a substring of `expr`, case-insensitive. Otherwise returns false.
+Returns true if `str` is a substring of `expr`, case-insensitive. Otherwise, returns false.
 
 * **Syntax:** `ICONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
@@ -1314,7 +1314,7 @@ Returns true if the IPv4 `address` belongs to the `subnet` literal, otherwise re
 
 <details><summary>Example</summary>
 
-The following example returns true if the IP address in the `forward_for` column from the `kttm` datasource belongs to the subnet `181.13.41.0/24`.
+The following example returns true if the IPv4 address in the `forward_for` column from the `kttm` datasource belongs to the subnet `181.13.41.0/24`.
 
 ```sql
 SELECT 
