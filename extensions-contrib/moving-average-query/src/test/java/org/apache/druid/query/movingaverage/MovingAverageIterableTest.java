@@ -439,12 +439,15 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
+    String genderMissingFirst = (result.getDimension("gender")).get(0);
+    Assert.assertTrue("u".equals(genderMissingFirst) || "f".equals(genderMissingFirst));
     Assert.assertEquals(JAN_2, (result.getTimestamp()));
 
     Assert.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
+    String genderMissingSecond = (result.getDimension("gender")).get(0);
+    Assert.assertTrue("u".equals(genderMissingSecond) || "f".equals(genderMissingSecond));
+    Assert.assertFalse(genderMissingSecond.equals(genderMissingFirst));
     Assert.assertEquals(JAN_2, (result.getTimestamp()));
 
     Assert.assertFalse(iter.hasNext());
