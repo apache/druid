@@ -1673,7 +1673,7 @@ Converts a number of milliseconds since epoch into a timestamp.
 
 <details><summary>Example</summary>
 
-The following example converts `1375344877000` milliseconds from epoch into a timestamp. 
+The following example converts 1375344877000 milliseconds from epoch into a timestamp. 
 
 ```sql
 SELECT MILLIS_TO_TIMESTAMP(1375344877000) AS "timestamp"
