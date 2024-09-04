@@ -757,7 +757,7 @@ public class AggregationTestHelper implements Closeable
                 @Override
                 public Object accumulate(Object accumulated, Object in)
                 {
-                  yield();
+                  this.yield();
                   return in;
                 }
               }
