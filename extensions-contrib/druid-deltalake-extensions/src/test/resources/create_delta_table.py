@@ -174,8 +174,6 @@ def main():
 
     parser.add_argument('--delta_table_type', type=lambda t: TableType[t.upper()], choices=TableType,
                         default=TableType.SIMPLE, help='Choose a Delta table type to generate.')
-    parser.add_argument("--gen_snapshots", type=bool, default=False, help="Generate multiple snapshots by updating and "
-                                                                          "deleting records from the Delta table.")
     parser.add_argument('--save_path', default=None, required=True, help="Save path for Delta table")
     parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
                         help="Specify write mode (append/overwrite)")
