@@ -23,22 +23,22 @@ sidebar_label: "Peon"
   ~ under the License.
   -->
 
-The Peon service is a task execution engine spawned by the MiddleManager. Each Peon runs a separate JVM and is responsible for executing a single task. Peons always run on the same host as the MiddleManager that spawned them.
+The Peon service is a task execution engine spawned by the Middle Manager. Each Peon runs a separate JVM and is responsible for executing a single task. Peons always run on the same host as the Middle Manager that spawned them.
 
 ## Configuration
 
 For Apache Druid Peon configuration, see [Peon Query Configuration](../configuration/index.md#peon-query-configuration) and [Additional Peon Configuration](../configuration/index.md#additional-peon-configuration).
 
-For basic tuning guidance for MiddleManager tasks, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#task-configurations).
+For basic tuning guidance for Middle Manager tasks, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#task-configurations).
 
 ## HTTP endpoints
 
-Peons run a single task in a single JVM. The MiddleManager is responsible for creating Peons for running tasks.
+Peons run a single task in a single JVM. The Middle Manager is responsible for creating Peons for running tasks.
 Peons should rarely run on their own.
 
 ## Running
 
-The Peon should seldom run separately from the MiddleManager, except for development purposes.
+The Peon should seldom run separately from the Middle Manager, except for development purposes.
 
 ```
 org.apache.druid.cli.Main internal peon <task_file> <status_file>

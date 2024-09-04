@@ -28,9 +28,9 @@ sidebar_label: "Indexer"
  Its memory management system is still under development and will be significantly enhanced in later releases.
 :::
 
-The Apache Druid Indexer service is an alternative to the MiddleManager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
+The Apache Druid Indexer service is an alternative to the Middle Manager + Peon task execution system. Instead of forking a separate JVM process per-task, the Indexer runs tasks as separate threads within a single JVM process.
 
-The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to better enable resource sharing across tasks.
+The Indexer is designed to be easier to configure and deploy compared to the Middle Manager + Peon system and to better enable resource sharing across tasks.
 
 ## Configuration
 
@@ -38,7 +38,7 @@ For Apache Druid Indexer service configuration, see [Indexer Configuration](../c
 
 ## HTTP endpoints
 
-The Indexer service shares the same HTTP endpoints as the [MiddleManager](../api-reference/service-status-api.md#middlemanager).
+The Indexer service shares the same HTTP endpoints as the [Middle Manager](../api-reference/service-status-api.md#middle-manager).
 
 ## Running
 
@@ -73,7 +73,7 @@ This global limit is evenly divided across the number of task slots configured b
 
 To apply the per-task heap limit, the Indexer overrides `maxBytesInMemory` in task tuning configurations, that is ignoring the default value or any user configured value. It also overrides `maxRowsInMemory` to an essentially unlimited value: the Indexer does not support row limits.
 
-By default, `druid.worker.globalIngestionHeapLimitBytes` is set to 1/6th of the available JVM heap. This default is chosen to align with the default value of `maxBytesInMemory` in task tuning configs when using the MiddleManager + Peon system, which is also 1/6th of the JVM heap.
+By default, `druid.worker.globalIngestionHeapLimitBytes` is set to 1/6th of the available JVM heap. This default is chosen to align with the default value of `maxBytesInMemory` in task tuning configs when using the Middle Manager + Peon system, which is also 1/6th of the JVM heap.
 
 The peak usage for rows held in heap memory relates to the interaction between the `maxBytesInMemory` and `maxPendingPersists` properties in the task tuning configs. When the amount of row data held in-heap by a task reaches the limit specified by `maxBytesInMemory`, a task will persist the in-heap row data. After the persist has been started, the task can again ingest up to `maxBytesInMemory` bytes worth of row data while the persist is running.
 

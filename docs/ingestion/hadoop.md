@@ -149,7 +149,7 @@ For example, using the static input paths:
 ```
 
 You can also read from cloud storage such as Amazon S3 or Google Cloud Storage.
-To do so, you need to install the necessary library under Druid's classpath in _all MiddleManager or Indexer processes_.
+To do so, you need to install the necessary library under Druid's classpath in _all Middle Manager or Indexer processes_.
 For S3, you can run the below command to install the [Hadoop AWS module](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/).
 
 ```bash
@@ -157,7 +157,7 @@ java -classpath "${DRUID_HOME}lib/*" org.apache.druid.cli.Main tools pull-deps -
 cp ${DRUID_HOME}/hadoop-dependencies/hadoop-aws/${HADOOP_VERSION}/hadoop-aws-${HADOOP_VERSION}.jar ${DRUID_HOME}/extensions/druid-hdfs-storage/
 ```
 
-Once you install the Hadoop AWS module in all MiddleManager and Indexer processes, you can put
+Once you install the Hadoop AWS module in all Middle Manager and Indexer processes, you can put
 your S3 paths in the inputSpec with the below job properties.
 For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/docs/stable/hadoop-aws/tools/hadoop-aws/).
 
@@ -175,8 +175,8 @@ For more configurations, see the [Hadoop AWS module](https://hadoop.apache.org/d
 ```
 
 For Google Cloud Storage, you need to install [GCS connector jar](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md)
-under `${DRUID_HOME}/hadoop-dependencies` in _all MiddleManager or Indexer processes_.
-Once you install the GCS Connector jar in all MiddleManager and Indexer processes, you can put
+under `${DRUID_HOME}/hadoop-dependencies` in _all Middle Manager or Indexer processes_.
+Once you install the GCS Connector jar in all Middle Manager and Indexer processes, you can put
 your Google Cloud Storage paths in the inputSpec with the below job properties.
 For more configurations, see the [instructions to configure Hadoop](https://github.com/GoogleCloudPlatform/bigdata-interop/blob/master/gcs/INSTALL.md#configure-hadoop),
 [GCS core default](https://github.com/GoogleCloudDataproc/hadoop-connectors/blob/v2.0.0/gcs/conf/gcs-core-default.xml)

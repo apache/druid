@@ -74,7 +74,7 @@ The following are the changes to the default values for the Coordinator service:
 
 #### `GoogleTaskLogs` upload buffer size
 
-Changed the upload buffer size in `GoogleTaskLogs` to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the MiddleManager service from running out of memory.
+Changed the upload buffer size in `GoogleTaskLogs` to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the Middle Manager service from running out of memory.
 
 [#16236](https://github.com/apache/druid/pull/16236)
 

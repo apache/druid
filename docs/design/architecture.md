@@ -40,8 +40,8 @@ Druid has several types of services:
 * [Broker](../design/broker.md) handles queries from external clients.
 * [Router](../design/router.md) routes requests to Brokers, Coordinators, and Overlords.
 * [Historical](../design/historical.md) stores queryable data.
-* [MiddleManager](../design/middlemanager.md) and [Peon](../design/peons.md) ingest data.
-* [Indexer](../design/indexer.md) serves an alternative to the MiddleManager + Peon task execution system.
+* [Middle Manager](../design/middlemanager.md) and [Peon](../design/peons.md) ingest data.
+* [Indexer](../design/indexer.md) serves an alternative to the Middle Manager + Peon task execution system.
 
 You can view services in the **Services** tab in the web console: 
 
@@ -63,7 +63,7 @@ Master servers divide operations between Coordinator and Overlord services.
 
 #### Overlord service
 
-[Overlord](../design/overlord.md) services watch over the MiddleManager services on the Data servers and are the controllers of data ingestion into Druid. They are responsible for assigning ingestion tasks to MiddleManagers and for coordinating segment publishing.
+[Overlord](../design/overlord.md) services watch over the Middle Manager services on the Data servers and are the controllers of data ingestion into Druid. They are responsible for assigning ingestion tasks to Middle Managers and for coordinating segment publishing.
 
 ### Query server
 
@@ -73,7 +73,7 @@ Query servers divide operations between Broker and Router services.
 
 #### Broker service
 
-[Broker](../design/broker.md) services receive queries from external clients and forward those queries to Data servers. When Brokers receive results from those subqueries, they merge those results and return them to the caller. Typically, you query Brokers rather than querying Historical or MiddleManager services on Data servers directly.
+[Broker](../design/broker.md) services receive queries from external clients and forward those queries to Data servers. When Brokers receive results from those subqueries, they merge those results and return them to the caller. Typically, you query Brokers rather than querying Historical or Middle Manager services on Data servers directly.
 
 #### Router service
 
@@ -85,30 +85,30 @@ The Router service also runs the [web console](../operations/web-console.md), a 
 
 A Data server executes ingestion jobs and stores queryable data.
 
-Data servers divide operations between Historical and MiddleManager services.
+Data servers divide operations between Historical and Middle Manager services.
 
 #### Historical service
 
 [**Historical**](../design/historical.md) services handle storage and querying on historical data, including any streaming data that has been in the system long enough to be committed. Historical services download segments from deep storage and respond to queries about these segments. They don't accept writes.
 
-#### MiddleManager service
+#### Middle Manager service
 
-[**MiddleManager**](../design/middlemanager.md) services handle ingestion of new data into the cluster. They are responsible
+[**Middle Manager**](../design/middlemanager.md) services handle ingestion of new data into the cluster. They are responsible
 for reading from external data sources and publishing new Druid segments.
 
 ##### Peon service
 
-[**Peon**](../design/peons.md) services are task execution engines spawned by MiddleManagers. Each Peon runs a separate JVM and is responsible for executing a single task. Peons always run on the same host as the MiddleManager that spawned them.
+[**Peon**](../design/peons.md) services are task execution engines spawned by Middle Managers. Each Peon runs a separate JVM and is responsible for executing a single task. Peons always run on the same host as the Middle Manager that spawned them.
 
 #### Indexer service (optional)
 
-[**Indexer**](../design/indexer.md) services are an alternative to MiddleManagers and Peons. Instead of
+[**Indexer**](../design/indexer.md) services are an alternative to Middle Managers and Peons. Instead of
 forking separate JVM processes per-task, the Indexer runs tasks as individual threads within a single JVM process.
 
-The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to better enable resource sharing across tasks. The Indexer is a newer feature and is currently designated [experimental](../development/experimental.md) due to the fact that its memory management system is still under
+The Indexer is designed to be easier to configure and deploy compared to the Middle Manager + Peon system and to better enable resource sharing across tasks. The Indexer is a newer feature and is currently designated [experimental](../development/experimental.md) due to the fact that its memory management system is still under
 development. It will continue to mature in future versions of Druid.
 
-Typically, you would deploy either MiddleManagers or Indexers, but not both.
+Typically, you would deploy either Middle Managers or Indexers, but not both.
 
 ## Colocation of services
 
@@ -126,11 +126,11 @@ In clusters with very high segment counts, it can make sense to separate the Coo
 You can run the Coordinator and Overlord services as a single combined service by setting the `druid.coordinator.asOverlord.enabled` property.
 For more information, see [Coordinator Operation](../configuration/index.md#coordinator-operation).
 
-### Historicals and MiddleManagers
+### Historicals and Middle Managers
 
-With higher levels of ingestion or query load, it can make sense to deploy the Historical and MiddleManager services on separate hosts to to avoid CPU and memory contention.
+With higher levels of ingestion or query load, it can make sense to deploy the Historical and Middle Manager services on separate hosts to to avoid CPU and memory contention.
 
-The Historical service also benefits from having free memory for memory mapped segments, which can be another reason to deploy the Historical and MiddleManager services separately.
+The Historical service also benefits from having free memory for memory mapped segments, which can be another reason to deploy the Historical and Middle Manager services separately.
 
 ## External dependencies
 

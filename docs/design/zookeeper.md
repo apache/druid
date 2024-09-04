@@ -41,7 +41,7 @@ The operations that happen over ZK are
 1.  [Coordinator](../design/coordinator.md) leader election
 2.  Segment "publishing" protocol from [Historical](../design/historical.md)
 3.  [Overlord](../design/overlord.md) leader election
-4.  [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) task management
+4.  [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) task management
 
 ## Coordinator Leader Election
 
