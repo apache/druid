@@ -32,8 +32,8 @@ import org.apache.druid.delta.filter.DeltaLessThanOrEqualsFilter;
 import org.apache.druid.delta.filter.DeltaNotFilter;
 import org.apache.druid.delta.filter.DeltaOrFilter;
 import org.apache.druid.delta.snapshot.LatestSnapshot;
-import org.apache.druid.delta.snapshot.SnapshotByTime;
-import org.apache.druid.delta.snapshot.SnapshotByVersion;
+import org.apache.druid.delta.snapshot.Snapshot;
+import org.apache.druid.delta.snapshot.VersionedSnapshot;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
@@ -68,36 +68,72 @@ public class DeltaInputSourceTest
     public static Object[][] data()
     {
       return new Object[][]{
-//          {
-//              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
-//              NonPartitionedDeltaTable.FULL_SCHEMA,
-//              NonPartitionedDeltaTable.EXPECTED_ROWS
-//          },
-//          {
-//              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
-//              NonPartitionedDeltaTable.SCHEMA_1,
-//              NonPartitionedDeltaTable.EXPECTED_ROWS
-//          },
-//          {
-//              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
-//              NonPartitionedDeltaTable.SCHEMA_2,
-//              NonPartitionedDeltaTable.EXPECTED_ROWS
-//          },
-//          {
-//              PartitionedDeltaTable.DELTA_TABLE_PATH,
-//              PartitionedDeltaTable.FULL_SCHEMA,
-//              PartitionedDeltaTable.EXPECTED_ROWS
-//          },
-//          {
-//              ComplexTypesDeltaTable.DELTA_TABLE_PATH,
-//              ComplexTypesDeltaTable.FULL_SCHEMA,
-//              ComplexTypesDeltaTable.EXPECTED_ROWS
-//          },
+          {
+              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
+              NonPartitionedDeltaTable.FULL_SCHEMA,
+              null,
+              NonPartitionedDeltaTable.EXPECTED_ROWS
+          },
+          {
+              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
+              NonPartitionedDeltaTable.SCHEMA_1,
+              null,
+              NonPartitionedDeltaTable.EXPECTED_ROWS
+          },
+          {
+              NonPartitionedDeltaTable.DELTA_TABLE_PATH,
+              NonPartitionedDeltaTable.SCHEMA_2,
+              null,
+              NonPartitionedDeltaTable.EXPECTED_ROWS
+          },
+          {
+              PartitionedDeltaTable.DELTA_TABLE_PATH,
+              PartitionedDeltaTable.FULL_SCHEMA,
+              null,
+              PartitionedDeltaTable.EXPECTED_ROWS
+          },
+          {
+              ComplexTypesDeltaTable.DELTA_TABLE_PATH,
+              ComplexTypesDeltaTable.FULL_SCHEMA,
+              null,
+              ComplexTypesDeltaTable.EXPECTED_ROWS
+          },
           {
               SnapshotDeltaTable.DELTA_TABLE_PATH,
               SnapshotDeltaTable.FULL_SCHEMA,
-              SnapshotDeltaTable.EXPECTED_ROWS
-          }
+              new VersionedSnapshot(0L),
+              SnapshotDeltaTable.V0_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              new VersionedSnapshot(1L),
+              SnapshotDeltaTable.V1_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              new VersionedSnapshot(2L),
+              SnapshotDeltaTable.V2_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              new VersionedSnapshot(3L),
+              SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              new LatestSnapshot(),
+              SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              null,
+              SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
+          },
       };
     }
 
@@ -106,12 +142,14 @@ public class DeltaInputSourceTest
     @Parameterized.Parameter(1)
     public InputRowSchema schema;
     @Parameterized.Parameter(2)
+    public Snapshot snapshot;
+    @Parameterized.Parameter(3)
     public List<Map<String, Object>> expectedRows;
 
     @Test
     public void testSampleDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, null);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshot);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
 
       List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
@@ -145,74 +183,7 @@ public class DeltaInputSourceTest
     @Test
     public void testReadDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, null);
-      final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
-      final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-      validateRows(expectedRows, actualReadRows, schema);
-    }
-
-    // These should be in its own suite test or something
-    @Test
-    public void testReadSnapshotVersion0() throws IOException
-    {
-      // Only 5 records as expected
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByVersion(0L));
-
-
-
-      // Throws exception bc version = 3 doesn't exist!
-//      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByVersion(3L));
-
-      // Reads all the records, including ones from 0, 1 and 2 snapshot versions!!!!! WEIRD
-//      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new LatestSnapshot());
-      final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
-      final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-      validateRows(expectedRows, actualReadRows, schema);
-    }
-
-    @Test
-    public void testReadSnapshotVersion2() throws IOException
-    {
-      // Only 5 records as expected
-//      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByVersion(3L));
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new LatestSnapshot());
-
-      final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
-      final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-      validateRows(expectedRows, actualReadRows, schema);
-    }
-
-    @Test
-    public void testReadSnapshotByTime() throws IOException
-    {
-      // Only 5 records as expected
-//      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByVersion(3L));
-//      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByTime(1725461643515L));
-
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByTime(1725461642515L));
-
-      final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
-      final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-      validateRows(expectedRows, actualReadRows, schema);
-    }
-
-    @Test
-    public void testReadSnapshotVersion3() throws IOException
-    {
-      // Only 5 records as expected
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, new SnapshotByVersion(3L));
-
-      final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
-      final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
-      validateRows(expectedRows, actualReadRows, schema);
-    }
-
-    @Test
-    public void testReadSnapshotVersionLatest() throws IOException
-    {
-      // Only 5 records as expected
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, null);
-
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshot);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
       final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
       validateRows(expectedRows, actualReadRows, schema);
@@ -440,6 +411,25 @@ public class DeltaInputSourceTest
           )
       );
     }
+
+    @Test
+    public void testReadNonExistentSnapshot()
+    {
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(
+          SnapshotDeltaTable.DELTA_TABLE_PATH,
+          null,
+          null,
+          new VersionedSnapshot(100L)
+      );
+
+      MatcherAssert.assertThat(
+          Assert.assertThrows(
+              DruidException.class,
+              () -> deltaInputSource.reader(null, null, null)
+          ),
+          DruidExceptionMatcher.invalidInput().expectMessageContains("Error reading snapshot version[100]")
+      );
+    }
   }
 
   private static List<InputRowListPlusRawValues> sampleAllRows(InputSourceReader reader) throws IOException
@@ -466,13 +456,11 @@ public class DeltaInputSourceTest
       final InputRowSchema schema
   )
   {
-    System.out.println("actual rows size: " + actualReadRows.size());
     Assert.assertEquals(expectedRows.size(), actualReadRows.size());
 
     for (int idx = 0; idx < expectedRows.size(); idx++) {
       final Map<String, Object> expectedRow = expectedRows.get(idx);
       final InputRow actualInputRow = actualReadRows.get(idx);
-      System.out.println("Actual row" + actualInputRow);
       for (String key : expectedRow.keySet()) {
         if (!schema.getColumnsFilter().apply(key)) {
           Assert.assertNull(actualInputRow.getRaw(key));

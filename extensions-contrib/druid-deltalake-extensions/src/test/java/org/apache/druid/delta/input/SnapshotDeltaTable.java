@@ -29,10 +29,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Refer to extensions-contrib/druid-deltalake-extensions/src/test/resources/README.md to generate the
@@ -44,72 +42,71 @@ public class SnapshotDeltaTable
   /**
    * The Delta table path used by unit tests.
    */
-//  public static final String DELTA_TABLE_PATH = "src/test/resources/snapshot-table";
   public static final String DELTA_TABLE_PATH = "src/test/resources/snapshot-table";
 
-  /**
-   * The list of dimensions in the Delta table {@link #DELTA_TABLE_PATH}.
-   */
-  public static final List<String> DIMENSIONS = ImmutableList.of(
-      "id",
-      "array_info",
-      "struct_info",
-      "map_info"
-  );
-
-  /**
-   * The expected set of rows from the first checkpoint file {@code {@link #DELTA_TABLE_PATH}/_delta_log/00000000000000000000.json}
-   */
-  private static final List<Map<String, Object>> SPLIT_0_EXPECTED_ROWS = new ArrayList<>(
+  public static final List<Map<String, Object>> V0_SNAPSHOT_EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(
               "id", 0L,
-              "array_info", ImmutableList.of(0, 1, 2, 3),
-              "struct_info", ImmutableMap.of("id", 0L, "snapshotVersion", "0"),
-              "map_info", ImmutableMap.of("key1", 0, "snapshotVersion", 0)
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
           ),
           ImmutableMap.of(
               "id", 1L,
-              "array_info", ImmutableList.of(1, 2, 3, 4),
-              "struct_info", ImmutableMap.of("id", 1L, "snapshotVersion", "0"),
-              "map_info", ImmutableMap.of("key1", 1, "snapshotVersion", 0)
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
           ),
           ImmutableMap.of(
               "id", 2L,
-              "array_info", ImmutableList.of(2, 3, 4, 5),
-              "struct_info", ImmutableMap.of("id", 2L, "snapshotVersion", "0"),
-              "map_info", ImmutableMap.of("key1", 2, "snapshotVersion", 0)
-          ),
-          ImmutableMap.of(
-              "id", 3L,
-              "array_info", ImmutableList.of(3, 4, 5, 6),
-              "struct_info", ImmutableMap.of("id", 3L, "snapshotVersion", "0"),
-              "map_info", ImmutableMap.of("key1", 3, "snapshotVersion", 0)
-          ),
-          ImmutableMap.of(
-              "id", 4L,
-              "array_info", ImmutableList.of(4, 5, 6, 7),
-              "struct_info", ImmutableMap.of("id", 4L, "snapshotVersion", "0"),
-              "map_info", ImmutableMap.of("key1", 4, "snapshotVersion", 0)
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
           )
       )
   );
 
-  /**
-   * Mapping of checkpoint file identifier to the list of expected rows in that checkpoint.
-   */
-  public static final Map<Integer, List<Map<String, Object>>> SPLIT_TO_EXPECTED_ROWS = new HashMap<>(
-      ImmutableMap.of(
-          0, SPLIT_0_EXPECTED_ROWS
+  public static final List<Map<String, Object>> V1_SNAPSHOT_EXPECTED_ROWS = new ArrayList<>(
+      ImmutableList.of(
+          ImmutableMap.of(
+              "id", 0L,
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
+          ),
+          ImmutableMap.of(
+              "id", 2L,
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
+          )
       )
   );
 
-  /**
-   * Complete set of expected rows across all checkpoint files for {@link #DELTA_TABLE_PATH}.
-   */
-  public static final List<Map<String, Object>> EXPECTED_ROWS = SPLIT_TO_EXPECTED_ROWS.values().stream()
-                                                                                      .flatMap(List::stream)
-                                                                                      .collect(Collectors.toList());
+  public static final List<Map<String, Object>> V2_SNAPSHOT_EXPECTED_ROWS = new ArrayList<>(
+      ImmutableList.of(
+          ImmutableMap.of(
+              "id", 2L,
+              "map_info", ImmutableMap.of("snapshotVersion", 2)
+          ),
+          ImmutableMap.of(
+              "id", 0L,
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
+          )
+      )
+  );
+
+  public static final List<Map<String, Object>> LATEST_SNAPSHOT_EXPECTED_ROWS = new ArrayList<>(
+      ImmutableList.of(
+          ImmutableMap.of(
+              "id", 1L,
+              "map_info", ImmutableMap.of("snapshotVersion", 3)
+          ),
+          ImmutableMap.of(
+              "id", 4L,
+              "map_info", ImmutableMap.of("snapshotVersion", 3)
+          ),
+          ImmutableMap.of(
+              "id", 2L,
+              "map_info", ImmutableMap.of("snapshotVersion", 2)
+          ),
+          ImmutableMap.of(
+              "id", 0L,
+              "map_info", ImmutableMap.of("snapshotVersion", 0)
+          )
+      )
+  );
 
   /**
    * The Druid schema used for ingestion of {@link #DELTA_TABLE_PATH}.
@@ -119,8 +116,6 @@ public class SnapshotDeltaTable
       new DimensionsSpec(
           ImmutableList.of(
               new AutoTypeColumnSchema("id", null),
-              new AutoTypeColumnSchema("array_info", null),
-              new AutoTypeColumnSchema("struct_info", null),
               new AutoTypeColumnSchema("map_info", null)
           )
       ),

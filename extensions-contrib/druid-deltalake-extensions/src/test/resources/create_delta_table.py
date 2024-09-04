@@ -83,11 +83,6 @@ def create_dataset_with_complex_types(num_records):
 def create_dataset_for_snapshot(num_records):
     schema = StructType([
         StructField("id", LongType(), False),
-        StructField("array_info", ArrayType(IntegerType(), True), True),
-        StructField("struct_info", StructType([
-            StructField("id", LongType(), False),
-            StructField("nextId", LongType(), False)
-        ])),
         StructField("map_info", MapType(StringType(), IntegerType()))
     ])
 
@@ -96,8 +91,6 @@ def create_dataset_for_snapshot(num_records):
     for idx in range(num_records):
         record = (
             idx,
-            (idx, idx + 1, idx + 2, idx + 3),
-            (idx, idx + 1),
             {"snapshotVersion": 0}
         )
         data.append(record)
@@ -107,19 +100,19 @@ def create_dataset_for_snapshot(num_records):
 def update_table(spark, schema, delta_table_path):
     delta_table = DeltaTable.forPath(spark, delta_table_path)
 
-    # Snapshot 1: remove record with id = 2; result = (id=1, id=3, id=4, id=5)
-    delta_table.delete(condition="id=2")
+    # Snapshot 1: remove record with id = 2; result : (id=0, id=2)
+    delta_table.delete(condition="id=1")
 
-    # Snapshot 2: do a partial update of snapshotInfo map for id = 3 ; result = (id=1, id=3, id=4, id=5)
+    # Snapshot 2: do a partial update of snapshotInfo map for id = 2 ; result : (id=2, id=0)
     delta_table.update(
-        condition="id=3",
+        condition="id=2",
         set={"map_info": expr("map('snapshotVersion', 2)")}
     )
 
-    # Snapshot 3: New records to be appended; result = (id=1, id=3, id=4, id=5, id=2, id=6)
+    # Snapshot 3: New records to be appended; result : (id=1, id=4, id=2, id=0)
     append_data = [
-        (2, [2, 2, 3, 3], (10, 11), {"snapshotVersion": 3}),
-        (6, [6, 6, 7, 7], (11, 12), {"snapshotVersion": 3})
+        (1, {"snapshotVersion": 3}),
+        (4, {"snapshotVersion": 3})
     ]
     append_df = spark.createDataFrame(append_data, schema)
     append_df.write.format("delta").mode("append").save(delta_table_path)

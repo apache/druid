@@ -21,16 +21,15 @@ package org.apache.druid.delta.snapshot;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "latest", value = LatestSnapshot.class),
-    @JsonSubTypes.Type(name = "version", value = SnapshotByVersion.class),
+    @JsonSubTypes.Type(name = "version", value = VersionedSnapshot.class),
 })
-public interface SnapshotInfo
+public interface Snapshot
 {
-  Snapshot getSnapshot(Table table, Engine engine);
+  io.delta.kernel.Snapshot getSnapshot(Table table, Engine engine);
 }

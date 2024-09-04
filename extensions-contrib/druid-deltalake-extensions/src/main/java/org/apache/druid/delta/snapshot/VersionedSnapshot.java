@@ -23,15 +23,17 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
+import io.delta.kernel.exceptions.KernelException;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 
-public class SnapshotByVersion implements Snapshot
+public class VersionedSnapshot implements Snapshot
 {
   @JsonProperty
   private final Long version;
 
   @JsonCreator
-  public SnapshotByVersion(@JsonProperty("version") final Long version)
+  public VersionedSnapshot(@JsonProperty("version") final Long version)
   {
     if (version == null) {
       throw InvalidInput.exception("version cannot be empty or null for version snapshot.");
@@ -42,6 +44,13 @@ public class SnapshotByVersion implements Snapshot
   @Override
   public io.delta.kernel.Snapshot getSnapshot(Table table, Engine engine)
   {
-    return table.getSnapshotAsOfVersion(engine, version);
+    try {
+      return table.getSnapshotAsOfVersion(engine, version);
+    } catch(KernelException ke) {
+      throw InvalidInput.exception(
+          "Error reading snapshot version[%s] from tablePath[%s]: [%s]",
+          version, table.getPath(engine), ke.getMessage()
+      );
+    }
   }
 }

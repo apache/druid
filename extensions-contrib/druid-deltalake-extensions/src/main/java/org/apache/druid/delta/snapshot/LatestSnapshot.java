@@ -19,14 +19,13 @@
 
 package org.apache.druid.delta.snapshot;
 
-import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
 
-public class LatestSnapshot implements SnapshotInfo
+public class LatestSnapshot implements Snapshot
 {
   @Override
-  public Snapshot getSnapshot(Table table, Engine engine)
+  public io.delta.kernel.Snapshot getSnapshot(Table table, Engine engine)
   {
     System.out.println("LATEST SNAPSHOT");
     return table.getLatestSnapshot(engine);

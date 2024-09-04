@@ -26,7 +26,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
-import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FilteredColumnarBatch;
@@ -53,7 +52,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.delta.filter.DeltaFilter;
 import org.apache.druid.delta.snapshot.LatestSnapshot;
-import org.apache.druid.delta.snapshot.SnapshotInfo;
+import org.apache.druid.delta.snapshot.Snapshot;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
@@ -69,9 +68,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Input source to ingest data from a Delta Lake. This input source reads the latest snapshot from a Delta table
- * specified by {@code tablePath} parameter. If {@code filter} is specified, it's used at the Kernel level
- * for data pruning. The filtering behavior is as follows:
+ * Input source to ingest data from a Delta Lake. This input source reads the given {@code snapshot} from a Delta
+ * table specified by {@code tablePath} parameter. If {@code snapshot} is unspecified, it defaults to the latest snapshot.
+ * If {@code filter} is specified, it's used at the Kernel level for data pruning. The filtering behavior is as follows:
  * <ul>
  * <li> When a filter is applied on a partitioned table using the partitioning columns, the filtering is guaranteed. </li>
  * <li> When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta
@@ -81,7 +80,6 @@ import java.util.stream.Stream;
  * <p>
  * We leverage the Delta Kernel APIs to interact with a Delta table. The Kernel API abstracts away the
  * complexities of the Delta protocol itself.
- * Note: currently, the Kernel table API only supports reading from the latest snapshot.
  * </p>
  */
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
@@ -100,14 +98,14 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   private final DeltaFilter filter;
 
   @JsonProperty
-  private final SnapshotInfo snapshotInfo;
+  private final Snapshot snapshot;
 
   @JsonCreator
   public DeltaInputSource(
       @JsonProperty("tablePath") final String tablePath,
       @JsonProperty("deltaSplit") @Nullable final DeltaSplit deltaSplit,
       @JsonProperty("filter") @Nullable final DeltaFilter filter,
-      @JsonProperty("snapshot") @Nullable final SnapshotInfo snapshotInfo
+      @JsonProperty("snapshot") @Nullable final Snapshot snapshot
   )
   {
     if (tablePath == null) {
@@ -116,7 +114,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
     this.filter = filter;
-    this.snapshotInfo = snapshotInfo == null ? new LatestSnapshot() : snapshotInfo;
+    this.snapshot = snapshot == null ? new LatestSnapshot() : snapshot;
   }
 
   @Override
@@ -159,7 +157,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         }
       } else {
         final Table table = Table.forPath(engine, tablePath);
-        final Snapshot snapshot = getSnapshotForTable(table, engine);
+        final io.delta.kernel.Snapshot snapshot = getSnapshotForTable(table, engine);
 
         final StructType fullSnapshotSchema = snapshot.getSchema(engine);
         final StructType prunedSchema = pruneSchema(
@@ -213,7 +211,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     }
 
     final Engine engine = createDeltaEngine();
-    final Snapshot snapshot;
+    final io.delta.kernel.Snapshot snapshot;
     final Table table = Table.forPath(engine, tablePath);
     try {
       snapshot = getSnapshotForTable(table, engine);
@@ -262,7 +260,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         tablePath,
         split.get(),
         filter,
-        snapshotInfo
+        snapshot
     );
   }
 
@@ -341,7 +339,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     );
   }
 
-  private Snapshot getSnapshotForTable(final Table table, final Engine engine)
+  private io.delta.kernel.Snapshot getSnapshotForTable(final Table table, final Engine engine)
   {
     // Setting the LogStore class loader before calling the Delta Kernel snapshot API is required as a workaround with
     // the 3.2.0 Delta Kernel because the Kernel library cannot instantiate the LogStore class otherwise. Please see
@@ -349,7 +347,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     final ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(LogStore.class.getClassLoader());
-      return snapshotInfo.getSnapshot(table, engine);
+      return snapshot.getSnapshot(table, engine);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
