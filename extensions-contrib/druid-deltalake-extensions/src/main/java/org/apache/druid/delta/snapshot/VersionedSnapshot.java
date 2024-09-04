@@ -21,12 +21,11 @@ package org.apache.druid.delta.snapshot;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
 import org.apache.druid.error.InvalidInput;
 
-public class SnapshotByVersion implements SnapshotInfo
+public class SnapshotByVersion implements Snapshot
 {
   @JsonProperty
   private final Long version;
@@ -41,7 +40,7 @@ public class SnapshotByVersion implements SnapshotInfo
   }
 
   @Override
-  public Snapshot getSnapshot(Table table, Engine engine)
+  public io.delta.kernel.Snapshot getSnapshot(Table table, Engine engine)
   {
     return table.getSnapshotAsOfVersion(engine, version);
   }
