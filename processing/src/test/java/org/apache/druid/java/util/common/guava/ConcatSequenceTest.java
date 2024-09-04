@@ -263,7 +263,7 @@ public class ConcatSequenceTest
           @Override
           public Integer accumulate(Integer accumulated, Integer in)
           {
-            yield();
+            this.yield();
             return in;
           }
         }

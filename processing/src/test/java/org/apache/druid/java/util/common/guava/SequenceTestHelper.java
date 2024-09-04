@@ -65,7 +65,7 @@ public class SequenceTestHelper
           {
             if (++count >= numToTake) {
               count = 0;
-              yield();
+              this.yield();
             }
 
             Assert.assertEquals(prefix, valsIter.next(), in);

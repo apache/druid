@@ -80,7 +80,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
 
   private static final String QUERIES_FILE = "/stream/queries/stream_index_queries.json";
   private static final String SUPERVISOR_SPEC_TEMPLATE_FILE = "supervisor_spec_template.json";
-  private static final String SUPERVISOR_WITH_CONCURRENT_LOCKS_SPEC_TEMPLATE_FILE = "supervisor_with_concurrent_locks_spec_template.json";
   private static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_FILE = "supervisor_with_autoscaler_spec_template.json";
   private static final String SUPERVISOR_WITH_IDLE_BEHAVIOUR_ENABLED_SPEC_TEMPLATE_FILE =
       "supervisor_with_idle_behaviour_enabled_spec_template.json";
@@ -89,8 +88,6 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
       "supervisor_with_long_duration.json";
 
   protected static final String DATA_RESOURCE_ROOT = "/stream/data";
-  protected static final String SUPERVISOR_WITH_CONCURRENT_LOCKS_SPEC_TEMPLATE_PATH =
-      String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_WITH_CONCURRENT_LOCKS_SPEC_TEMPLATE_FILE);
   protected static final String SUPERVISOR_SPEC_TEMPLATE_PATH =
       String.join("/", DATA_RESOURCE_ROOT, SUPERVISOR_SPEC_TEMPLATE_FILE);
   protected static final String SUPERVISOR_WITH_AUTOSCALER_SPEC_TEMPLATE_PATH =

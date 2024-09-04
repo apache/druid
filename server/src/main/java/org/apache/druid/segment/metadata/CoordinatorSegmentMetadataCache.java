@@ -21,8 +21,8 @@ package org.apache.druid.segment.metadata;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
@@ -64,6 +64,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -357,27 +358,29 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
-  public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata()
   {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
-    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-      for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : val.entrySet()) {
-        Optional<SchemaPayloadPlus> metadata = segmentSchemaCache.getSchemaForSegment(entry.getKey());
-        AvailableSegmentMetadata availableSegmentMetadata = entry.getValue();
-        if (metadata.isPresent()) {
-          availableSegmentMetadata = AvailableSegmentMetadata.from(entry.getValue())
-                                           .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
-                                           .withNumRows(metadata.get().getNumRows())
-                                           .build();
-        } else {
-          // mark it for refresh, however, this case shouldn't arise by design
-          markSegmentAsNeedRefresh(entry.getKey());
-          log.debug("SchemaMetadata for segmentId [%s] is absent.", entry.getKey());
-        }
-        segmentMetadata.put(entry.getKey(), availableSegmentMetadata);
-      }
-    }
-    return segmentMetadata;
+    return FluentIterable
+        .from(segmentMetadataInfo.values())
+        .transformAndConcat(Map::values)
+        .transform(
+            availableSegmentMetadata -> {
+              final SegmentId segmentId = availableSegmentMetadata.getSegment().getId();
+              final Optional<SchemaPayloadPlus> metadata = segmentSchemaCache.getSchemaForSegment(segmentId);
+              if (metadata.isPresent()) {
+                return AvailableSegmentMetadata.from(availableSegmentMetadata)
+                                               .withRowSignature(metadata.get().getSchemaPayload().getRowSignature())
+                                               .withNumRows(metadata.get().getNumRows())
+                                               .build();
+              } else {
+                // mark it for refresh, however, this case shouldn't arise by design
+                markSegmentAsNeedRefresh(segmentId);
+                log.debug("SchemaMetadata for segmentId[%s] is absent.", segmentId);
+                return availableSegmentMetadata;
+              }
+            }
+        )
+        .iterator();
   }
 
   @Nullable
