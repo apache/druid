@@ -38,6 +38,7 @@ public class MetricsEmittingQueryProcessingPoolTest
   {
     PrioritizedExecutorService service = Mockito.mock(PrioritizedExecutorService.class);
     Mockito.when(service.getQueueSize()).thenReturn(10);
+    Mockito.when(service.getActiveTasks()).thenReturn(2);
     ExecutorServiceMonitor monitor = new ExecutorServiceMonitor();
     List<Event> events = new ArrayList<>();
     MetricsEmittingQueryProcessingPool processingPool = new MetricsEmittingQueryProcessingPool(service, monitor);
@@ -52,9 +53,11 @@ public class MetricsEmittingQueryProcessingPoolTest
       }
     };
     monitor.doMonitor(serviceEmitter);
-    Assert.assertEquals(1, events.size());
+    Assert.assertEquals(2, events.size());
     Assert.assertEquals(((ServiceMetricEvent) (events.get(0))).getMetric(), "segment/scan/pending");
     Assert.assertEquals(((ServiceMetricEvent) (events.get(0))).getValue(), 10);
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(1))).getMetric(), "segment/scan/active");
+    Assert.assertEquals(((ServiceMetricEvent) (events.get(1))).getValue(), 2);
   }
 
   @Test
