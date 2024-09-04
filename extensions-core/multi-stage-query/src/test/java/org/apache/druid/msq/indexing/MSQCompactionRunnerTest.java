@@ -132,10 +132,10 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testMaxRowsPerSegmentIsInvalid()
+  public void testRangePartitionsSpecWithTargetRowsPerSegmentIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
-        new DimensionRangePartitionsSpec(null, MAX_ROWS_PER_SEGMENT, PARTITION_DIMENSIONS, false),
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
         null,
         Collections.emptyMap(),
         null,
@@ -145,10 +145,10 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testTargetRowsPerSegmentIsValid()
+  public void testRangePartitionsSpecWithMaxRowsPerSegmentIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(
-        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        new DimensionRangePartitionsSpec(null, MAX_ROWS_PER_SEGMENT, PARTITION_DIMENSIONS, false),
         null,
         Collections.emptyMap(),
         null,
@@ -158,7 +158,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testMaxTotalRowsIsInvalid()
+  public void testDynamicPartitionsSpecWithMaxTotalRowsIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, 3L),

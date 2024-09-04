@@ -103,7 +103,7 @@ public class ClientCompactionRunnerInfo
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>maxRowsPerSegment in DimensionRangePartitionsSpec.</li>
+   * <li>targetRowsPerSegment in DimensionRangePartitionsSpec.</li>
    * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's empty.</li>
    * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
@@ -130,7 +130,7 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate that partitionSpec is either 'dynamic' or 'range'.
-   * For 'dynamic' and 'range' configs, ensure 'maxTotalRows' and 'maxRowsPerSegment' are null, respectively.
+   * For 'dynamic' and 'range' configs, ensure 'maxTotalRows' and 'targetRowsPerSegment' are null, respectively.
    */
   public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(PartitionsSpec partitionsSpec)
   {
@@ -142,11 +142,9 @@ public class ClientCompactionRunnerInfo
       );
     }
     if (partitionsSpec instanceof DimensionRangePartitionsSpec
-        && ((DimensionRangePartitionsSpec) partitionsSpec).getTargetRowsPerSegment() == null) {
-      // Indicates maxRowsPerSegment is non-null. Cannot check directly for maxRowsPerSegment==null since a resolved
-      // value is computed from targetRowsPerSegment.
+        && ((DimensionRangePartitionsSpec) partitionsSpec).getTargetRowsPerSegment() != null) {
       return CompactionConfigValidationResult.failure(
-          "MSQ: 'maxRowsPerSegment' not supported with 'range' partitioning"
+          "MSQ: 'targetRowsPerSegment' not supported with 'range' partitioning"
       );
     }
     if (partitionsSpec instanceof DynamicPartitionsSpec

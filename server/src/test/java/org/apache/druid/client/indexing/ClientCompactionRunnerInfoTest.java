@@ -103,10 +103,10 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
-  public void testMSQEngineWithMaxRowsPerSegmentIsInvalid()
+  public void testMSQEngineWithTargetRowsPerSegmentIsInvalid()
   {
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
-        new DimensionRangePartitionsSpec(null, 100, ImmutableList.of("partitionDim"), false),
+        new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
         Collections.emptyMap(),
         null,
         null
@@ -117,16 +117,16 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: 'maxRowsPerSegment' not supported with 'range' partitioning",
+        "MSQ: 'targetRowsPerSegment' not supported with 'range' partitioning",
         validationResult.getReason()
     );
   }
 
   @Test
-  public void testMSQEngineWithTargetRowsPerSegmentIsValid()
+  public void testMSQEngineWithMaxRowsPerSegmentIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
-        new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
+        new DimensionRangePartitionsSpec(null, 100, ImmutableList.of("partitionDim"), false),
         Collections.emptyMap(),
         null,
         null
