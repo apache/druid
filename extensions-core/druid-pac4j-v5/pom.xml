@@ -22,9 +22,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.apache.druid.extensions</groupId>
-  <artifactId>druid-pac4j</artifactId>
-  <name>druid-pac4j</name>
-  <description>druid-pac4j</description>
+  <artifactId>druid-pac4j-v5</artifactId>
+  <name>druid-pac4j-v5</name>
+  <description>druid-pac4j-v5</description>
 
   <parent>
     <groupId>org.apache.druid</groupId>
@@ -34,12 +34,13 @@
   </parent>
 
   <properties>
-    <pac4j.version>4.5.7</pac4j.version>
+    <java.version>11</java.version>
+    <pac4j.version>5.7.3</pac4j.version>
 
     <!-- Following must be updated along with any updates to pac4j version. One can find the compatible version of nimbus libraries in org.pac4j:pac4j-oidc dependencies-->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>
-    <nimbus.jose.jwt.version>8.22.1</nimbus.jose.jwt.version>
-    <oauth2.oidc.sdk.version>8.22</oauth2.oidc.sdk.version>
+    <nimbus.jose.jwt.version>9.37.2</nimbus.jose.jwt.version>
+    <oauth2.oidc.sdk.version>10.1</oauth2.oidc.sdk.version>
   </properties>
 
   <dependencies>
@@ -127,6 +128,11 @@
     <dependency>
       <groupId>org.pac4j</groupId>
       <artifactId>pac4j-core</artifactId>
+      <version>${pac4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.pac4j</groupId>
+      <artifactId>pac4j-javaee</artifactId>
       <version>${pac4j.version}</version>
     </dependency>
     <dependency>
