@@ -52,6 +52,8 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.delta.filter.DeltaFilter;
+import org.apache.druid.delta.snapshot.LatestSnapshot;
+import org.apache.druid.delta.snapshot.SnapshotInfo;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
@@ -97,11 +99,15 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Nullable
   private final DeltaFilter filter;
 
+  @JsonProperty
+  private final SnapshotInfo snapshotInfo;
+
   @JsonCreator
   public DeltaInputSource(
       @JsonProperty("tablePath") final String tablePath,
       @JsonProperty("deltaSplit") @Nullable final DeltaSplit deltaSplit,
-      @JsonProperty("filter") @Nullable final DeltaFilter filter
+      @JsonProperty("filter") @Nullable final DeltaFilter filter,
+      @JsonProperty("snapshot") @Nullable final SnapshotInfo snapshotInfo
   )
   {
     if (tablePath == null) {
@@ -110,6 +116,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
     this.filter = filter;
+    this.snapshotInfo = snapshotInfo == null ? new LatestSnapshot() : snapshotInfo;
   }
 
   @Override
@@ -152,15 +159,15 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         }
       } else {
         final Table table = Table.forPath(engine, tablePath);
-        final Snapshot latestSnapshot = getLatestSnapshotForTable(table, engine);
+        final Snapshot snapshot = getSnapshotForTable(table, engine);
 
-        final StructType fullSnapshotSchema = latestSnapshot.getSchema(engine);
+        final StructType fullSnapshotSchema = snapshot.getSchema(engine);
         final StructType prunedSchema = pruneSchema(
             fullSnapshotSchema,
             inputRowSchema.getColumnsFilter()
         );
 
-        final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(engine);
+        final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
         if (filter != null) {
           scanBuilder.withFilter(engine, filter.getFilterPredicate(fullSnapshotSchema));
         }
@@ -206,17 +213,17 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     }
 
     final Engine engine = createDeltaEngine();
-    final Snapshot latestSnapshot;
+    final Snapshot snapshot;
     final Table table = Table.forPath(engine, tablePath);
     try {
-      latestSnapshot = getLatestSnapshotForTable(table, engine);
+      snapshot = getSnapshotForTable(table, engine);
     }
     catch (TableNotFoundException e) {
       throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
     }
-    final StructType fullSnapshotSchema = latestSnapshot.getSchema(engine);
+    final StructType fullSnapshotSchema = snapshot.getSchema(engine);
 
-    final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(engine);
+    final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
     if (filter != null) {
       scanBuilder.withFilter(engine, filter.getFilterPredicate(fullSnapshotSchema));
     }
@@ -254,7 +261,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     return new DeltaInputSource(
         tablePath,
         split.get(),
-        filter
+        filter,
+        snapshotInfo
     );
   }
 
@@ -333,7 +341,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     );
   }
 
-  private Snapshot getLatestSnapshotForTable(final Table table, final Engine engine)
+  private Snapshot getSnapshotForTable(final Table table, final Engine engine)
   {
     // Setting the LogStore class loader before calling the Delta Kernel snapshot API is required as a workaround with
     // the 3.2.0 Delta Kernel because the Kernel library cannot instantiate the LogStore class otherwise. Please see
@@ -341,7 +349,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     final ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(LogStore.class.getClassLoader());
-      return table.getLatestSnapshot(engine);
+      return snapshotInfo.getSnapshot(table, engine);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);

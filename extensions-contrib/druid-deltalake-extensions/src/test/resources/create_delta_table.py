@@ -16,11 +16,21 @@
 # limitations under the License.
 
 import argparse
+from enum import Enum
+
 from delta import *
 import pyspark
 from pyspark.sql.types import MapType, StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType, ArrayType
+from pyspark.sql.functions import expr
 from datetime import datetime, timedelta
 import random
+from delta.tables import DeltaTable
+
+
+class TableType(Enum):
+    SIMPLE = "simple"
+    COMPLEX = "complex"
+    SNAPSHOTS = "snapshots"
 
 
 def config_spark_with_delta_lake():
@@ -38,22 +48,6 @@ def config_spark_with_delta_lake():
 
 
 def create_dataset_with_complex_types(num_records):
-    """
-    Create a mock dataset with records containing complex types like arrays, structs and maps.
-
-    Parameters:
-    - num_records (int): Number of records to generate.
-
-    Returns:
-    - Tuple: A tuple containing a list of records and the corresponding schema.
-      - List of Records: Each record is a tuple representing a row of data.
-      - StructType: The schema defining the structure of the records.
-
-    Example:
-    ```python
-    data, schema = create_dataset_with_complex_types(10)
-    ```
-    """
     schema = StructType([
         StructField("id", LongType(), False),
         StructField("array_info", ArrayType(IntegerType(), True), True),
@@ -84,6 +78,51 @@ def create_dataset_with_complex_types(num_records):
         )
         data.append(record)
     return data, schema
+
+
+def create_dataset_for_snapshot(num_records):
+    schema = StructType([
+        StructField("id", LongType(), False),
+        StructField("array_info", ArrayType(IntegerType(), True), True),
+        StructField("struct_info", StructType([
+            StructField("id", LongType(), False),
+            StructField("nextId", LongType(), False)
+        ])),
+        StructField("map_info", MapType(StringType(), IntegerType()))
+    ])
+
+    data = []
+
+    for idx in range(num_records):
+        record = (
+            idx,
+            (idx, idx + 1, idx + 2, idx + 3),
+            (idx, idx + 1),
+            {"snapshotVersion": 0}
+        )
+        data.append(record)
+    return data, schema
+
+
+def update_table(spark, schema, delta_table_path):
+    delta_table = DeltaTable.forPath(spark, delta_table_path)
+
+    # Snapshot 1: remove record with id = 2; result = (id=1, id=3, id=4, id=5)
+    delta_table.delete(condition="id=2")
+
+    # Snapshot 2: do a partial update of snapshotInfo map for id = 3 ; result = (id=1, id=3, id=4, id=5)
+    delta_table.update(
+        condition="id=3",
+        set={"map_info": expr("map('snapshotVersion', 2)")}
+    )
+
+    # Snapshot 3: New records to be appended; result = (id=1, id=3, id=4, id=5, id=2, id=6)
+    append_data = [
+        (2, [2, 2, 3, 3], (10, 11), {"snapshotVersion": 3}),
+        (6, [6, 6, 7, 7], (11, 12), {"snapshotVersion": 3})
+    ]
+    append_df = spark.createDataFrame(append_data, schema)
+    append_df.write.format("delta").mode("append").save(delta_table_path)
 
 
 def create_dataset(num_records):
@@ -136,24 +175,24 @@ def create_dataset(num_records):
         data.append(record)
     return data, schema
 
-
 def main():
     parser = argparse.ArgumentParser(description="Script to write a Delta Lake table.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument("--gen_complex_types", type=bool, default=False, help="Generate a Delta table with records"
-                                                                              " containing complex types like structs,"
-                                                                              " maps and arrays.")
+    parser.add_argument('--delta_table_type', type=lambda t: TableType[t.upper()], choices=TableType,
+                        default=TableType.SIMPLE, help='Choose a Delta table type to generate.')
+    parser.add_argument("--gen_snapshots", type=bool, default=False, help="Generate multiple snapshots by updating and "
+                                                                          "deleting records from the Delta table.")
     parser.add_argument('--save_path', default=None, required=True, help="Save path for Delta table")
     parser.add_argument('--save_mode', choices=('append', 'overwrite'), default="append",
                         help="Specify write mode (append/overwrite)")
-    parser.add_argument('--partitioned_by', choices=("date", "name"), default=None,
+    parser.add_argument('--partitioned_by', choices=("date", "name", "id"), default=None,
                         help="Column to partition the Delta table")
     parser.add_argument('--num_records', type=int, default=5, help="Specify number of Delta records to write")
 
     args = parser.parse_args()
 
-    is_gen_complex_types = args.gen_complex_types
+    delta_table_type = args.delta_table_type
     save_mode = args.save_mode
     save_path = args.save_path
     num_records = args.num_records
@@ -161,21 +200,29 @@ def main():
 
     spark = config_spark_with_delta_lake()
 
-    if is_gen_complex_types:
-        data, schema = create_dataset_with_complex_types(num_records=num_records)
-    else:
+    if delta_table_type == TableType.SIMPLE:
         data, schema = create_dataset(num_records=num_records)
+    elif delta_table_type == TableType.COMPLEX:
+        data, schema = create_dataset_with_complex_types(num_records=num_records)
+    elif delta_table_type == TableType.SNAPSHOTS:
+        data, schema = create_dataset_for_snapshot(num_records)
+    else:
+        args.print_help()
+        raise Exception("Unknown value specified for --delta_table_type")
 
     df = spark.createDataFrame(data, schema=schema)
     if not partitioned_by:
         df.write.format("delta").mode(save_mode).save(save_path)
     else:
-        df.write.format("delta").partitionBy("name").mode(save_mode).save(save_path)
+        df.write.format("delta").partitionBy(partitioned_by).mode(save_mode).save(save_path)
 
     df.show()
 
     print(f"Generated Delta table records partitioned by {partitioned_by} in {save_path} in {save_mode} mode"
-          f" with {num_records} records.")
+          f" with {num_records} records with {delta_table_type}.")
+
+    if delta_table_type == TableType.SNAPSHOTS:
+        update_table(spark, schema, save_path)
 
 
 if __name__ == "__main__":

@@ -124,7 +124,7 @@ public class DeltaInputRowTest
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReadNonExistentTable()
   {
-    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null);
+    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
     MatcherAssert.assertThat(
         Assert.assertThrows(
