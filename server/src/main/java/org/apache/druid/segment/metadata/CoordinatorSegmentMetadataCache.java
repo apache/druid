@@ -23,6 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.client.CoordinatorServerView;
@@ -527,6 +528,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         log.debug("[%s] signature is unchanged.", dataSource);
       }
     }
+  }
+
+  @Override
+  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  {
+    log.info("Refreshing segments [%s] for datasource [%s]", Iterables.limit(ids, 10), dataSource);
   }
 
   private void filterRealtimeSegments(Set<SegmentId> segmentIds)
