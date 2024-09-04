@@ -31,7 +31,6 @@ public interface BlockingPool<T>
    *
    * @param elementNum number of resources to take
    * @param timeoutMs  maximum time to wait for resources, in milliseconds.
-   *
    * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
    */
   List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum, long timeoutMs);
@@ -40,8 +39,14 @@ public interface BlockingPool<T>
    * Take resources from the pool, waiting if necessary until the elements of the given number become available.
    *
    * @param elementNum number of resources to take
-   *
    * @return a list of resource holders. An empty list is returned if {@code elementNum} resources aren't available.
    */
   List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum);
+
+  /**
+   * Returns the count of the requests waiting to acquire a batch of resources.
+   *
+   * @return count of pending requests
+   */
+  long getPendingRequests();
 }
