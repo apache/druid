@@ -808,10 +808,10 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
         mergedColumnTypes.put(column, columnType);
       }
 
-      Map<String, ColumnType> columnMapping = segmentSchema.getColumnTypeMap();
+      final Map<String, ColumnType> columnMapping = segmentSchema.getColumnTypeMap();
 
       // column type to be updated is not present in the existing schema
-      Set<String> missingUpdateColumns = new HashSet<>();
+      final Set<String> missingUpdateColumns = new HashSet<>();
 
       for (String column : segmentSchema.getUpdatedColumns()) {
         if (!mergedColumnTypes.containsKey(column)) {
@@ -831,7 +831,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       }
 
       if (!missingUpdateColumns.isEmpty()) {
-        log.makeAlert("Datasource schema is missing columns to be updated in delta realtime segment schema.")
+        log.makeAlert(
+               "Datasource schema mismatch detected. The delta realtime segment schema contains columns "
+               + "that are not defined in the datasource schema. "
+               + "This indicates a potential issue with schema updates on the Coordinator. "
+               + "Please review relevant Coordinator metrics and logs for task communication to identify any issues."
+           )
            .addData("datasource", segmentId.getDataSource())
            .addData("existingSignature", existingSignature)
            .addData("deltaSchema", segmentSchema)
