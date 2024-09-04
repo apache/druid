@@ -27,7 +27,6 @@ public class LatestSnapshot implements Snapshot
   @Override
   public io.delta.kernel.Snapshot getSnapshot(Table table, Engine engine)
   {
-    System.out.println("LATEST SNAPSHOT");
     return table.getLatestSnapshot(engine);
   }
 }

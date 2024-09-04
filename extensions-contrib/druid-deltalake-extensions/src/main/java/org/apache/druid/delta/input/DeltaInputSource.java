@@ -365,4 +365,10 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     return filter;
   }
+
+  @VisibleForTesting
+  Snapshot getSnapshot()
+  {
+    return snapshot;
+  }
 }

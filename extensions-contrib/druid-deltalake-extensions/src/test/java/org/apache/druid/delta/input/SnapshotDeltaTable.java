@@ -44,6 +44,11 @@ public class SnapshotDeltaTable
    */
   public static final String DELTA_TABLE_PATH = "src/test/resources/snapshot-table";
 
+  /**
+   * The list of dimensions in the Delta table {@link #DELTA_TABLE_PATH}.
+   */
+  public static final List<String> DIMENSIONS = ImmutableList.of("id", "map_info");
+
   public static final List<Map<String, Object>> V0_SNAPSHOT_EXPECTED_ROWS = new ArrayList<>(
       ImmutableList.of(
           ImmutableMap.of(

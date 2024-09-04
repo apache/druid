@@ -35,7 +35,7 @@ public class VersionedSnapshot implements Snapshot
   public VersionedSnapshot(@JsonProperty("version") final Long version)
   {
     if (version == null) {
-      throw InvalidInput.exception("version cannot be empty or null for version snapshot.");
+      throw InvalidInput.exception("version cannot be empty or null for versioned snapshot reads.");
     }
     this.version = version;
   }
