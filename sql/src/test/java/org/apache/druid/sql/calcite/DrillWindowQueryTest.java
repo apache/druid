@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
@@ -318,30 +319,35 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       for (int i = 0; i < cc.size(); i++) {
         ColumnType type = rs.getColumnType(i).get();
         assertNull(type.getComplexTypeName());
-        final String val = row[i];
-        Object newVal;
-        if ("null".equals(val)) {
-          newVal = null;
-        } else {
-          switch (type.getType()) {
-            case STRING:
-              newVal = val;
-              break;
-            case LONG:
-              newVal = parseLongValue(val);
-              break;
-            case DOUBLE:
-              newVal = Numbers.parseDoubleObject(val);
-              break;
-            default:
-              throw new RuntimeException("unimplemented");
-          }
-        }
-        newRow[i] = newVal;
+        newRow[i] = parseElement(row[i], type.getType());
       }
       ret.add(newRow);
     }
     return ret;
+  }
+
+  private static Object parseElement(String element, ValueType elementType)
+  {
+    if ("null".equals(element)) {
+      return null;
+    }
+    switch (elementType) {
+      case STRING:
+        return element;
+      case LONG:
+        return parseLongValue(element);
+      case DOUBLE:
+        return Numbers.parseDoubleObject(element);
+      case ARRAY:
+        String[] elements = element.substring(1, element.length() - 1).split(",");
+        List<String> arrayElements = new ArrayList<>();
+        for (String s : elements) {
+          arrayElements.add(parseElement(s.trim(), ValueType.STRING).toString());
+        }
+        return "[" + String.join(",", arrayElements) + "]";
+      default:
+        throw new RuntimeException("unimplemented type: " + elementType);
+    }
   }
 
   private static Object parseLongValue(final String val)
@@ -7766,6 +7772,34 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("druid_queries/partition_by_array/wikipedia_query_3")
   @Test
   public void test_partition_by_array_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_1")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_2")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_3")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/multiple_partition_columns_1")
+  @Test
+  public void test_array_concat_agg_with_multiple_partition_columns_1()
   {
     windowQueryTest();
   }
