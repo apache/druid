@@ -406,7 +406,7 @@ public abstract class ExprEval<T>
   public static ExprEval bestEffortOf(@Nullable Object val)
   {
     if (val == null) {
-      return new StringExprEval(null);
+      return StringExprEval.OF_NULL;
     }
     if (val instanceof ExprEval) {
       return (ExprEval) val;
@@ -522,7 +522,7 @@ public abstract class ExprEval<T>
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
   {
     if (type == null) {
-      return bestEffortOf(value);
+      return StringExprEval.OF_NULL;
     }
     switch (type.getType()) {
       case STRING:
@@ -1145,10 +1145,13 @@ public abstract class ExprEval<T>
       switch (castTo.getType()) {
         case DOUBLE:
           return ExprEval.ofDouble(computeNumber());
+
         case LONG:
           return ExprEval.ofLong(computeNumber());
+
         case STRING:
           return this;
+
         case ARRAY:
           if (value == null) {
             return new ArrayExprEval(castTo, null);
@@ -1162,10 +1165,11 @@ public abstract class ExprEval<T>
             return ExprEval.ofLongArray(new Object[]{number == null ? null : number.longValue()});
           } else if (type == ExprType.STRING) {
             return ExprEval.ofStringArray(new Object[]{value});
-          } else {
-            ExpressionType elementType = (ExpressionType) castTo.getElementType();
-            return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
           }
+
+          ExpressionType elementType = (ExpressionType) castTo.getElementType();
+          return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
+
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
             return new NestedDataExprEval(value);

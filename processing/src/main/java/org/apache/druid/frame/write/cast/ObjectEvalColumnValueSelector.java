@@ -29,10 +29,10 @@ import org.apache.druid.segment.column.ColumnType;
 import javax.annotation.Nullable;
 
 /**
- * Wraps a {@link ColumnValueSelector}, calls {@link ColumnValueSelector#getObject()}, and casts that value using
- * {@link ExprEval}. The object is interpreted using {@link ExprEval#ofType}.
+ * Wraps a {@link ColumnValueSelector}, calls {@link ColumnValueSelector#getObject()}, interprets that value using
+ * {@link ExprEval#ofType}, and casts it using {@link ExprEval#castTo}.
  */
-public class ObjectToExprEvalColumnValueSelector implements ColumnValueSelector<Object>
+public class ObjectEvalColumnValueSelector implements ColumnValueSelector<Object>
 {
   private final ColumnValueSelector<?> selector;
   @Nullable
@@ -41,7 +41,7 @@ public class ObjectToExprEvalColumnValueSelector implements ColumnValueSelector<
   @Nullable
   private final RowIdSupplier rowIdSupplier;
 
-  public ObjectToExprEvalColumnValueSelector(
+  public ObjectEvalColumnValueSelector(
       final ColumnValueSelector<?> selector,
       @Nullable final ColumnType selectorType,
       final ColumnType desiredType,
@@ -101,10 +101,6 @@ public class ObjectToExprEvalColumnValueSelector implements ColumnValueSelector<
   private ExprEval<?> eval()
   {
     final Object obj = selector.getObject();
-    if (obj == null) {
-      return ExprEval.of(null);
-    } else {
-      return ExprEval.ofType(selectorType, obj).castTo(desiredType);
-    }
+    return ExprEval.ofType(selectorType, obj).castTo(desiredType);
   }
 }

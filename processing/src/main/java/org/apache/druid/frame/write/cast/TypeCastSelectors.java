@@ -91,7 +91,7 @@ public class TypeCastSelectors
                && (selectorCapabilities == null || !selectorCapabilities.toColumnType().equals(desiredType))) {
       // When reading arrays, wrap if the underlying type does not match the desired array type.
       final ColumnType columnType = selectorCapabilities != null ? selectorCapabilities.toColumnType() : null;
-      return new ObjectToExprEvalColumnValueSelector(selector, columnType, desiredType, rowIdSupplier);
+      return new ObjectEvalColumnValueSelector(selector, columnType, desiredType, rowIdSupplier);
     } else {
       // OK to return the original selector.
       return selector;
