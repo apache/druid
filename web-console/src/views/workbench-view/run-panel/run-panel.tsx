@@ -41,6 +41,7 @@ import type {
   DruidEngine,
   IndexSpec,
   QueryContext,
+  SelectDestination,
   SqlJoinAlgorithm,
   WorkbenchQuery,
 } from '../../../druid-models';
@@ -112,6 +113,11 @@ const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
     default:
       return { text: 'Auto' };
   }
+};
+
+const SELECT_DESTINATION_LABEL: Record<SelectDestination, string> = {
+  taskReport: 'Task report',
+  durableStorage: 'Durable storage',
 };
 
 const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
@@ -481,6 +487,41 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                           }
                         />
                       ))}
+                    </MenuItem>
+
+                    <MenuItem
+                      icon={IconNames.MANUALLY_ENTERED_DATA}
+                      text="SELECT destination"
+                      label={
+                        SELECT_DESTINATION_LABEL[selectDestination as SelectDestination] ??
+                        selectDestination
+                      }
+                      intent={intent}
+                    >
+                      {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
+                        <MenuItem
+                          key={o}
+                          icon={tickIcon(selectDestination === o)}
+                          text={SELECT_DESTINATION_LABEL[o]}
+                          shouldDismissPopover={false}
+                          onClick={() =>
+                            changeQueryContext({ ...queryContext, selectDestination: o })
+                          }
+                        />
+                      ))}
+                      <MenuDivider />
+                      <MenuCheckbox
+                        checked={selectDestination === 'taskReport' ? !query.unlimited : false}
+                        intent={intent}
+                        disabled={selectDestination !== 'taskReport'}
+                        text="Limit SELECT results in taskReport"
+                        labelElement={
+                          query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
+                        }
+                        onChange={() => {
+                          onQueryChange(query.toggleUnlimited());
+                        }}
+                      />
                     </MenuItem>
 
                     <MenuBoolean

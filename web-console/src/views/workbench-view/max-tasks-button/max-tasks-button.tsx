@@ -126,7 +126,6 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                     <strong>Max</strong>: uses the maximum possible tasks up to the specified limit.
                   </>
                 }
-                shouldDismissPopover
                 multiline
                 onClick={() => changeQueryContext({ ...queryContext, taskAssignment: 'max' })}
               />
@@ -135,17 +134,21 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 icon={tickIcon(taskAssigment === 'auto')}
                 text={
                   <>
-                    <strong>Auto</strong>: Use the minimum number of tasks while{' '}
-                    <a
-                      href={TASK_DOCUMENTATION_LINK}
-                      target="_blank"
-                      onClick={e => e.stopPropagation()}
+                    <strong>Auto</strong>: uses the minimum number of tasks while{' '}
+                    <span
+                      style={{
+                        color: '#3eadf9',
+                        cursor: 'pointer',
+                      }}
+                      onClick={e => {
+                        window.open(TASK_DOCUMENTATION_LINK, '_blank');
+                        e.stopPropagation();
+                      }}
                     >
-                      staying within constrain.
-                    </a>
+                      staying within constraints.
+                    </span>
                   </>
                 }
-                shouldDismissPopover
                 multiline
                 onClick={() => changeQueryContext({ ...queryContext, taskAssignment: 'auto' })}
               />
