@@ -39,12 +39,14 @@ public class QueryableIndexSegment implements Segment
       .makeAsMap(QueryableIndexSegment.class);
 
   private final QueryableIndex index;
+  private final QueryableIndexCursorFactory cursorFactory;
   private final TimeBoundaryInspector timeBoundaryInspector;
   private final SegmentId segmentId;
 
   public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
   {
     this.index = index;
+    this.cursorFactory = new QueryableIndexCursorFactory(index);
     this.timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
     this.segmentId = segmentId;
   }
@@ -70,7 +72,7 @@ public class QueryableIndexSegment implements Segment
   @Override
   public CursorFactory asCursorFactory()
   {
-    return new QueryableIndexCursorFactory(index);
+    return cursorFactory;
   }
 
   @Override
