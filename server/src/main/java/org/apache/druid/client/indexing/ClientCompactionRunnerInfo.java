@@ -105,7 +105,7 @@ public class ClientCompactionRunnerInfo
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>targetRowsPerSegment in DimensionRangePartitionsSpec.</li>
    * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's empty.</li>
-   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
+   * <li>any non-idempotent metric, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
@@ -144,7 +144,7 @@ public class ClientCompactionRunnerInfo
     if (partitionsSpec instanceof DimensionRangePartitionsSpec
         && ((DimensionRangePartitionsSpec) partitionsSpec).getTargetRowsPerSegment() != null) {
       return CompactionConfigValidationResult.failure(
-          "MSQ: 'targetRowsPerSegment' not supported with 'range' partitioning"
+          "MSQ: 'targetRowsPerSegment' not supported with 'range' partitioning. Use `maxRowsPerSegment` instead."
       );
     }
     if (partitionsSpec instanceof DynamicPartitionsSpec

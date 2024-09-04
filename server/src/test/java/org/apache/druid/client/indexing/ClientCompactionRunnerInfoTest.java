@@ -117,7 +117,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: 'targetRowsPerSegment' not supported with 'range' partitioning",
+        "MSQ: 'targetRowsPerSegment' not supported with 'range' partitioning. Use `maxRowsPerSegment` instead.",
         validationResult.getReason()
     );
   }
