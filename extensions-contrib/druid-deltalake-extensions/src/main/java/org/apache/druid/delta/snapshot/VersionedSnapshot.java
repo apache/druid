@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
 import io.delta.kernel.exceptions.KernelException;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 
 public class VersionedSnapshot implements Snapshot
@@ -46,7 +45,8 @@ public class VersionedSnapshot implements Snapshot
   {
     try {
       return table.getSnapshotAsOfVersion(engine, version);
-    } catch(KernelException ke) {
+    }
+    catch (KernelException ke) {
       throw InvalidInput.exception(
           "Error reading snapshot version[%s] from tablePath[%s]: [%s]",
           version, table.getPath(engine), ke.getMessage()
