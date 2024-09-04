@@ -89,6 +89,32 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_readXAsLongArray()
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.LONG_ARRAY);
+
+    Assert.assertEquals(12L, selector.getLong());
+    Assert.assertEquals(12.0d, selector.getDouble(), 0.001);
+    Assert.assertEquals(12.0f, selector.getFloat(), 0);
+    Assert.assertFalse(selector.isNull());
+    Assert.assertArrayEquals(new Object[]{12L}, (Object[]) selector.getObject());
+  }
+
+  @Test
+  public void test_readXAsStringArray()
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.STRING_ARRAY);
+
+    Assert.assertEquals(12L, selector.getLong());
+    Assert.assertEquals(12.3d, selector.getDouble(), 0.001);
+    Assert.assertEquals(12.3f, selector.getFloat(), 0);
+    Assert.assertFalse(selector.isNull());
+    Assert.assertArrayEquals(new Object[]{"12.3"}, (Object[]) selector.getObject());
+  }
+
+  @Test
   public void test_readYAsLong()
   {
     final ColumnValueSelector<?> selector =
@@ -128,6 +154,32 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void test_readYAsLongArray()
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.LONG_ARRAY);
+
+    Assert.assertEquals(0L, selector.getLong());
+    Assert.assertEquals(0d, selector.getDouble(), 0);
+    Assert.assertEquals(0f, selector.getFloat(), 0);
+    Assert.assertTrue(selector.isNull());
+    Assert.assertArrayEquals(new Object[]{null}, (Object[]) selector.getObject());
+  }
+
+  @Test
+  public void test_readYAsStringArray()
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.STRING_ARRAY);
+
+    Assert.assertEquals(0L, selector.getLong());
+    Assert.assertEquals(0d, selector.getDouble(), 0);
+    Assert.assertEquals(0f, selector.getFloat(), 0);
+    Assert.assertTrue(selector.isNull());
+    Assert.assertArrayEquals(new Object[]{"abc"}, (Object[]) selector.getObject());
+  }
+
+  @Test
   public void test_readZAsLong()
   {
     final ColumnValueSelector<?> selector =
@@ -158,6 +210,32 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
   {
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.FLOAT);
+
+    Assert.assertEquals(0L, selector.getLong());
+    Assert.assertEquals(0d, selector.getDouble(), 0);
+    Assert.assertEquals(0f, selector.getFloat(), 0);
+    Assert.assertTrue(selector.isNull());
+    Assert.assertNull(selector.getObject());
+  }
+
+  @Test
+  public void test_readZAsLongArray()
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.LONG_ARRAY);
+
+    Assert.assertEquals(0L, selector.getLong());
+    Assert.assertEquals(0d, selector.getDouble(), 0);
+    Assert.assertEquals(0f, selector.getFloat(), 0);
+    Assert.assertTrue(selector.isNull());
+    Assert.assertNull(selector.getObject());
+  }
+
+  @Test
+  public void test_readZAsStringArray()
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.STRING_ARRAY);
 
     Assert.assertEquals(0L, selector.getLong());
     Assert.assertEquals(0d, selector.getDouble(), 0);

@@ -83,7 +83,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   @Override
   protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
   {
-    if (AggregatorUtil.shouldUseGetObjectForNumbers(fieldName, metricFactory)) {
+    if (AggregatorUtil.shouldUseObjectColumnAggregatorWrapper(fieldName, metricFactory)) {
       return new ObjectColumnDoubleAggregatorWrapper(
           selector,
           SimpleDoubleAggregatorFactory.this::buildAggregator,
@@ -100,7 +100,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
       ColumnValueSelector selector
   )
   {
-    if (AggregatorUtil.shouldUseGetObjectForNumbers(fieldName, metricFactory)) {
+    if (AggregatorUtil.shouldUseObjectColumnAggregatorWrapper(fieldName, metricFactory)) {
       return new ObjectColumnDoubleBufferAggregatorWrapper(
           selector,
           SimpleDoubleAggregatorFactory.this::buildBufferAggregator,
@@ -131,7 +131,7 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   @Override
   protected boolean useGetObject(ColumnSelectorFactory columnSelectorFactory)
   {
-    return AggregatorUtil.shouldUseGetObjectForNumbers(fieldName, columnSelectorFactory);
+    return AggregatorUtil.shouldUseObjectColumnAggregatorWrapper(fieldName, columnSelectorFactory);
   }
 
   @Override

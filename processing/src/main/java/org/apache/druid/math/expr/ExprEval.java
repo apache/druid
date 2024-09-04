@@ -1153,21 +1153,18 @@ public abstract class ExprEval<T>
           if (value == null) {
             return new ArrayExprEval(castTo, null);
           }
-          final Number number = computeNumber();
-          switch (castTo.getElementType().getType()) {
-            case DOUBLE:
-              return ExprEval.ofDoubleArray(
-                  new Object[]{number == null ? null : number.doubleValue()}
-              );
-            case LONG:
-              return ExprEval.ofLongArray(
-                  new Object[]{number == null ? null : number.longValue()}
-              );
-            case STRING:
-              return ExprEval.ofStringArray(new Object[]{value});
-            default:
-              ExpressionType elementType = (ExpressionType) castTo.getElementType();
-              return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
+          ExprType type = castTo.getElementType().getType();
+          if (type == ExprType.DOUBLE) {
+            final Number number = computeNumber();
+            return ExprEval.ofDoubleArray(new Object[]{number == null ? null : number.doubleValue()});
+          } else if (type == ExprType.LONG) {
+            final Number number = computeNumber();
+            return ExprEval.ofLongArray(new Object[]{number == null ? null : number.longValue()});
+          } else if (type == ExprType.STRING) {
+            return ExprEval.ofStringArray(new Object[]{value});
+          } else {
+            ExpressionType elementType = (ExpressionType) castTo.getElementType();
+            return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
           }
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {

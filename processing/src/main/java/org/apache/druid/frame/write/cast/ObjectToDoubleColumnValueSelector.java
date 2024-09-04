@@ -21,15 +21,24 @@ package org.apache.druid.frame.write.cast;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 
+/**
+ * Wraps a {@link ColumnValueSelector}, calls {@link ColumnValueSelector#getObject()} and provides primitive numeric
+ * accessors based on that object value. The object is interpreted as a double.
+ */
 public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Double>
 {
-  private final ColumnValueSelector<?> objectSelector;
+  private final ColumnValueSelector<?> selector;
+
+  @Nullable
+  private final ExpressionType selectorType;
 
   @Nullable
   private final RowIdSupplier rowIdSupplier;
@@ -39,11 +48,13 @@ public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Do
   private long currentRowId = RowIdSupplier.INIT;
 
   public ObjectToDoubleColumnValueSelector(
-      final ColumnValueSelector<?> objectSelector,
+      final ColumnValueSelector<?> selector,
+      @Nullable final ColumnType selectorType,
       @Nullable final RowIdSupplier rowIdSupplier
   )
   {
-    this.objectSelector = objectSelector;
+    this.selector = selector;
+    this.selectorType = ExpressionType.fromColumnType(selectorType);
     this.rowIdSupplier = rowIdSupplier;
   }
 
@@ -90,7 +101,7 @@ public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Do
   @Override
   public void inspectRuntimeShape(RuntimeShapeInspector inspector)
   {
-    inspector.visit("objectSelector", objectSelector);
+    inspector.visit("selector", selector);
     inspector.visit("rowIdSupplier", rowIdSupplier);
   }
 
@@ -114,13 +125,11 @@ public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Do
   @Nullable
   private Double eval()
   {
-    final Object obj = objectSelector.getObject();
+    final Object obj = selector.getObject();
     if (obj == null) {
       return null;
-    } else if (obj instanceof Number) {
-      return ((Number) obj).doubleValue();
     } else {
-      final ExprEval<?> eval = ExprEval.bestEffortOf(obj);
+      final ExprEval<?> eval = ExprEval.ofType(selectorType, obj);
       return eval.isNumericNull() ? null : eval.asDouble();
     }
   }

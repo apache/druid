@@ -20,13 +20,15 @@
 package org.apache.druid.frame.write.cast;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+
+import javax.annotation.Nullable;
 
 public class TypeCastSelectors
 {
@@ -46,26 +48,52 @@ public class TypeCastSelectors
   )
   {
     final ColumnValueSelector<?> selector = columnSelectorFactory.makeColumnValueSelector(column);
+    final ColumnCapabilities selectorCapabilities = columnSelectorFactory.getColumnCapabilities(column);
 
+    return wrapColumnValueSelectorIfNeeded(
+        selector,
+        selectorCapabilities,
+        columnSelectorFactory.getRowIdSupplier(),
+        desiredType
+    );
+  }
+
+  public static ColumnValueSelector<?> wrapColumnValueSelectorIfNeeded(
+      final ColumnValueSelector<?> selector,
+      @Nullable final ColumnCapabilities selectorCapabilities,
+      @Nullable final RowIdSupplier rowIdSupplier,
+      final ColumnType desiredType
+  )
+  {
     if (desiredType.is(ValueType.STRING)) {
-      throw DruidException.defensive("Unexpected type[%s]", column);
-    } else if (desiredType.isNumeric() && AggregatorUtil.shouldUseGetObjectForNumbers(column, columnSelectorFactory)) {
-      final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
+      throw DruidException.defensive("Type[%s] should be read using a DimensionSelector", desiredType);
+    } else if (desiredType.isNumeric()
+               && (selectorCapabilities == null || !selectorCapabilities.isNumeric())) {
+      // When capabilities are unknown, or known to be non-numeric, fall back to getObject() and explicit typecasting.
+      // This avoids using primitive numeric accessors (getLong / getDouble / getFloat / isNull) on a selector that
+      // may not support them.
+      final ColumnType selectorType = selectorCapabilities != null ? selectorCapabilities.toColumnType() : null;
 
       switch (desiredType.getType()) {
         case LONG:
-          return new ObjectToLongColumnValueSelector(selector, rowIdSupplier);
+          return new ObjectToLongColumnValueSelector(selector, selectorType, rowIdSupplier);
 
         case DOUBLE:
-          return new ObjectToDoubleColumnValueSelector(selector, rowIdSupplier);
+          return new ObjectToDoubleColumnValueSelector(selector, selectorType, rowIdSupplier);
 
         case FLOAT:
-          return new ObjectToFloatColumnValueSelector(selector, rowIdSupplier);
+          return new ObjectToFloatColumnValueSelector(selector, selectorType, rowIdSupplier);
 
         default:
-          throw DruidException.defensive("No implementation for desiredType[%s]", desiredType);
+          throw DruidException.defensive("Unexpected numeric desiredType[%s]", desiredType);
       }
+    } else if (desiredType.isArray()
+               && (selectorCapabilities == null || !selectorCapabilities.toColumnType().equals(desiredType))) {
+      // When reading arrays, wrap if the underlying type does not match the desired array type.
+      final ColumnType columnType = selectorCapabilities != null ? selectorCapabilities.toColumnType() : null;
+      return new ObjectToExprEvalColumnValueSelector(selector, columnType, desiredType, rowIdSupplier);
     } else {
+      // OK to return the original selector.
       return selector;
     }
   }

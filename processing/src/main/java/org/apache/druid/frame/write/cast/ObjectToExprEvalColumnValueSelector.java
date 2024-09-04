@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.write.cast;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -30,72 +29,66 @@ import org.apache.druid.segment.column.ColumnType;
 import javax.annotation.Nullable;
 
 /**
- * Wraps a {@link ColumnValueSelector}, calls {@link ColumnValueSelector#getObject()} and provides primitive numeric
- * accessors based on that object value. The object is interpreted as a long.
+ * Wraps a {@link ColumnValueSelector}, calls {@link ColumnValueSelector#getObject()}, and casts that value using
+ * {@link ExprEval}. The object is interpreted using {@link ExprEval#ofType}.
  */
-public class ObjectToLongColumnValueSelector implements ColumnValueSelector<Long>
+public class ObjectToExprEvalColumnValueSelector implements ColumnValueSelector<Object>
 {
   private final ColumnValueSelector<?> selector;
-
   @Nullable
   private final ExpressionType selectorType;
-
+  private final ExpressionType desiredType;
   @Nullable
   private final RowIdSupplier rowIdSupplier;
 
-  @Nullable
-  private Long currentValue;
-  private long currentRowId = RowIdSupplier.INIT;
-
-  public ObjectToLongColumnValueSelector(
+  public ObjectToExprEvalColumnValueSelector(
       final ColumnValueSelector<?> selector,
       @Nullable final ColumnType selectorType,
+      final ColumnType desiredType,
       @Nullable final RowIdSupplier rowIdSupplier
   )
   {
     this.selector = selector;
     this.selectorType = ExpressionType.fromColumnType(selectorType);
+    this.desiredType = ExpressionType.fromColumnType(desiredType);
     this.rowIdSupplier = rowIdSupplier;
   }
 
   @Override
   public double getDouble()
   {
-    final Number n = computeIfNeeded();
-    return n == null ? NullHandling.ZERO_DOUBLE : n.doubleValue();
+    return eval().asDouble();
   }
 
   @Override
   public float getFloat()
   {
-    final Number n = computeIfNeeded();
-    return n == null ? NullHandling.ZERO_FLOAT : n.floatValue();
+    return (float) eval().asDouble();
   }
 
   @Override
   public long getLong()
   {
-    final Number n = computeIfNeeded();
-    return n == null ? NullHandling.ZERO_LONG : n.longValue();
+    return eval().asLong();
   }
 
   @Override
   public boolean isNull()
   {
-    return computeIfNeeded() == null;
+    return eval().isNumericNull();
   }
 
   @Nullable
   @Override
-  public Long getObject()
+  public Object getObject()
   {
-    return computeIfNeeded();
+    return eval().value();
   }
 
   @Override
-  public Class<Long> classOfObject()
+  public Class<Object> classOfObject()
   {
-    return Long.class;
+    return Object.class;
   }
 
   @Override
@@ -105,34 +98,13 @@ public class ObjectToLongColumnValueSelector implements ColumnValueSelector<Long
     inspector.visit("rowIdSupplier", rowIdSupplier);
   }
 
-  @Nullable
-  private Long computeIfNeeded()
-  {
-    if (rowIdSupplier == null) {
-      return eval();
-    } else {
-      final long rowId = rowIdSupplier.getRowId();
-
-      if (currentRowId != rowId) {
-        currentValue = eval();
-        currentRowId = rowId;
-      }
-
-      return currentValue;
-    }
-  }
-
-  @Nullable
-  private Long eval()
+  private ExprEval<?> eval()
   {
     final Object obj = selector.getObject();
     if (obj == null) {
-      return null;
-    } else if (obj instanceof Number) {
-      return ((Number) obj).longValue();
+      return ExprEval.of(null);
     } else {
-      final ExprEval<?> eval = ExprEval.ofType(selectorType, obj);
-      return eval.isNumericNull() ? null : eval.asLong();
+      return ExprEval.ofType(selectorType, obj).castTo(desiredType);
     }
   }
 }

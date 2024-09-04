@@ -39,7 +39,7 @@ import javax.annotation.Nullable;
  *
  * @param <ElementType> Type of the individual array elements
  */
-public abstract class NumericArrayFieldSelector<ElementType extends Number> implements ColumnValueSelector
+public abstract class NumericArrayFieldSelector<ElementType extends Number> implements ColumnValueSelector<Object[]>
 {
   /**
    * Memory containing the serialized values of the array
@@ -81,15 +81,15 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
 
   @Nullable
   @Override
-  public Object getObject()
+  public Object[] getObject()
   {
     return computeCurrentArray();
   }
 
   @Override
-  public Class classOfObject()
+  public Class<Object[]> classOfObject()
   {
-    return Object.class;
+    return Object[].class;
   }
 
   @Override
@@ -131,7 +131,7 @@ public abstract class NumericArrayFieldSelector<ElementType extends Number> impl
   public abstract int getIndividualFieldSize();
 
   @Nullable
-  private Number[] computeCurrentArray()
+  private Object[] computeCurrentArray()
   {
     final long fieldPosition = fieldPointer.position();
     final long fieldLength = fieldPointer.length();
