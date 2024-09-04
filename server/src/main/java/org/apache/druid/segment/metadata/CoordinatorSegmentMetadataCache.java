@@ -831,14 +831,12 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
       }
 
       if (!missingUpdateColumns.isEmpty()) {
-        log.makeAlert(
-            "Realtime schema merge: datasource [%s] is missing columns to be updated. "
-            + "ExistingSignature [%s], deltaSchema [%s], missingUpdateColumns [%s].",
-            segmentId.getDataSource(),
-            existingSignature,
-            segmentSchema,
-            missingUpdateColumns
-        ).emit();
+        log.makeAlert("Datasource schema is missing columns to be updated in delta realtime segment schema.")
+           .addData("datasource", segmentId.getDataSource())
+           .addData("existingSignature", existingSignature)
+           .addData("deltaSchema", segmentSchema)
+           .addData("missingUpdateColumns", missingUpdateColumns)
+           .emit();
       }
 
       mergedColumnTypes.forEach(builder::add);
