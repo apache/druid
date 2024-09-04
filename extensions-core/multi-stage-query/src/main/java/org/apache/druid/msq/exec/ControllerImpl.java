@@ -1623,9 +1623,10 @@ public class ControllerImpl implements Controller
                 )));
       }
     } else if (clusterBy != null && !clusterBy.getColumns().isEmpty()) {
+      // Only maxRowsPerSegment is allowed in compaction spec which is then propagated as rowsPerSegment in MSQ.
       partitionSpec = new DimensionRangePartitionsSpec(
-          tuningConfig.getRowsPerSegment(),
           null,
+          tuningConfig.getRowsPerSegment(),
           clusterBy.getColumns()
                    .stream()
                    .map(KeyColumn::columnName).collect(Collectors.toList()),
