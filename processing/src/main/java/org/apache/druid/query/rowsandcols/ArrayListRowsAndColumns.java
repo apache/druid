@@ -25,7 +25,6 @@ import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.semantic.SemanticCreator;
 import org.apache.druid.common.semantic.SemanticUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
