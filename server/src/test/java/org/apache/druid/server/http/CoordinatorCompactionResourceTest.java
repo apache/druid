@@ -19,13 +19,15 @@
 
 package org.apache.druid.server.http;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.compaction.CompactionStatistics;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
@@ -37,7 +39,6 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 public class CoordinatorCompactionResourceTest
@@ -92,7 +93,7 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock, overlordClient)
         .getCompactionSnapshotForDataSource("");
-    Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
+    Assert.assertEquals(new CompactionStatusResponse(expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 
@@ -110,7 +111,7 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock, overlordClient)
         .getCompactionSnapshotForDataSource(null);
-    Assert.assertEquals(ImmutableMap.of("latestStatus", expected.values()), response.getEntity());
+    Assert.assertEquals(new CompactionStatusResponse(expected.values()), response.getEntity());
     Assert.assertEquals(200, response.getStatus());
   }
 
@@ -124,7 +125,10 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock, overlordClient)
         .getCompactionSnapshotForDataSource(dataSourceName);
-    Assert.assertEquals(ImmutableMap.of("latestStatus", ImmutableList.of(expectedSnapshot)), response.getEntity());
+    Assert.assertEquals(
+        new CompactionStatusResponse(Collections.singletonList(expectedSnapshot)),
+        response.getEntity()
+    );
     Assert.assertEquals(200, response.getStatus());
   }
 
@@ -149,10 +153,14 @@ public class CoordinatorCompactionResourceTest
     final Response response = new CoordinatorCompactionResource(mock, overlordClient)
         .getCompactionProgress(null);
     Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertEquals(
-        ImmutableMap.of("error", "No DataSource specified"),
-        response.getEntity()
-    );
+
+    final Object responseEntity = response.getEntity();
+    Assert.assertTrue(responseEntity instanceof ErrorResponse);
+
+    final ErrorResponse errorResponse = (ErrorResponse) responseEntity;
+    DruidExceptionMatcher.invalidInput()
+                         .expectMessageIs("No DataSource specified")
+                         .matches(errorResponse.getUnderlyingException());
   }
 
   @Test
@@ -172,9 +180,11 @@ public class CoordinatorCompactionResourceTest
       }
 
       @Override
-      public ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource)
+      public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
       {
-        return Futures.immediateFuture(Collections.singletonList(snapshotFromOverlord));
+        return Futures.immediateFuture(
+            new CompactionStatusResponse(Collections.singletonList(snapshotFromOverlord))
+        );
       }
     };
 

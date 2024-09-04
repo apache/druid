@@ -45,7 +45,8 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -238,13 +239,13 @@ class LocalOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource)
+  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public ListenableFuture<Long> getBytesAwaitingCompaction(String dataSource)
+  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
   {
     throw new UnsupportedOperationException();
   }

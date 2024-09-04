@@ -45,7 +45,8 @@ import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -314,7 +315,7 @@ public class OverlordClientImpl implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource)
+  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
   {
     final StringBuilder pathBuilder = new StringBuilder("/druid/indexer/v1/compaction/status");
     if (dataSource != null && !dataSource.isEmpty()) {
@@ -329,13 +330,13 @@ public class OverlordClientImpl implements OverlordClient
         holder -> JacksonUtils.readValue(
             jsonMapper,
             holder.getContent(),
-            new TypeReference<List<AutoCompactionSnapshot>>() {}
+            CompactionStatusResponse.class
         )
     );
   }
 
   @Override
-  public ListenableFuture<Long> getBytesAwaitingCompaction(String dataSource)
+  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
   {
     final String path = "/druid/indexer/v1/compaction/progress?dataSource=" + dataSource;
     return FutureUtils.transform(
@@ -343,7 +344,7 @@ public class OverlordClientImpl implements OverlordClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), Long.class)
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), CompactionProgressResponse.class)
     );
   }
 
