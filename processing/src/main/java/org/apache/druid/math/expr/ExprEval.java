@@ -522,7 +522,7 @@ public abstract class ExprEval<T>
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
   {
     if (type == null) {
-      return StringExprEval.OF_NULL;
+      return bestEffortOf(value);
     }
     switch (type.getType()) {
       case STRING:
