@@ -697,4 +697,13 @@
      TODO: There is no workaround, and the dependency cannot be upgraded till https://github.com/apache/orc has a new release. -->
     <cve>CVE-2024-36114</cve>
   </suppress>
+  <suppress>
+    <!-- The CVE is also not applicable to xz-java because it does not implement xzgrep and therefore is not vulnerable
+     ~ to the filename validation problem. Druid does not use xzgrep but this CVE is popping up because the CPE matches the
+     ~ Java package too. -->
+    <notes><![CDATA[
+    file name: xz-1.9.jar
+    ]]></notes>
+    <vulnerabilityName>CVE-2022-1271</vulnerabilityName>
+  </suppress>
 </suppressions>
