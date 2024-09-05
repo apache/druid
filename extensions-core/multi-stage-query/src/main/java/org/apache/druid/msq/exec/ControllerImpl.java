@@ -1604,8 +1604,8 @@ public class ControllerImpl implements Controller
       if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
         List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
         partitionSpec = new DimensionRangePartitionsSpec(
-            tuningConfig.getRowsPerSegment(),
             null,
+            tuningConfig.getRowsPerSegment(),
             partitionDimensions,
             false
         );
