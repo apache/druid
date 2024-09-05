@@ -22,6 +22,9 @@ package org.apache.druid.delta.snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
 
+/**
+ * Represents a snapshot that always points to the latest available snapshot in a Delta table.
+ */
 public class LatestSnapshot implements Snapshot
 {
   @Override

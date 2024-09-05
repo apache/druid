@@ -180,7 +180,7 @@ public class DeltaInputSourceSerdeTest
   }
 
   @Test
-  public void testDeltaInputSourceVersionSnapshotMissingVersion()
+  public void testDeltaInputSourceVersionedSnapshotMissingVersion()
   {
     final String payload = "{\n"
                            + "      \"type\": \"delta\",\n"

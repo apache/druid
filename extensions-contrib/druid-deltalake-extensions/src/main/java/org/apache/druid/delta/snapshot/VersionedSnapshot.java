@@ -26,6 +26,9 @@ import io.delta.kernel.engine.Engine;
 import io.delta.kernel.exceptions.KernelException;
 import org.apache.druid.error.InvalidInput;
 
+/**
+ * Represents a Delta table snapshot identified by a specific version.
+ */
 public class VersionedSnapshot implements Snapshot
 {
   @JsonProperty

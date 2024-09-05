@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.delta.kernel.Table;
 import io.delta.kernel.engine.Engine;
 
+/**
+ * Represents a snapshot of a Delta table that can be retrieved.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "latest", value = LatestSnapshot.class),
@@ -31,5 +34,13 @@ import io.delta.kernel.engine.Engine;
 })
 public interface Snapshot
 {
+
+  /**
+   * Retrieves a snapshot of the given Delta table using the provided engine.
+   *
+   * @param table  the Delta table from which to retrieve the snapshot
+   * @param engine the engine used to retrieve the snapshot
+   * @return the snapshot of the Delta table, as determined by the implementation
+   */
   io.delta.kernel.Snapshot getSnapshot(Table table, Engine engine);
 }

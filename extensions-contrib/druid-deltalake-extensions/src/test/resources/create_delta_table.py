@@ -26,7 +26,6 @@ from datetime import datetime, timedelta
 import random
 from delta.tables import DeltaTable
 
-
 class TableType(Enum):
     SIMPLE = "simple"
     COMPLEX = "complex"
@@ -60,7 +59,7 @@ def create_dataset_with_complex_types(num_records):
     ```python
     data, schema = create_dataset_with_complex_types(10)
     ```
-"""
+    """
     schema = StructType([
         StructField("id", LongType(), False),
         StructField("array_info", ArrayType(IntegerType(), True), True),
