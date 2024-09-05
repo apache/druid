@@ -1393,7 +1393,7 @@ Returns the following:
 
 ## IPV6_MATCH
 
-Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
+Returns true if the IPv6 `address` belongs to the `subnet` literal. Otherwise, returns false.
 
 * **Syntax:** `IPV6_MATCH(address, subnet)`
 * **Function type:** Scalar, IP address
@@ -1410,7 +1410,7 @@ SELECT
 
 Returns the following: 
 
-| `ipv4_address` | `belongs_in_subnet` | 
+| `ipv6_address` | `belongs_in_subnet` | 
 | -- | -- |
 | `75e9:efa4:29c6:85f6::232c` | `true` | 
 
