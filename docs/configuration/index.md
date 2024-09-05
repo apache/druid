@@ -1790,12 +1790,13 @@ This prioritization strategy lowers the priority of queries that cross any of a 
 
 This strategy can be enabled by setting `druid.query.scheduler.prioritization.strategy` to `threshold`.
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.scheduler.prioritization.periodThreshold`|ISO duration threshold for how old data can be queried before automatically adjusting query priority.|none|
-|`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|none|
-|`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|none|
-|`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|none|
+|Property| Description                                                                                                                  |Default|
+|--------|------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.query.scheduler.prioritization.periodThreshold`| ISO duration threshold for how old data can be queried before automatically adjusting query priority.                        |none|
+|`druid.query.scheduler.prioritization.durationThreshold`| ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.       |none|
+|`druid.query.scheduler.prioritization.segmentCountThreshold`| Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted. |none|
+|`druid.query.scheduler.prioritization.segmentRangeThreshold`| ISO duration threshold for maximum segment range a query can span before the priority is automatically adjusted.             |none|
+|`druid.query.scheduler.prioritization.adjustment`| Amount to reduce the priority of queries which cross any threshold.                                                          |none|
 
 ##### Laning strategies
 
