@@ -60,6 +60,7 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
+import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -205,6 +206,12 @@ public class IndexerControllerContext implements ControllerContext
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
     );
+  }
+
+  @Override
+  public File taskTempDir()
+  {
+    return toolbox.getIndexingTmpDir();
   }
 
   /**

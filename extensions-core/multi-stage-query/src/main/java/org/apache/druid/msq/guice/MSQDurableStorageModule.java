@@ -118,10 +118,11 @@ public class MSQDurableStorageModule implements DruidModule
     private StorageConnectorProvider storageConnectorProvider;
 
     @Inject
-    public void inject(StorageConnectorProvider storageConnectorProvider)
+    public void inject(@MultiStageQuery StorageConnectorProvider storageConnectorProvider)
     {
       this.storageConnectorProvider = storageConnectorProvider;
     }
+
     @Override
     public StorageConnector get()
     {

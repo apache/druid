@@ -39,6 +39,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -69,6 +70,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -89,6 +91,7 @@ public class MSQTestControllerContext implements ControllerContext
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));
+  private final File tempDir = FileUtils.createTempDir();
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
       "controller",
@@ -329,6 +332,12 @@ public class MSQTestControllerContext implements ControllerContext
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0
     );
+  }
+
+  @Override
+  public File taskTempDir()
+  {
+    return tempDir;
   }
 
   @Override
