@@ -84,7 +84,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Start',
     'End',
     'Version',
-    'Time span',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -106,6 +106,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Start',
     'End',
     'Version',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -261,7 +262,7 @@ END AS "time_span"`,
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
             if (f.id === 'shard_type') {
-              // Special handling for shard_type that needs to be search in the shard_spec
+              // Special handling for shard_type that needs to be searched for in the shard_spec
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
               const modeAndNeedle = parseFilterModeAndNeedle(f);
               if (!modeAndNeedle) return;

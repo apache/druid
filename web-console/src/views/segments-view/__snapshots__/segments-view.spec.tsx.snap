@@ -55,7 +55,10 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Start",
             "End",
             "Version",
-            "Time span",
+            {
+              "label": "𝑓(sys.segments)",
+              "text": "Time span",
+            },
             "Shard type",
             "Shard spec",
             "Partition",
