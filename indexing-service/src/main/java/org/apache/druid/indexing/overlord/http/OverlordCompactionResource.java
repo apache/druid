@@ -19,9 +19,9 @@
 
 package org.apache.druid.indexing.overlord.http;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.indexing.compact.CompactionScheduler;
@@ -45,8 +45,8 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * Contains the same logic as {@code CompactionResource} but the APIs are served
- * by {@link CompactionScheduler} instead of {@code DruidCoordinator}.
+ * Contains the same logic as {@code CoordinatorCompactionResource} but the APIs
+ * are served by {@link CompactionScheduler} instead of {@code DruidCoordinator}.
  */
 @Path("/druid/indexer/v1/compaction")
 public class OverlordCompactionResource
@@ -138,12 +138,12 @@ public class OverlordCompactionResource
 
   private Response buildErrorResponseIfSchedulerDisabled()
   {
-    return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(
-        ImmutableMap.of(
-            "error",
-            "Compaction Supervisors are disabled on the Overlord."
-            + " Use Coordinator APIs to fetch compaction status."
-        )
-    ).build();
+    final String msg = "Compaction Supervisors are disabled on the Overlord."
+                       + " Use Coordinator APIs to fetch compaction status.";
+    return ServletResourceUtils.buildErrorResponseFrom(
+        DruidException.forPersona(DruidException.Persona.USER)
+                      .ofCategory(DruidException.Category.UNSUPPORTED)
+                      .build(msg)
+    );
   }
 }

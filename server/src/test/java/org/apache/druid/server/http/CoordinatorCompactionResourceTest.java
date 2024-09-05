@@ -31,6 +31,7 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -120,7 +121,8 @@ public class CoordinatorCompactionResourceTest
   {
     String dataSourceName = "datasource_1";
 
-    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(expectedSnapshot).once();
+    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName))
+            .andReturn(expectedSnapshot).once();
     EasyMock.replay(mock);
 
     final Response response = new CoordinatorCompactionResource(mock, overlordClient)
@@ -137,7 +139,8 @@ public class CoordinatorCompactionResourceTest
   {
     String dataSourceName = "invalid_datasource";
 
-    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName)).andReturn(null).once();
+    EasyMock.expect(mock.getAutoCompactionSnapshotForDataSource(dataSourceName))
+            .andReturn(null).once();
     EasyMock.replay(mock);
 
     final Response response = new CoordinatorCompactionResource(mock, overlordClient)
@@ -157,14 +160,14 @@ public class CoordinatorCompactionResourceTest
     final Object responseEntity = response.getEntity();
     Assert.assertTrue(responseEntity instanceof ErrorResponse);
 
-    final ErrorResponse errorResponse = (ErrorResponse) responseEntity;
-    DruidExceptionMatcher.invalidInput()
-                         .expectMessageIs("No DataSource specified")
-                         .matches(errorResponse.getUnderlyingException());
+    MatcherAssert.assertThat(
+        ((ErrorResponse) responseEntity).getUnderlyingException(),
+        DruidExceptionMatcher.invalidInput().expectMessageIs("No DataSource specified")
+    );
   }
 
   @Test
-  public void testGetSnapshotWhenCompactionSupervisorIsEnabled()
+  public void testGetSnapshotRedirectsToOverlordWhenSupervisorIsEnabled()
   {
     EasyMock.replay(mock);
 

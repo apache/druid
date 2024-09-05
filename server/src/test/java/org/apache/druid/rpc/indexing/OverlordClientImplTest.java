@@ -479,7 +479,7 @@ public class OverlordClientImplTest
                               .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
                               .build(),
         AutoCompactionSnapshot.builder("ds2")
-                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED)
                               .build()
     );
     serviceClient.expectAndRespond(
@@ -500,9 +500,7 @@ public class OverlordClientImplTest
       throws JsonProcessingException, ExecutionException, InterruptedException
   {
     final List<AutoCompactionSnapshot> compactionSnapshots = Collections.singletonList(
-        AutoCompactionSnapshot.builder("ds1")
-                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
-                              .build()
+        AutoCompactionSnapshot.builder("ds1").build()
     );
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/status?dataSource=ds1"),
