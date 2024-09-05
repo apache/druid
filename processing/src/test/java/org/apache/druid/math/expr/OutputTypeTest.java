@@ -20,13 +20,10 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Map;
 
@@ -47,9 +44,6 @@ public class OutputTypeTest extends InitializedNullHandlingTest
                   .put("c_", ExpressionType.DOUBLE_ARRAY)
                   .build()
   );
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testConstantsAndIdentifiers()
@@ -541,7 +535,6 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.DOUBLE,
         ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.STRING)
     );
-    // unless it is an array, and those have to be the same
     Assert.assertEquals(
         ExpressionType.LONG_ARRAY,
         ExpressionTypeConversion.operator(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY)
@@ -554,7 +547,30 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.operator(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
-
+    Assert.assertEquals(
+        ExpressionType.LONG_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.LONG_ARRAY, ExpressionType.LONG)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.STRING, ExpressionType.LONG_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.LONG_ARRAY, ExpressionType.DOUBLE_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.LONG, ExpressionType.DOUBLE_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.LONG_ARRAY, ExpressionType.STRING_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING_ARRAY,
+        ExpressionTypeConversion.operator(ExpressionType.STRING_ARRAY, ExpressionType.DOUBLE_ARRAY)
+    );
     ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
     Assert.assertEquals(
         nested,
@@ -619,7 +635,6 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.STRING,
         ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.STRING)
     );
-    // unless it is an array, and those have to be the same
     Assert.assertEquals(
         ExpressionType.LONG_ARRAY,
         ExpressionTypeConversion.function(ExpressionType.LONG_ARRAY, ExpressionType.LONG_ARRAY)
@@ -631,6 +646,30 @@ public class OutputTypeTest extends InitializedNullHandlingTest
     Assert.assertEquals(
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.function(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.DOUBLE_ARRAY, ExpressionType.LONG_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.DOUBLE_ARRAY, ExpressionType.STRING_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.STRING_ARRAY, ExpressionType.LONG_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.STRING_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.STRING, ExpressionType.LONG_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.LONG_ARRAY, ExpressionType.DOUBLE_ARRAY)
+    );
+    Assert.assertEquals(
+        ExpressionType.DOUBLE_ARRAY,
+        ExpressionTypeConversion.function(ExpressionType.LONG, ExpressionType.DOUBLE_ARRAY)
     );
     ExpressionType nested = ExpressionType.fromColumnType(ColumnType.NESTED_DATA);
     Assert.assertEquals(
@@ -717,27 +756,6 @@ public class OutputTypeTest extends InitializedNullHandlingTest
         ExpressionType.STRING_ARRAY,
         ExpressionTypeConversion.integerMathFunction(ExpressionType.STRING_ARRAY, ExpressionType.STRING_ARRAY)
     );
-  }
-
-  @Test
-  public void testAutoConversionArrayMismatchArrays()
-  {
-    expectedException.expect(IAE.class);
-    ExpressionTypeConversion.function(ExpressionType.DOUBLE_ARRAY, ExpressionType.LONG_ARRAY);
-  }
-
-  @Test
-  public void testAutoConversionArrayMismatchArrayScalar()
-  {
-    expectedException.expect(IAE.class);
-    ExpressionTypeConversion.function(ExpressionType.DOUBLE_ARRAY, ExpressionType.LONG);
-  }
-
-  @Test
-  public void testAutoConversionArrayMismatchScalarArray()
-  {
-    expectedException.expect(IAE.class);
-    ExpressionTypeConversion.function(ExpressionType.DOUBLE, ExpressionType.LONG_ARRAY);
   }
 
   private void assertOutputType(String expression, Expr.InputBindingInspector inspector, ExpressionType outputType)
