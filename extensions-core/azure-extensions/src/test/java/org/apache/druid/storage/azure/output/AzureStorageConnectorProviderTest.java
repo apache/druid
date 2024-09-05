@@ -25,10 +25,9 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import com.google.inject.name.Names;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -59,7 +58,7 @@ public class AzureStorageConnectorProviderTest
     StorageConnectorProvider storageConnectorProvider = getStorageConnectorProvider(properties);
 
     assertInstanceOf(AzureStorageConnectorProvider.class, storageConnectorProvider);
-    assertInstanceOf(AzureStorageConnector.class, storageConnectorProvider.get());
+    assertInstanceOf(AzureStorageConnector.class, storageConnectorProvider.createStorageConnector(new File("/tmp")));
     assertEquals("container", ((AzureStorageConnectorProvider) storageConnectorProvider).getContainer());
     assertEquals("prefix", ((AzureStorageConnectorProvider) storageConnectorProvider).getPrefix());
     assertEquals(new File("/tmp"),
@@ -107,9 +106,9 @@ public class AzureStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
 
     assertThrows(
-        ProvisionException.class,
-        () -> getStorageConnectorProvider(properties),
-        "Missing required creator property 'tempDir'"
+        DruidException.class,
+        () -> getStorageConnectorProvider(properties).createStorageConnector(null),
+        "'tempDir' is required."
     );
   }
 
@@ -119,18 +118,12 @@ public class AzureStorageConnectorProviderTest
         new AzureStorageDruidModule(),
         new StorageConnectorModule(),
         new AzureStorageConnectorModule(),
-        binder -> {
-          JsonConfigProvider.bind(
-              binder,
-              CUSTOM_NAMESPACE,
-              StorageConnectorProvider.class,
-              Names.named(CUSTOM_NAMESPACE)
-          );
-
-          binder.bind(Key.get(StorageConnector.class, Names.named(CUSTOM_NAMESPACE)))
-                .toProvider(Key.get(StorageConnectorProvider.class, Names.named(CUSTOM_NAMESPACE)))
-                .in(LazySingleton.class);
-        }
+        binder -> JsonConfigProvider.bind(
+            binder,
+            CUSTOM_NAMESPACE,
+            StorageConnectorProvider.class,
+            Names.named(CUSTOM_NAMESPACE)
+        )
     ).withProperties(properties);
 
     Injector injector = startupInjectorBuilder.build();
