@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>30.0.1-SNAPSHOT</version>
+    <version>30.0.1</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -66,7 +66,7 @@
         <connection>scm:git:ssh://git@github.com/apache/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/apache/druid.git</developerConnection>
         <url>https://github.com/apache/druid.git</url>
-        <tag>29.0.0-SNAPSHOT</tag>
+        <tag>druid-30.0.1-rc1</tag>
     </scm>
 
     <properties>
@@ -117,8 +117,7 @@
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
         <mockito.version>5.5.0</mockito.version>
         <!-- mockito-inline artifact was removed in mockito 5.3 (mockito 5.x is required for Java >17),
-             however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11.
-             We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->
+             however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11. We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->
         <mockito.inline.artifact>core</mockito.inline.artifact>
         <aws.sdk.version>1.12.638</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
@@ -155,7 +154,7 @@
              -->
          <jacocoArgLine />
          <!--  used to enable continuous profiling of jdk17 unit tests in github actions  -->
-         <jfrProfilerArgLine></jfrProfilerArgLine>
+         <jfrProfilerArgLine />
     </properties>
 
     <modules>
@@ -1613,7 +1612,7 @@
                         </goals>
                         <configuration>
                             <rules>
-                                <banDuplicatePomDependencyVersions/>
+                                <banDuplicatePomDependencyVersions />
                                 <requireMavenVersion>
                                     <version>3.0.0</version>
                                 </requireMavenVersion>
@@ -1781,11 +1780,11 @@
                         <trimStackTrace>false</trimStackTrace>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
+                        <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
                         <!-- Surefire default is to exclude static inner classes; which may lead to the ignore of static inner classes
                              https://maven.apache.org/surefire/maven-surefire-plugin/test-mojo.html#excludes -->
                         <excludes>
-                           <exclude/>
+                           <exclude />
                         </excludes>
                     </configuration>
                 </plugin>
