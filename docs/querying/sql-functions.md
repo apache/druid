@@ -2529,14 +2529,14 @@ Formats a timestamp as a string.
 
 ## TIME_IN_INTERVAL
 
-Returns whether a timestamp is contained within a particular interval. Intervals must be formatted as a string literal containing any ISO 8601 interval. The start instant of an interval is inclusive, and the end instant is exclusive.
+Returns true if a timestamp is contained within a particular interval. Intervals must be formatted as a string literal containing any ISO 8601 interval. The start instant of an interval is inclusive, and the end instant is exclusive.
 
 * **Syntax:** `TIME_IN_INTERVAL(timestamp_expr, interval)`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
 
-The following example returns `true` when a timestamp in the `__time` column of the `taxi-trips` datasource is within a hour interval starting from `2013-08-01T08:00:00`.
+The following example returns true when a timestamp in the `__time` column of the `taxi-trips` datasource is within a hour interval starting from `2013-08-01T08:00:00`.
 
 ```sql
 SELECT 
@@ -2631,7 +2631,7 @@ Returns the following:
 
 ## TIMESTAMPDIFF
 
-Returns the difference between two timestamps in the given `unit`.
+Returns the difference between two timestamps in a given unit.
 
 * **Syntax:** `TIMESTAMPDIFF(unit, timestamp1, timestamp2)`
 * **Function type:** Scalar, date and time
