@@ -28,7 +28,7 @@ Druid uses separate JVMs for tasks to isolate resources and logs. Each Peon is c
 
 ## Configuration
 
-For Apache Druid Middle Manager service configuration, see [Middle Manager and Peons](../configuration/index.md#middle-manager-and-peons).
+For Apache Druid Middle Manager service configuration, see [Middle Manager and Peons](../configuration/index.md#middle-manager-and-peon).
 
 For basic tuning guidance for the Middle Manager service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middle-manager).
 
