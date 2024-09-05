@@ -192,7 +192,7 @@ public class CoordinatorCompactionResourceTest
         .getCompactionSnapshotForDataSource(dataSourceName);
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(
-        Collections.singletonList(snapshotFromOverlord),
+        new CompactionStatusResponse(Collections.singletonList(snapshotFromOverlord)),
         response.getEntity()
     );
   }
