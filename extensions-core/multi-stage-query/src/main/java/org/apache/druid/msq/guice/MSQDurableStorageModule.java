@@ -86,27 +86,28 @@ public class MSQDurableStorageModule implements DruidModule
       );
 
       if (nodeRoles.contains(NodeRole.OVERLORD)) {
+        binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
+              .toProvider(NoTempDirectoryStorageConnector.class)
+              .in(LazySingleton.class);
+
         JsonConfigProvider.bind(
             binder,
             String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "cleaner"),
             DurableStorageCleanerConfig.class
         );
 
-        binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-              .toProvider(NoTempDirectoryStorageConnector.class)
-              .in(LazySingleton.class);
-
         Multibinder.newSetBinder(binder, OverlordDuty.class)
                    .addBinding()
                    .to(DurableStorageCleaner.class);
       }
+      if (nodeRoles.contains(NodeRole.BROKER)) {
+        binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
+              .toProvider(NoTempDirectoryStorageConnector.class)
+              .in(LazySingleton.class);
+      }
     } else if (nodeRoles.contains(NodeRole.BROKER)) {
       // bind with nil implementation so that configs are not required during service startups of broker since SQLStatementResource uses it.
       binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class)).toInstance(NilStorageConnector.getInstance());
-
-      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-            .toProvider(NoTempDirectoryStorageConnector.class)
-            .in(LazySingleton.class);
     } else {
       // do nothing
     }
