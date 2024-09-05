@@ -45,7 +45,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
+import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowFrame;
@@ -125,7 +125,7 @@ public class MSQWindowTest extends MSQTestBase
         RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d0")),
             new WindowOperatorFactory(proc)
         ),
         null
@@ -223,10 +223,10 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w1", ColumnType.DOUBLE)
                     .build(),
         ImmutableList.of(
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc1),
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d0")),
             new WindowOperatorFactory(proc)
         ),
         null
@@ -334,10 +334,10 @@ public class MSQWindowTest extends MSQTestBase
                     .build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d0")),
             new WindowOperatorFactory(proc),
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d1"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d1")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d1")),
             new WindowOperatorFactory(proc1)
         ),
         null
@@ -447,10 +447,10 @@ public class MSQWindowTest extends MSQTestBase
                     .build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d1"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d1")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d1")),
             new WindowOperatorFactory(proc),
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d0")),
             new WindowOperatorFactory(proc1)
         ),
         null
@@ -541,7 +541,7 @@ public class MSQWindowTest extends MSQTestBase
         context,
         RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc)
         ),
         null
@@ -621,7 +621,7 @@ public class MSQWindowTest extends MSQTestBase
         RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m1"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("m1")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -692,7 +692,7 @@ public class MSQWindowTest extends MSQTestBase
                 ColumnWithDirection.ascending("m1"),
                 ColumnWithDirection.ascending("m2")
             )),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("m1", "m2")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("m1", "m2")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -760,7 +760,7 @@ public class MSQWindowTest extends MSQTestBase
         RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m2"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("m2")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("m2")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -831,7 +831,7 @@ public class MSQWindowTest extends MSQTestBase
         context,
         RowSignature.builder().add("d0", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -909,7 +909,7 @@ public class MSQWindowTest extends MSQTestBase
                     .build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m1"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("m1")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -976,7 +976,7 @@ public class MSQWindowTest extends MSQTestBase
         context,
         RowSignature.builder().add("m1", ColumnType.FLOAT).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1078,7 +1078,7 @@ public class MSQWindowTest extends MSQTestBase
                     .build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m1"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("m1")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1181,7 +1181,7 @@ public class MSQWindowTest extends MSQTestBase
                     .add("j0.m2", ColumnType.DOUBLE)
                     .build(),
         ImmutableList.of(
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1251,7 +1251,7 @@ public class MSQWindowTest extends MSQTestBase
         RowSignature.builder().add("dim2", ColumnType.STRING).add("w0", ColumnType.DOUBLE).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("dim2"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("dim2")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("dim2")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1340,7 +1340,7 @@ public class MSQWindowTest extends MSQTestBase
                     .add("j0.unnest", ColumnType.STRING)
                     .build(),
         ImmutableList.of(
-            new NaivePartitioningOperatorFactory(ImmutableList.of()),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of()),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1424,7 +1424,7 @@ public class MSQWindowTest extends MSQTestBase
                     .build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("m1"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("m1")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("m1")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1803,7 +1803,7 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w0", ColumnType.LONG).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("cityName"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("cityName")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("cityName")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1894,7 +1894,7 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w0", ColumnType.LONG).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("countryIsoCode"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("countryIsoCode")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("countryIsoCode")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -1991,7 +1991,7 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w0", ColumnType.LONG).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"))),
-            new NaivePartitioningOperatorFactory(ImmutableList.of("d0")),
+            new GlueingPartitioningOperatorFactory(ImmutableList.of("d0")),
             new WindowOperatorFactory(proc)
         ),
         ImmutableList.of()
@@ -2121,10 +2121,10 @@ public class MSQWindowTest extends MSQTestBase
                     .add("w1", ColumnType.LONG).build(),
         ImmutableList.of(
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d0"), ColumnWithDirection.ascending("d1"), ColumnWithDirection.ascending("d2"))),
-            new NaivePartitioningOperatorFactory(Collections.emptyList()),
+            new GlueingPartitioningOperatorFactory(Collections.emptyList()),
             new WindowOperatorFactory(new WindowRowNumberProcessor("w0")),
             new NaiveSortOperatorFactory(ImmutableList.of(ColumnWithDirection.ascending("d1"), ColumnWithDirection.ascending("d0"), ColumnWithDirection.ascending("d2"))),
-            new NaivePartitioningOperatorFactory(Collections.singletonList("d1")),
+            new GlueingPartitioningOperatorFactory(Collections.singletonList("d1")),
             new WindowOperatorFactory(new WindowFramedAggregateProcessor(WindowFrame.forOrderBy("d0", "d1", "d2"), aggs))
         ),
         ImmutableList.of()

@@ -29,40 +29,38 @@ import org.junit.Test;
 
 import java.util.function.BiFunction;
 
-public class NaivePartitioningOperatorTest
+public class GlueingPartitioningOperatorTest
 {
   @Test
   public void testDefaultImplementation()
   {
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
         )
     );
 
-    NaivePartitioningOperator op = new NaivePartitioningOperator(
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         ImmutableList.of("sorted"),
-        InlineScanOperator.make(rac)
+        inlineScanOperator
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{0, 0, 0})
-                .expectColumn("unsorted", new int[]{3, 54, 21})
+                .expectColumn("sorted", new int[]{1, 1, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 10})
                 .allColumnsRegistered(),
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1})
-                .expectColumn("unsorted", new int[]{1, 5})
+                .expectColumn("sorted", new int[]{2, 2})
+                .expectColumn("unsorted", new int[]{20, 20})
                 .allColumnsRegistered(),
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2})
-                .expectColumn("unsorted", new int[]{54})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{4, 4, 4})
-                .expectColumn("unsorted", new int[]{2, 3, 92})
+                .expectColumn("sorted", new int[]{1})
+                .expectColumn("unsorted", new int[]{11})
                 .allColumnsRegistered()
         )
         .runToCompletion(op);
@@ -73,39 +71,59 @@ public class NaivePartitioningOperatorTest
   {
     RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5})
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
         )
     );
     RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 2, 2, 2}),
-            "unsorted", new IntArrayColumn(new int[]{10, 20, 30, 40})
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{50, 51, 52, 53, 54, 55})
+        )
+    );
+    RowsAndColumns rac3 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{70, 71, 72, 73, 74})
         )
     );
 
-    NaivePartitioningOperator op = new NaivePartitioningOperator(
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2, rac3);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         ImmutableList.of("sorted"),
-        InlineScanOperator.make(rac1, rac2)
+        inlineScanOperator
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{0, 0, 0})
-                .expectColumn("unsorted", new int[]{3, 54, 21})
+                .expectColumn("sorted", new int[]{1, 1, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 10})
                 .allColumnsRegistered(),
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1})
-                .expectColumn("unsorted", new int[]{1, 5})
+                .expectColumn("sorted", new int[]{2, 2})
+                .expectColumn("unsorted", new int[]{20, 20})
+                .allColumnsRegistered(),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1, 1, 1})
+                .expectColumn("unsorted", new int[]{11, 50, 51, 52})
+                .allColumnsRegistered(),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{2, 2})
+                .expectColumn("unsorted", new int[]{53, 54})
+                .allColumnsRegistered(),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1, 1})
+                .expectColumn("unsorted", new int[]{55, 70, 71})
+                .allColumnsRegistered(),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{2, 2})
+                .expectColumn("unsorted", new int[]{72, 73})
                 .allColumnsRegistered(),
             new RowsAndColumnsHelper()
                 .expectColumn("sorted", new int[]{1})
-                .expectColumn("unsorted", new int[]{10})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2, 2})
-                .expectColumn("unsorted", new int[]{20, 30, 40})
+                .expectColumn("unsorted", new int[]{74})
                 .allColumnsRegistered()
         )
         .runToCompletion(op);
@@ -116,24 +134,28 @@ public class NaivePartitioningOperatorTest
   {
     RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
         )
     );
 
-    NaivePartitioningOperator op = new NaivePartitioningOperator(
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         ImmutableList.of("sorted"),
-        InlineScanOperator.make(rac)
+        inlineScanOperator
     );
 
     new OperatorTestHelper()
         .expectAndStopAfter(
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{0, 0, 0})
-                .expectColumn("unsorted", new int[]{3, 54, 21}),
+                .expectColumn("sorted", new int[]{1, 1, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 10})
+                .allColumnsRegistered(),
             new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1})
-                .expectColumn("unsorted", new int[]{1, 5})
+                .expectColumn("sorted", new int[]{2, 2})
+                .expectColumn("unsorted", new int[]{20, 20})
+                .allColumnsRegistered()
         )
         .runToCompletion(op);
   }
@@ -155,7 +177,7 @@ public class NaivePartitioningOperatorTest
         )
     );
 
-    NaivePartitioningOperator op = new NaivePartitioningOperator(
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         ImmutableList.of("unsorted"),
         InlineScanOperator.make(rac)
     );

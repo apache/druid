@@ -213,7 +213,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      Most of the window operations like SUM(), RANK(), RANGE() etc. can be made with 2 passes of the data. We might think to reimplement them in the MSQ way so that we do not have to materialize so much data.
      */
 
-    if (partitionColumnNames.isEmpty()) {
+    // todo: need to cleanup unused code and comments
+    if (true) {
       // Scenario 1: Query has atleast one window function with an OVER() clause without a PARTITION BY.
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();

@@ -37,7 +37,7 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
+import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
@@ -81,8 +81,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     boolean isEmptyOverPresent = originalQuery.getOperators()
                                             .stream()
-                                            .filter(of -> of instanceof NaivePartitioningOperatorFactory)
-                                            .map(of -> (NaivePartitioningOperatorFactory) of)
+                                            .filter(of -> of instanceof GlueingPartitioningOperatorFactory)
+                                            .map(of -> (GlueingPartitioningOperatorFactory) of)
                                             .anyMatch(of -> of.getPartitionColumns().isEmpty());
 
     List<List<OperatorFactory>> operatorList = getOperatorListFromQuery(originalQuery);
@@ -208,8 +208,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         boolean partitionOperatorExists = false;
         List<String> currentPartitionColumns = new ArrayList<>();
         for (OperatorFactory of : operatorList.get(i)) {
-          if (of instanceof NaivePartitioningOperatorFactory) {
-            for (String s : ((NaivePartitioningOperatorFactory) of).getPartitionColumns()) {
+          if (of instanceof GlueingPartitioningOperatorFactory) {
+            for (String s : ((GlueingPartitioningOperatorFactory) of).getPartitionColumns()) {
               currentPartitionColumns.add(s);
               partitionOperatorExists = true;
             }
@@ -287,11 +287,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
   private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int maxWorkerCount)
   {
-    NaivePartitioningOperatorFactory partition = null;
+    GlueingPartitioningOperatorFactory partition = null;
     NaiveSortOperatorFactory sort = null;
     for (OperatorFactory of : operatorFactories) {
-      if (of instanceof NaivePartitioningOperatorFactory) {
-        partition = (NaivePartitioningOperatorFactory) of;
+      if (of instanceof GlueingPartitioningOperatorFactory) {
+        partition = (GlueingPartitioningOperatorFactory) of;
       } else if (of instanceof NaiveSortOperatorFactory) {
         sort = (NaiveSortOperatorFactory) of;
       }
