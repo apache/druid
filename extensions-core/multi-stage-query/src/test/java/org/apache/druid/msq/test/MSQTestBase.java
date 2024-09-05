@@ -77,6 +77,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
@@ -198,6 +199,7 @@ import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -450,7 +452,24 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(QueryProcessingPool.class)
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(this::newTempFolder, segmentId));
+                .toInstance(new DataSegmentProvider()
+                {
+                  @Override
+                  public Supplier<ResourceHolder<Segment>> fetchSegment(
+                      SegmentId segmentId,
+                      ChannelCounters channelCounters,
+                      boolean isReindex
+                  )
+                  {
+                    return getSupplierForSegment(s -> newTempFolder(s), segmentId);
+                  }
+
+                  @Override
+                  public DataSegment fetchDataSegment(SegmentId segmentId, boolean isReindex)
+                  {
+                    return getDataSegment(segmentId);
+                  }
+                });
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
@@ -620,7 +639,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
   }
 
   @Nonnull
-  private Supplier<ResourceHolder<Segment>> getSupplierForSegment(Function<String, File> tempFolderProducer, SegmentId segmentId)
+  protected DataSegment getDataSegment(SegmentId segmentId)
+  {
+    return DataSegment.builder()
+                      .dataSource(segmentId.getDataSource())
+                      .interval(segmentId.getInterval())
+                      .version(segmentId.getVersion())
+                      .shardSpec(new LinearShardSpec(0))
+                      .build();
+  }
+
+  @Nonnull
+  protected Supplier<ResourceHolder<Segment>> getSupplierForSegment(Function<String, File> tempFolderProducer, SegmentId segmentId)
   {
     if (segmentManager.getSegment(segmentId) == null) {
       final QueryableIndex index;
