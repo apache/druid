@@ -30,7 +30,6 @@ import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -121,7 +120,6 @@ public class MSQCompactionRunner implements CompactionRunner
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>targetRowsPerSegment in DimensionRangePartitionsSpec.</li>
    * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
    * Null is treated as true if metricsSpec exist and false if empty.</li>
    * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
@@ -276,17 +274,10 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static Integer getRowsPerSegment(CompactionTask compactionTask)
   {
-    Integer rowsPerSegment = PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
-    if (compactionTask.getTuningConfig() != null) {
-      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
-      if (partitionsSpec instanceof DynamicPartitionsSpec) {
-        rowsPerSegment = partitionsSpec.getMaxRowsPerSegment();
-      } else if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
-        DimensionRangePartitionsSpec dimensionRangePartitionsSpec = (DimensionRangePartitionsSpec) partitionsSpec;
-        rowsPerSegment = dimensionRangePartitionsSpec.getMaxRowsPerSegment();
-      }
+    if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
+      return compactionTask.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment();
     }
-    return rowsPerSegment;
+    return PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
   }
 
   private static RowSignature getRowSignature(DataSchema dataSchema)

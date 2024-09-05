@@ -223,6 +223,15 @@ public class CompactionStatus
           partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
           ((DynamicPartitionsSpec) partitionsSpecFromTuningConfig).getMaxTotalRowsOr(Long.MAX_VALUE)
       );
+    } else if (partitionsSpecFromTuningConfig instanceof DimensionRangePartitionsSpec) {
+      // Always compare only the effective maxRowsPerSegment even if targetRowsPerSegment is set to avoid false positives.
+      DimensionRangePartitionsSpec rangePartitionsSpec = (DimensionRangePartitionsSpec) partitionsSpecFromTuningConfig;
+      return new DimensionRangePartitionsSpec(
+          null,
+          rangePartitionsSpec.getMaxRowsPerSegment(),
+          rangePartitionsSpec.getPartitionDimensions(),
+          rangePartitionsSpec.isAssumeGrouped()
+      );
     } else {
       return partitionsSpecFromTuningConfig;
     }

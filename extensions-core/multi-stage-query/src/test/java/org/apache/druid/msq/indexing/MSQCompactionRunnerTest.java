@@ -85,7 +85,6 @@ public class MSQCompactionRunnerTest
 
   private static final String TIMESTAMP_COLUMN = "timestamp";
   private static final int TARGET_ROWS_PER_SEGMENT = 100000;
-  private static final int MAX_ROWS_PER_SEGMENT = 100000;
   private static final GranularityType SEGMENT_GRANULARITY = GranularityType.HOUR;
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
   private static List<String> PARTITION_DIMENSIONS;
@@ -132,23 +131,10 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testRangePartitionsSpecWithTargetRowsPerSegmentIsInvalid()
+  public void testDimensionRangePartitionsSpecIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
-        null,
-        Collections.emptyMap(),
-        null,
-        null
-    );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask).isValid());
-  }
-
-  @Test
-  public void testRangePartitionsSpecWithMaxRowsPerSegmentIsValid()
-  {
-    CompactionTask compactionTask = createCompactionTask(
-        new DimensionRangePartitionsSpec(null, MAX_ROWS_PER_SEGMENT, PARTITION_DIMENSIONS, false),
         null,
         Collections.emptyMap(),
         null,
@@ -158,7 +144,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testDynamicPartitionsSpecWithMaxTotalRowsIsInvalid()
+  public void testMaxTotalRowsIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, 3L),
@@ -171,7 +157,7 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testDynamicPartitionsSpecWithMaxRowsPerSegmentIsInvalid()
+  public void testDynamicPartitionsSpecIsValid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, null),
