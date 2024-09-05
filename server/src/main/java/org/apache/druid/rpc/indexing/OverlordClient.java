@@ -35,7 +35,8 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -226,7 +227,7 @@ public interface OverlordClient
    * <p>
    * API: {@code /druid/indexer/v1/compaction/progress}
    */
-  ListenableFuture<Long> getBytesAwaitingCompaction(String dataSource);
+  ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource);
 
   /**
    * Gets the latest compaction snapshots of one or all datasources.
@@ -236,7 +237,7 @@ public interface OverlordClient
    * @param dataSource If passed as non-null, then the returned list contains only
    *                   the snapshot for this datasource.
    */
-  ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource);
+  ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
 
   /**
    * Returns a copy of this client with a different retry policy.

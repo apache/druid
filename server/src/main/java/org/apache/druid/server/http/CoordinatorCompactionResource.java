@@ -21,13 +21,17 @@ package org.apache.druid.server.http;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.InternalServerError;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -82,9 +86,7 @@ public class CoordinatorCompactionResource
   )
   {
     if (dataSource == null || dataSource.isEmpty()) {
-      return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", "No DataSource specified"))
-                     .build();
+      return ServletResourceUtils.buildErrorResponseFrom(InvalidInput.exception("No DataSource specified"));
     }
 
     if (isCompactionSupervisorEnabled()) {
@@ -93,9 +95,9 @@ public class CoordinatorCompactionResource
 
     final AutoCompactionSnapshot snapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
     if (snapshot == null) {
-      return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "Unknown DataSource")).build();
+      return ServletResourceUtils.buildErrorResponseFrom(NotFound.exception("Unknown DataSource"));
     } else {
-      return Response.ok(ImmutableMap.of("remainingSegmentSize", snapshot.getBytesAwaitingCompaction())).build();
+      return Response.ok(new CompactionProgressResponse(snapshot.getBytesAwaitingCompaction())).build();
     }
   }
 
@@ -117,11 +119,11 @@ public class CoordinatorCompactionResource
     } else {
       AutoCompactionSnapshot autoCompactionSnapshot = coordinator.getAutoCompactionSnapshotForDataSource(dataSource);
       if (autoCompactionSnapshot == null) {
-        return Response.status(Response.Status.NOT_FOUND).entity(ImmutableMap.of("error", "Unknown DataSource")).build();
+        return ServletResourceUtils.buildErrorResponseFrom(NotFound.exception("Unknown DataSource"));
       }
       snapshots = ImmutableList.of(autoCompactionSnapshot);
     }
-    return Response.ok(ImmutableMap.of("latestStatus", snapshots)).build();
+    return Response.ok(new CompactionStatusResponse(snapshots)).build();
   }
 
   @POST
@@ -149,9 +151,9 @@ public class CoordinatorCompactionResource
                        .entity(cause.getResponse().getContent())
                        .build();
       } else {
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                       .entity(ImmutableMap.of("error", e.getMessage()))
-                       .build();
+        return ServletResourceUtils.buildErrorResponseFrom(
+            InternalServerError.exception(e.getMessage())
+        );
       }
     }
   }
