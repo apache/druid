@@ -61,6 +61,7 @@ import './execution-stages-pane.scss';
 const MAX_STAGE_ROWS = 20;
 const MAX_DETAIL_ROWS = 20;
 const NOT_SIZE_ON_DISK = '(does not represent size on disk)';
+const NO_SIZE_INFO = 'no size info';
 
 function summarizeTableInput(tableStageInput: StageInput): string {
   if (tableStageInput.type !== 'table') return '';
@@ -271,7 +272,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                       title={
                         c.bytes
                           ? `Uncompressed size: ${formatBytesCompact(c.bytes)} ${NOT_SIZE_ON_DISK}`
-                          : undefined
+                          : NO_SIZE_INFO
                       }
                     />
                     {Boolean(c.totalFiles) && (
@@ -378,7 +379,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                     title={
                       c.bytes
                         ? `Uncompressed size: ${formatBytesCompact(c.bytes)} ${NOT_SIZE_ON_DISK}`
-                        : undefined
+                        : NO_SIZE_INFO
                     }
                   />
                 );
@@ -395,19 +396,15 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const hasCounter = stages.hasCounterForStage(stage, inputCounter);
     const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
+    const inputLabel = `${formatInputLabel(stage, inputNumber)} (input${inputNumber})`;
     return (
       <div
         className="data-transfer"
         key={inputNumber}
         title={
           bytes
-            ? `${formatInputLabel(
-                stage,
-                inputNumber,
-              )} (input${inputNumber}) uncompressed size: ${formatBytesCompact(
-                bytes,
-              )} ${NOT_SIZE_ON_DISK}`
-            : undefined
+            ? `${inputLabel} uncompressed size: ${formatBytesCompact(bytes)} ${NOT_SIZE_ON_DISK}`
+            : `${inputLabel}: ${NO_SIZE_INFO}`
         }
       >
         <BracedText
@@ -510,7 +507,7 @@ ${title} uncompressed size: ${formatBytesCompact(
     if (!stages.hasCounterForStage(stage, 'segmentGenerationProgress')) return;
 
     return (
-      <div className="data-transfer">
+      <div className="data-transfer" title={NO_SIZE_INFO}>
         <BracedText
           text={formatRows(stages.getTotalSegmentGenerationProgressForStage(stage, field))}
           braces={rowsValues}

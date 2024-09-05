@@ -26,6 +26,7 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
+  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -76,14 +77,14 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
-const tableColumns: Record<CapabilitiesMode, string[]> = {
+const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
     'Segment ID',
     'Datasource',
     'Start',
     'End',
     'Version',
-    'Time span',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -105,6 +106,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -260,7 +262,7 @@ END AS "time_span"`,
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
             if (f.id === 'shard_type') {
-              // Special handling for shard_type that needs to be search in the shard_spec
+              // Special handling for shard_type that needs to be searched for in the shard_spec
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
               const modeAndNeedle = parseFilterModeAndNeedle(f);
               if (!modeAndNeedle) return;
@@ -1008,7 +1010,7 @@ END AS "time_span"`,
               disabled={!capabilities.hasSqlOrCoordinatorAccess()}
             />
             <TableColumnSelector
-              columns={tableColumns[capabilities.getMode()]}
+              columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
               onChange={column =>
                 this.setState(prevState => ({
                   visibleColumns: prevState.visibleColumns.toggle(column),

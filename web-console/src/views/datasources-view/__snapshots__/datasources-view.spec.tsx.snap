@@ -67,17 +67,35 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "Availability",
           "Historical load/drop queues",
           "Total data size",
-          "Running tasks",
+          {
+            "label": "sys.tasks",
+            "text": "Running tasks",
+          },
           "Segment rows",
           "Segment size",
-          "Segment granularity",
+          {
+            "label": "𝑓(sys.segments)",
+            "text": "Segment granularity",
+          },
           "Total rows",
           "Avg. row size",
           "Replicated size",
-          "Compaction",
-          "% Compacted",
-          "Left to be compacted",
-          "Retention",
+          {
+            "label": "compaction API",
+            "text": "Compaction",
+          },
+          {
+            "label": "compaction API",
+            "text": "% Compacted",
+          },
+          {
+            "label": "compaction API",
+            "text": "Left to be compacted",
+          },
+          {
+            "label": "rules API",
+            "text": "Retention",
+          },
         ]
       }
       onChange={[Function]}
