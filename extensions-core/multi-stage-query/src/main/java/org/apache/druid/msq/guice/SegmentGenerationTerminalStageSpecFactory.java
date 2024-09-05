@@ -27,7 +27,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 /**
  * Configures ingestion queries to create new segments with the results in all cases.
  */
-public class NewSegmentsStageSpecFactory implements MSQTerminalStageSpecFactory
+public class SegmentGenerationTerminalStageSpecFactory implements MSQTerminalStageSpecFactory
 {
   @Override
   public TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext)
