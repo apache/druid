@@ -166,7 +166,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
         if (value instanceof Object[] || value instanceof List) {
           throw InvalidInput.exception(
               "Encountered a multi value column [%s]. Window processing does not support MVDs. "
-              + "Try considering grouping on the column or use MV_TO_ARRAY()",
+              + "Consider using UNNEST or MV_TO_ARRAY.",
               name
           );
         }

@@ -262,13 +262,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                  + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                  + "order by 1, 2, 3")
             .queryContext(DEFAULT_QUERY_CONTEXT)
-            .expectedResults(ImmutableList.of())
             .run()
     );
 
     assertEquals(
         "Encountered a multi value column [v0]. Window processing does not support MVDs. "
-        + "Try considering grouping on the column or use MV_TO_ARRAY()",
+        + "Consider using UNNEST or MV_TO_ARRAY.",
         e.getMessage()
     );
   }
