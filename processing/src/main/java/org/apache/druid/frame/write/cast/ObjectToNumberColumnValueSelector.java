@@ -21,10 +21,10 @@ package org.apache.druid.frame.write.cast;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.RowIdSupplier;
-import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 
@@ -35,7 +35,7 @@ import javax.annotation.Nullable;
 public class ObjectToNumberColumnValueSelector implements ColumnValueSelector<Number>
 {
   private final ColumnValueSelector<?> selector;
-  private final ColumnType desiredType;
+  private final ExpressionType desiredType;
 
   @Nullable
   private final RowIdSupplier rowIdSupplier;
@@ -50,7 +50,7 @@ public class ObjectToNumberColumnValueSelector implements ColumnValueSelector<Nu
    */
   ObjectToNumberColumnValueSelector(
       final ColumnValueSelector<?> selector,
-      final ColumnType desiredType,
+      final ExpressionType desiredType,
       @Nullable final RowIdSupplier rowIdSupplier
   )
   {

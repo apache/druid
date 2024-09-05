@@ -88,7 +88,7 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     Assert.assertEquals(12.3d, selector.getDouble(), 0.001);
     Assert.assertEquals(12.3f, selector.getFloat(), 0);
     Assert.assertFalse(selector.isNull());
-    Assert.assertEquals(12.3f, selector.getObject());
+    Assert.assertEquals(12.3d, selector.getObject());
   }
 
   @Test

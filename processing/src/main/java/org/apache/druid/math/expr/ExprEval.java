@@ -519,6 +519,12 @@ public abstract class ExprEval<T>
     return ofComplex(ExpressionType.UNKNOWN_COMPLEX, val);
   }
 
+  /**
+   * Create an eval of the provided type. Coerces the provided object to the desired type.
+   *
+   * @param type  type, or null to be equivalent to {@link #bestEffortOf(Object)}
+   * @param value object to be coerced to the type
+   */
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
   {
     if (type == null) {

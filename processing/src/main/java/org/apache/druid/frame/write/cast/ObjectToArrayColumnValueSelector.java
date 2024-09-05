@@ -21,11 +21,10 @@ package org.apache.druid.frame.write.cast;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.RowIdSupplier;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
@@ -37,13 +36,13 @@ public class ObjectToArrayColumnValueSelector implements ColumnValueSelector<Obj
 {
   private final ColumnValueSelector<?> selector;
   @Nullable
-  private final ColumnType desiredType;
+  private final ExpressionType desiredType;
   @Nullable
   private final RowIdSupplier rowIdSupplier;
 
   public ObjectToArrayColumnValueSelector(
       final ColumnValueSelector<?> selector,
-      final ColumnType desiredType,
+      final ExpressionType desiredType,
       @Nullable final RowIdSupplier rowIdSupplier
   )
   {
@@ -51,7 +50,7 @@ public class ObjectToArrayColumnValueSelector implements ColumnValueSelector<Obj
     this.desiredType = desiredType;
     this.rowIdSupplier = rowIdSupplier;
 
-    if (!desiredType.is(ValueType.ARRAY) || desiredType.getElementType() == null) {
+    if (!desiredType.isArray() || desiredType.getElementType() == null) {
       throw DruidException.defensive("Expected array with nonnull element type, got[%s]", desiredType);
     }
   }
