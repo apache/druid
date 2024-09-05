@@ -33,7 +33,7 @@ The supervisor oversees the state of the indexing tasks to coordinate handoffs, 
 
 Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. 
 
-This topic contains configuration information for the Amazon Kinesis indexing service supervisor for Apache Druid.
+This topic contains configuration information for the Kinesis indexing service supervisor for Apache Druid.
 
 ## Setup
 
@@ -127,9 +127,9 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
 
 ### `ioConfig`
 
-The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
+The `ioConfig` influences how data is read from a source system, such as Amazon Kinesis, Amazon S3, a mounted filesystem, or any other supported source system.
 
-The following table outlines the `ioConfig` configuration properties specific to Amazon Kinesis.
+The following table outlines the `ioConfig` configuration properties specific to Kinesis.
 
 For configuration properties shared across all supervisor-led ingestion, refer to the [supervisor `ioConfig`](supervisor.md#ioconfig).
 
@@ -159,9 +159,9 @@ You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift
 
 ### `tuningConfig`
 
-Specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
+You specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
 
-The following table outlines the `tuningConfig` configuration properties specific to Amazon Kinesis.
+The following table outlines the `tuningConfig` configuration properties specific to Kinesis.
 
 For configuration properties shared across all supervisor-led ingestion, refer to the [supervisor `tuningConfig`](supervisor.md#tuningconfig).
 

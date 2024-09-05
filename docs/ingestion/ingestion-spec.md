@@ -476,9 +476,9 @@ An example `ioConfig` to read JSON data is:
 
 ## `tuningConfig`
 
-Specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
+You specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
 
-For details, see the documentation for `tuningConfig`  for each [ingestion method](./index.md#ingestion-methods).
+For details, see the documentation for `tuningConfig` for each [ingestion method](./index.md#ingestion-methods).
 
 The following table lists the common tuning properties shared by all ingestion methods:
 
@@ -487,9 +487,9 @@ The following table lists the common tuning properties shared by all ingestion m
 |`type`|Each ingestion method has its own tuning type code. You must specify the type code that matches your ingestion method. Common options are `index`, `hadoop`, `kafka`, and `kinesis`.||
 |`maxRowsInMemory`|The maximum number of records to store in memory before persisting to disk. Note that this is the number of rows post-rollup, and so it may not be equal to the number of input records. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first).|`1000000`|
 |`maxBytesInMemory`|The maximum aggregate size of records, in bytes, to store in the JVM heap before persisting. This is based on a rough estimate of memory usage. Ingested records will be persisted to disk when either `maxRowsInMemory` or `maxBytesInMemory` are reached (whichever happens first). `maxBytesInMemory` also includes heap usage of artifacts created from intermediary persists. This means that after every persist, the amount of `maxBytesInMemory` until the next persist will decrease. If the sum of bytes of all intermediary persisted artifacts exceeds `maxBytesInMemory` the task fails.<br /><br />Setting `maxBytesInMemory` to -1 disables this check, meaning Druid will rely entirely on `maxRowsInMemory` to control memory usage. Setting it to zero means the default value will be used (one-sixth of JVM heap size).<br /><br />Note that the estimate of memory usage is designed to be an overestimate, and can be especially high when using complex ingest-time aggregators, including sketches. If this causes your indexing workloads to persist to disk too often, you can set `maxBytesInMemory` to -1 and rely on `maxRowsInMemory` instead.|One-sixth of max JVM heap size|
-|`skipBytesInMemoryOverheadCheck`|The calculation of maxBytesInMemory takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from maxBytesInMemory check.|false|
-|[`indexSpec`](#indexspec)|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
-|[`indexSpecForIntermediatePersists`](#indexspec)|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
+|`skipBytesInMemoryOverheadCheck`|The calculation of `maxBytesInMemory` takes into account overhead objects created during ingestion and each intermediate persist. Setting this to true can exclude the bytes of these overhead objects from `maxBytesInMemory` check.|false|
+|`indexSpec`|Defines segment storage format options to use at indexing time.|See [`indexSpec`](#indexspec) for more information.|
+|`indexSpecForIntermediatePersists`|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments.|See [`indexSpec`](#indexspec) for more information.|
 |Other properties|Each ingestion method has its own list of additional tuning properties. See the documentation for each method for a full list: [Kafka indexing service](../ingestion/kafka-ingestion.md#tuningconfig), [Kinesis indexing service](../ingestion/kinesis-ingestion.md#tuningconfig), [Native batch](native-batch.md#tuningconfig), and [Hadoop-based](hadoop.md#tuningconfig).||
 
 The following example shows a `tuningConfig` object that sets all of the shared common properties to their defaults:
@@ -519,10 +519,10 @@ For information on defining an `indexSpec` in a query context, see [SQL-based in
 |`bitmap`|Compression format for bitmap indexes. Should be a JSON object with `type` set to `roaring` or `concise`.|`{"type": "roaring"}`|
 |`dimensionCompression`|Compression format for dimension columns. One of `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 |`stringDictionaryEncoding`|Encoding format for string value dictionaries used by STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns. To enable front coding, set `stringDictionaryEncoding.type` to `frontCoded`. Optionally, you can specify the `bucketSize` and `formatVersion` properties. See [Front coding](#front-coding) for more information.|`{"type":"utf8"}`|
-|`metricCompression`|Compression format for primitive type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`, or `none` (which is more efficient than `uncompressed`, but not supported by older versions of Druid).|`lz4`|
-|`longEncoding`|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
-|`complexMetricCompression`|Compression format for complex type metric columns. Options are `lz4`, `lzf`, `zstd`, `uncompressed`. Options other than `uncompressed` are not compatible with Druid versions older than 31, and only applies to complex metrics which do not have specialized column formats.|`uncompressed`|
-|`jsonCompression`|Compression format to use for nested column raw data. Options are `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
+|`metricCompression`|Compression format for primitive type metric columns. One of `lz4`, `lzf`, `zstd`, `uncompressed`, or `none`. `none` is more efficient than `uncompressed`, but it's not supported by older versions of Druid.|`lz4`|
+|`longEncoding`|Encoding format for long-typed columns. Applies regardless of whether they are dimensions or metrics. Options are `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality and stores them with variable size. `longs` stores the value as-is with 8 bytes each.|`longs`|
+|`complexMetricCompression`|Compression format for complex type metric columns. One of `lz4`, `lzf`, `zstd`, `uncompressed`. Options other than `uncompressed` are not compatible with Druid versions older than 31 and only apply to complex metrics which do not have specialized column formats.|`uncompressed`|
+|`jsonCompression`|Compression format to use for nested column raw data. One of `lz4`, `lzf`, `zstd`, or `uncompressed`.|`lz4`|
 
 #### Front coding
 

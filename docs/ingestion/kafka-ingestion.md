@@ -29,13 +29,13 @@ To use the Kafka indexing service, you must be on Apache Kafka version 0.11.x or
 If you are using an older version, refer to the [Apache Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
 :::
 
-When you enable the Apache Kafka indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Apache Kafka indexing tasks.
+When you enable the Apache Kafka indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kafka indexing tasks.
 
 The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
 
 Kafka indexing tasks read events using Kafka partition and offset mechanism to guarantee exactly-once ingestion. 
 
-This topic contains configuration information for the Apache Kafka indexing service supervisor for Apache Druid.
+This topic contains configuration information for the Kafka indexing service supervisor for Apache Druid.
 
 ## Setup
 
@@ -43,7 +43,7 @@ To use the Kafka indexing service, you must first load the `druid-kafka-indexing
 
 ## `spec`
 
-This section outlines the configuration properties that are specific to supervisor-led streaming ingestion for Apache Kafka.
+This section outlines the configuration properties that are specific to supervisor-led streaming ingestion for Kafka.
 
 For configuration properties shared across all streaming ingestion methods supported by Druid, see [supervisor spec](supervisor.md#spec).
 
@@ -122,7 +122,7 @@ The following example shows a supervisor spec for the Kafka indexing service:
 
 The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
 
-The following table outlines the `ioConfig` configuration properties specific to Apache Kafka.
+The following table outlines the `ioConfig` configuration properties specific to Kafka.
 
 For configuration properties shared across all supervisor-led ingestion, refer to [supervisor `ioConfig`](supervisor.md#ioconfig).
 
@@ -423,7 +423,7 @@ This query returns:
 
 ### `tuningConfig`
 
-Specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
+You specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
 
 The following table outlines the `tuningConfig` configuration properties specific to Apache Kafka.
 
