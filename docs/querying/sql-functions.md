@@ -1154,14 +1154,14 @@ Returns the following:
 
 ## GREATEST
 
-Returns the maximum value from the provided expressions. The [following rules](sql-scalar.md#reduction-functions) determine how Druid compares between different data types.
+Returns the maximum value from the provided expressions. For information on how Druid interprets the arguments passed into the function, see [Reduction functions](sql-scalar.md#reduction-functions).
 
 * **Syntax:** `GREATEST([expr1, ...])`
 * **Function type:** Scalar, reduction
 
 <details><summary>Example</summary>
 
-The following example returns the greatest value between the numeric constant `PI`, the integer number `4`, and the double `-5.0`. Druid interprets all expressions as doubles to make comparison between integers and doubles possible. 
+The following example returns the greatest value between the numeric constant `PI`, the integer number `4`, and the double `-5.0`. Druid interprets these arguments as DOUBLE data type.
 
 ```sql
 SELECT GREATEST(PI, 4, -5.0) AS "greatest"
@@ -1444,14 +1444,14 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 ## LEAST
 
-Returns the minimum value from the provided expressions. The [following rules](sql-scalar.md#reduction-functions) determine how Druid compares between different data types.
+Returns the minimum value from the provided expressions. For information on how Druid interprets the arguments passed into the function, see [Reduction functions](sql-scalar.md#reduction-functions).
 
 * **Syntax:** `LEAST([expr1, ...])`
 * **Function type:** Scalar, reduction
 
 <details><summary>Example</summary>
 
-The following example returns the minimum value between the strings `apple`, `orange`, and `pear`. Druid compares the expressions as strings because they're all already in string format. 
+The following example returns the minimum value between the strings `apple`, `orange`, and `pear`. Druid interprets these arguments as STRING data type. 
 
 ```sql
 SELECT LEAST( 'apple', 'orange', 'pear') AS "least"
