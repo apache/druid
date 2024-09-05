@@ -61,6 +61,15 @@ public class TypeCastSelectors
     );
   }
 
+  /**
+   * Wraps a {@link ColumnValueSelector} with a type casting selector if necessary. If typecasting is not necessary,
+   * returns the original selector.
+   *
+   * @param selector             selector
+   * @param selectorCapabilities capabilities for the selector, from {@link ColumnSelectorFactory#getColumnCapabilities}
+   * @param rowIdSupplier        row id supplier, from {@link ColumnSelectorFactory#getRowIdSupplier()}
+   * @param desiredType          desired type for the returned selector
+   */
   public static ColumnValueSelector<?> wrapColumnValueSelectorIfNeeded(
       final ColumnValueSelector<?> selector,
       @Nullable final ColumnCapabilities selectorCapabilities,
