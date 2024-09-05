@@ -27,8 +27,8 @@ This topic provides a high-level overview of how Apache Druid distributes and pr
 The general flow is as follows:
 
 1. A query enters the [Broker](../design/broker.md) service, which identifies the segments with data that may pertain to that query. The list of segments is always pruned by time, and may also be pruned by other attributes depending on how the datasource is partitioned.
-2. The Broker identifies which [Historical](../design/historical.md) and [MiddleManager](../design/middlemanager.md) services are serving those segments and distributes a rewritten subquery to each of the services.
-3. The Historical and MiddleManager services execute each subquery and return results to the Broker.
+2. The Broker identifies which [Historical](../design/historical.md) and [Middle Manager](../design/middlemanager.md) services are serving those segments and distributes a rewritten subquery to each of the services.
+3. The Historical and Middle Manager services execute each subquery and return results to the Broker.
 4. The Broker merges the partial results to get the final answer, which it returns to the original caller.
 
 Druid uses time and attribute pruning to minimize the data it must scan for each query.

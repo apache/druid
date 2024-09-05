@@ -1,7 +1,7 @@
 ---
 id: middlemanager
-title: "MiddleManager service"
-sidebar_label: "MiddleManager"
+title: "Middle Manager service"
+sidebar_label: "Middle Manager"
 ---
 
 <!--
@@ -23,18 +23,18 @@ sidebar_label: "MiddleManager"
   ~ under the License.
   -->
 
-The MiddleManager service is a worker service that executes submitted tasks. MiddleManagers forward tasks to [Peons](../design/peons.md) that run in separate JVMs.
-Druid uses separate JVMs for tasks to isolate resources and logs. Each Peon is capable of running only one task at a time, wheres a MiddleManager may have multiple Peons.
+The Middle Manager service is a worker service that executes submitted tasks. Middle Managers forward tasks to [Peons](../design/peons.md) that run in separate JVMs.
+Druid uses separate JVMs for tasks to isolate resources and logs. Each Peon is capable of running only one task at a time, whereas a Middle Manager may have multiple Peons.
 
 ## Configuration
 
-For Apache Druid MiddleManager service configuration, see [MiddleManager and Peons](../configuration/index.md#middlemanager-and-peons).
+For Apache Druid Middle Manager service configuration, see [Middle Manager and Peons](../configuration/index.md#middle-manager-and-peon).
 
-For basic tuning guidance for the MiddleManager service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middlemanager).
+For basic tuning guidance for the Middle Manager service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middle-manager).
 
 ## HTTP endpoints
 
-For a list of API endpoints supported by the MiddleManager, see the [Service status API reference](../api-reference/service-status-api.md#middlemanager).
+For a list of API endpoints supported by the Middle Manager, see the [Service status API reference](../api-reference/service-status-api.md#middle-manager).
 
 ## Running
 

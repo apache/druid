@@ -27,7 +27,7 @@ Loading data in Druid is called _ingestion_ or _indexing_. When you ingest data 
 your source system and stores it in data files called [_segments_](../design/segments.md).
 In general, segment files contain a few million rows each.
 
-For most ingestion methods, the Druid [MiddleManager](../design/middlemanager.md) processes or the
+For most ingestion methods, the Druid [Middle Manager](../design/middlemanager.md) processes or the
 [Indexer](../design/indexer.md) processes load your source data. The sole exception is Hadoop-based ingestion, which
 uses a Hadoop MapReduce job on YARN.
 
