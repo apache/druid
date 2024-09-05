@@ -26,6 +26,7 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
+  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -76,7 +77,7 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
-const tableColumns: Record<CapabilitiesMode, string[]> = {
+const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
     'Segment ID',
     'Datasource',
@@ -1008,7 +1009,7 @@ END AS "time_span"`,
               disabled={!capabilities.hasSqlOrCoordinatorAccess()}
             />
             <TableColumnSelector
-              columns={tableColumns[capabilities.getMode()]}
+              columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
               onChange={column =>
                 this.setState(prevState => ({
                   visibleColumns: prevState.visibleColumns.toggle(column),
