@@ -109,7 +109,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
             RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
                 query,
                 () -> outputRow,
-                RowSignature.Finalization.YES
+                GroupByQueryKit.isFinalize(query) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
             )
         );
   }

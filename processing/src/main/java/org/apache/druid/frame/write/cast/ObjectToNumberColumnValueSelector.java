@@ -20,8 +20,7 @@
 package org.apache.druid.frame.write.cast;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.RowIdSupplier;
@@ -31,31 +30,37 @@ import javax.annotation.Nullable;
 
 /**
  * Wraps a {@link ColumnValueSelector}, calls {@link ColumnValueSelector#getObject()} and provides primitive numeric
- * accessors based on that object value. The object is interpreted as a double.
+ * accessors based on that object value.
  */
-public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Double>
+public class ObjectToNumberColumnValueSelector implements ColumnValueSelector<Number>
 {
   private final ColumnValueSelector<?> selector;
-
-  @Nullable
-  private final ExpressionType selectorType;
+  private final ColumnType desiredType;
 
   @Nullable
   private final RowIdSupplier rowIdSupplier;
 
   @Nullable
-  private Double currentValue;
+  private Number currentValue;
   private long currentRowId = RowIdSupplier.INIT;
 
-  public ObjectToDoubleColumnValueSelector(
+  /**
+   * Package-private; create using {@link TypeCastSelectors#makeColumnValueSelector} or
+   * {@link TypeCastSelectors#wrapColumnValueSelectorIfNeeded}.
+   */
+  ObjectToNumberColumnValueSelector(
       final ColumnValueSelector<?> selector,
-      @Nullable final ColumnType selectorType,
+      final ColumnType desiredType,
       @Nullable final RowIdSupplier rowIdSupplier
   )
   {
     this.selector = selector;
-    this.selectorType = ExpressionType.fromColumnType(selectorType);
+    this.desiredType = desiredType;
     this.rowIdSupplier = rowIdSupplier;
+
+    if (!desiredType.isNumeric()) {
+      throw DruidException.defensive("Expected numeric type, got[%s]", desiredType);
+    }
   }
 
   @Override
@@ -87,15 +92,15 @@ public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Do
 
   @Nullable
   @Override
-  public Double getObject()
+  public Number getObject()
   {
     return computeIfNeeded();
   }
 
   @Override
-  public Class<Double> classOfObject()
+  public Class<Number> classOfObject()
   {
-    return Double.class;
+    return Number.class;
   }
 
   @Override
@@ -106,7 +111,7 @@ public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Do
   }
 
   @Nullable
-  private Double computeIfNeeded()
+  private Number computeIfNeeded()
   {
     if (rowIdSupplier == null) {
       return eval();
@@ -123,14 +128,8 @@ public class ObjectToDoubleColumnValueSelector implements ColumnValueSelector<Do
   }
 
   @Nullable
-  private Double eval()
+  private Number eval()
   {
-    final Object obj = selector.getObject();
-    if (obj == null) {
-      return null;
-    } else {
-      final ExprEval<?> eval = ExprEval.ofType(selectorType, obj);
-      return eval.isNumericNull() ? null : eval.asDouble();
-    }
+    return (Number) TypeCastSelectors.bestEffortCoerce(selector.getObject(), desiredType);
   }
 }

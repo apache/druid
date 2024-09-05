@@ -22,8 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -34,6 +32,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.segment.nested.StructuredData;
@@ -446,7 +445,8 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
     } else {
       final Function<T, Object> columnFunction = adapter.columnFunction(columnName);
       final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(columnName);
-      final ExpressionType desiredType = ExpressionType.fromColumnType(capabilities);
+      final ValueType numberType =
+          capabilities != null && capabilities.getType().isNumeric() ? capabilities.getType() : null;
 
       return new ColumnValueSelector<Object>()
       {
@@ -512,7 +512,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         {
           if (rowIdSupplier == null || rowIdSupplier.getRowId() != currentValueId) {
             try {
-              currentValue = coerce(columnFunction.apply(rowSupplier.get()));
+              currentValue = columnFunction.apply(rowSupplier.get());
             }
             catch (Throwable e) {
               currentValueId = RowIdSupplier.INIT;
@@ -533,12 +533,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
             try {
               final Object valueToUse =
                   currentValue instanceof StructuredData ? ((StructuredData) currentValue).getValue() : currentValue;
-              currentValueAsNumber = Rows.objectToNumber(
-                  columnName,
-                  valueToUse,
-                  capabilities != null && capabilities.isNumeric() ? capabilities.getType() : null,
-                  throwParseExceptions
-              );
+              currentValueAsNumber = Rows.objectToNumber(columnName, valueToUse, numberType, throwParseExceptions);
             }
             catch (Throwable e) {
               currentValueAsNumberId = RowIdSupplier.INIT;
@@ -548,37 +543,6 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
             if (rowIdSupplier != null) {
               currentValueAsNumberId = rowIdSupplier.getRowId();
             }
-          }
-        }
-
-        @Nullable
-        private Object coerce(@Nullable final Object obj)
-        {
-          if (needsCoerce(obj)) {
-            return ExprEval.bestEffortOf(obj).castTo(desiredType).value();
-          } else {
-            return obj;
-          }
-        }
-
-        private boolean needsCoerce(@Nullable final Object obj)
-        {
-          if (obj == null || desiredType == null) {
-            return false;
-          }
-
-          switch (desiredType.getType()) {
-            case LONG:
-            case DOUBLE:
-              return !(obj instanceof Number);
-            case STRING:
-              return !(obj instanceof String || obj instanceof List || obj instanceof Object[]);
-            case ARRAY:
-              return !(obj instanceof Object[]);
-            case COMPLEX:
-              return false;
-            default:
-              return true;
           }
         }
       };
