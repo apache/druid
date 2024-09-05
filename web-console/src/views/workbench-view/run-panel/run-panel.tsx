@@ -601,7 +601,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     />
                   </>
                 )}
-                {effectiveEngine !== 'native' && (
+                {effectiveEngine !== 'native' && effectiveEngine !== 'sql-msq-task' && (
                   <MenuBoolean
                     icon={IconNames.ROCKET_SLANT}
                     text="Approximate COUNT(DISTINCT)"
