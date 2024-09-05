@@ -1413,7 +1413,7 @@ This section contains the configuration options for the services that reside on 
 
 Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
-### Middle Manager and Peons
+### Middle Manager and Peon
 
 These Middle Manager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
 
