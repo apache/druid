@@ -123,15 +123,19 @@ exports[`MaxTasksButton matches snapshot 1`] = `
                 <strong>
                   Auto
                 </strong>
-                : Use the minimum number of tasks while
+                : uses the minimum number of tasks while
                  
-                <a
-                  href="https://druid.apache.org/docs/latest/multi-stage-query/reference#context-parameters"
+                <span
                   onClick={[Function]}
-                  target="_blank"
+                  style={
+                    {
+                      "color": "#3eadf9",
+                      "cursor": "pointer",
+                    }
+                  }
                 >
-                  staying within constrain.
-                </a>
+                  staying within constraints.
+                </span>
               </React.Fragment>
             }
           />
