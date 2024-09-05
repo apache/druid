@@ -761,6 +761,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
 
     final Set<SegmentId> retVal = new HashSet<>();
+
+    logSegmentsToRefresh(dataSource, segments);
+
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
     );
@@ -803,6 +806,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     );
 
     return retVal;
+  }
+
+  /**
+   * Log the segment details for a datasource to be refreshed for debugging purpose.
+   */
+  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  {
+    // no-op
   }
 
   /**
