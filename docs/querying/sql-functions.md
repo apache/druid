@@ -1366,14 +1366,14 @@ Returns the following:
 
 ## IPV4_STRINGIFY
 
-Converts `address` into an IPv4 address in dot-decimal notation.
+Converts an IPv4 `address` in integer notation into dot-decimal notation.
 
 * **Syntax:** `IPV4_STRINGIFY(address)`
 * **Function type:** Scalar, IP address
 
 <details><summary>Example</summary>
 
-The following example returns the integer `84215045` in its IPv4 dot-decimal notation.
+The following example returns the integer `84215045` in IPv4 dot-decimal notation.
 
 ```sql
 SELECT 
