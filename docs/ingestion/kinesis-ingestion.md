@@ -33,7 +33,7 @@ This topic contains configuration information for the Kinesis indexing service s
 
 ## Setup
 
-To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
+To use the Kinesis indexing service, you must first load the `druid-kinesis-indexing-service` core extension on both the Overlord and the Middle Manager. See [Loading extensions](../configuration/extensions.md#loading-extensions) for more information.
 
 Review [Known issues](#known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
@@ -249,7 +249,7 @@ At this point, the task creates a new shard for this segment granularity to cont
 
 The Kinesis indexing task also performs incremental hand-offs so that the segments created by the task are not held up until the task duration is over.
 When the task reaches one of the `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod` limits, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations
-without accumulating old segments locally on MiddleManager services.
+without accumulating old segments locally on Middle Manager services.
 
 The Kinesis indexing service may still produce some small segments.
 For example, consider the following scenario:

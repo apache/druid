@@ -1847,7 +1847,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(5),
+                .with().rows(4),
             1, 0, "shuffle"
         )
         .setExpectedCountersForStageWorkerChannel(
@@ -1862,7 +1862,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(5),
+                .with().rows(4),
             2, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
