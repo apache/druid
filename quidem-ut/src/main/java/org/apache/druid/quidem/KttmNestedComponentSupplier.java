@@ -20,6 +20,7 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Injector;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -120,9 +121,13 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
-        ResourceInputSource inputSource = ResourceInputSource.of(
-            TestIndex.class.getClassLoader(),
-            "kttm-nested-v2-2019-08-25.json"
+        InputSource inputSource = new ScaledResoureInputDataSource(
+            1,
+            100,
+            ResourceInputSource.of(
+                TestIndex.class.getClassLoader(),
+                "kttm-nested-v2-2019-08-25.json"
+            )
         );
         return IndexBuilder
             .create()
