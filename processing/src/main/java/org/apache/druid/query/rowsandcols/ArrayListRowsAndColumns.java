@@ -163,7 +163,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
       // special handling to reject MVDs
       adapterForValue = f -> {
         Object value = rowAdapter.columnFunction(name).apply(f);
-        if (value instanceof Object[] || value instanceof List) {
+        if (value instanceof List) {
           throw InvalidInput.exception(
               "Encountered a multi value column [%s]. Window processing does not support MVDs. "
               + "Consider using UNNEST or MV_TO_ARRAY.",
