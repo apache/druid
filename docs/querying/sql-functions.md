@@ -1071,7 +1071,7 @@ SELECT
   "OriginState" AS "origin_state",
   "DestState" AS "destination_state",
   DS_HLL("Tail_Number") AS "hll_tail_number",
-  COUNT(DISTINCT "Reporting_Airline") AS "group_rows"
+  COUNT(DISTINCT "Tail_Number") AS "grouped_rows"
 FROM "flight-carriers"
 GROUP BY 1,2
 LIMIT 1
@@ -1081,7 +1081,7 @@ Returns the following:
 
 | `origin_state` | `destination_state` | `hll_tail_number` | `grouped_rows`|
 | -- | -- | -- | -- | 
-| `AK` | `AK` | `"AwEHDAcIAAFBAAAA..."` | `1` | 
+| `AK` | `AK` | `"AwEHDAcIAAFBAAAAfY..."` | `64` | 
 
 </details>
 
