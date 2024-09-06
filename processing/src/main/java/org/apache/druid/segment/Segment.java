@@ -20,6 +20,8 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.query.datasourcemetadata.DataSourceMetadataResultValue;
+import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -36,11 +38,14 @@ import java.io.Closeable;
 public interface Segment extends Closeable
 {
   SegmentId getId();
+
   Interval getDataInterval();
+
   @Nullable
   QueryableIndex asQueryableIndex();
+
   StorageAdapter asStorageAdapter();
-  
+
   /**
    * Request an implementation of a particular interface.
    *
@@ -49,14 +54,22 @@ public interface Segment extends Closeable
    * expected to be requested by callers that have specific knowledge of extra features provided by specific
    * segment types. For example, an extension might provide a custom Segment type that can offer both
    * StorageAdapter and some new interface. That extension can also offer a Query that uses that new interface.
-   * 
-   * Implementations which accept classes other than {@link QueryableIndex} or {@link StorageAdapter} are limited 
-   * to using those classes within the extension. This means that one extension cannot rely on the `Segment.as` 
+   *
+   * Implementations which accept classes other than {@link QueryableIndex} or {@link StorageAdapter} are limited
+   * to using those classes within the extension. This means that one extension cannot rely on the `Segment.as`
    * behavior of another extension.
    *
    * @param clazz desired interface
-   * @param <T> desired interface
+   * @param <T>   desired interface
+   *
    * @return instance of clazz, or null if the interface is not supported by this segment
+   *
+   * @see StorageAdapter storage adapter for queries. Never null.
+   * @see QueryableIndex index object, if this is a memory-mapped regular segment.
+   * @see IndexedTable table object, if this is a joinable indexed table.
+   * @see TimeBoundaryInspector inspector for min/max timestamps, if supported by this segment.
+   * @see MaxIngestedEventTimeInspector inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}
+   * @see CloseableShapeshifter stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.
    */
   @SuppressWarnings({"unused", "unchecked"})
   @Nullable

@@ -92,6 +92,7 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
+import org.apache.druid.msq.guice.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -141,6 +142,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -209,7 +211,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -549,7 +550,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
-        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules())
+        qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
+        new SegmentGenerationTerminalStageSpecFactory()
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
@@ -1288,17 +1290,20 @@ public class MSQTestBase extends BaseCalciteQueryTest
           Assert.assertEquals(expectedDestinationIntervals, destination.getReplaceTimeChunks());
         }
         if (expectedSegments != null) {
+          final int timeIndex =
+              MSQResultsReport.ColumnAndType.toRowSignature(expectedRowSignature)
+                                            .indexOf(ColumnHolder.TIME_COLUMN_NAME);
           Assert.assertEquals(expectedSegments, segmentIdVsOutputRowsMap.keySet());
           for (Object[] row : transformedOutputRows) {
-            List<SegmentId> diskSegmentList = segmentIdVsOutputRowsMap.keySet()
-                                                                      .stream()
-                                                                      .filter(segmentId -> segmentId.getInterval()
-                                                                                                    .contains((Long) row[0]))
-                                                                      .filter(segmentId -> {
-                                                                        List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
-                                                                        return lists.contains(Arrays.asList(row));
-                                                                      })
-                                                                      .collect(Collectors.toList());
+            List<SegmentId> diskSegmentList = segmentIdVsOutputRowsMap
+                .keySet()
+                .stream()
+                .filter(segmentId -> segmentId.getInterval().contains((Long) row[timeIndex]))
+                .filter(segmentId -> {
+                  List<List<Object>> lists = segmentIdVsOutputRowsMap.get(segmentId);
+                  return lists.contains(Arrays.asList(row));
+                })
+                .collect(Collectors.toList());
             if (diskSegmentList.size() != 1) {
               throw new IllegalStateException("Single key in multiple partitions");
             }

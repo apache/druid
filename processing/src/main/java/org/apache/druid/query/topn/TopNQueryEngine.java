@@ -19,28 +19,32 @@
 
 package org.apache.druid.query.topn;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.filter.Filters;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Collections;
 
 /**
  */
@@ -57,13 +61,14 @@ public class TopNQueryEngine
   /**
    * Do the thing - process a {@link StorageAdapter} into a {@link Sequence} of {@link TopNResultValue}, with one of the
    * fine {@link TopNAlgorithm} available chosen based on the type of column being aggregated. The algorithm provides a
-   * mapping function to process rows from the adapter {@link org.apache.druid.segment.Cursor} to apply
-   * {@link AggregatorFactory} and create or update {@link TopNResultValue}
+   * mapping function to process rows from the adapter {@link Cursor} to apply {@link AggregatorFactory} and create or
+   * update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
       final TopNQuery query,
       final StorageAdapter adapter,
-      final @Nullable TopNQueryMetrics queryMetrics
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      @Nullable final TopNQueryMetrics queryMetrics
   )
   {
     if (adapter == null) {
@@ -72,36 +77,36 @@ public class TopNQueryEngine
       );
     }
 
-    final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
-    final Granularity granularity = query.getGranularity();
     final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
 
-    Preconditions.checkArgument(
-        queryIntervals.size() == 1,
-        "Can only handle a single interval, got[%s]",
-        queryIntervals
+    final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
+    final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec);
+    final Cursor cursor = cursorHolder.asCursor();
+    if (cursor == null) {
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+    }
+    final CursorGranularizer granularizer = CursorGranularizer.create(
+        cursor,
+        timeBoundaryInspector,
+        cursorHolder.getTimeOrder(),
+        query.getGranularity(),
+        buildSpec.getInterval()
     );
+    if (granularizer == null) {
+      return Sequences.withBaggage(Sequences.empty(), cursorHolder);
+    }
 
+    if (queryMetrics != null) {
+      queryMetrics.cursor(cursor);
+    }
     return Sequences.filter(
-        Sequences.map(
-            adapter.makeCursors(
-                filter,
-                queryIntervals.get(0),
-                query.getVirtualColumns(),
-                granularity,
-                query.isDescending(),
-                queryMetrics
-            ),
-            input -> {
-              if (queryMetrics != null) {
-                queryMetrics.cursor(input);
-              }
-              return mapFn.apply(input, queryMetrics);
-            }
-        ),
-        Predicates.notNull()
-    );
+        Sequences.simple(granularizer.getBucketIterable())
+                 .map(bucketInterval -> {
+                   granularizer.advanceToBucket(bucketInterval);
+                   return mapFn.apply(cursor, granularizer, queryMetrics);
+                 }),
+                 Predicates.notNull()
+    ).withBaggage(cursorHolder);
   }
 
   /**
@@ -132,13 +137,13 @@ public class TopNQueryEngine
 
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
-    if (canUsePooledAlgorithm(selector, query, columnCapabilities)) {
+    if (canUsePooledAlgorithm(selector, query, columnCapabilities, bufferPool, cardinality, numBytesPerRecord)) {
       // pool based algorithm selection, if we can
       if (selector.isAggregateAllMetrics()) {
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
         // this
         topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
-      } else if (selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false)) {
+      } else if (shouldUseAggregateMetricFirstAlgorithm(query, selector)) {
         // for high cardinality dimensions with larger result sets we aggregate with only the ordering aggregation to
         // compute the first 'n' values, and then for the rest of the metrics but for only the 'n' values
         topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
@@ -173,7 +178,7 @@ public class TopNQueryEngine
    * algorithm) are optimized off-heap algorithms for aggregating dictionary encoded string columns. These algorithms
    * rely on dictionary ids being unique so to aggregate on the dictionary ids directly and defer
    * {@link org.apache.druid.segment.DimensionSelector#lookupName(int)} until as late as possible in query processing.
-   *
+   * <p>
    * When these conditions are not true, we have an on-heap fall-back algorithm, the {@link HeapBasedTopNAlgorithm}
    * (and {@link TimeExtractionTopNAlgorithm} for a specialized form for long columns) which aggregates on values of
    * selectors.
@@ -181,7 +186,10 @@ public class TopNQueryEngine
   private static boolean canUsePooledAlgorithm(
       final TopNAlgorithmSelector selector,
       final TopNQuery query,
-      final ColumnCapabilities capabilities
+      final ColumnCapabilities capabilities,
+      final NonBlockingPool<ByteBuffer> bufferPool,
+      final int cardinality,
+      final int numBytesPerRecord
   )
   {
     if (selector.isHasExtractionFn()) {
@@ -193,13 +201,54 @@ public class TopNQueryEngine
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
-    if (Types.is(capabilities, ValueType.STRING)) {
-      // string columns must use the on heap algorithm unless they have the following capabilites
-      return capabilities.isDictionaryEncoded().isTrue() && capabilities.areDictionaryValuesUnique().isTrue();
-    } else {
+    if (!Types.is(capabilities, ValueType.STRING)) {
       // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
       return false;
     }
+
+    // string columns must use the on heap algorithm unless they have the following capabilites
+    if (!capabilities.isDictionaryEncoded().isTrue() || !capabilities.areDictionaryValuesUnique().isTrue()) {
+      return false;
+    }
+    if (Granularities.ALL.equals(query.getGranularity())) {
+      // all other requirements have been satisfied, ALL granularity can always use the pooled algorithms
+      return true;
+    }
+    // if not using ALL granularity, we can still potentially use the pooled algorithm if we are certain it doesn't
+    // need to make multiple passes (e.g. reset the cursor)
+    try (final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take()) {
+      final ByteBuffer resultsBuf = resultsBufHolder.get();
+
+      final int numBytesToWorkWith = resultsBuf.capacity();
+      final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
+
+      return numValuesPerPass <= cardinality;
+    }
+  }
+
+  private static boolean shouldUseAggregateMetricFirstAlgorithm(TopNQuery query, TopNAlgorithmSelector selector)
+  {
+    // must be using ALL granularity since it makes multiple passes and must reset the cursor
+    if (Granularities.ALL.equals(query.getGranularity())) {
+      return selector.isAggregateTopNMetricFirst() || query.context().getBoolean("doAggregateTopNMetricFirst", false);
+    }
+    return false;
+  }
+
+  public static CursorBuildSpec makeCursorBuildSpec(TopNQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    return Granularities.decorateCursorBuildSpec(
+        query,
+        CursorBuildSpec.builder()
+                       .setInterval(query.getSingleInterval())
+                       .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                       .setGroupingColumns(Collections.singletonList(query.getDimensionSpec().getDimension()))
+                       .setVirtualColumns(query.getVirtualColumns())
+                       .setAggregators(query.getAggregatorSpecs())
+                       .setQueryContext(query.context())
+                       .setQueryMetrics(queryMetrics)
+                       .build()
+    );
   }
 
   /**

@@ -85,7 +85,7 @@ public interface IndexedTable extends ReferenceCountedObject, Closeable
    * instead.
    */
   @Nullable
-  default ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
+  default ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, Closer closer)
   {
     return null;
   }

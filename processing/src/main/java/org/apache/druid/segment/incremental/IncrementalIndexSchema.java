@@ -40,7 +40,7 @@ public class IncrementalIndexSchema
 
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
-  private final Granularity gran;
+  private final Granularity queryGranularity;
   private final VirtualColumns virtualColumns;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
@@ -49,7 +49,7 @@ public class IncrementalIndexSchema
   public IncrementalIndexSchema(
       long minTimestamp,
       TimestampSpec timestampSpec,
-      Granularity gran,
+      Granularity queryGranularity,
       VirtualColumns virtualColumns,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
@@ -58,7 +58,7 @@ public class IncrementalIndexSchema
   {
     this.minTimestamp = minTimestamp;
     this.timestampSpec = timestampSpec;
-    this.gran = gran;
+    this.queryGranularity = queryGranularity;
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
@@ -75,9 +75,9 @@ public class IncrementalIndexSchema
     return timestampSpec;
   }
 
-  public Granularity getGran()
+  public Granularity getQueryGranularity()
   {
-    return gran;
+    return queryGranularity;
   }
 
   public VirtualColumns getVirtualColumns()
@@ -104,7 +104,7 @@ public class IncrementalIndexSchema
   {
     private long minTimestamp;
     private TimestampSpec timestampSpec;
-    private Granularity gran;
+    private Granularity queryGranularity;
     private VirtualColumns virtualColumns;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
@@ -113,7 +113,7 @@ public class IncrementalIndexSchema
     public Builder()
     {
       this.minTimestamp = 0L;
-      this.gran = Granularities.NONE;
+      this.queryGranularity = Granularities.NONE;
       this.virtualColumns = VirtualColumns.EMPTY;
       this.dimensionsSpec = DimensionsSpec.EMPTY;
       this.metrics = new AggregatorFactory[]{};
@@ -134,7 +134,7 @@ public class IncrementalIndexSchema
 
     public Builder withQueryGranularity(Granularity gran)
     {
-      this.gran = gran;
+      this.queryGranularity = gran;
       return this;
     }
 
@@ -181,7 +181,7 @@ public class IncrementalIndexSchema
       return new IncrementalIndexSchema(
           minTimestamp,
           timestampSpec,
-          gran,
+          queryGranularity,
           virtualColumns,
           dimensionsSpec,
           metrics,

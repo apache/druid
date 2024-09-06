@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
@@ -48,12 +49,14 @@ public class HeapBasedTopNAlgorithm
   @Override
   public TopNParams makeInitParams(
       final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus,
-      final Cursor cursor
+      final Cursor cursor,
+      final CursorGranularizer granularizer
   )
   {
     return new TopNParams(
         selectorPlus,
         cursor,
+        granularizer,
         Integer.MAX_VALUE
     );
   }
@@ -96,6 +99,7 @@ public class HeapBasedTopNAlgorithm
         query,
         selectorPlus.getSelector(),
         cursor,
+        params.getGranularizer(),
         rowSelector
     );
   }

@@ -69,6 +69,7 @@ import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.index.semantic.ValueSetIndexes;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nonnull;
@@ -104,17 +105,17 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
         );
         final ByteBuffer longsValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.LONG_VALUE_COLUMN_FILE_NAME
+            ColumnSerializerUtils.LONG_VALUE_COLUMN_FILE_NAME
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
         );
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
             valueIndexBuffer,

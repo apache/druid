@@ -44,6 +44,7 @@ import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
 import org.apache.druid.frame.processor.FrameChannelMixer;
 import org.apache.druid.frame.processor.FrameProcessor;
+import org.apache.druid.frame.processor.FrameProcessorDecorator;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -62,6 +63,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
@@ -110,6 +112,7 @@ import java.util.stream.Collectors;
  */
 public class RunWorkOrder
 {
+  private final String controllerTaskId;
   private final WorkOrder workOrder;
   private final InputChannelFactory inputChannelFactory;
   private final CounterTracker counterTracker;
@@ -138,6 +141,7 @@ public class RunWorkOrder
   private ListenableFuture<OutputChannels> stageOutputChannelsFuture;
 
   public RunWorkOrder(
+      final String controllerTaskId,
       final WorkOrder workOrder,
       final InputChannelFactory inputChannelFactory,
       final CounterTracker counterTracker,
@@ -150,6 +154,7 @@ public class RunWorkOrder
       final boolean removeNullBytes
   )
   {
+    this.controllerTaskId = controllerTaskId;
     this.workOrder = workOrder;
     this.inputChannelFactory = inputChannelFactory;
     this.counterTracker = counterTracker;
@@ -240,6 +245,7 @@ public class RunWorkOrder
             () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getStandardFrameSize()),
             exec,
             cancellationId,
+            counterTracker,
             removeNullBytes
         );
 
@@ -345,7 +351,7 @@ public class RunWorkOrder
     }
 
     final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
-        processorManager,
+        counterTracker.trackCpu(processorManager, CpuCounters.LABEL_MAIN),
         maxOutstandingProcessors,
         frameContext.processorBouncer(),
         cancellationId
@@ -565,7 +571,7 @@ public class RunWorkOrder
   )
   {
     return DurableStorageOutputChannelFactory.createStandardImplementation(
-        workOrder.getQueryDefinition().getQueryId(),
+        controllerTaskId,
         workOrder.getWorkerNumber(),
         workOrder.getStageNumber(),
         workerContext.workerId(),
@@ -638,7 +644,7 @@ public class RunWorkOrder
                 );
 
             return new ResultAndChannels<>(
-                exec.runFully(mixer, cancellationId),
+                exec.runFully(counterTracker.trackCpu(mixer, CpuCounters.LABEL_MIX), cancellationId),
                 OutputChannels.wrap(Collections.singletonList(outputChannel.readOnly()))
             );
           }
@@ -720,11 +726,19 @@ public class RunWorkOrder
                 stageDefinition.getSortKey(),
                 partitionBoundariesFuture,
                 exec,
+                new FrameProcessorDecorator()
+                {
+                  @Override
+                  public <T> FrameProcessor<T> decorate(FrameProcessor<T> processor)
+                  {
+                    return counterTracker.trackCpu(processor, CpuCounters.LABEL_SORT);
+                  }
+                },
                 outputChannelFactory,
                 makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
                 memoryParameters.getSuperSorterMaxActiveProcessors(),
                 memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
-                -1,
+                stageDefinition.getShuffleSpec().limitHint(),
                 cancellationId,
                 counterTracker.sortProgress(),
                 removeNullBytes
@@ -767,7 +781,11 @@ public class RunWorkOrder
                 )
             );
 
-            final ListenableFuture<Long> partitionerFuture = exec.runFully(partitioner, cancellationId);
+            final ListenableFuture<Long> partitionerFuture =
+                exec.runFully(
+                    counterTracker.trackCpu(partitioner, CpuCounters.LABEL_HASH_PARTITION),
+                    cancellationId
+                );
 
             final ResultAndChannels<Long> retVal =
                 new ResultAndChannels<>(partitionerFuture, OutputChannels.wrap(outputChannels));
@@ -841,11 +859,19 @@ public class RunWorkOrder
                         stageDefinition.getSortKey(),
                         Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
                         exec,
+                        new FrameProcessorDecorator()
+                        {
+                          @Override
+                          public <T> FrameProcessor<T> decorate(FrameProcessor<T> processor)
+                          {
+                            return counterTracker.trackCpu(processor, CpuCounters.LABEL_SORT);
+                          }
+                        },
                         partitionOverrideOutputChannelFactory,
                         makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
                         1,
                         2,
-                        -1,
+                        ShuffleSpec.UNLIMITED,
                         cancellationId,
 
                         // Tracker is not actually tracked, since it doesn't quite fit into the way we report counters.
@@ -926,13 +952,16 @@ public class RunWorkOrder
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              ProcessorManagers.of(processors)
-                               .withAccumulation(
-                                   stageDefinition.createResultKeyStatisticsCollector(
-                                       frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+              counterTracker.trackCpu(
+                  ProcessorManagers.of(processors)
+                                   .withAccumulation(
+                                       stageDefinition.createResultKeyStatisticsCollector(
+                                           frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                       ),
+                                       ClusterByStatisticsCollector::addAll
                                    ),
-                                   ClusterByStatisticsCollector::addAll
-                               ),
+                  CpuCounters.LABEL_KEY_STATISTICS
+              ),
               // Run all processors simultaneously. They are lightweight and this keeps things moving.
               processors.size(),
               Bouncer.unlimited(),

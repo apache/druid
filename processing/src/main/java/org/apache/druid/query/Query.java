@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -41,6 +42,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -164,8 +166,6 @@ public interface Query<T>
     return context().getHumanReadableBytes(key, defaultValue);
   }
 
-  boolean isDescending();
-
   /**
    * Comparator that represents the order in which results are generated from the
    * {@link QueryRunnerFactory#createRunner(Segment)} and
@@ -270,5 +270,19 @@ public interface Query<T>
   default Set<String> getRequiredColumns()
   {
     return null;
+  }
+
+  /**
+   * Returns an interval if {@link #getIntervals()} has only a single interval, else explodes
+   */
+  default Interval getSingleInterval()
+  {
+    return CollectionUtils.getOnlyElement(
+        getIntervals(),
+        (i) -> DruidException.defensive(
+            "This method can only be called after query is reduced to a single segment interval, got [%s]",
+            i
+        )
+    );
   }
 }

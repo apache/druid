@@ -20,23 +20,114 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Optional;
+import java.util.List;
 
 /**
+ *
  */
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnInspector
+public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHolderFactory
 {
+
+  /**
+   * Build a {@link CursorHolder} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
+   * scanning segments and creating {@link ColumnSelectorFactory} and
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values at the cursor
+   * position.
+   */
+  @Override
+  default CursorHolder makeCursorHolder(CursorBuildSpec spec)
+  {
+    // For backwards compatibility, the default implementation assumes the underlying rows are sorted by __time.
+    // Built-in implementations of StorageAdapter must override this method.
+    final List<OrderBy> ordering;
+    final boolean descending;
+    if (Cursors.preferDescendingTimeOrdering(spec)) {
+      ordering = Cursors.descendingTimeOrder();
+      descending = true;
+    } else {
+      ordering = Cursors.ascendingTimeOrder();
+      descending = false;
+    }
+    return new CursorHolder()
+    {
+      @Override
+      public boolean canVectorize()
+      {
+        return StorageAdapter.this.canVectorize(
+            spec.getFilter(),
+            spec.getVirtualColumns(),
+            descending
+        );
+      }
+
+      @Override
+      public Cursor asCursor()
+      {
+        return Iterables.getOnlyElement(
+            StorageAdapter.this.makeCursors(
+                spec.getFilter(),
+                spec.getInterval(),
+                spec.getVirtualColumns(),
+                Granularities.ALL,
+                descending,
+                spec.getQueryMetrics()
+            ).toList()
+        );
+      }
+
+      @Override
+      public VectorCursor asVectorCursor()
+      {
+        return StorageAdapter.this.makeVectorCursor(
+            spec.getFilter(),
+            spec.getInterval(),
+            spec.getVirtualColumns(),
+            descending,
+            spec.getQueryContext().getVectorSize(),
+            spec.getQueryMetrics()
+        );
+      }
+
+      @Nullable
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
+      }
+
+      @Override
+      public void close()
+      {
+        // consuming sequences of CursorFactory are expected to close themselves.
+      }
+    };
+  }
+
   Interval getInterval();
+
+  /**
+   * Returns the names of all dimension columns, not including {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
   Indexed<String> getAvailableDimensions();
+
+  /**
+   * Returns the names of all metric columns.
+   */
   Iterable<String> getAvailableMetrics();
 
   /**
@@ -49,10 +140,7 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
     builder.addTimeColumn();
 
     for (final String column : Iterables.concat(getAvailableDimensions(), getAvailableMetrics())) {
-      builder.add(
-          column,
-          Optional.ofNullable(getColumnCapabilities(column)).map(ColumnCapabilities::toColumnType).orElse(null)
-      );
+      builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
     }
 
     return builder.build();
@@ -68,28 +156,26 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   int getDimensionCardinality(String column);
 
   /**
-   * Metadata-only operation that returns a lower bound on
-   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} values for this adapter. May be earlier than
-   * the actual minimum data timestamp.
-   *
-   * For {@link QueryableIndexStorageAdapter} and {@link org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter}
-   * specifically, which back regular tables (i.e. {@link org.apache.druid.query.TableDataSource}), this method
-   * contract is tighter: it does return the actual minimum data timestamp. This fact is leveraged by
-   * {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} to return results using metadata only.
+   * Use {@link TimeBoundaryInspector#getMinTime()} instead.
    */
-  DateTime getMinTime();
+  @Deprecated
+  default DateTime getMinTime()
+  {
+    throw DruidException.defensive(
+        "getMinTime is no longer supported, use Segment.as(MinMaxValueInspector.class) instead"
+    );
+  }
 
   /**
-   * Metadata-only operation that returns an upper bound on
-   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} values for this adapter. May be later than
-   * the actual maximum data timestamp.
-   *
-   * For {@link QueryableIndexStorageAdapter} and {@link org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter}
-   * specifically, which back regular tables (i.e. {@link org.apache.druid.query.TableDataSource}), this method
-   * contract is tighter: it does return the actual maximum data timestamp. This fact is leveraged by
-   * {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} to return results using metadata only.
+   * Use {@link TimeBoundaryInspector#getMaxTime()} instead.
    */
-  DateTime getMaxTime();
+  @Deprecated
+  default DateTime getMaxTime()
+  {
+    throw DruidException.defensive(
+        "getMaxTime is no longer supported, use Segment.as(MinMaxValueInspector.class) instead"
+    );
+  }
 
   /**
    * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
@@ -124,7 +210,17 @@ public interface StorageAdapter extends CursorFactory, ColumnInspector
   ColumnCapabilities getColumnCapabilities(String column);
 
   int getNumRows();
-  DateTime getMaxIngestedEventTime();
+
+  /**
+   * Use {@link MaxIngestedEventTimeInspector#getMaxIngestedEventTime()} instead.
+   */
+  @Deprecated
+  default DateTime getMaxIngestedEventTime()
+  {
+    throw DruidException.defensive(
+        "getMaxIngestedEventTime is no longer supported, use Segment.as(MaxIngestedEventTimeInspector.class) instead"
+    );
+  }
 
   @Nullable
   Metadata getMetadata();

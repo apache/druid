@@ -19,23 +19,16 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
-import org.apache.druid.segment.column.NumericColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.vector.VectorCursor;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -43,7 +36,6 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.LinkedHashSet;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -55,12 +47,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   private final QueryableIndex index;
 
-  @Nullable
-  private volatile DateTime minTime;
-
-  @Nullable
-  private volatile DateTime maxTime;
-
   public QueryableIndexStorageAdapter(QueryableIndex index)
   {
     this.index = index;
@@ -70,6 +56,40 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Interval getInterval()
   {
     return index.getDataInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final LinkedHashSet<String> columns = new LinkedHashSet<>();
+
+    for (final OrderBy orderBy : index.getOrdering()) {
+      columns.add(orderBy.getColumnName());
+    }
+
+    // Add __time after the defined ordering, if __time wasn't part of it.
+    columns.add(ColumnHolder.TIME_COLUMN_NAME);
+
+    for (final String dimension : getAvailableDimensions()) {
+      columns.add(dimension);
+    }
+
+    for (final String metric : getAvailableMetrics()) {
+      columns.add(metric);
+    }
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+
+      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
+      // being 100% nulls. Don't add those to the row signature.
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
+    }
+
+    return builder.build();
   }
 
   @Override
@@ -117,28 +137,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public DateTime getMinTime()
-  {
-    if (minTime == null) {
-      // May be called a few times in parallel when first populating minTime, but this is benign, so allow it.
-      populateMinMaxTime();
-    }
-
-    return minTime;
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    if (maxTime == null) {
-      // May be called a few times in parallel when first populating maxTime, but this is benign, so allow it.
-      populateMinMaxTime();
-    }
-
-    return maxTime;
-  }
-
-  @Override
   @Nullable
   public Comparable getMinValue(String dimension)
   {
@@ -179,97 +177,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean canVectorize(
-      @Nullable final Filter filter,
-      final VirtualColumns virtualColumns,
-      final boolean descending
-  )
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    if (filter != null) {
-      // ideally we would allow stuff to vectorize if we can build indexes even if the value matcher cannot be
-      // vectorized, this used to be true in fact, but changes to filter partitioning (FilterBundle) have caused
-      // the only way to know this to be building the bitmaps since BitmapColumnIndex can return null.
-      // this will be changed in a future refactor of cursor building, at which point this method can just return
-      // true if !descending...
-      final boolean filterCanVectorize = filter.canVectorizeMatcher(this);
-
-      if (!filterCanVectorize) {
-        return false;
-      }
-    }
-
-    // vector cursors can't iterate backwards yet
-    return !descending;
-  }
-
-  @Override
-  @Nullable
-  public VectorCursor makeVectorCursor(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final boolean descending,
-      final int vectorSize,
-      @Nullable final QueryMetrics<?> queryMetrics
-  )
-  {
-    if (!canVectorize(filter, virtualColumns, descending)) {
-      throw new ISE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor'.");
-    }
-
-    if (queryMetrics != null) {
-      queryMetrics.vectorized(true);
-    }
-
-    final Interval actualInterval = computeCursorInterval(Granularities.ALL, interval);
-
-    if (actualInterval == null) {
-      return null;
-    }
-    return new QueryableIndexCursorSequenceBuilder(
+    return new QueryableIndexCursorHolder(
         index,
-        actualInterval,
-        virtualColumns,
-        filter,
-        queryMetrics,
-        getMinTime().getMillis(),
-        getMaxTime().getMillis(),
-        descending
-    ).buildVectorized(vectorSize > 0 ? vectorSize : DEFAULT_VECTOR_SIZE);
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    if (queryMetrics != null) {
-      queryMetrics.vectorized(false);
-    }
-
-    final Interval actualInterval = computeCursorInterval(gran, interval);
-
-    if (actualInterval == null) {
-      return Sequences.empty();
-    }
-
-    return Sequences.filter(
-        new QueryableIndexCursorSequenceBuilder(
-            index,
-            actualInterval,
-            virtualColumns,
-            filter,
-            queryMetrics,
-            getMinTime().getMillis(),
-            getMaxTime().getMillis(),
-            descending
-        ).build(gran),
-        Objects::nonNull
+        CursorBuildSpec.builder(spec).build()
     );
   }
 
@@ -277,29 +189,5 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
-  }
-
-  private void populateMinMaxTime()
-  {
-    // Compute and cache minTime, maxTime.
-    final ColumnHolder columnHolder = index.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME);
-    try (NumericColumn column = (NumericColumn) columnHolder.getColumn()) {
-      this.minTime = DateTimes.utc(column.getLongSingleValueRow(0));
-      this.maxTime = DateTimes.utc(column.getLongSingleValueRow(column.length() - 1));
-    }
-  }
-
-  @Nullable
-  private Interval computeCursorInterval(final Granularity gran, final Interval interval)
-  {
-    final DateTime minTime = getMinTime();
-    final DateTime maxTime = getMaxTime();
-    final Interval dataInterval = new Interval(minTime, gran.bucketEnd(maxTime));
-
-    if (!interval.overlaps(dataInterval)) {
-      return null;
-    }
-
-    return interval.overlap(dataInterval);
   }
 }

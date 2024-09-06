@@ -34,6 +34,9 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -59,7 +62,7 @@ public class TimeseriesQueryRunnerFactory
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> createRunner(final Segment segment)
   {
-    return new TimeseriesQueryRunner(engine, segment.asStorageAdapter());
+    return new TimeseriesQueryRunner(engine, segment.asStorageAdapter(), segment.as(TimeBoundaryInspector.class));
   }
 
   @Override
@@ -81,11 +84,18 @@ public class TimeseriesQueryRunnerFactory
   {
     private final TimeseriesQueryEngine engine;
     private final StorageAdapter adapter;
+    @Nullable
+    private final TimeBoundaryInspector timeBoundaryInspector;
 
-    private TimeseriesQueryRunner(TimeseriesQueryEngine engine, StorageAdapter adapter)
+    private TimeseriesQueryRunner(
+        TimeseriesQueryEngine engine,
+        StorageAdapter adapter,
+        @Nullable TimeBoundaryInspector timeBoundaryInspector
+    )
     {
       this.engine = engine;
       this.adapter = adapter;
+      this.timeBoundaryInspector = timeBoundaryInspector;
     }
 
     @Override
@@ -99,7 +109,12 @@ public class TimeseriesQueryRunnerFactory
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TimeseriesQuery.class);
       }
 
-      return engine.process((TimeseriesQuery) input, adapter, (TimeseriesQueryMetrics) queryPlus.getQueryMetrics());
+      return engine.process(
+          (TimeseriesQuery) input,
+          adapter,
+          timeBoundaryInspector,
+          (TimeseriesQueryMetrics) queryPlus.getQueryMetrics()
+      );
     }
   }
 

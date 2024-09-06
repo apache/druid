@@ -85,6 +85,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
+    assertFaultSerde(new TooManyRowsInAWindowFault(10, 20));
     assertFaultSerde(new TooManyRowsWithSameKeyFault(Arrays.asList("foo", 123), 1, 2));
     assertFaultSerde(new TooManySegmentsInTimeChunkFault(DateTimes.nowUtc(), 10, 1, Granularities.ALL));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));

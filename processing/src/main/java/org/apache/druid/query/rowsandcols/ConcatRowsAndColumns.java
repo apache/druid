@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
@@ -30,6 +31,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -53,6 +55,7 @@ public class ConcatRowsAndColumns implements RowsAndColumns
       ArrayList<RowsAndColumns> racBuffer
   )
   {
+    Preconditions.checkNotNull(racBuffer, "racBuffer cannot be null");
     this.racBuffer = racBuffer;
 
     int numRows = 0;
@@ -76,6 +79,9 @@ public class ConcatRowsAndColumns implements RowsAndColumns
   @Override
   public Collection<String> getColumnNames()
   {
+    if (racBuffer.isEmpty()) {
+      return Collections.emptySet();
+    }
     return racBuffer.get(0).getColumnNames();
   }
 
@@ -92,6 +98,9 @@ public class ConcatRowsAndColumns implements RowsAndColumns
     if (columnCache.containsKey(name)) {
       return columnCache.get(name);
     } else {
+      if (racBuffer.isEmpty()) {
+        return null;
+      }
       final Column firstCol = racBuffer.get(0).findColumn(name);
       if (firstCol == null) {
         for (int i = 1; i < racBuffer.size(); ++i) {

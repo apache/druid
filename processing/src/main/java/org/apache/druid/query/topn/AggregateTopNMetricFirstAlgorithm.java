@@ -23,6 +23,7 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -62,9 +63,9 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   }
 
   @Override
-  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
+  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor, CursorGranularizer granularizer)
   {
-    return new TopNParams(selectorPlus, cursor, Integer.MAX_VALUE);
+    return new TopNParams(selectorPlus, cursor, granularizer, Integer.MAX_VALUE);
   }
 
   @Override
@@ -93,7 +94,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector;
     try {
-      singleMetricParam = singleMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
+      singleMetricParam = singleMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor(), params.getGranularizer());
       singleMetricAlgo.run(
           singleMetricParam,
           singleMetricResultBuilder,
@@ -111,8 +112,10 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(storageAdapter, query, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
+      // reset cursor since we call run again
+      params.getCursor().reset();
       // Run topN for all metrics for top N dimension values
-      allMetricsParam = allMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor());
+      allMetricsParam = allMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor(), params.getGranularizer());
       allMetricAlgo.run(
           allMetricsParam,
           resultBuilder,

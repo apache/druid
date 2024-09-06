@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
+ *
  */
 public class QueryableIndexSegment implements Segment
 {
@@ -39,12 +40,14 @@ public class QueryableIndexSegment implements Segment
 
   private final QueryableIndex index;
   private final QueryableIndexStorageAdapter storageAdapter;
+  private final TimeBoundaryInspector timeBoundaryInspector;
   private final SegmentId segmentId;
 
   public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
   {
     this.index = index;
     this.storageAdapter = new QueryableIndexStorageAdapter(index);
+    this.timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
     this.segmentId = segmentId;
   }
 
@@ -86,7 +89,14 @@ public class QueryableIndexSegment implements Segment
   {
     final Function<QueryableIndexSegment, ?> fn = AS_MAP.get(clazz);
     if (fn != null) {
-      return (T) fn.apply(this);
+      final T fnApply = (T) fn.apply(this);
+      if (fnApply != null) {
+        return fnApply;
+      }
+    }
+
+    if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) timeBoundaryInspector;
     }
 
     return Segment.super.as(clazz);

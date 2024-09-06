@@ -597,11 +597,30 @@ Returns true if the expression is contained in a Base64-serialized Bloom filter.
 
 ## BTRIM
 
-`BTRIM(<CHARACTER>, [<CHARACTER>])`
+Trims characters from both the leading and trailing ends of an expression. Defaults `chars` to a space if none is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `BTRIM(expr[, chars])`
+* **Function type:** Scalar, string
 
-Trims characters from both the leading and trailing ends of an expression.
+<details><summary>Example</summary>
+
+The following example trims the `_` characters from both ends of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  BTRIM('___abc___', '_') AS "trim_both_ends"
+```
+
+Returns the following:
+
+| `original_string` | `trim_both_ends` |
+| -- | -- | 
+| `___abc___` | `abc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## CASE
 
@@ -807,27 +826,84 @@ Returns the cumulative distribution of the current row within the window calcula
 
 ## CURRENT_DATE
 
-`CURRENT_DATE`
+Returns the current date in UTC time, unless you specify a different timezone in the query context.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `CURRENT_DATE`
+* **Function type:** Scalar, date and time
 
-Returns the current date in the connection's time zone.
+<details><summary>Example</summary>
+
+The following example returns the current date.
+
+```sql
+SELECT CURRENT_DATE AS "current_date"
+```
+
+Returns the following:
+
+| `current_date` | 
+| -- |
+| `2024-08-14T00:00:00.000Z `|
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## CURRENT_TIMESTAMP
 
-`CURRENT_TIMESTAMP`
+Returns the current timestamp in UTC time, unless you specify a different timezone in the query context.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-Returns the current timestamp in the connection's time zone.
+* **Syntax:** `CURRENT_TIMESTAMP`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example returns the current timestamp.
+
+```sql
+SELECT CURRENT_TIMESTAMP AS "current_timestamp"
+```
+
+Returns the following:
+
+| `current_timestamp` |
+| -- |
+| `2024-08-14T21:30:13.793Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## DATE_TRUNC
 
-`DATE_TRUNC(<CHARACTER>, <TIMESTAMP>)`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Rounds down a timestamp by a given time unit.
+
+* **Syntax:** `DATE_TRUNC(unit, timestamp_expr)` 
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example truncates a timestamp from the `__time` column from the `taxi-trips` datasource to the most recent `decade`.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  DATE_TRUNC('decade', "__time") AS "truncate_timestamp"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_timestamp` | `truncate_time` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2010-01-01T00:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
+
 
 ## DECODE_BASE64_COMPLEX
 
@@ -1135,11 +1211,29 @@ Returns the following:
 
 ## GREATEST
 
-`GREATEST([expr1, ...])`
+Returns the maximum value from the provided expressions. For information on how Druid interprets the arguments passed into the function, see [Reduction functions](sql-scalar.md#reduction-functions).
 
-**Function type:** [Scalar, reduction](sql-scalar.md#reduction-functions)
+* **Syntax:** `GREATEST([expr1, ...])`
+* **Function type:** Scalar, reduction
 
-Returns the maximum value from the provided arguments.
+<details><summary>Example</summary>
+
+The following example returns the greatest value between the numeric constant `PI`, the integer number `4`, and the double `-5.0`. Druid interprets these arguments as DOUBLE data type.
+
+```sql
+SELECT GREATEST(PI, 4, -5.0) AS "greatest"
+```
+
+Returns the following:
+
+| `greatest` |
+| -- | 
+| `4` |
+
+</details>
+
+[Learn more](sql-scalar.md#reduction-functions)
+
 
 ## GROUPING
 
@@ -1407,11 +1501,29 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 ## LEAST
 
-`LEAST([expr1, ...])`
+Returns the minimum value from the provided expressions. For information on how Druid interprets the arguments passed into the function, see [Reduction functions](sql-scalar.md#reduction-functions).
 
-**Function type:** [Scalar, reduction](sql-scalar.md#reduction-functions)
+* **Syntax:** `LEAST([expr1, ...])`
+* **Function type:** Scalar, reduction
 
-Returns the minimum value from the provided arguments.
+<details><summary>Example</summary>
+
+The following example returns the minimum value between the strings `apple`, `orange`, and `pear`. Druid interprets these arguments as STRING data type. 
+
+```sql
+SELECT LEAST( 'apple', 'orange', 'pear') AS "least"
+```
+
+Returns the following:
+
+| `least` |
+| -- |
+| `apple` |
+
+</details>
+
+[Learn more](sql-scalar.md#reduction-functions)
+
 
 ## LEFT
 
@@ -1487,11 +1599,13 @@ SELECT
 FROM "taxi-trips"
 LIMIT 1
 ```
+
 Returns the following:
 
 | `max_temperature` | `natural_log_max_temp` | 
 | -- | -- | 
 | `76` | `4.330733340286331` | 
+
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1525,35 +1639,131 @@ Returns the following:
 
 ## LOOKUP
 
-`LOOKUP(<CHARACTER>, <CHARACTER>[, <CHARACTER>])`
+Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `defaultValue` if supplied, otherwise returns null.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LOOKUP(expr, lookupName[, defaultValue])`
+* **Function type:** Scalar, string
 
-Looks up the expression in a registered query-time lookup table.
+<details><summary>Example</summary>
+
+The following example uses a `map` type lookup table named `code_to_name`, which contains the following key-value pairs:
+
+```json
+{
+  "SJU": "Luis Munoz Marin International Airport",
+  "IAD": "Dulles International Airport"
+}
+```
+
+The example uses `code_to_name` to map the `Origin` column from the `flight-carriers` datasource to the corresponding full airport name. Returns `key not found` if no matching key exists in the lookup table.
+
+```sql
+SELECT 
+  "Origin" AS "origin_airport",
+  LOOKUP("Origin", 'code_to_name','key not found') AS "full_airport_name"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_airport` | `full_airport_name` | 
+| -- | -- |
+| `SJU` | `Luis Munoz Marin International Airport` |
+| `BOS` | `key not found` |
+
+</details> 
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## LOWER
 
-`LOWER(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Returns the expression in lowercase.
+
+* **Syntax:** `LOWER(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example converts the `OriginCityName` column from the `flight-carriers` datasource to lowercase.
+
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city",
+  LOWER("OriginCityName") AS "lowercase"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_city` | `lowercase` |
+| -- | -- |
+`San Juan, PR` | `san juan, pr` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## LPAD
 
-`LPAD(<CHARACTER>, <INTEGER>, [<CHARACTER>])`
+Returns a string of size `length` from `expr`. When the length of `expr` is less than `length`, left pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LPAD(expr, length[, chars])`
+* **Function type:** Scalar, string
 
-Returns the leftmost number of characters from an expression, optionally padded with the given characters.
+<details><summary>Example</summary>
+
+The following example left pads the value of `OriginStateName` from the `flight-carriers` datasource to return a total of 11 characters.
+
+```sql
+SELECT 
+  "OriginStateName" AS "origin_state",
+  LPAD("OriginStateName", 11, '+') AS "add_left_padding"
+FROM "flight-carriers"
+LIMIT 3
+```
+
+Returns the following:
+
+| `origin_state` | `add_left_padding` |
+| -- | -- |
+| `Puerto Rico` | `Puerto Rico` |
+| `Massachusetts` | `Massachuset` |
+| `Florida` | `++++Florida` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## LTRIM
 
-`LTRIM(<CHARACTER>, [<CHARACTER>])`
+Trims characters from the leading end of an expression. Defaults `chars` to a space if none is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `LTRIM(expr[, chars])`
+* **Function type:** Scalar, string
 
-Trims characters from the leading end of an expression.
+<details><summary>Example</summary>
+
+The following example trims the `_` characters from the leading end of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  LTRIM('___abc___', '_') AS "trim_leading_end_of_expression"
+```
+
+Returns the following:
+
+| `original_string` | `trim_leading_end_of_expression` |
+| -- | -- | 
+| `___abc___` | `abc___` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## MAX
 
@@ -1756,11 +1966,31 @@ Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON val
 
 ## PARSE_LONG
 
-`PARSE_LONG(<CHARACTER>, [<INTEGER>])`
+Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base 10) if a radix is not provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:**`PARSE_LONG(string[, radix])`
+* **Function type:** Scalar, string
 
-Converts a string into a BIGINT with the given base or into a DECIMAL data type if the base is not specified.
+<details><summary>Example</summary>
+
+The following example converts the string representation of the binary, radix 2, number `1100` into its long (BIGINT) equivalent.
+
+```sql
+SELECT 
+  '1100' AS "binary_as_string", 
+  PARSE_LONG('1110', 2) AS "bigint_value"
+```
+
+Returns the following:
+
+| `binary_as_string` | `bigint_value` |
+| -- | -- |
+| `1100` | `14` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## PERCENT_RANK
 
@@ -1772,11 +2002,33 @@ Returns the relative rank of the row calculated as a percentage according to the
 
 ## POSITION
 
-`POSITION(<CHARACTER> IN <CHARACTER> [FROM <INTEGER>])`
+Returns the one-based index position of a substring within an expression, optionally starting from a given one-based index. If `substring` is not found, returns 0.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax**: `POSITION(substring IN expr [FROM startingIndex])`
+* **Function type:** Scalar, string
 
-Returns the one-based index position of a substring within an expression, optionally starting from a given one-based index.
+<details><summary>Example</summary>
+
+The following example returns the one-based index of the substring `PR` in the `OriginCityName` column from the `flight-carriers` datasource starting from index 5.
+
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city",
+  POSITION('PR' IN "OriginCityName" FROM 5) AS "index"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_city` | `index` |
+| -- | -- |
+| `San Juan, PR` | `11` |
+| `Boston, MA` | `0` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## POWER
 
@@ -1834,52 +2086,171 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 ## REGEXP_EXTRACT
 
-`REGEXP_EXTRACT(<CHARACTER>, <CHARACTER>, [<INTEGER>])`
+Apply regular expression `pattern` to `expr` and extract the Nth capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns `null` if there is no matching pattern.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_EXTRACT(expr, pattern[, N])`
+* **Function type:** Scalar, string 
 
-Applies a regular expression to the string expression and returns the _n_th match.
+<details><summary>Example</summary>
+
+The following example uses regular expressions to find city names inside the `OriginCityName` column from the `flight-carriers` datasource by matching what comes before the comma.
+
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city",
+  REGEXP_EXTRACT("OriginCityName", '([^,]+)', 0) AS "pattern_match"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_city` | `pattern_match` |
+| -- | -- |
+| `San Juan, PR` | `San Juan`|
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REGEXP_LIKE
 
-`REGEXP_LIKE(<CHARACTER>, <CHARACTER>)`
+Returns `true` if the regular expression `pattern` finds a match in `expr`. Returns `false` otherwise.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_LIKE(expr, pattern)`
+* **Function type:** Scalar, string
 
-Returns true or false signifying whether the regular expression finds a match in the string expression.
+<details><summary>Example</summary>
+
+The following example returns `true` when the `OriginCityName` column from `flight-carriers` has a city name containing a space.
+
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city",
+  REGEXP_LIKE("OriginCityName", '[A-Za-z]+\s[A-Za-z]+') AS "pattern_found"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_city` | `pattern_found` |
+| -- | -- |
+| `San Juan, PR` | `true` |
+| `Boston, MA` | `false` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REGEXP_REPLACE
 
-`REGEXP_REPLACE(<CHARACTER>, <CHARACTER>, <CHARACTER>)`
+Replaces all occurrences of a regular expression in a string expression with a replacement string. Refer to capture groups in the replacement string using `$group` syntax. For example: `$1` or `$2`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REGEXP_REPLACE(expr, pattern, replacement)`
+* **Function type:** Scalar, string
 
-Replaces all occurrences of a regular expression in a string expression with a replacement string. The replacement
-string may refer to capture groups using `$1`, `$2`, etc.
+<details><summary>Example</summary>
+
+The following example matches three consecutive words, where each word is its own capture group, and replaces the matched words with the word in the second capture group punctuated with exclamation marks.
+
+```sql
+SELECT 
+  'foo bar baz' AS "original_string",
+  REGEXP_REPLACE('foo bar baz', '([A-Za-z]+) ([A-Za-z]+) ([A-Za-z]+)' , '$2!') AS "modified_string"
+```
+
+Returns the following:
+
+| `original_string` | `modified_string` |
+| -- | -- |
+| `foo bar baz` | `bar!` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## REPEAT
 
-`REPEAT(<CHARACTER>, [<INTEGER>])`
+Repeats the string expression `N` times, where `N` is an integer.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REPEAT(expr, N)`
+* **Function type:** Scalar, string
 
-Repeats the string expression an integer number of times.
+<details><summary>Example</summary>
+
+The following example returns the string expression `abc` repeated `3` times.
+
+```sql
+SELECT 
+  'abc' AS "original_string",
+  REPEAT('abc', 3) AS "with_repetition"
+```
+
+Returns the following: 
+
+| `original_string` | `with_repetition` |
+| -- | -- |
+| `abc` | `abcabcabc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REPLACE
 
-`REPLACE(expr, pattern, replacement)`
+Replaces instances of a substring with a replacement string in the given expression.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `REPLACE(expr, substring, replacement)`
+* **Function type:** Scalar, string 
 
-Replaces a pattern with another string in the given expression.
+<details><summary>Example</summary>
+
+The following example replaces instances of the substring `abc` with `XYZ`.
+
+```sql
+SELECT 
+  'abc 123 abc 123' AS "original_string",
+   REPLACE('abc 123 abc 123', 'abc', 'XYZ') AS "modified_string"
+```
+
+Returns the following:
+
+| `original_string` | `modified_string` | 
+| -- | -- |
+| `abc 123 abc 123` | `XYZ 123 XYZ 123` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## REVERSE
 
-`REVERSE(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Reverses the given expression.
+
+* **Syntax:** `REVERSE(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example reverses the string expression `abc`.
+
+```sql
+SELECT 
+  'abc' AS "original_string",
+  REVERSE('abc') AS "reversal"
+```
+
+Returns the following:
+
+| `original_string` | `reversal` |
+| -- | -- |
+| `abc` | `cba` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## RIGHT
 
@@ -1946,19 +2317,61 @@ Returns the number of the row within the window starting from 1.
 
 ## RPAD
 
-`RPAD(<CHARACTER>, <INTEGER>, [<CHARACTER>])`
+Returns a string of size `length` from `expr`. When the length of `expr` is less than `length`, right pads `expr` with `chars`, which defaults to the space character. Truncates `expr` to `length` if `length` is shorter than the length of `expr`.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `RPAD(expr, length[, chars])`
+* **Function type:** Scalar, string
 
-Returns the rightmost number of characters from an expression, optionally padded with the given characters.
+<details><summary>Example</summary>
+
+The following example right pads the value of `OriginStateName` from the `flight-carriers` datasource to return a total of 11 characters.
+
+```sql
+SELECT 
+  "OriginStateName" AS "origin_state",
+  RPAD("OriginStateName", 11, '+') AS "add_right_padding"
+FROM "flight-carriers"
+LIMIT 3
+```
+
+Returns the following:
+
+| `origin_state` | `add_right_padding` |
+| -- | -- |
+| `Puerto Rico` | `Puerto Rico` |
+| `Massachusetts` | `Massachuset` |
+| `Florida` | `Florida++++` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## RTRIM
 
-`RTRIM(<CHARACTER>, [<CHARACTER>])`
+Trims characters from the trailing end of an expression. Defaults `chars` to a space if none is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `RTRIM(expr[, chars])`
+* **Function type:** Scalar, string
 
-Trims characters from the trailing end of an expression.
+<details><summary>Example</summary>
+
+The following example trims the `_` characters from the trailing end of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  RTRIM('___abc___', '_') AS "trim_end"
+```
+
+Returns the following:
+
+| `original_string` | `trim_end` |
+| -- | -- | 
+| `___abc___` | `___abc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## SAFE_DIVIDE
 
@@ -2074,11 +2487,33 @@ Splits `str1` into an array on the delimiter specified by `str2`, which is a reg
 
 ## STRING_FORMAT
 
-`STRING_FORMAT(pattern[, args...])`
+Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `STRING_FORMAT(pattern[, args...])`
+* **Function type:** Scalar, string 
 
-Returns a string formatted in accordance to Java's String.format method.
+<details><summary>Example</summary>
+
+The following example uses Java String format to pass in `Flight_Number_Reporting_Airline` and `origin_airport` columns, from the `flight-carriers` datasource, as arguments into the string. 
+
+```sql
+SELECT 
+  "Flight_Number_Reporting_Airline" AS "flight_number",
+  "Origin" AS "origin_airport",
+  STRING_FORMAT('Flight No.%d departing from %s', "Flight_Number_Reporting_Airline", "Origin") AS "departure_announcement"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `flight_number` | `origin_airport` | `departure_announcement` |
+| -- | -- | -- |
+| `314` | `SJU` | `Flight No.314 departing from SJU` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## STRING_TO_MV
 
@@ -2099,27 +2534,69 @@ Alias for [`LENGTH`](#length).
 
 ## STRPOS
 
-`STRPOS(<CHARACTER>, <CHARACTER>)`
+Returns the one-based index position of a substring within an expression. If `substring` is not found, returns 0.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `STRPOS(expr, substring)`
+* **Function type:** Scalar, string
 
-Returns the one-based index position of a substring within an expression.
+<details><summary>Example</summary>
+
+The following example returns the one-based index position of `World`.
+
+```sql
+SELECT 
+  'Hello World!' AS "original_string",
+  STRPOS('Hello World!', 'World') AS "index"
+```
+
+Returns the following:
+
+| `original_string` | `index` |
+| -- | -- |
+| `Hello World!` | `7` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## SUBSTR
 
-`SUBSTR(<CHARACTER>, <INTEGER>, [<INTEGER>])`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Alias for [`SUBSTRING`](#substring).
+
+* **Syntax:** `SUBSTR(expr, index[, length])`
+* **Function type:** Scalar, string
+
+[Learn more](sql-scalar.md#string-functions)
+
 
 ## SUBSTRING
 
-`SUBSTRING(<CHARACTER>, <INTEGER>, [<INTEGER>])`
+Returns a substring of the expression starting at a given one-based index. If `length` is omitted, extracts characters to the end of the string, otherwise returns a substring of `length` characters.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `SUBSTRING(expr, index[, length])`
+* **Function type:** Scalar, string
 
-Returns a substring of the expression starting at a given one-based index.
+<details><summary>Example</summary>
+
+The following example extracts a substring from the string expression `abcdefghi` of length `3` starting at index `4`
+
+```sql
+SELECT 
+  'abcdefghi' AS "original_string",
+  SUBSTRING('abcdefghi', 4, 3) AS "substring"
+```
+
+Returns the following:
+
+| `original_string` | `substring` |
+| -- | -- |
+| `abcdefghi` | `def` |
+
+</details>
+
+
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## SUM
 
@@ -2239,35 +2716,121 @@ Returns a union of Theta sketches.
 
 ## TIME_CEIL
 
-`TIME_CEIL(<TIMESTAMP>, <period>, [<origin>, [<timezone>]])`
+Rounds up a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Rounds up a timestamp by a given time period, optionally from some reference time or timezone.
+<details><summary>Example</summary>
+
+The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  TIME_CEIL("__time", 'PT45M', TIMESTAMP '2013-08-01 08:0:00') AS "time_ceiling"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_timestamp` | `time_ceiling` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-08-01T08:45:00.000Z` |
+| `2013-08-01T09:13:00.000Z` | `2013-08-01T09:30:00.000Z` |
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_EXTRACT
 
-`TIME_EXTRACT(<TIMESTAMP>, [<unit>, [<timezone>]])`
+Extracts the value of `unit` from the timestamp and returns it as a number. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_EXTRACT(timestamp_expr[, unit[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Extracts the value of some unit of the timestamp and returns the number.
+<details><summary>Example</summary>
+
+The following example extracts the hour from the `__time` column in the `taxi-trips` datasource and offsets its timezone by `-04:00` hours.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  TIME_EXTRACT("__time", 'hour', '-04:00') AS "extract_hour"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_timestamp` | `extract_hour` | 
+| -- | -- | 
+| `2013-08-01T08:14:37.000Z` | `4` |
+| `2013-08-01T09:13:00.000Z` | `5` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_FLOOR
 
-`TIME_FLOOR(<TIMESTAMP>, <period>, [<origin>, [<timezone>]])`
+Rounds down a timestamp to a given ISO 8601 time period. You can specify `origin` to provide a reference timestamp from which to start rounding. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Rounds down a timestamp by a given time period, optionally from some reference time or timezone.
+<details><summary>Example</summary>
+
+The following example rounds down the `__time` column from the `taxi-trips` datasource to the nearest 45th minute in reference to the timestamp `2013-08-01 08:0:00`.
+
+```sql
+SELECT 
+  "__time" AS "original_timestamp",
+  TIME_FLOOR("__time", 'PT45M', TIMESTAMP '2013-08-01 08:0:00') AS "time_floor"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_timestamp` | `time_floor` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-08-01T08:00:00.000Z` |
+| `2013-08-01T09:13:00.000Z` | `2013-08-01T08:45:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_FORMAT
 
-`TIME_FORMAT(<TIMESTAMP>, [<pattern>, [<timezone>]])`
+Formats a timestamp as a string in a provided [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, `pattern` defaults to ISO 8601. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_FORMAT(timestamp_expr[, pattern[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Formats a timestamp as a string.
+<details><summary>Example</summary>
+
+The following example formats the `__time` column from the `flight-carriers` datasource into a string format and offsets the result's timezone by `-05:00` hours.
+
+```sql
+SELECT
+  "__time" AS "original_time",
+TIME_FORMAT( "__time", 'dd-MM-YYYY hh:mm aa zzz', '-05:00') AS "string"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `string` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `01-08-2013 03:14 AM -05:00` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_IN_INTERVAL
 
@@ -2279,19 +2842,62 @@ Returns whether a timestamp is contained within a particular interval, formatted
 
 ## TIME_PARSE
 
-`TIME_PARSE(<string_expr>, [<pattern>, [<timezone>]])`
+Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html). If no pattern is provided, `pattern` defaults to ISO 8601. Returns NULL if string cannot be parsed. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_PARSE(string_expr[, pattern[, timezone]])`
+* **Function type:** Scalar, date and time
 
-Parses a string into a timestamp.
+<details><summary>Example</summary>
+
+The following example parses the `FlightDate` STRING column from the `flight-carriers` datasource into a valid timestamp with an offset of `-05:00` hours.
+
+```sql
+SELECT
+  "FlightDate" AS "original_string",
+  TIME_PARSE("FlightDate", 'YYYY-MM-dd', '-05:00') AS "timestamp"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_string` | `timestamp` | 
+| -- | -- |
+| `2005-11-01` | `2005-11-01T05:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_SHIFT
 
-`TIME_SHIFT(<TIMESTAMP>, <period>, <step>, [<timezone>])`
+Shifts a timestamp by a given number of time units. The `period` parameter can be any ISO 8601 period. The `step` parameter can be negative. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_SHIFT(timestamp_expr, period, step[, timezone])`
+* **Function type:** Scalar, date and time
 
-Shifts a timestamp forwards or backwards by a given number of time units.
+<details><summary>Example</summary>
+
+The following example shifts the `__time` column from the `taxi-trips` datasource back by 24 hours.
+
+```sql
+SELECT
+  "__time" AS "original_timestamp",
+  TIME_SHIFT("__time", 'PT1H', -24) AS "shift_back"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_timestamp` | `shift_back` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-07-31T08:14:37.000Z` | 
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
+
 
 ## TIMESTAMP_TO_MILLIS
 
@@ -2322,17 +2928,35 @@ Takes the difference between two timestamps, returning the results in the given 
 **Function type:** [JSON](sql-json-functions.md)
 
 `TO_JSON_STRING(expr)`
-
 Serializes `expr` into a JSON string.
 
 
 ## TRIM
 
-`TRIM([BOTH|LEADING|TRAILING] [<chars> FROM] expr)`
+Trims the leading and/or trailing characters of an expression. Defaults `chars` to a space if none is provided. Defaults to `BOTH` if no directional argument is provided.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `TRIM([BOTH|LEADING|TRAILING] [chars FROM] expr)`
+* **Function type:** Scalar, string
 
-Trims the leading or trailing characters of an expression.
+<details><summary>Example</summary>
+
+The following example trims `_` characters from both ends of the string expression.
+
+```sql
+SELECT 
+  '___abc___' AS "original_string",
+  TRIM( BOTH '_' FROM '___abc___') AS "trim_expression"
+```
+
+Returns the following:
+
+| `original_string` | `trim_expression` |
+| -- | -- |
+| `___abc___` | `abc` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## TRUNC
 
@@ -2390,11 +3014,32 @@ For more information, see [UNNEST](./sql.md#unnest).
 
 ## UPPER
 
-`UPPER(expr)`
-
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
-
 Returns the expression in uppercase.
+
+* **Syntax:** `UPPER(expr)`
+* **Function type:** Scalar, string
+
+<details><summary>Example</summary>
+
+The following example converts the `OriginCityName` column from the `flight-carriers` datasource to uppercase.
+
+```sql
+SELECT 
+  "OriginCityName" AS "origin_city",
+  UPPER("OriginCityName") AS "uppercase"
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_city` | `uppercase` |
+| -- | -- |
+`San Juan, PR` | `SAN JUAN, PR` |
+
+</details>
+
+[Learn more](sql-scalar.md#string-functions)
 
 ## VAR_POP
 

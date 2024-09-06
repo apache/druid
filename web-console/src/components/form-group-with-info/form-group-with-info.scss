@@ -33,7 +33,7 @@
     }
   }
 
-  .#{$bp-ns}-text-muted .#{$bp-ns}-popover2-target {
+  .#{$bp-ns}-text-muted .#{$bp-ns}-popover-target {
     margin-top: 0;
   }
 
@@ -48,7 +48,7 @@
   }
 }
 
-.#{$bp-ns}-popover2-content {
+.#{$bp-ns}-popover-content {
   .code-block {
     white-space: pre;
     overflow: auto;

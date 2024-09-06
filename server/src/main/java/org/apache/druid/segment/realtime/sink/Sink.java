@@ -24,6 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -37,7 +38,6 @@ import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnFormat;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
@@ -92,6 +92,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   private final LinkedHashSet<String> dimOrder = new LinkedHashSet<>();
 
   // columns excluding current index (the in-memory fire hydrant), includes __time column
+  @GuardedBy("hydrantLock")
   private final LinkedHashSet<String> columnsExcludingCurrIndex = new LinkedHashSet<>();
 
   // column types for columns in {@code columnsExcludingCurrIndex}
@@ -349,7 +350,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           Map<String, ColumnFormat> oldFormat = null;
           newCount = lastHydrant.getCount() + 1;
 
-          boolean customDimensions = !indexSchema.getDimensionsSpec().hasCustomDimensions();
+          boolean variableDimensions = !indexSchema.getDimensionsSpec().hasFixedDimensions();
 
           if (lastHydrant.hasSwapped()) {
             oldFormat = new HashMap<>();
@@ -357,7 +358,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             try {
               QueryableIndex oldIndex = segment.asQueryableIndex();
               overwriteIndexDimensions(new QueryableIndexStorageAdapter(oldIndex));
-              if (customDimensions) {
+              if (variableDimensions) {
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
                   oldFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
@@ -370,12 +371,12 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
           } else {
             IncrementalIndex oldIndex = lastHydrant.getIndex();
             overwriteIndexDimensions(new IncrementalIndexStorageAdapter(oldIndex));
-            if (customDimensions) {
+            if (variableDimensions) {
               dimOrder.addAll(oldIndex.getDimensionOrder());
               oldFormat = oldIndex.getColumnFormats();
             }
           }
-          if (customDimensions) {
+          if (variableDimensions) {
             newIndex.loadDimensionIterable(dimOrder, oldFormat);
           }
         }
@@ -397,6 +398,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   /**
    * Merge the column from the index with the existing columns.
    */
+  @GuardedBy("hydrantLock")
   private void overwriteIndexDimensions(StorageAdapter storageAdapter)
   {
     RowSignature rowSignature = storageAdapter.getRowSignature();
@@ -414,20 +416,19 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
     synchronized (hydrantLock) {
       RowSignature.Builder builder = RowSignature.builder();
 
-      builder.addTimeColumn();
-
+      // Add columns from columnsExcludingCurrIndex.
       for (String dim : columnsExcludingCurrIndex) {
-        if (!ColumnHolder.TIME_COLUMN_NAME.equals(dim)) {
-          builder.add(dim, columnTypeExcludingCurrIndex.get(dim));
-        }
+        builder.add(dim, columnTypeExcludingCurrIndex.get(dim));
       }
 
-      IncrementalIndexStorageAdapter incrementalIndexStorageAdapter = new IncrementalIndexStorageAdapter(currHydrant.getIndex());
-      RowSignature incrementalIndexSignature = incrementalIndexStorageAdapter.getRowSignature();
+      // Add columns from the currHydrant that do not yet exist in columnsExcludingCurrIndex.
+      IncrementalIndexStorageAdapter currStorageAdapter =
+          new IncrementalIndexStorageAdapter(currHydrant.getIndex());
+      RowSignature currSignature = currStorageAdapter.getRowSignature();
 
-      for (String dim : incrementalIndexSignature.getColumnNames()) {
-        if (!columnsExcludingCurrIndex.contains(dim) && !ColumnHolder.TIME_COLUMN_NAME.equals(dim)) {
-          builder.add(dim, incrementalIndexSignature.getColumnType(dim).orElse(null));
+      for (String dim : currSignature.getColumnNames()) {
+        if (!columnsExcludingCurrIndex.contains(dim)) {
+          builder.add(dim, currSignature.getColumnType(dim).orElse(null));
         }
       }
 

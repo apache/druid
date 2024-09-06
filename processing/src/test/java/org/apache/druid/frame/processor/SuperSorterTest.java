@@ -21,6 +21,7 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
@@ -58,6 +59,8 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -126,11 +129,12 @@ public class SuperSorterTest
           Collections.emptyList(),
           outputPartitionsFuture,
           exec,
+          FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           2,
           2,
-          -1,
+          SuperSorter.UNLIMITED,
           null,
           superSorterProgressTracker,
           false
@@ -161,11 +165,47 @@ public class SuperSorterTest
           Collections.emptyList(),
           Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
           exec,
+          FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
           2,
           2,
           -1,
+          null,
+          superSorterProgressTracker,
+          false
+      );
+
+      final OutputChannels channels = superSorter.run().get();
+      Assert.assertEquals(1, channels.getAllChannels().size());
+
+      final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
+      Assert.assertTrue(channel.isFinished());
+      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      channel.close();
+    }
+
+    @Test
+    public void testLimitHint() throws Exception
+    {
+      final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
+      inputChannel.writable().close();
+
+      final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
+
+      final File tempFolder = temporaryFolder.newFolder();
+      final SuperSorter superSorter = new SuperSorter(
+          Collections.singletonList(inputChannel.readable()),
+          FrameReader.create(RowSignature.empty()),
+          Collections.emptyList(),
+          Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
+          exec,
+          FrameProcessorDecorator.NONE,
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          2,
+          2,
+          3,
           null,
           superSorterProgressTracker,
           false
@@ -199,6 +239,7 @@ public class SuperSorterTest
     private final int numThreads;
     private final boolean isComposedStorage;
     private final boolean partitionsDeferred;
+    private final long limitHint;
 
     private StorageAdapter adapter;
     private RowSignature signature;
@@ -214,7 +255,8 @@ public class SuperSorterTest
         int maxChannelsPerProcessor,
         int numThreads,
         boolean isComposedStorage,
-        boolean partitionsDeferred
+        boolean partitionsDeferred,
+        long limitHint
     )
     {
       this.maxRowsPerFrame = maxRowsPerFrame;
@@ -225,6 +267,7 @@ public class SuperSorterTest
       this.numThreads = numThreads;
       this.isComposedStorage = isComposedStorage;
       this.partitionsDeferred = partitionsDeferred;
+      this.limitHint = limitHint;
     }
 
     @Parameterized.Parameters(
@@ -235,7 +278,8 @@ public class SuperSorterTest
                + "maxChannelsPerProcessor= {4}, "
                + "numThreads = {5}, "
                + "isComposedStorage = {6}, "
-               + "partitionsDeferred = {7}"
+               + "partitionsDeferred = {7}, "
+               + "limitHint = {8}"
     )
     public static Iterable<Object[]> constructorFeeder()
     {
@@ -249,18 +293,21 @@ public class SuperSorterTest
                 for (int numThreads : new int[]{1, 3}) {
                   for (boolean isComposedStorage : new boolean[]{true, false}) {
                     for (boolean partitionsDeferred : new boolean[]{true, false}) {
-                      constructors.add(
-                          new Object[]{
-                              maxRowsPerFrame,
-                              maxBytesPerFrame,
-                              numChannels,
-                              maxActiveProcessors,
-                              maxChannelsPerProcessor,
-                              numThreads,
-                              isComposedStorage,
-                              partitionsDeferred
-                          }
-                      );
+                      for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
+                        constructors.add(
+                            new Object[]{
+                                maxRowsPerFrame,
+                                maxBytesPerFrame,
+                                numChannels,
+                                maxActiveProcessors,
+                                maxChannelsPerProcessor,
+                                numThreads,
+                                isComposedStorage,
+                                partitionsDeferred,
+                                limitHint
+                            }
+                        );
+                      }
                     }
                   }
                 }
@@ -345,11 +392,12 @@ public class SuperSorterTest
           clusterBy.getColumns(),
           clusterByPartitionsFuture,
           exec,
+          FrameProcessorDecorator.NONE,
           new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null),
           outputChannelFactory,
           maxActiveProcessors,
           maxChannelsPerProcessor,
-          -1,
+          limitHint,
           null,
           superSorterProgressTracker,
           false
@@ -412,6 +460,10 @@ public class SuperSorterTest
         );
       }
 
+      if (limitHint != SuperSorter.UNLIMITED) {
+        MatcherAssert.assertThat(readRows.size(), Matchers.greaterThanOrEqualTo(Ints.checkedCast(limitHint)));
+      }
+
       final Sequence<List<Object>> expectedRows = Sequences.sort(
           FrameTestUtil.readRowsFromAdapter(adapter, signature, true),
           Comparator.comparing(
@@ -426,7 +478,7 @@ public class SuperSorterTest
               },
               keyComparator
           )
-      );
+      ).limit(limitHint == SuperSorter.UNLIMITED ? Long.MAX_VALUE : readRows.size());
 
       FrameTestUtil.assertRowsEqual(expectedRows, Sequences.simple(readRows));
     }

@@ -25,6 +25,7 @@ import com.google.common.collect.RangeSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.CursorBuildSpec;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -76,7 +77,8 @@ public interface DimFilter extends Cacheable
    *
    * The Filter returned by this method across multiple calls must be the same object: parts of the query stack
    * compare Filters, and returning the same object allows these checks to avoid deep comparisons.
-   * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursors for an example}
+   * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursorHolder(CursorBuildSpec)}
+   * for an example}
    *
    * @param mayIncludeUnknown whether the optimized filter may need to operate in "includeUnknown" mode.
    *                          See {@link NullHandling#useThreeValueLogic()}.

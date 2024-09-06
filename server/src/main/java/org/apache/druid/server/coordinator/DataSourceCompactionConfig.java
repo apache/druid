@@ -20,9 +20,11 @@
 package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Period;
 
@@ -186,6 +188,13 @@ public class DataSourceCompactionConfig
   public CompactionEngine getEngine()
   {
     return engine;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Granularity getSegmentGranularity()
+  {
+    return granularitySpec == null ? null : granularitySpec.getSegmentGranularity();
   }
 
   @Override

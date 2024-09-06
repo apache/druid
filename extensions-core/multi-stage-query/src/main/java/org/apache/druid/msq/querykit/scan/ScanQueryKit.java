@@ -37,6 +37,8 @@ import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
@@ -119,11 +121,11 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
     // Add regular orderBys.
-    for (final ScanQuery.OrderBy orderBy : queryToRun.getOrderBys()) {
+    for (final OrderBy orderBy : queryToRun.getOrderBys()) {
       clusterByColumns.add(
           new KeyColumn(
               orderBy.getColumnName(),
-              orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
+              orderBy.getOrder() == Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
           )
       );
     }
@@ -141,22 +143,32 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     );
 
     ShuffleSpec scanShuffleSpec;
-    if (!hasLimitOrOffset) {
-      // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
-      scanShuffleSpec = finalShuffleSpec;
-    } else {
+    if (hasLimitOrOffset) {
       // If there is a limit spec, check if there are any non-boost columns to sort in.
-      boolean requiresSort = clusterByColumns.stream()
-                                             .anyMatch(keyColumn -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(keyColumn.columnName()));
+      boolean requiresSort =
+          clusterByColumns.stream()
+                          .anyMatch(keyColumn -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(keyColumn.columnName()));
       if (requiresSort) {
         // If yes, do a sort into a single partition.
-        scanShuffleSpec = ShuffleSpecFactories.singlePartition().build(clusterBy, false);
+        final long limitHint;
+
+        if (queryToRun.isLimited()
+            && queryToRun.getScanRowsOffset() + queryToRun.getScanRowsLimit() > 0 /* overflow check */) {
+          limitHint = queryToRun.getScanRowsOffset() + queryToRun.getScanRowsLimit();
+        } else {
+          limitHint = ShuffleSpec.UNLIMITED;
+        }
+
+        scanShuffleSpec = ShuffleSpecFactories.singlePartitionWithLimit(limitHint).build(clusterBy, false);
       } else {
         // If the only clusterBy column is the boost column, we just use a mix shuffle to avoid unused shuffling.
         // Note that we still need the boost column to be present in the row signature, since the limit stage would
         // need it to be populated to do its own shuffling later.
         scanShuffleSpec = MixShuffleSpec.instance();
       }
+    } else {
+      // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
+      scanShuffleSpec = finalShuffleSpec;
     }
 
     queryDefBuilder.add(
