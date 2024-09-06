@@ -92,7 +92,8 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
         durationThreshold.map(duration -> theQuery.getDuration().isLongerThan(duration)).orElse(false);
     boolean violatesSegmentRangeThreshold = false;
     if (segmentRangeThreshold.isPresent()) {
-      long segmentRange = segments.stream().map(segment -> segment.getSegmentDescriptor().getInterval())
+      long segmentRange = segments.stream().filter(segment -> segment.getSegmentDescriptor() != null)
+              .map(segment -> segment.getSegmentDescriptor().getInterval())
               .distinct()
               .mapToLong(AbstractInterval::toDurationMillis)
               .sum();
