@@ -9,7 +9,7 @@ GROUP BY ();
 +-------------------------+
 | __VALUE__               |
 +-------------------------+
-| 2019-08-25 23:59:34.290 |
+| 2019-08-25 23:59:58.044 |
 +-------------------------+
 (1 row)
 
@@ -22,7 +22,7 @@ GROUP BY ();
 +-------------------------+
 | __VALUE__               |
 +-------------------------+
-| 2019-08-25 23:59:34.290 |
+| 2019-08-25 23:59:58.044 |
 +-------------------------+
 (1 row)
 
@@ -50,7 +50,7 @@ GROUP BY ();
 +-----------+
 | __VALUE__ |
 +-----------+
-|      4681 |
+|      4519 |
 +-----------+
 (1 row)
 
@@ -67,24 +67,22 @@ LIMIT 1000;
 +-----------------------+-------+
 | Browser               | count |
 +-----------------------+-------+
-| Chrome                |  2395 |
-| Mobile Safari         |  1129 |
-| Chrome Mobile         |   597 |
-| Safari                |   376 |
-| Firefox               |    76 |
-| Yandex.Browser        |    38 |
-| Opera                 |    28 |
-| Mozilla               |    11 |
-| Silk                  |    11 |
-| IE                    |     8 |
-| Yandex.Browser mobile |     4 |
-| Mobile Firefox        |     3 |
-| Puffin                |     2 |
-| Android browser       |     1 |
-| Chromium              |     1 |
-| PS4 Web browser       |     1 |
+| Chrome                |  2313 |
+| Mobile Safari         |  1052 |
+| Chrome Mobile         |   589 |
+| Safari                |   386 |
+| Firefox               |    72 |
+| Yandex.Browser        |    39 |
+| Opera                 |    22 |
+| Mozilla               |    15 |
+| IE                    |    10 |
+| Silk                  |     9 |
+| Yandex.Browser mobile |     8 |
+| PS4 Web browser       |     2 |
+| Mobile Firefox        |     1 |
+| Puffin                |     1 |
 +-----------------------+-------+
-(16 rows)
+(14 rows)
 
 !ok
 # Wed Jul 10 16:24:21 IST 2024
@@ -96,7 +94,7 @@ GROUP BY ();
 +-----------+
 | __VALUE__ |
 +-----------+
-|      2395 |
+|      2313 |
 +-----------+
 (1 row)
 
@@ -111,23 +109,21 @@ GROUP BY 1;
 +-----------------------+-------+
 | Browser               | count |
 +-----------------------+-------+
-| Android browser       |     1 |
-| Chrome Mobile         |   597 |
-| Chromium              |     1 |
-| Firefox               |    76 |
-| IE                    |     8 |
-| Mobile Firefox        |     3 |
-| Mobile Safari         |  1129 |
-| Mozilla               |    11 |
-| Opera                 |    28 |
-| PS4 Web browser       |     1 |
-| Puffin                |     2 |
-| Safari                |   376 |
-| Silk                  |    11 |
-| Yandex.Browser        |    38 |
-| Yandex.Browser mobile |     4 |
+| Chrome Mobile         |   589 |
+| Firefox               |    72 |
+| IE                    |    10 |
+| Mobile Firefox        |     1 |
+| Mobile Safari         |  1052 |
+| Mozilla               |    15 |
+| Opera                 |    22 |
+| PS4 Web browser       |     2 |
+| Puffin                |     1 |
+| Safari                |   386 |
+| Silk                  |     9 |
+| Yandex.Browser        |    39 |
+| Yandex.Browser mobile |     8 |
 +-----------------------+-------+
-(15 rows)
+(13 rows)
 
 !ok
 # Wed Jul 10 16:24:25 IST 2024
@@ -142,7 +138,7 @@ LIMIT 10;
 +-------------+-------+
 | app_version | count |
 +-------------+-------+
-| 1.9.6       |  4681 |
+| 1.9.6       |  4519 |
 +-------------+-------+
 (1 row)
 
@@ -157,24 +153,22 @@ GROUP BY 1;
 +-----------------------+-------+
 | Browser               | count |
 +-----------------------+-------+
-| Android browser       |     1 |
-| Chrome                |  2395 |
-| Chrome Mobile         |   597 |
-| Chromium              |     1 |
-| Firefox               |    76 |
-| IE                    |     8 |
-| Mobile Firefox        |     3 |
-| Mobile Safari         |  1129 |
-| Mozilla               |    11 |
-| Opera                 |    28 |
-| PS4 Web browser       |     1 |
-| Puffin                |     2 |
-| Safari                |   376 |
-| Silk                  |    11 |
-| Yandex.Browser        |    38 |
-| Yandex.Browser mobile |     4 |
+| Chrome                |  2313 |
+| Chrome Mobile         |   589 |
+| Firefox               |    72 |
+| IE                    |    10 |
+| Mobile Firefox        |     1 |
+| Mobile Safari         |  1052 |
+| Mozilla               |    15 |
+| Opera                 |    22 |
+| PS4 Web browser       |     2 |
+| Puffin                |     1 |
+| Safari                |   386 |
+| Silk                  |     9 |
+| Yandex.Browser        |    39 |
+| Yandex.Browser mobile |     8 |
 +-----------------------+-------+
-(16 rows)
+(14 rows)
 
 !ok
 # Wed Jul 10 16:24:30 IST 2024
@@ -189,11 +183,12 @@ LIMIT 1000;
 +----------------------------+-------+
 | adblock_list               | count |
 +----------------------------+-------+
-| NoAdblock                  |  4239 |
-| EasyList                   |   439 |
-| EasyList,AntiAdblockKiller |     3 |
+| NoAdblock                  |  4123 |
+| EasyList                   |   394 |
+| AntiAdblockKiller          |     1 |
+| EasyList,AntiAdblockKiller |     1 |
 +----------------------------+-------+
-(3 rows)
+(4 rows)
 
 !ok
 # Wed Jul 10 16:24:30 IST 2024
@@ -206,23 +201,22 @@ GROUP BY 1;
 +-----------------------+-------+
 | Browser               | count |
 +-----------------------+-------+
-| Android browser       |     1 |
-| Chrome                |  2007 |
-| Chrome Mobile         |   595 |
-| Firefox               |    49 |
-| IE                    |     8 |
-| Mobile Firefox        |     3 |
-| Mobile Safari         |  1124 |
-| Mozilla               |    11 |
-| Opera                 |    14 |
-| PS4 Web browser       |     1 |
-| Puffin                |     2 |
-| Safari                |   373 |
-| Silk                  |    11 |
-| Yandex.Browser        |    36 |
-| Yandex.Browser mobile |     4 |
+| Chrome                |  1969 |
+| Chrome Mobile         |   587 |
+| Firefox               |    46 |
+| IE                    |    10 |
+| Mobile Firefox        |     1 |
+| Mobile Safari         |  1049 |
+| Mozilla               |    15 |
+| Opera                 |     6 |
+| PS4 Web browser       |     2 |
+| Puffin                |     1 |
+| Safari                |   385 |
+| Silk                  |     9 |
+| Yandex.Browser        |    35 |
+| Yandex.Browser mobile |     8 |
 +-----------------------+-------+
-(15 rows)
+(14 rows)
 
 !ok
 # Wed Jul 10 16:24:30 IST 2024
@@ -236,33 +230,30 @@ GROUP BY 1,2;
 +-----------------------+----------------------------+-------+
 | Browser               | adblock_list               | count |
 +-----------------------+----------------------------+-------+
-| Android browser       | NoAdblock                  |     1 |
-| Chrome                | EasyList                   |   387 |
 | Chrome                | EasyList,AntiAdblockKiller |     1 |
-| Chrome                | NoAdblock                  |  2007 |
 | Chrome Mobile         | EasyList                   |     2 |
-| Chrome Mobile         | NoAdblock                  |   595 |
-| Chromium              | EasyList                   |     1 |
-| Firefox               | EasyList                   |    25 |
-| Firefox               | EasyList,AntiAdblockKiller |     2 |
-| Firefox               | NoAdblock                  |    49 |
-| IE                    | NoAdblock                  |     8 |
-| Mobile Firefox        | NoAdblock                  |     3 |
-| Mobile Safari         | EasyList                   |     5 |
-| Mobile Safari         | NoAdblock                  |  1124 |
-| Mozilla               | NoAdblock                  |    11 |
-| Opera                 | EasyList                   |    14 |
-| Opera                 | NoAdblock                  |    14 |
-| PS4 Web browser       | NoAdblock                  |     1 |
-| Puffin                | NoAdblock                  |     2 |
-| Safari                | EasyList                   |     3 |
-| Safari                | NoAdblock                  |   373 |
-| Silk                  | NoAdblock                  |    11 |
-| Yandex.Browser        | EasyList                   |     2 |
-| Yandex.Browser        | NoAdblock                  |    36 |
-| Yandex.Browser mobile | NoAdblock                  |     4 |
+| Chrome                | EasyList                   |   343 |
+| Chrome                | NoAdblock                  |  1969 |
+| Chrome Mobile         | NoAdblock                  |   587 |
+| Firefox               | EasyList                   |    26 |
+| Firefox               | NoAdblock                  |    46 |
+| IE                    | NoAdblock                  |    10 |
+| Mobile Firefox        | NoAdblock                  |     1 |
+| Mobile Safari         | EasyList                   |     2 |
+| Mobile Safari         | NoAdblock                  |  1049 |
+| Mozilla               | NoAdblock                  |    15 |
+| Opera                 | EasyList                   |    16 |
+| Opera                 | NoAdblock                  |     6 |
+| PS4 Web browser       | NoAdblock                  |     2 |
+| Puffin                | NoAdblock                  |     1 |
+| Safari                | EasyList                   |     1 |
+| Safari                | NoAdblock                  |   385 |
+| Silk                  | NoAdblock                  |     9 |
+| Yandex.Browser        | EasyList                   |     4 |
+| Yandex.Browser        | NoAdblock                  |    35 |
+| Yandex.Browser mobile | NoAdblock                  |     8 |
 +-----------------------+----------------------------+-------+
-(25 rows)
+(22 rows)
 
 !ok
 # Wed Jul 10 16:24:31 IST 2024
@@ -276,18 +267,16 @@ GROUP BY 1,2;
 +----------------+----------------------------+-------+
 | Browser        | adblock_list               | count |
 +----------------+----------------------------+-------+
-| Chrome         | EasyList                   |   387 |
 | Chrome         | EasyList,AntiAdblockKiller |     1 |
 | Chrome Mobile  | EasyList                   |     2 |
-| Chromium       | EasyList                   |     1 |
-| Firefox        | EasyList                   |    25 |
-| Firefox        | EasyList,AntiAdblockKiller |     2 |
-| Mobile Safari  | EasyList                   |     5 |
-| Opera          | EasyList                   |    14 |
-| Safari         | EasyList                   |     3 |
-| Yandex.Browser | EasyList                   |     2 |
+| Chrome         | EasyList                   |   343 |
+| Firefox        | EasyList                   |    26 |
+| Mobile Safari  | EasyList                   |     2 |
+| Opera          | EasyList                   |    16 |
+| Safari         | EasyList                   |     1 |
+| Yandex.Browser | EasyList                   |     4 |
 +----------------+----------------------------+-------+
-(10 rows)
+(8 rows)
 
 !ok
 # Wed Jul 10 16:24:36 IST 2024
