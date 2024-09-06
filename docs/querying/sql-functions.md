@@ -1339,14 +1339,14 @@ Returns the following:
 
 ## IPV4_PARSE
 
-Parses `address` into an IPv4 address stored as an integer.
+Parses an IPv4 `address` into its integer notation.
 
 * **Syntax:** `IPV4_PARSE(address)`
 * **Function type:** Scalar, IP address
 
 <details><summary>Example</summary>
 
-The following example returns the IPv4 address `5.5.5.5` represented as an integer.
+The following example returns an integer that represents the IPv4 address `5.5.5.5`.
 
 ```sql
 SELECT 
