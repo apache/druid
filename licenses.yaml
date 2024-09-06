@@ -1848,7 +1848,6 @@ notices:
   - maven-builder-support: |
       Maven Builder Support
       Copyright 2001-2018 The Apache Software Foundation
-
 ---
 
 name: Maven Artifact Resolver Provider
@@ -1870,8 +1869,6 @@ notices:
   - maven-model-builder: |
       Maven Model Builder
       Copyright 2001-2018 The Apache Software Foundation
-
-
 ---
 
 name: Apache Maven Artifact
@@ -1910,7 +1907,6 @@ notices:
   - maven-resolver-util: |
       Maven Artifact Resolver Utilities
       Copyright 2001-2018 The Apache Software Foundation
-
 ---
 
 name: Maven Artifact Resolver Transport HTTP
@@ -1938,7 +1934,6 @@ notices:
   - maven-resolver-impl: |
       Maven Artifact Resolver Implementation
       Copyright 2001-2018 The Apache Software Foundation
-
 ---
 
 name: Plexus :: Component Annotations
@@ -1948,21 +1943,6 @@ license_name: Apache License version 2.0
 version: 1.7.1
 libraries:
   - org.codehaus.plexus: plexus-component-annotations
-
----
-
-name: Maven Artifact Resolver Implementation
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.3.1
-libraries:
-  - org.apache.maven.resolver: maven-resolver-impl
-notices:
-  - maven-resolver-impl: |
-      Maven Artifact Resolver Implementation
-      Copyright 2001-2018 The Apache Software Foundation
-
 ---
 
 name: Apache Maven Wagon API
