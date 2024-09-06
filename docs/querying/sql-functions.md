@@ -641,11 +641,32 @@ Converts a value into the specified data type.
 
 ## CEIL (date and time)
 
-`CEIL(<TIMESTAMP> TO <TIME_UNIT>)`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Rounds up a timestamp by a given time unit.
+
+* **Syntax:** `CEIL(timestamp_expr TO unit>)`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest year.
+
+```sql
+SELECT
+  "__time" AS "original_time",
+  CEIL("__time" TO YEAR) AS "ceiling"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `ceiling` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2014-01-01T00:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## CEIL (numeric)
 
@@ -1161,11 +1182,32 @@ Returns the following:
 
 ## EXTRACT
 
-`EXTRACT(<TIME_UNIT> FROM <TIMESTAMP>)`
+Extracts the value of some unit from the timestamp.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `EXTRACT(unit FROM timestamp_expr)`
+* **Function type:** Scalar, date and time
 
-Extracts the value of some unit of the timestamp, optionally from a certain time zone, and returns the number.
+<details><summary>Example</summary>
+
+The following example extracts the year from the `__time` column from the `taxi-trips` datasource.
+
+```sql
+SELECT 
+  "__time" AS "original_time",
+  EXTRACT(YEAR FROM "__time" ) AS "year"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `year` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## FIRST_VALUE
 
@@ -1177,11 +1219,32 @@ Returns the value evaluated for the expression for the first row within the wind
 
 ## FLOOR (date and time)
 
-`FLOOR(<TIMESTAMP> TO <TIME_UNIT>)`
+Rounds down a timestamp by a given time unit. 
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `FLOOR(timestamp_expr TO unit>)`
+* **Function type:** Scalar, date and time
 
-Rounds down a timestamp by a given time unit.
+<details><summary>Example</summary>
+
+The following example rounds down the `__time` column from the `taxi-trips` datasource to the nearest year.
+
+```sql
+SELECT
+  "__time" AS "original_time",
+  FLOOR("__time" TO YEAR) AS "floor"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `floor` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-01-01T00:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## FLOOR (numeric)
 
@@ -1859,11 +1922,28 @@ Returns the maximum value of a set of values.
 
 ## MILLIS_TO_TIMESTAMP
 
-`MILLIS_TO_TIMESTAMP(millis_expr)`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Converts a number of milliseconds since epoch into a timestamp.
+
+* **Syntax:** `MILLIS_TO_TIMESTAMP(millis_expr)`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example converts 1375344877000 milliseconds from epoch into a timestamp. 
+
+```sql
+SELECT MILLIS_TO_TIMESTAMP(1375344877000) AS "timestamp"
+```
+
+Returns the following:
+
+| `timestamp` |
+| -- |
+| `2013-08-01T08:14:37.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## MIN
 
@@ -2918,11 +2998,33 @@ Returns the following:
 
 ## TIME_IN_INTERVAL
 
-`TIME_IN_INTERVAL(<TIMESTAMP>, <CHARACTER>)`
+Returns true if a timestamp is contained within a particular interval. Intervals must be formatted as a string literal containing any ISO 8601 interval. The start instant of an interval is inclusive, and the end instant is exclusive.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIME_IN_INTERVAL(timestamp_expr, interval)`
+* **Function type:** Scalar, date and time
 
-Returns whether a timestamp is contained within a particular interval, formatted as a string.
+<details><summary>Example</summary>
+
+The following example returns true when a timestamp in the `__time` column of the `taxi-trips` datasource is within a hour interval starting from `2013-08-01T08:00:00`.
+
+```sql
+SELECT 
+  "__time" AS "original_time",
+  TIME_IN_INTERVAL("__time", '2013-08-01T08:00:00/PT1H') AS "in_interval"
+FROM "taxi-trips"
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_time` | `in_interval` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `true` | 
+| `2013-08-01T09:13:00.000Z` | `false` | 
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIME_PARSE
 
@@ -2985,27 +3087,89 @@ Returns the following:
 
 ## TIMESTAMP_TO_MILLIS
 
-`TIMESTAMP_TO_MILLIS(<TIMESTAMP>)`
-
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
-
 Returns the number of milliseconds since epoch for the given timestamp.
+
+* **Syntax:** `TIMESTAMP_TO_MILLIS(timestamp_expr)`
+* **Function type:** Scalar, date and time
+
+<details><summary>Example</summary>
+
+The following example converts the `__time` column from the `taxi-trips` datasource into milliseconds since epoch.
+
+```sql
+SELECT 
+  "__time" AS "original_time",
+  TIMESTAMP_TO_MILLIS("__time") AS "miliseconds"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_time` | `miliseconds` |
+| -- | -- |
+| `2013-08-01T08:14:37.000Z` | `1375344877000` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIMESTAMPADD
 
-`TIMESTAMPADD(<unit>, <count>, <TIMESTAMP>)`
+Add a `unit` of time multiplied by `count` to `timestamp`.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIMESTAMPADD(unit, count, timestamp)`
+* **Function type:** Scalar, date and time
 
-Adds a certain amount of time to a given timestamp.
+<details><summary>Example</summary>
+
+The following example adds five months to the timestamp `2000-01-01 00:00:00`.
+
+```sql
+SELECT
+  TIMESTAMP '2000-01-01 00:00:00' AS "original_time",
+  TIMESTAMPADD (MONTH, 5, TIMESTAMP '2000-01-01 00:00:00') AS "new_time"
+```
+
+Returns the following:
+
+| `original_time` | `new_time` |
+| -- | -- |
+| `2000-01-01T00:00:00.000Z` | `2000-06-01T00:00:00.000Z` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIMESTAMPDIFF
 
-`TIMESTAMPDIFF(<unit>, <TIMESTAMP>, <TIMESTAMP>)`
+Returns the difference between two timestamps in a given unit.
 
-**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+* **Syntax:** `TIMESTAMPDIFF(unit, timestamp1, timestamp2)`
+* **Function type:** Scalar, date and time
 
-Takes the difference between two timestamps, returning the results in the given units.
+<details><summary>Example</summary>
+
+The following example calculates the taxi trip length in minutes by subtracting the `__time` column from the `dropoff_datetime` column in the `taxi-trips` datasource.
+
+```sql
+SELECT
+  "__time" AS "pickup_time",
+  "dropoff_datetime" AS "dropoff_time",
+  TIMESTAMPDIFF (MINUTE, "__time", TIME_PARSE("dropoff_datetime")) AS "trip_length"
+FROM "taxi-trips"
+LIMIT 1
+```
+
+Returns the following: 
+
+| `pickup_time` | `dropoff_time` | `trip_length` |
+| -- | -- | -- |
+| `2013-08-01T08:14:37.000Z` | `2013-08-01 09:09:06` | `54` |
+
+</details>
+
+[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TO_JSON_STRING
 
