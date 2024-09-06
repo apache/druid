@@ -36,11 +36,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class NoopQueryProcessingPool implements QueryProcessingPool
 {
-  private static final QueryProcessingPool INSTANCE = new NoopQueryProcessingPool();
-  private static final DruidException UNSUPPORTED_EXCEPTION =
-      DruidException.defensive("Unexpected call made to NoopQueryProcessingPool");
+  private static final NoopQueryProcessingPool INSTANCE = new NoopQueryProcessingPool();
 
-  public static QueryProcessingPool instance()
+  public static NoopQueryProcessingPool instance()
   {
     return INSTANCE;
   }
@@ -48,37 +46,37 @@ public class NoopQueryProcessingPool implements QueryProcessingPool
   @Override
   public <T, V> ListenableFuture<T> submitRunnerTask(PrioritizedQueryRunnerCallable<T, V> task)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public <T> ListenableFuture<T> submit(Callable<T> callable)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public ListenableFuture<?> submit(Runnable runnable)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public <T> ListenableFuture<T> submit(Runnable runnable, T t)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
@@ -114,18 +112,23 @@ public class NoopQueryProcessingPool implements QueryProcessingPool
   @Override
   public <T> T invokeAny(Collection<? extends Callable<T>> collection)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public <T> T invokeAny(Collection<? extends Callable<T>> collection, long l, TimeUnit timeUnit)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
   }
 
   @Override
   public void execute(Runnable runnable)
   {
-    throw UNSUPPORTED_EXCEPTION;
+    throw unsupportedException();
+  }
+
+  private DruidException unsupportedException()
+  {
+    return DruidException.defensive("Unexpected call made to NoopQueryProcessingPool");
   }
 }

@@ -83,7 +83,9 @@ public class PeonProcessingModule implements Module
       Lifecycle lifecycle
   )
   {
-    if (!task.supportsQueries()) {
+    if (task.supportsQueries()) {
+      return DruidProcessingModule.createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
+    } else {
       if (config.isNumThreadsConfigured()) {
         log.warn(
             "Ignoring the configured numThreads[%d] because task[%s] of type[%s] does not support queries",
@@ -94,7 +96,6 @@ public class PeonProcessingModule implements Module
       }
       return NoopQueryProcessingPool.instance();
     }
-    return DruidProcessingModule.createProcessingExecutorPool(config, executorServiceMonitor, lifecycle);
   }
 
   @Provides
@@ -102,10 +103,11 @@ public class PeonProcessingModule implements Module
   @Global
   public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(Task task, DruidProcessingConfig config)
   {
-    if (!task.supportsQueries()) {
+    if (task.supportsQueries()) {
+      return DruidProcessingModule.createIntermediateResultsPool(config);
+    } else {
       return DummyNonBlockingPool.instance();
     }
-    return DruidProcessingModule.createIntermediateResultsPool(config);
   }
 
   @Provides
@@ -113,7 +115,9 @@ public class PeonProcessingModule implements Module
   @Merging
   public BlockingPool<ByteBuffer> getMergeBufferPool(Task task, DruidProcessingConfig config)
   {
-    if (!task.supportsQueries()) {
+    if (task.supportsQueries()) {
+      return DruidProcessingModule.createMergeBufferPool(config);
+    } else {
       if (config.isNumMergeBuffersConfigured()) {
         log.warn(
             "Ignoring the configured numMergeBuffers[%d] because task[%s] of type[%s] does not support queries",
@@ -124,7 +128,6 @@ public class PeonProcessingModule implements Module
       }
       return DummyBlockingPool.instance();
     }
-    return DruidProcessingModule.createMergeBufferPool(config);
   }
 
   @Provides
