@@ -121,13 +121,9 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
-        InputSource inputSource = new ScaledResoureInputDataSource(
-            1,
-            100,
-            ResourceInputSource.of(
-                TestIndex.class.getClassLoader(),
-                "kttm-nested-v2-2019-08-25.json"
-            )
+        InputSource inputSource = ResourceInputSource.of(
+            TestIndex.class.getClassLoader(),
+            "kttm-nested-v2-2019-08-25.json"
         );
         return IndexBuilder
             .create()

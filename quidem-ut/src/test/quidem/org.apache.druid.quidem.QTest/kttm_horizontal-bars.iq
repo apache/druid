@@ -9,7 +9,7 @@ GROUP BY ();
 +-------------------------+
 | __VALUE__               |
 +-------------------------+
-| 2019-08-25 23:59:58.044 |
+| 2019-08-25 23:59:59.686 |
 +-------------------------+
 (1 row)
 
@@ -22,7 +22,7 @@ GROUP BY ();
 +-------------------------+
 | __VALUE__               |
 +-------------------------+
-| 2019-08-25 23:59:58.044 |
+| 2019-08-25 23:59:59.686 |
 +-------------------------+
 (1 row)
 
@@ -50,7 +50,7 @@ GROUP BY ();
 +-----------+
 | __VALUE__ |
 +-----------+
-|      4519 |
+|    465346 |
 +-----------+
 (1 row)
 
@@ -64,25 +64,36 @@ WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t
 GROUP BY 1
 ORDER BY "count" DESC
 LIMIT 1000;
-+-----------------------+-------+
-| Browser               | count |
-+-----------------------+-------+
-| Chrome                |  2313 |
-| Mobile Safari         |  1052 |
-| Chrome Mobile         |   589 |
-| Safari                |   386 |
-| Firefox               |    72 |
-| Yandex.Browser        |    39 |
-| Opera                 |    22 |
-| Mozilla               |    15 |
-| IE                    |    10 |
-| Silk                  |     9 |
-| Yandex.Browser mobile |     8 |
-| PS4 Web browser       |     2 |
-| Mobile Firefox        |     1 |
-| Puffin                |     1 |
-+-----------------------+-------+
-(14 rows)
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+| Chrome                | 232603 |
+| Mobile Safari         | 113617 |
+| Chrome Mobile         |  60173 |
+| Safari                |  38323 |
+| Firefox               |   8307 |
+| Yandex.Browser        |   4258 |
+| Opera                 |   2819 |
+| IE                    |   1238 |
+| Mozilla               |   1224 |
+| Silk                  |   1050 |
+| Yandex.Browser mobile |    583 |
+| Mobile Firefox        |    253 |
+| Puffin                |    240 |
+| Chromium              |    149 |
+| Waterfox              |    129 |
+| Opera Mobile          |     78 |
+| PS4 Web browser       |     77 |
+| Android browser       |     52 |
+| Sogou Explorer        |     51 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| PS Vita browser       |     19 |
+| unknown               |     17 |
+|                       |     10 |
+| Apple Mail            |      7 |
++-----------------------+--------+
+(25 rows)
 
 !ok
 # Wed Jul 10 16:24:21 IST 2024
@@ -94,7 +105,7 @@ GROUP BY ();
 +-----------+
 | __VALUE__ |
 +-----------+
-|      2313 |
+|    232603 |
 +-----------+
 (1 row)
 
@@ -106,24 +117,35 @@ CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
 FROM "kttm_nested" AS t
 WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox','Opera Mobile','PS4 Web browser','Android browser','Sogou Explorer','IE Mobile','Maxthon','PS Vita browser','unknown','','Apple Mail'))
 GROUP BY 1;
-+-----------------------+-------+
-| Browser               | count |
-+-----------------------+-------+
-| Chrome Mobile         |   589 |
-| Firefox               |    72 |
-| IE                    |    10 |
-| Mobile Firefox        |     1 |
-| Mobile Safari         |  1052 |
-| Mozilla               |    15 |
-| Opera                 |    22 |
-| PS4 Web browser       |     2 |
-| Puffin                |     1 |
-| Safari                |   386 |
-| Silk                  |     9 |
-| Yandex.Browser        |    39 |
-| Yandex.Browser mobile |     8 |
-+-----------------------+-------+
-(13 rows)
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+|                       |     10 |
+| Android browser       |     52 |
+| Apple Mail            |      7 |
+| Chrome Mobile         |  60173 |
+| Chromium              |    149 |
+| Firefox               |   8307 |
+| IE                    |   1238 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| Mobile Firefox        |    253 |
+| Mobile Safari         | 113617 |
+| Mozilla               |   1224 |
+| Opera                 |   2819 |
+| Opera Mobile          |     78 |
+| PS Vita browser       |     19 |
+| PS4 Web browser       |     77 |
+| Puffin                |    240 |
+| Safari                |  38323 |
+| Silk                  |   1050 |
+| Sogou Explorer        |     51 |
+| Waterfox              |    129 |
+| Yandex.Browser        |   4258 |
+| Yandex.Browser mobile |    583 |
+| unknown               |     17 |
++-----------------------+--------+
+(24 rows)
 
 !ok
 # Wed Jul 10 16:24:25 IST 2024
@@ -135,11 +157,11 @@ WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t
 GROUP BY 1
 ORDER BY "count" DESC
 LIMIT 10;
-+-------------+-------+
-| app_version | count |
-+-------------+-------+
-| 1.9.6       |  4519 |
-+-------------+-------+
++-------------+--------+
+| app_version | count  |
++-------------+--------+
+| 1.9.6       | 465346 |
++-------------+--------+
 (1 row)
 
 !ok
@@ -150,25 +172,36 @@ CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
 FROM "kttm_nested" AS t
 WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox','Opera Mobile','PS4 Web browser','Android browser','Sogou Explorer','IE Mobile','Maxthon','PS Vita browser','unknown','','Apple Mail')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6'))
 GROUP BY 1;
-+-----------------------+-------+
-| Browser               | count |
-+-----------------------+-------+
-| Chrome                |  2313 |
-| Chrome Mobile         |   589 |
-| Firefox               |    72 |
-| IE                    |    10 |
-| Mobile Firefox        |     1 |
-| Mobile Safari         |  1052 |
-| Mozilla               |    15 |
-| Opera                 |    22 |
-| PS4 Web browser       |     2 |
-| Puffin                |     1 |
-| Safari                |   386 |
-| Silk                  |     9 |
-| Yandex.Browser        |    39 |
-| Yandex.Browser mobile |     8 |
-+-----------------------+-------+
-(14 rows)
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+|                       |     10 |
+| Android browser       |     52 |
+| Apple Mail            |      7 |
+| Chrome                | 232603 |
+| Chrome Mobile         |  60173 |
+| Chromium              |    149 |
+| Firefox               |   8307 |
+| IE                    |   1238 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| Mobile Firefox        |    253 |
+| Mobile Safari         | 113617 |
+| Mozilla               |   1224 |
+| Opera                 |   2819 |
+| Opera Mobile          |     78 |
+| PS Vita browser       |     19 |
+| PS4 Web browser       |     77 |
+| Puffin                |    240 |
+| Safari                |  38323 |
+| Silk                  |   1050 |
+| Sogou Explorer        |     51 |
+| Waterfox              |    129 |
+| Yandex.Browser        |   4258 |
+| Yandex.Browser mobile |    583 |
+| unknown               |     17 |
++-----------------------+--------+
+(25 rows)
 
 !ok
 # Wed Jul 10 16:24:30 IST 2024
@@ -180,14 +213,14 @@ WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t
 GROUP BY 1
 ORDER BY "count" DESC
 LIMIT 1000;
-+----------------------------+-------+
-| adblock_list               | count |
-+----------------------------+-------+
-| NoAdblock                  |  4123 |
-| EasyList                   |   394 |
-| AntiAdblockKiller          |     1 |
-| EasyList,AntiAdblockKiller |     1 |
-+----------------------------+-------+
++----------------------------+--------+
+| adblock_list               | count  |
++----------------------------+--------+
+| NoAdblock                  | 424282 |
+| EasyList                   |  40579 |
+| EasyList,AntiAdblockKiller |    401 |
+| AntiAdblockKiller          |     84 |
++----------------------------+--------+
 (4 rows)
 
 !ok
@@ -198,25 +231,35 @@ CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
 FROM "kttm_nested" AS t
 WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox','Opera Mobile','PS4 Web browser','Android browser','Sogou Explorer','IE Mobile','Maxthon','PS Vita browser','unknown','','Apple Mail')) AND (CAST(t."adblock_list" AS VARCHAR)='NoAdblock'))
 GROUP BY 1;
-+-----------------------+-------+
-| Browser               | count |
-+-----------------------+-------+
-| Chrome                |  1969 |
-| Chrome Mobile         |   587 |
-| Firefox               |    46 |
-| IE                    |    10 |
-| Mobile Firefox        |     1 |
-| Mobile Safari         |  1049 |
-| Mozilla               |    15 |
-| Opera                 |     6 |
-| PS4 Web browser       |     2 |
-| Puffin                |     1 |
-| Safari                |   385 |
-| Silk                  |     9 |
-| Yandex.Browser        |    35 |
-| Yandex.Browser mobile |     8 |
-+-----------------------+-------+
-(14 rows)
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+| Android browser       |     52 |
+| Apple Mail            |      6 |
+| Chrome                | 197577 |
+| Chrome Mobile         |  60013 |
+| Chromium              |     36 |
+| Firefox               |   5254 |
+| IE                    |   1210 |
+| IE Mobile             |     35 |
+| Maxthon               |     16 |
+| Mobile Firefox        |    249 |
+| Mobile Safari         | 113431 |
+| Mozilla               |   1209 |
+| Opera                 |   1238 |
+| Opera Mobile          |     78 |
+| PS Vita browser       |     19 |
+| PS4 Web browser       |     77 |
+| Puffin                |    240 |
+| Safari                |  37975 |
+| Silk                  |   1050 |
+| Sogou Explorer        |     49 |
+| Waterfox              |    112 |
+| Yandex.Browser        |   3756 |
+| Yandex.Browser mobile |    583 |
+| unknown               |     17 |
++-----------------------+--------+
+(24 rows)
 
 !ok
 # Wed Jul 10 16:24:30 IST 2024
@@ -227,33 +270,55 @@ CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
 FROM "kttm_nested" AS t
 WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin','Chromium','Waterfox','Opera Mobile','PS4 Web browser','Android browser','Sogou Explorer','IE Mobile','Maxthon','PS Vita browser','unknown','','Apple Mail')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller'))
 GROUP BY 1,2;
-+-----------------------+----------------------------+-------+
-| Browser               | adblock_list               | count |
-+-----------------------+----------------------------+-------+
-| Chrome                | EasyList,AntiAdblockKiller |     1 |
-| Chrome Mobile         | EasyList                   |     2 |
-| Chrome                | EasyList                   |   343 |
-| Chrome                | NoAdblock                  |  1969 |
-| Chrome Mobile         | NoAdblock                  |   587 |
-| Firefox               | EasyList                   |    26 |
-| Firefox               | NoAdblock                  |    46 |
-| IE                    | NoAdblock                  |    10 |
-| Mobile Firefox        | NoAdblock                  |     1 |
-| Mobile Safari         | EasyList                   |     2 |
-| Mobile Safari         | NoAdblock                  |  1049 |
-| Mozilla               | NoAdblock                  |    15 |
-| Opera                 | EasyList                   |    16 |
-| Opera                 | NoAdblock                  |     6 |
-| PS4 Web browser       | NoAdblock                  |     2 |
-| Puffin                | NoAdblock                  |     1 |
-| Safari                | EasyList                   |     1 |
-| Safari                | NoAdblock                  |   385 |
-| Silk                  | NoAdblock                  |     9 |
-| Yandex.Browser        | EasyList                   |     4 |
-| Yandex.Browser        | NoAdblock                  |    35 |
-| Yandex.Browser mobile | NoAdblock                  |     8 |
-+-----------------------+----------------------------+-------+
-(22 rows)
++-----------------------+----------------------------+--------+
+| Browser               | adblock_list               | count  |
++-----------------------+----------------------------+--------+
+|                       | EasyList                   |     10 |
+| Android browser       | NoAdblock                  |     52 |
+| Apple Mail            | EasyList                   |      1 |
+| Apple Mail            | NoAdblock                  |      6 |
+| Chrome                | EasyList                   |  34745 |
+| Chrome                | EasyList,AntiAdblockKiller |    258 |
+| Chrome                | NoAdblock                  | 197577 |
+| Chrome Mobile         | EasyList                   |    146 |
+| Chrome Mobile         | EasyList,AntiAdblockKiller |     11 |
+| Chrome Mobile         | NoAdblock                  |  60013 |
+| Chromium              | EasyList                   |     78 |
+| Chromium              | EasyList,AntiAdblockKiller |     35 |
+| Chromium              | NoAdblock                  |     36 |
+| Firefox               | EasyList                   |   3014 |
+| Firefox               | EasyList,AntiAdblockKiller |     39 |
+| Firefox               | NoAdblock                  |   5254 |
+| IE                    | NoAdblock                  |   1210 |
+| IE Mobile             | NoAdblock                  |     35 |
+| Maxthon               | EasyList                   |     18 |
+| Maxthon               | NoAdblock                  |     16 |
+| Mobile Firefox        | EasyList                   |      4 |
+| Mobile Firefox        | NoAdblock                  |    249 |
+| Mobile Safari         | EasyList                   |    131 |
+| Mobile Safari         | EasyList,AntiAdblockKiller |     40 |
+| Mobile Safari         | NoAdblock                  | 113431 |
+| Mozilla               | NoAdblock                  |   1209 |
+| Opera                 | EasyList                   |   1581 |
+| Opera                 | NoAdblock                  |   1238 |
+| Opera Mobile          | NoAdblock                  |     78 |
+| PS Vita browser       | NoAdblock                  |     19 |
+| PS4 Web browser       | NoAdblock                  |     77 |
+| Puffin                | NoAdblock                  |    240 |
+| Safari                | EasyList                   |    348 |
+| Safari                | NoAdblock                  |  37975 |
+| Silk                  | NoAdblock                  |   1050 |
+| Sogou Explorer        | EasyList                   |      1 |
+| Sogou Explorer        | EasyList,AntiAdblockKiller |      1 |
+| Sogou Explorer        | NoAdblock                  |     49 |
+| Waterfox              | EasyList,AntiAdblockKiller |     17 |
+| Waterfox              | NoAdblock                  |    112 |
+| Yandex.Browser        | EasyList                   |    502 |
+| Yandex.Browser        | NoAdblock                  |   3756 |
+| Yandex.Browser mobile | NoAdblock                  |    583 |
+| unknown               | NoAdblock                  |     17 |
++-----------------------+----------------------------+--------+
+(44 rows)
 
 !ok
 # Wed Jul 10 16:24:31 IST 2024
@@ -267,16 +332,28 @@ GROUP BY 1,2;
 +----------------+----------------------------+-------+
 | Browser        | adblock_list               | count |
 +----------------+----------------------------+-------+
-| Chrome         | EasyList,AntiAdblockKiller |     1 |
-| Chrome Mobile  | EasyList                   |     2 |
-| Chrome         | EasyList                   |   343 |
-| Firefox        | EasyList                   |    26 |
-| Mobile Safari  | EasyList                   |     2 |
-| Opera          | EasyList                   |    16 |
-| Safari         | EasyList                   |     1 |
-| Yandex.Browser | EasyList                   |     4 |
+|                | EasyList                   |    10 |
+| Apple Mail     | EasyList                   |     1 |
+| Chrome         | EasyList                   | 34745 |
+| Chrome         | EasyList,AntiAdblockKiller |   258 |
+| Chrome Mobile  | EasyList                   |   146 |
+| Chrome Mobile  | EasyList,AntiAdblockKiller |    11 |
+| Chromium       | EasyList                   |    78 |
+| Chromium       | EasyList,AntiAdblockKiller |    35 |
+| Firefox        | EasyList                   |  3014 |
+| Firefox        | EasyList,AntiAdblockKiller |    39 |
+| Maxthon        | EasyList                   |    18 |
+| Mobile Firefox | EasyList                   |     4 |
+| Mobile Safari  | EasyList                   |   131 |
+| Mobile Safari  | EasyList,AntiAdblockKiller |    40 |
+| Opera          | EasyList                   |  1581 |
+| Safari         | EasyList                   |   348 |
+| Sogou Explorer | EasyList                   |     1 |
+| Sogou Explorer | EasyList,AntiAdblockKiller |     1 |
+| Waterfox       | EasyList,AntiAdblockKiller |    17 |
+| Yandex.Browser | EasyList                   |   502 |
 +----------------+----------------------------+-------+
-(8 rows)
+(20 rows)
 
 !ok
 # Wed Jul 10 16:24:36 IST 2024
