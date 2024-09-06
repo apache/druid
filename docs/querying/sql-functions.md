@@ -1070,8 +1070,7 @@ The following example creates an HLL sketch on the `Tail_number` column from the
 SELECT
   "OriginState" AS "origin_state",
   "DestState" AS "destination_state",
-  DS_HLL("Tail_Number") AS "hll_tail_number",
-  COUNT(DISTINCT "Tail_Number") AS "grouped_rows"
+  DS_HLL("Tail_Number") AS "hll_tail_number"
 FROM "flight-carriers"
 GROUP BY 1,2
 LIMIT 1
@@ -1079,9 +1078,9 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_state` | `destination_state` | `hll_tail_number` | `grouped_rows`|
-| -- | -- | -- | -- | 
-| `AK` | `AK` | `"AwEHDAcIAAFBAAAAfY..."` | `64` | 
+| `origin_state` | `destination_state` | `hll_tail_number` | 
+| -- | -- | -- | 
+| `AK` | `AK` | `"AwEHDAcIAAFBAAAAfY..."` |
 
 </details>
 
