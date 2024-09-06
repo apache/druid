@@ -411,32 +411,11 @@ Converts a value into the specified data type.
 
 ## CEIL (date and time)
 
+`CEIL(<TIMESTAMP> TO <TIME_UNIT>)`
+
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+
 Rounds up a timestamp by a given time unit.
-
-* **Syntax:** `CEIL(timestamp_expr TO unit>)`
-* **Function type:** Scalar, date and time
-
-<details><summary>Example</summary>
-
-The following example rounds up the `__time` column from the `taxi-trips` datasource to the nearest year.
-
-```sql
-SELECT
-  "__time" AS "original_time",
-  CEIL("__time" TO YEAR) AS "ceiling"
-FROM "taxi-trips"
-LIMIT 1
-```
-
-Returns the following:
-
-| `original_time` | `ceiling` |
-| -- | -- |
-| `2013-08-01T08:14:37.000Z` | `2014-01-01T00:00:00.000Z` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## CEIL (numeric)
 
@@ -726,32 +705,11 @@ Calculates _e_ raised to the power of the numeric expression.
 
 ## EXTRACT
 
-Extracts the value of some unit from the timestamp.
+`EXTRACT(<TIME_UNIT> FROM <TIMESTAMP>)`
 
-* **Syntax:** `EXTRACT(unit FROM timestamp_expr)`
-* **Function type:** Scalar, date and time
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-<details><summary>Example</summary>
-
-The following example extracts the year from the `__time` column from the `taxi-trips` datasource.
-
-```sql
-SELECT 
-  "__time" AS "original_time",
-  EXTRACT(YEAR FROM "__time" ) AS "year"
-FROM "taxi-trips"
-LIMIT 1
-```
-
-Returns the following:
-
-| `original_time` | `year` |
-| -- | -- |
-| `2013-08-01T08:14:37.000Z` | `2013` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
+Extracts the value of some unit of the timestamp, optionally from a certain time zone, and returns the number.
 
 ## FIRST_VALUE
 
@@ -763,32 +721,11 @@ Returns the value evaluated for the expression for the first row within the wind
 
 ## FLOOR (date and time)
 
-Rounds down a timestamp by a given time unit. 
+`FLOOR(<TIMESTAMP> TO <TIME_UNIT>)`
 
-* **Syntax:** `FLOOR(timestamp_expr TO unit>)`
-* **Function type:** Scalar, date and time
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-<details><summary>Example</summary>
-
-The following example rounds down the `__time` column from the `taxi-trips` datasource to the nearest year.
-
-```sql
-SELECT
-  "__time" AS "original_time",
-  FLOOR("__time" TO YEAR) AS "floor"
-FROM "taxi-trips"
-LIMIT 1
-```
-
-Returns the following:
-
-| `original_time` | `floor` |
-| -- | -- |
-| `2013-08-01T08:14:37.000Z` | `2013-01-01T00:00:00.000Z` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
+Rounds down a timestamp by a given time unit.
 
 ## FLOOR (numeric)
 
@@ -800,29 +737,11 @@ Calculates the largest integer value less than or equal to the numeric expressio
 
 ## GREATEST
 
-Returns the maximum value from the provided expressions. For information on how Druid interprets the arguments passed into the function, see [Reduction functions](sql-scalar.md#reduction-functions).
+`GREATEST([expr1, ...])`
 
-* **Syntax:** `GREATEST([expr1, ...])`
-* **Function type:** Scalar, reduction
+**Function type:** [Scalar, reduction](sql-scalar.md#reduction-functions)
 
-<details><summary>Example</summary>
-
-The following example returns the greatest value between the numeric constant `PI`, the integer number `4`, and the double `-5.0`. Druid interprets these arguments as DOUBLE data type.
-
-```sql
-SELECT GREATEST(PI, 4, -5.0) AS "greatest"
-```
-
-Returns the following:
-
-| `greatest` |
-| -- | 
-| `4` |
-
-</details>
-
-[Learn more](sql-scalar.md#reduction-functions)
-
+Returns the maximum value from the provided arguments.
 
 ## GROUPING
 
@@ -898,118 +817,35 @@ Finds whether a string is in a given expression, case-insensitive.
 
 ## IPV4_MATCH
 
-Returns true if the IPv4 `address` belongs to the `subnet` literal, otherwise returns false.
+`IPV4_MATCH(address, subnet)`
 
-* **Syntax:** `IPV4_MATCH(address, subnet)`
-* **Function type:** Scalar, IP address
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-<details><summary>Example</summary>
-
-The following example returns true if the IPv4 address in the `forward_for` column from the `kttm` datasource belongs to the subnet `181.13.41.0/24`.
-
-```sql
-SELECT 
-  "forwarded_for" AS "ipv4_address",
-  IPV4_MATCH("forwarded_for", '181.13.41.0/24') AS "belongs_in_subnet"
-FROM "kttm"
-LIMIT 2
-```
-
-Returns the following:
-
-| `ipv4_address` | `belongs_in_subnet`|
-| -- | -- | 
-| `181.13.41.82` | `true`|
-| `177.242.100.0` | `false`|
-
-</details>
-
-
-[Learn more](sql-scalar.md#ip-address-functions)
-
+Returns true if the IPv4 `address` belongs to the `subnet` literal, else false.
 
 ## IPV4_PARSE
 
-Parses an IPv4 `address` into its integer notation.
+`IPV4_PARSE(address)`
 
-* **Syntax:** `IPV4_PARSE(address)`
-* **Function type:** Scalar, IP address
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-<details><summary>Example</summary>
-
-The following example returns an integer that represents the IPv4 address `5.5.5.5`.
-
-```sql
-SELECT 
-  '5.5.5.5' AS "ipv4_address",
-  IPV4_PARSE('5.5.5.5') AS "integer"
-```
-
-Returns the following:
-
-| `ipv4_address` | `integer` |
-| -- | -- |
-| `5.5.5.5` | `84215045` |
-
-</details>
-
-[Learn more](sql-scalar.md#ip-address-functions)
+Parses `address` into an IPv4 address stored as an integer.
 
 ## IPV4_STRINGIFY
 
-Converts an IPv4 `address` in integer notation into dot-decimal notation.
+`IPV4_STRINGIFY(address)`
 
-* **Syntax:** `IPV4_STRINGIFY(address)`
-* **Function type:** Scalar, IP address
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-<details><summary>Example</summary>
-
-The following example returns the integer `84215045` in IPv4 dot-decimal notation.
-
-```sql
-SELECT 
-  '84215045' AS "integer",
-  IPV4_STRINGIFY(84215045) AS "dot_decimal_notation"
-```
-
-Returns the following:
-
-| `integer` | `dot_decimal_notation` |
-| -- | -- |
-| `84215045` | `5.5.5.5` |
-
-</details>
-
-[Learn more](sql-scalar.md#ip-address-functions)
+Converts `address` into an IPv4 address in dot-decimal notation.
 
 ## IPV6_MATCH
 
-Returns true if the IPv6 `address` belongs to the `subnet` literal. Otherwise, returns false.
+`IPV6_MATCH(address, subnet)`
 
-* **Syntax:** `IPV6_MATCH(address, subnet)`
-* **Function type:** Scalar, IP address
+**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
 
-<details><summary>Example</summary>
-
-The following example returns true because `75e9:efa4:29c6:85f6::232c` is in the subnet of `75e9:efa4:29c6:85f6::/64`.
-
-```sql
-SELECT 
-  '75e9:efa4:29c6:85f6::232c' AS "ipv6_address",
-  IPV6_MATCH('75e9:efa4:29c6:85f6::232c', '75e9:efa4:29c6:85f6::/64') AS "belongs_in_subnet" 
-```
-
-Returns the following: 
-
-| `ipv6_address` | `belongs_in_subnet` | 
-| -- | -- |
-| `75e9:efa4:29c6:85f6::232c` | `true` | 
-
-
-</details>
-
-[Learn more](sql-scalar.md#ip-address-functions)
-
+Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 ## JSON_KEYS
 
@@ -1101,29 +937,11 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 ## LEAST
 
-Returns the minimum value from the provided expressions. For information on how Druid interprets the arguments passed into the function, see [Reduction functions](sql-scalar.md#reduction-functions).
+`LEAST([expr1, ...])`
 
-* **Syntax:** `LEAST([expr1, ...])`
-* **Function type:** Scalar, reduction
+**Function type:** [Scalar, reduction](sql-scalar.md#reduction-functions)
 
-<details><summary>Example</summary>
-
-The following example returns the minimum value between the strings `apple`, `orange`, and `pear`. Druid interprets these arguments as STRING data type. 
-
-```sql
-SELECT LEAST( 'apple', 'orange', 'pear') AS "least"
-```
-
-Returns the following:
-
-| `least` |
-| -- |
-| `apple` |
-
-</details>
-
-[Learn more](sql-scalar.md#reduction-functions)
-
+Returns the minimum value from the provided arguments.
 
 ## LEFT
 
@@ -1199,28 +1017,11 @@ Returns the maximum value of a set of values.
 
 ## MILLIS_TO_TIMESTAMP
 
+`MILLIS_TO_TIMESTAMP(millis_expr)`
+
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+
 Converts a number of milliseconds since epoch into a timestamp.
-
-* **Syntax:** `MILLIS_TO_TIMESTAMP(millis_expr)`
-* **Function type:** Scalar, date and time
-
-<details><summary>Example</summary>
-
-The following example converts 1375344877000 milliseconds from epoch into a timestamp. 
-
-```sql
-SELECT MILLIS_TO_TIMESTAMP(1375344877000) AS "timestamp"
-```
-
-Returns the following:
-
-| `timestamp` |
-| -- |
-| `2013-08-01T08:14:37.000Z` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## MIN
 
@@ -1754,33 +1555,11 @@ Formats a timestamp as a string.
 
 ## TIME_IN_INTERVAL
 
-Returns true if a timestamp is contained within a particular interval. Intervals must be formatted as a string literal containing any ISO 8601 interval. The start instant of an interval is inclusive, and the end instant is exclusive.
+`TIME_IN_INTERVAL(<TIMESTAMP>, <CHARACTER>)`
 
-* **Syntax:** `TIME_IN_INTERVAL(timestamp_expr, interval)`
-* **Function type:** Scalar, date and time
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-<details><summary>Example</summary>
-
-The following example returns true when a timestamp in the `__time` column of the `taxi-trips` datasource is within a hour interval starting from `2013-08-01T08:00:00`.
-
-```sql
-SELECT 
-  "__time" AS "original_time",
-  TIME_IN_INTERVAL("__time", '2013-08-01T08:00:00/PT1H') AS "in_interval"
-FROM "taxi-trips"
-LIMIT 2
-```
-
-Returns the following:
-
-| `original_time` | `in_interval` |
-| -- | -- |
-| `2013-08-01T08:14:37.000Z` | `true` | 
-| `2013-08-01T09:13:00.000Z` | `false` | 
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
+Returns whether a timestamp is contained within a particular interval, formatted as a string.
 
 ## TIME_PARSE
 
@@ -1800,89 +1579,27 @@ Shifts a timestamp forwards or backwards by a given number of time units.
 
 ## TIMESTAMP_TO_MILLIS
 
+`TIMESTAMP_TO_MILLIS(<TIMESTAMP>)`
+
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
+
 Returns the number of milliseconds since epoch for the given timestamp.
-
-* **Syntax:** `TIMESTAMP_TO_MILLIS(timestamp_expr)`
-* **Function type:** Scalar, date and time
-
-<details><summary>Example</summary>
-
-The following example converts the `__time` column from the `taxi-trips` datasource into milliseconds since epoch.
-
-```sql
-SELECT 
-  "__time" AS "original_time",
-  TIMESTAMP_TO_MILLIS("__time") AS "miliseconds"
-FROM "taxi-trips"
-LIMIT 1
-```
-
-Returns the following:
-
-| `original_time` | `miliseconds` |
-| -- | -- |
-| `2013-08-01T08:14:37.000Z` | `1375344877000` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
 
 ## TIMESTAMPADD
 
-Add a `unit` of time multiplied by `count` to `timestamp`.
+`TIMESTAMPADD(<unit>, <count>, <TIMESTAMP>)`
 
-* **Syntax:** `TIMESTAMPADD(unit, count, timestamp)`
-* **Function type:** Scalar, date and time
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-<details><summary>Example</summary>
-
-The following example adds five months to the timestamp `2000-01-01 00:00:00`.
-
-```sql
-SELECT
-  TIMESTAMP '2000-01-01 00:00:00' AS "original_time",
-  TIMESTAMPADD (MONTH, 5, TIMESTAMP '2000-01-01 00:00:00') AS "new_time"
-```
-
-Returns the following:
-
-| `original_time` | `new_time` |
-| -- | -- |
-| `2000-01-01T00:00:00.000Z` | `2000-06-01T00:00:00.000Z` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
+Adds a certain amount of time to a given timestamp.
 
 ## TIMESTAMPDIFF
 
-Returns the difference between two timestamps in a given unit.
+`TIMESTAMPDIFF(<unit>, <TIMESTAMP>, <TIMESTAMP>)`
 
-* **Syntax:** `TIMESTAMPDIFF(unit, timestamp1, timestamp2)`
-* **Function type:** Scalar, date and time
+**Function type:** [Scalar, date and time](sql-scalar.md#date-and-time-functions)
 
-<details><summary>Example</summary>
-
-The following example calculates the taxi trip length in minutes by subtracting the `__time` column from the `dropoff_datetime` column in the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "__time" AS "pickup_time",
-  "dropoff_datetime" AS "dropoff_time",
-  TIMESTAMPDIFF (MINUTE, "__time", TIME_PARSE("dropoff_datetime")) AS "trip_length"
-FROM "taxi-trips"
-LIMIT 1
-```
-
-Returns the following: 
-
-| `pickup_time` | `dropoff_time` | `trip_length` |
-| -- | -- | -- |
-| `2013-08-01T08:14:37.000Z` | `2013-08-01 09:09:06` | `54` |
-
-</details>
-
-[Learn more](sql-scalar.md#date-and-time-functions)
+Takes the difference between two timestamps, returning the results in the given units.
 
 ## TO_JSON_STRING
 
