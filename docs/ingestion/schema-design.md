@@ -159,8 +159,8 @@ two. You won't be able to retrieve the user IDs or compute exact distinct counts
 approximate distinct counts, and you'll reduce your storage footprint.
 
 Sketches reduce memory footprint at query time because they limit the amount of data that needs to be shuffled between
-servers. For example, in a quantile computation, instead of needing to send all data points to a central location,
-so they can be sorted and the quantile can be computed, Druid instead only needs to send a sketch of the points. This
+servers. For example, in a quantile computation, instead of needing to send all data points to a central location
+so that they can be sorted and the quantile can be computed, Druid instead only needs to send a sketch of the points. This
 can reduce data transfer needs to mere kilobytes.
 
 For details about the sketches available in Druid, see the
@@ -255,7 +255,7 @@ Druid can infer the schema for your data in one of two ways:
 
 You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
 
-When performing type-aware schema discovery, Druid can discover all the columns of your input data (that aren't in
+When performing type-aware schema discovery, Druid can discover all the columns of your input data (that are not present in
 the exclusion list). Druid automatically chooses the most appropriate native Druid type among `STRING`, `LONG`,
 `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, `ARRAY<DOUBLE>`, or `COMPLEX<json>` for nested data. For input formats with
 native boolean types, Druid ingests these values as longs if `druid.expressions.useStrictBooleans` is set to `true`
