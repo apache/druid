@@ -510,6 +510,10 @@
                 <artifactId>maven-dependency-plugin</artifactId>
                 <configuration>
                     <usedDependencies>
+                        <!-- These are needed for scope: compile -->
+                        <dependency>org.apache.maven:maven-resolver-provider</dependency>
+                        <dependency>org.apache.maven.resolver:maven-resolver-transport-http</dependency>
+                        <dependency>org.apache.maven.resolver:maven-resolver-connector-basic</dependency>
                         <!-- These are needed for scope: runtime -->
                         <dependency>org.xerial.snappy:snappy-java</dependency>
                     </usedDependencies>
