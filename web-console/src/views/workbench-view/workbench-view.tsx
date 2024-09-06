@@ -96,6 +96,16 @@ function externalDataTabId(tabId: string | undefined): boolean {
   return String(tabId).startsWith('connect-external-data');
 }
 
+type MoreMenuItem =
+  | 'explain'
+  | 'history'
+  | 'prettify'
+  | 'convert-ingestion-to-sql'
+  | 'attach-tab-from-task-id'
+  | 'open-query-detail-archive'
+  | 'druid-sql-documentation'
+  | 'load-demo-queries';
+
 export interface WorkbenchViewProps
   extends Pick<
     QueryTabProps,
@@ -115,7 +125,7 @@ export interface WorkbenchViewProps
   mandatoryQueryContext?: QueryContext;
   serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
-  allowExplain: boolean;
+  hiddenMoreMenuItems?: MoreMenuItem[];
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
@@ -668,7 +678,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       baseQueryContext,
       serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
-      allowExplain,
+      hiddenMoreMenuItems = [],
       goToTask,
       getClusterCapacity,
       maxTasksMenuHeader,
@@ -711,7 +721,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           hiddenOptions={hiddenOptions}
           runMoreMenu={
             <Menu>
-              {allowExplain &&
+              {!hiddenMoreMenuItems.includes('explain') &&
                 (effectiveEngine === 'sql-native' || effectiveEngine === 'sql-msq-task') && (
                   <MenuItem
                     icon={IconNames.CLEAN}
@@ -719,14 +729,14 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                     onClick={this.openExplainDialog}
                   />
                 )}
-              {effectiveEngine !== 'sql-msq-task' && (
+              {effectiveEngine !== 'sql-msq-task' && !hiddenMoreMenuItems.includes('history') && (
                 <MenuItem
                   icon={IconNames.HISTORY}
                   text="Query history"
                   onClick={this.openHistoryDialog}
                 />
               )}
-              {currentTabEntry.query.canPrettify() && (
+              {currentTabEntry.query.canPrettify() && !hiddenMoreMenuItems.includes('prettify') && (
                 <MenuItem
                   icon={IconNames.ALIGN_LEFT}
                   text="Prettify query"
@@ -735,38 +745,47 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               )}
               {queryEngines.includes('sql-msq-task') && (
                 <>
-                  <MenuItem
-                    icon={IconNames.TEXT_HIGHLIGHT}
-                    text="Convert ingestion spec to SQL"
-                    onClick={this.openSpecDialog}
-                  />
-                  <MenuItem
-                    icon={IconNames.DOCUMENT_OPEN}
-                    text="Attach tab from task ID"
-                    onClick={this.openTaskIdSubmitDialog}
-                  />
-                  <MenuItem
-                    icon={IconNames.UNARCHIVE}
-                    text="Open query detail archive"
-                    onClick={this.openExecutionSubmitDialog}
-                  />
+                  {!hiddenMoreMenuItems.includes('convert-ingestion-to-sql') && (
+                    <MenuItem
+                      icon={IconNames.TEXT_HIGHLIGHT}
+                      text="Convert ingestion spec to SQL"
+                      onClick={this.openSpecDialog}
+                    />
+                  )}
+                  {!hiddenMoreMenuItems.includes('attach-tab-from-task-id') && (
+                    <MenuItem
+                      icon={IconNames.DOCUMENT_OPEN}
+                      text="Attach tab from task ID"
+                      onClick={this.openTaskIdSubmitDialog}
+                    />
+                  )}
+                  {!hiddenMoreMenuItems.includes('open-query-detail-archive') && (
+                    <MenuItem
+                      icon={IconNames.UNARCHIVE}
+                      text="Open query detail archive"
+                      onClick={this.openExecutionSubmitDialog}
+                    />
+                  )}
                 </>
               )}
               <MenuDivider />
-              <MenuItem
-                icon={IconNames.HELP}
-                text="DruidSQL documentation"
-                href={getLink('DOCS_SQL')}
-                target="_blank"
-              />
-              {queryEngines.includes('sql-msq-task') && (
+              {!hiddenMoreMenuItems.includes('druid-sql-documentation') && (
                 <MenuItem
-                  icon={IconNames.ROCKET_SLANT}
-                  text="Load demo queries"
-                  label="(replaces current tabs)"
-                  onClick={() => this.handleQueriesChange(getDemoQueries())}
+                  icon={IconNames.HELP}
+                  text="DruidSQL documentation"
+                  href={getLink('DOCS_SQL')}
+                  target="_blank"
                 />
               )}
+              {queryEngines.includes('sql-msq-task') &&
+                !hiddenMoreMenuItems.includes('load-demo-queries') && (
+                  <MenuItem
+                    icon={IconNames.ROCKET_SLANT}
+                    text="Load demo queries"
+                    label="(replaces current tabs)"
+                    onClick={() => this.handleQueriesChange(getDemoQueries())}
+                  />
+                )}
             </Menu>
           }
         />
