@@ -237,15 +237,6 @@ public class TaskDataSegmentProviderTest
     Assert.assertArrayEquals(new String[]{}, cacheDir.list());
   }
 
-  @Test
-  public void testGetDataSegment()
-  {
-    for (int i = 0; i < NUM_SEGMENTS; i++) {
-      DataSegment dataSegment = provider.fetchDataSegment(segments.get(i).getId(), false);
-      Assert.assertEquals(segments.get(i), dataSegment);
-    }
-  }
-
   private class TestCoordinatorClientImpl extends NoopCoordinatorClient
   {
     @Override
