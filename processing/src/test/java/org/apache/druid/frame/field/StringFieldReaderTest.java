@@ -60,7 +60,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
-  public BaseObjectColumnValueSelector<List<String>> writeSelector;
+  public BaseObjectColumnValueSelector<Object[]> writeSelector;
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
@@ -277,7 +277,8 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
 
   private void writeToMemory(@Nullable final List<String> values)
   {
-    Mockito.when(writeSelector.getObject()).thenReturn(values);
+    final Object[] arr = values == null ? null : values.toArray();
+    Mockito.when(writeSelector.getObject()).thenReturn(arr);
 
     if (fieldWriter.writeTo(memory, MEMORY_POSITION, memory.getCapacity() - MEMORY_POSITION) < 0) {
       throw new ISE("Could not write");

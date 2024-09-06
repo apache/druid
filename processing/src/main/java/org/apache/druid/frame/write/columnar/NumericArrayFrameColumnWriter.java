@@ -24,10 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.AppendableMemory;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryRange;
-import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.segment.ColumnValueSelector;
-
-import java.util.List;
 
 /**
  * Parent class for the family of writers writing numeric arrays in columnar frames. Since the numeric primitives are
@@ -119,8 +116,8 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
   @Override
   public boolean addSelection()
   {
-    List<? extends Number> numericArray = FrameWriterUtils.getNumericArrayFromObject(selector.getObject());
-    int rowLength = numericArray == null ? 0 : numericArray.size();
+    final Object[] row = (Object[]) selector.getObject();
+    int rowLength = row == null ? 0 : row.length;
 
     // Begin memory allocations before writing
     if ((long) lastCumulativeRowLength + rowLength > Integer.MAX_VALUE) {
@@ -142,7 +139,7 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
 
     final MemoryRange<WritableMemory> rowLengthsCursor = cumulativeRowLengths.cursor();
 
-    if (numericArray == null) {
+    if (row == null) {
       rowLengthsCursor.memory().putInt(rowLengthsCursor.start(), -(lastCumulativeRowLength + rowLength) - 1);
     } else {
       rowLengthsCursor.memory().putInt(rowLengthsCursor.start(), lastCumulativeRowLength + rowLength);
@@ -155,7 +152,7 @@ public abstract class NumericArrayFrameColumnWriter implements FrameColumnWriter
     final MemoryRange<WritableMemory> rowDataCursor = rowLength > 0 ? rowData.cursor() : null;
 
     for (int i = 0; i < rowLength; ++i) {
-      final Number element = numericArray.get(i);
+      final Number element = (Number) row[i];
       final long memoryOffset = rowDataCursor.start() + ((long) elementSizeBytes() * i);
       if (element == null) {
         rowNullityDataCursor.memory()

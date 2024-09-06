@@ -22,6 +22,7 @@ package org.apache.druid.frame.field;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.write.RowBasedFrameWriterFactory;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.frame.write.cast.TypeCastSelectors;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -101,7 +102,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.LONG);
     return LongFieldWriter.forPrimitive(selector);
   }
 
@@ -110,7 +112,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.FLOAT);
     return FloatFieldWriter.forPrimitive(selector);
   }
 
@@ -119,7 +122,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.DOUBLE);
     return DoubleFieldWriter.forPrimitive(selector);
   }
 
@@ -139,7 +143,8 @@ public class FieldWriters
       final boolean removeNullBytes
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.STRING_ARRAY);
     return new StringArrayFieldWriter(selector, removeNullBytes);
   }
 
@@ -148,7 +153,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.LONG_ARRAY);
     return NumericArrayFieldWriter.getLongArrayFieldWriter(selector);
   }
 
@@ -157,7 +163,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.FLOAT_ARRAY);
     return NumericArrayFieldWriter.getFloatArrayFieldWriter(selector);
   }
 
@@ -166,7 +173,8 @@ public class FieldWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.DOUBLE_ARRAY);
     return NumericArrayFieldWriter.getDoubleArrayFieldWriter(selector);
   }
 
@@ -185,7 +193,8 @@ public class FieldWriters
       throw new ISE("No serde for complexTypeName[%s], cannot write column [%s]", columnTypeName, columnName);
     }
 
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.ofComplex(columnTypeName));
     return new ComplexFieldWriter(serde, selector);
   }
 }
