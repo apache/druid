@@ -39,6 +39,7 @@ This page provides a reference of Apache Druid&circledR; SQL functions in alphab
 The examples on this page use the following example datasources:
 * `flight-carriers` using `FlightCarrierOnTime (1 month)` 
 * `taxi-trips` using `NYC Taxi cabs (3 files)`
+* `kttm` using `KoalasToTheMax one day`
 
 ## ABS
 
@@ -731,14 +732,14 @@ Returns the following:
 
 ## CONTAINS_STRING
 
-Returns `true` if `str` is a substring of `expr`, case-sensitive. Otherwise returns `false`.
+Returns true if `str` is a substring of `expr`, case-sensitive. Otherwise, returns false.
 
 * **Syntax:** `CONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example returns `true` if the `OriginCityName` column from the `flight-carriers` datasource contains the substring `San`. 
+The following example returns true if the `OriginCityName` column from the `flight-carriers` datasource contains the substring `San`. 
 
 ```sql
 SELECT
@@ -1351,14 +1352,14 @@ Returns the following:
 
 ## ICONTAINS_STRING
 
-Returns `true` if `str` is a substring of `expr`, case-insensitive. Otherwise returns `false`.
+Returns true if `str` is a substring of `expr`, case-insensitive. Otherwise, returns false.
 
 * **Syntax:** `ICONTAINS_STRING(expr, str)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example returns `true` if the `OriginCityName` column from the `flight-carriers` datasource contains the case-insensitive substring `san`.  
+The following example returns true if the `OriginCityName` column from the `flight-carriers` datasource contains the case-insensitive substring `san`.  
 
 ```sql
 SELECT
@@ -1381,35 +1382,118 @@ Returns the following:
 
 ## IPV4_MATCH
 
-`IPV4_MATCH(address, subnet)`
+Returns true if the IPv4 `address` belongs to the `subnet` literal, otherwise returns false.
 
-**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+* **Syntax:** `IPV4_MATCH(address, subnet)`
+* **Function type:** Scalar, IP address
 
-Returns true if the IPv4 `address` belongs to the `subnet` literal, else false.
+<details><summary>Example</summary>
+
+The following example returns true if the IPv4 address in the `forward_for` column from the `kttm` datasource belongs to the subnet `181.13.41.0/24`.
+
+```sql
+SELECT 
+  "forwarded_for" AS "ipv4_address",
+  IPV4_MATCH("forwarded_for", '181.13.41.0/24') AS "belongs_in_subnet"
+FROM "kttm"
+LIMIT 2
+```
+
+Returns the following:
+
+| `ipv4_address` | `belongs_in_subnet`|
+| -- | -- | 
+| `181.13.41.82` | `true`|
+| `177.242.100.0` | `false`|
+
+</details>
+
+
+[Learn more](sql-scalar.md#ip-address-functions)
+
 
 ## IPV4_PARSE
 
-`IPV4_PARSE(address)`
+Parses an IPv4 `address` into its integer notation.
 
-**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+* **Syntax:** `IPV4_PARSE(address)`
+* **Function type:** Scalar, IP address
 
-Parses `address` into an IPv4 address stored as an integer.
+<details><summary>Example</summary>
+
+The following example returns an integer that represents the IPv4 address `5.5.5.5`.
+
+```sql
+SELECT 
+  '5.5.5.5' AS "ipv4_address",
+  IPV4_PARSE('5.5.5.5') AS "integer"
+```
+
+Returns the following:
+
+| `ipv4_address` | `integer` |
+| -- | -- |
+| `5.5.5.5` | `84215045` |
+
+</details>
+
+[Learn more](sql-scalar.md#ip-address-functions)
 
 ## IPV4_STRINGIFY
 
-`IPV4_STRINGIFY(address)`
+Converts an IPv4 `address` in integer notation into dot-decimal notation.
 
-**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+* **Syntax:** `IPV4_STRINGIFY(address)`
+* **Function type:** Scalar, IP address
 
-Converts `address` into an IPv4 address in dot-decimal notation.
+<details><summary>Example</summary>
+
+The following example returns the integer `84215045` in IPv4 dot-decimal notation.
+
+```sql
+SELECT 
+  '84215045' AS "integer",
+  IPV4_STRINGIFY(84215045) AS "dot_decimal_notation"
+```
+
+Returns the following:
+
+| `integer` | `dot_decimal_notation` |
+| -- | -- |
+| `84215045` | `5.5.5.5` |
+
+</details>
+
+[Learn more](sql-scalar.md#ip-address-functions)
 
 ## IPV6_MATCH
 
-`IPV6_MATCH(address, subnet)`
+Returns true if the IPv6 `address` belongs to the `subnet` literal. Otherwise, returns false.
 
-**Function type:** [Scalar, IP address](sql-scalar.md#ip-address-functions)
+* **Syntax:** `IPV6_MATCH(address, subnet)`
+* **Function type:** Scalar, IP address
 
-Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
+<details><summary>Example</summary>
+
+The following example returns true because `75e9:efa4:29c6:85f6::232c` is in the subnet of `75e9:efa4:29c6:85f6::/64`.
+
+```sql
+SELECT 
+  '75e9:efa4:29c6:85f6::232c' AS "ipv6_address",
+  IPV6_MATCH('75e9:efa4:29c6:85f6::232c', '75e9:efa4:29c6:85f6::/64') AS "belongs_in_subnet" 
+```
+
+Returns the following: 
+
+| `ipv6_address` | `belongs_in_subnet` | 
+| -- | -- |
+| `75e9:efa4:29c6:85f6::232c` | `true` | 
+
+
+</details>
+
+[Learn more](sql-scalar.md#ip-address-functions)
+
 
 ## JSON_KEYS
 
