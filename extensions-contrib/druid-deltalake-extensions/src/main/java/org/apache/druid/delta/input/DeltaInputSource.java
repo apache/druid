@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.primitives.Ints;
 import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
+import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FilteredColumnarBatch;
@@ -51,8 +52,6 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.delta.filter.DeltaFilter;
-import org.apache.druid.delta.snapshot.LatestSnapshot;
-import org.apache.druid.delta.snapshot.Snapshot;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.utils.Streams;
 import org.apache.hadoop.conf.Configuration;
@@ -68,8 +67,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Input source to ingest data from a Delta Lake. This input source reads the given {@code snapshot} from a Delta
- * table specified by {@code tablePath} parameter. If {@code snapshot} is unspecified, it defaults to the latest snapshot.
+ * Input source to ingest data from a Delta Lake. This input source reads the given {@code snapshotVersion} from a Delta
+ * table specified by {@code tablePath} parameter, or the latest snapshot if it's not specified.
  * If {@code filter} is specified, it's used at the Kernel level for data pruning. The filtering behavior is as follows:
  * <ul>
  * <li> When a filter is applied on a partitioned table using the partitioning columns, the filtering is guaranteed. </li>
@@ -98,14 +97,14 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   private final DeltaFilter filter;
 
   @JsonProperty
-  private final Snapshot snapshot;
+  private final Long snapshotVersion;
 
   @JsonCreator
   public DeltaInputSource(
       @JsonProperty("tablePath") final String tablePath,
       @JsonProperty("deltaSplit") @Nullable final DeltaSplit deltaSplit,
       @JsonProperty("filter") @Nullable final DeltaFilter filter,
-      @JsonProperty("snapshot") @Nullable final Snapshot snapshot
+      @JsonProperty("snapshotVersion") @Nullable final Long snapshotVersion
   )
   {
     if (tablePath == null) {
@@ -114,7 +113,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
     this.filter = filter;
-    this.snapshot = snapshot == null ? new LatestSnapshot() : snapshot;
+    this.snapshotVersion = snapshotVersion;
   }
 
   @Override
@@ -157,7 +156,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         }
       } else {
         final Table table = Table.forPath(engine, tablePath);
-        final io.delta.kernel.Snapshot snapshot = getSnapshotForTable(table, engine);
+        final Snapshot snapshot = getSnapshotForTable(table, engine);
 
         final StructType fullSnapshotSchema = snapshot.getSchema(engine);
         final StructType prunedSchema = pruneSchema(
@@ -211,7 +210,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     }
 
     final Engine engine = createDeltaEngine();
-    final io.delta.kernel.Snapshot snapshot;
+    final Snapshot snapshot;
     final Table table = Table.forPath(engine, tablePath);
     try {
       snapshot = getSnapshotForTable(table, engine);
@@ -260,7 +259,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         tablePath,
         split.get(),
         filter,
-        snapshot
+        snapshotVersion
     );
   }
 
@@ -339,7 +338,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     );
   }
 
-  private io.delta.kernel.Snapshot getSnapshotForTable(final Table table, final Engine engine)
+  private Snapshot getSnapshotForTable(final Table table, final Engine engine)
   {
     // Setting the LogStore class loader before calling the Delta Kernel snapshot API is required as a workaround with
     // the 3.2.0 Delta Kernel because the Kernel library cannot instantiate the LogStore class otherwise. Please see
@@ -347,7 +346,11 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     final ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(LogStore.class.getClassLoader());
-      return snapshot.getSnapshot(table, engine);
+      if (snapshotVersion != null) {
+        return table.getSnapshotAsOfVersion(engine, snapshotVersion);
+      } else {
+        return table.getLatestSnapshot(engine);
+      }
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxCl);
@@ -367,8 +370,8 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   }
 
   @VisibleForTesting
-  Snapshot getSnapshot()
+  Long getSnapshotVersion()
   {
-    return snapshot;
+    return snapshotVersion;
   }
 }

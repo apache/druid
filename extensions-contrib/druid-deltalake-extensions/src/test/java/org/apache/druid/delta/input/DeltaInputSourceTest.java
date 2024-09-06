@@ -19,6 +19,7 @@
 
 package org.apache.druid.delta.input;
 
+import io.delta.kernel.exceptions.KernelException;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -31,9 +32,6 @@ import org.apache.druid.delta.filter.DeltaGreaterThanOrEqualsFilter;
 import org.apache.druid.delta.filter.DeltaLessThanOrEqualsFilter;
 import org.apache.druid.delta.filter.DeltaNotFilter;
 import org.apache.druid.delta.filter.DeltaOrFilter;
-import org.apache.druid.delta.snapshot.LatestSnapshot;
-import org.apache.druid.delta.snapshot.Snapshot;
-import org.apache.druid.delta.snapshot.VersionedSnapshot;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
@@ -101,31 +99,25 @@ public class DeltaInputSourceTest
           {
               SnapshotDeltaTable.DELTA_TABLE_PATH,
               SnapshotDeltaTable.FULL_SCHEMA,
-              new VersionedSnapshot(0L),
+              0L,
               SnapshotDeltaTable.V0_SNAPSHOT_EXPECTED_ROWS
           },
           {
               SnapshotDeltaTable.DELTA_TABLE_PATH,
               SnapshotDeltaTable.FULL_SCHEMA,
-              new VersionedSnapshot(1L),
+              1L,
               SnapshotDeltaTable.V1_SNAPSHOT_EXPECTED_ROWS
           },
           {
               SnapshotDeltaTable.DELTA_TABLE_PATH,
               SnapshotDeltaTable.FULL_SCHEMA,
-              new VersionedSnapshot(2L),
+              2L,
               SnapshotDeltaTable.V2_SNAPSHOT_EXPECTED_ROWS
           },
           {
               SnapshotDeltaTable.DELTA_TABLE_PATH,
               SnapshotDeltaTable.FULL_SCHEMA,
-              new VersionedSnapshot(3L),
-              SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
-          },
-          {
-              SnapshotDeltaTable.DELTA_TABLE_PATH,
-              SnapshotDeltaTable.FULL_SCHEMA,
-              new LatestSnapshot(),
+              3L,
               SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
           },
           {
@@ -133,7 +125,7 @@ public class DeltaInputSourceTest
               SnapshotDeltaTable.FULL_SCHEMA,
               null,
               SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
-          },
+          }
       };
     }
 
@@ -142,14 +134,14 @@ public class DeltaInputSourceTest
     @Parameterized.Parameter(1)
     public InputRowSchema schema;
     @Parameterized.Parameter(2)
-    public Snapshot snapshot;
+    public Long snapshotVersion;
     @Parameterized.Parameter(3)
     public List<Map<String, Object>> expectedRows;
 
     @Test
     public void testSampleDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshot);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshotVersion);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
 
       List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
@@ -183,7 +175,7 @@ public class DeltaInputSourceTest
     @Test
     public void testReadDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshot);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshotVersion);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
       final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
       validateRows(expectedRows, actualReadRows, schema);
@@ -419,15 +411,12 @@ public class DeltaInputSourceTest
           SnapshotDeltaTable.DELTA_TABLE_PATH,
           null,
           null,
-          new VersionedSnapshot(100L)
+          100L
       );
 
-      MatcherAssert.assertThat(
-          Assert.assertThrows(
-              DruidException.class,
-              () -> deltaInputSource.reader(null, null, null)
-          ),
-          DruidExceptionMatcher.invalidInput().expectMessageContains("Error reading snapshot version[100]")
+      Assert.assertThrows(
+          KernelException.class,
+          () -> deltaInputSource.reader(null, null, null)
       );
     }
   }
