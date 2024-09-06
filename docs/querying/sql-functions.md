@@ -1000,7 +1000,7 @@ Returns the result of integer division of `x` by `y`.
 * **Syntax:** `DIV(x, y)`
 * **Function type:** Scalar, numeric
 
-<!--
+
 <details><summary>Example</summary>
 
   The following calculates integer divisions of `78` by `10`.
@@ -1016,7 +1016,6 @@ Returns the result of integer division of `x` by `y`.
   | `7` |
 
 </details>
--->
 
 :::info
 
