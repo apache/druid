@@ -108,8 +108,20 @@ public class AzureStorageConnectorProviderTest
     assertThrows(
         DruidException.class,
         () -> getStorageConnectorProvider(properties).createStorageConnector(null),
-        "'tempDir' is required."
+        "The runtime property `druid.msq.intermediate.storage.tempDir` must be configured."
     );
+  }
+
+  @Test
+  public void createAzureStorageFactoryWithMissingTempDirButProvidedDuringRuntime()
+  {
+
+    final Properties properties = new Properties();
+    properties.setProperty(CUSTOM_NAMESPACE + ".type", "azure");
+    properties.setProperty(CUSTOM_NAMESPACE + ".container", "container");
+    properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
+
+    getStorageConnectorProvider(properties).createStorageConnector(new File("/tmp"));
   }
 
   private StorageConnectorProvider getStorageConnectorProvider(Properties properties)

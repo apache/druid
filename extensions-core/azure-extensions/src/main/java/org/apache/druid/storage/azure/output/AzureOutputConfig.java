@@ -124,7 +124,7 @@ public class AzureOutputConfig
   public void validateTempDirectory()
   {
     if (tempDir == null) {
-      throw DruidException.defensive("'tempDir' is required.");
+      throw DruidException.defensive("The runtime property `druid.msq.intermediate.storage.tempDir` must be configured.");
     }
 
     try {

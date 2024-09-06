@@ -1700,7 +1700,7 @@ public class ControllerImpl implements Controller
       final ResultsContext resultsContext
   )
   {
-    final ObjectMapper jsonMapper =  controllerContext.jsonMapper();
+    final ObjectMapper jsonMapper = controllerContext.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     final Query<?> queryToPlan;
