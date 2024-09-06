@@ -224,17 +224,24 @@ public class CompactionStatus
           ((DynamicPartitionsSpec) partitionsSpecFromTuningConfig).getMaxTotalRowsOr(Long.MAX_VALUE)
       );
     } else if (partitionsSpecFromTuningConfig instanceof DimensionRangePartitionsSpec) {
-      // Always compare only the effective maxRowsPerSegment even if targetRowsPerSegment is set to avoid false positives.
-      DimensionRangePartitionsSpec rangePartitionsSpec = (DimensionRangePartitionsSpec) partitionsSpecFromTuningConfig;
-      return new DimensionRangePartitionsSpec(
-          null,
-          rangePartitionsSpec.getMaxRowsPerSegment(),
-          rangePartitionsSpec.getPartitionDimensions(),
-          rangePartitionsSpec.isAssumeGrouped()
-      );
+      return getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) partitionsSpecFromTuningConfig);
     } else {
       return partitionsSpecFromTuningConfig;
     }
+  }
+
+  /**
+   * Converts to have only the effective maxRowsPerSegment to avoid false positives when targetRowsPerSegment is set but
+   * effectively translates to the same maxRowsPerSegment.
+   */
+  static DimensionRangePartitionsSpec getEffectiveRangePartitionsSpec(DimensionRangePartitionsSpec partitionsSpec)
+  {
+    return new DimensionRangePartitionsSpec(
+        null,
+        partitionsSpec.getMaxRowsPerSegment(),
+        partitionsSpec.getPartitionDimensions(),
+        partitionsSpec.isAssumeGrouped()
+    );
   }
 
   /**
@@ -295,10 +302,14 @@ public class CompactionStatus
 
     private CompactionStatus partitionsSpecIsUpToDate()
     {
+      PartitionsSpec existingPartionsSpec = lastCompactionState.getPartitionsSpec();
+      if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
+        existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
+      }
       return CompactionStatus.completeIfEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
-          lastCompactionState.getPartitionsSpec(),
+          existingPartionsSpec,
           CompactionStatus::asString
       );
     }

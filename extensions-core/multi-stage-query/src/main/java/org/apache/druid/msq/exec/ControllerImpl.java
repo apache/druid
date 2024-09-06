@@ -1603,6 +1603,7 @@ public class ControllerImpl implements Controller
     if (shardSpec != null) {
       if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
         List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+        // Effective maxRowsPerSegment is propagated as rowsPerSegment in MSQ
         partitionSpec = new DimensionRangePartitionsSpec(
             null,
             tuningConfig.getRowsPerSegment(),
@@ -1623,7 +1624,7 @@ public class ControllerImpl implements Controller
                 )));
       }
     } else if (clusterBy != null && !clusterBy.getColumns().isEmpty()) {
-      // Only maxRowsPerSegment is allowed in compaction spec which is then propagated as rowsPerSegment in MSQ.
+      // Effective maxRowsPerSegment is propagated as rowsPerSegment in MSQ
       partitionSpec = new DimensionRangePartitionsSpec(
           null,
           tuningConfig.getRowsPerSegment(),
