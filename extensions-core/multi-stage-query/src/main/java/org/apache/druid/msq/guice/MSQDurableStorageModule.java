@@ -24,18 +24,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Key;
-import com.google.inject.Provider;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
 import org.apache.druid.storage.NilStorageConnector;
-import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.List;
@@ -86,10 +83,6 @@ public class MSQDurableStorageModule implements DruidModule
       );
 
       if (nodeRoles.contains(NodeRole.OVERLORD)) {
-        binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-              .toProvider(NoTempDirectoryStorageConnector.class)
-              .in(LazySingleton.class);
-
         JsonConfigProvider.bind(
             binder,
             String.join(".", MSQ_INTERMEDIATE_STORAGE_PREFIX, "cleaner"),
@@ -100,33 +93,11 @@ public class MSQDurableStorageModule implements DruidModule
                    .addBinding()
                    .to(DurableStorageCleaner.class);
       }
-      if (nodeRoles.contains(NodeRole.BROKER)) {
-        binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-              .toProvider(NoTempDirectoryStorageConnector.class)
-              .in(LazySingleton.class);
-      }
     } else if (nodeRoles.contains(NodeRole.BROKER)) {
       // bind with nil implementation so that configs are not required during service startups of broker since SQLStatementResource uses it.
-      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class)).toInstance(NilStorageConnector.getInstance());
+      binder.bind(Key.get(StorageConnectorProvider.class, MultiStageQuery.class)).toInstance(tempDir -> NilStorageConnector.getInstance());
     } else {
       // do nothing
-    }
-  }
-
-  private static class NoTempDirectoryStorageConnector implements Provider<StorageConnector>
-  {
-    private StorageConnectorProvider storageConnectorProvider;
-
-    @Inject
-    public void inject(@MultiStageQuery StorageConnectorProvider storageConnectorProvider)
-    {
-      this.storageConnectorProvider = storageConnectorProvider;
-    }
-
-    @Override
-    public StorageConnector get()
-    {
-      return storageConnectorProvider.createStorageConnector(null);
     }
   }
 

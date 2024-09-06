@@ -693,7 +693,8 @@ public class SqlStatementResourceTest extends MSQTestBase
         sqlStatementFactory,
         objectMapper,
         overlordClient,
-        new LocalFileStorageConnector(newTempFolder("local")),
+        tempDir -> localFileStorageConnector,
+
         authorizerMapper
     );
   }

@@ -59,7 +59,7 @@ public class DurableStorageCleanerTest
     durableStorageCleanerConfig.enabled = true;
     durableStorageCleaner = new DurableStorageCleaner(
         durableStorageCleanerConfig,
-        STORAGE_CONNECTOR,
+        s -> STORAGE_CONNECTOR,
         () -> TASK_MASTER
     );
   }
