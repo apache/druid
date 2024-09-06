@@ -1400,7 +1400,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @POST
   @Path("/report")
   @Consumes(SmileMediaTypes.APPLICATION_JACKSON_SMILE)
-  @Produces(MediaType.APPLICATION_JSON)
   public Response report(
       SubTaskReport report,
       @Context final HttpServletRequest req
