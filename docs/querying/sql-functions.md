@@ -2604,7 +2604,7 @@ Returns the following:
 
 ## TIMESTAMPADD
 
-Adds a `unit` of time to `timestamp` a total of `count` times.
+Add a `unit` of time multiplied by `count` to `timestamp`.
 
 * **Syntax:** `TIMESTAMPADD(unit, count, timestamp)`
 * **Function type:** Scalar, date and time
