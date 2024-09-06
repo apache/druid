@@ -213,7 +213,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
             .context(ImmutableMap.of())
             .build();
     SegmentServerSelector segmentServerSelector = EasyMock.createMock(SegmentServerSelector.class);
-    EasyMock.expect(segmentServerSelector.getSegmentDescriptor()).andReturn(new SegmentDescriptor(new Interval(startDate, endDate), "", 0));
+    EasyMock.expect(segmentServerSelector.getSegmentDescriptor()).andReturn(new SegmentDescriptor(new Interval(startDate, endDate), "", 0)).times(2);
     EasyMock.replay(segmentServerSelector);
     Assert.assertFalse(
             strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of(segmentServerSelector)).isPresent()
@@ -237,7 +237,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
             .context(ImmutableMap.of())
             .build();
     SegmentServerSelector segmentServerSelector = EasyMock.createMock(SegmentServerSelector.class);
-    EasyMock.expect(segmentServerSelector.getSegmentDescriptor()).andReturn(new SegmentDescriptor(new Interval(startDate, endDate), "", 0));
+    EasyMock.expect(segmentServerSelector.getSegmentDescriptor()).andReturn(new SegmentDescriptor(new Interval(startDate, endDate), "", 0)).times(2);
     EasyMock.replay(segmentServerSelector);
     Assert.assertEquals(
             -adjustment,
