@@ -20,7 +20,6 @@
 package org.apache.druid.storage;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
 
 import java.io.File;
 

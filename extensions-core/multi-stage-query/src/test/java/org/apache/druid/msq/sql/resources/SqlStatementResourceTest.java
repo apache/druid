@@ -684,7 +684,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @BeforeEach
-  public void init() throws Exception
+  public void init()
   {
     overlordClient = Mockito.mock(OverlordClient.class);
     setupMocks(overlordClient);
@@ -693,7 +693,6 @@ public class SqlStatementResourceTest extends MSQTestBase
         objectMapper,
         overlordClient,
         tempDir -> localFileStorageConnector,
-
         authorizerMapper
     );
   }
