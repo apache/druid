@@ -78,6 +78,7 @@ export interface QueryTabProps
     | 'maxTasksLabelFn'
     | 'fullClusterCapacityLabelFn'
     | 'maxTasksOptions'
+    | 'hiddenOptions'
   > {
   query: WorkbenchQuery;
   id: string;
@@ -116,6 +117,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     maxTasksLabelFn,
     maxTasksOptions,
     fullClusterCapacityLabelFn,
+    hiddenOptions,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -426,6 +428,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               maxTasksLabelFn={maxTasksLabelFn}
               maxTasksOptions={maxTasksOptions}
               fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
+              hiddenOptions={hiddenOptions}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel

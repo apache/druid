@@ -104,6 +104,7 @@ export interface WorkbenchViewProps
     | 'maxTasksLabelFn'
     | 'fullClusterCapacityLabelFn'
     | 'maxTasksOptions'
+    | 'hiddenOptions'
   > {
   capabilities: Capabilities;
   tabId: string | undefined;
@@ -675,6 +676,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       maxTasksLabelFn,
       maxTasksOptions,
       fullClusterCapacityLabelFn,
+      hiddenOptions,
     } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
@@ -706,6 +708,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           maxTasksLabelFn={maxTasksLabelFn}
           maxTasksOptions={maxTasksOptions}
           fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
+          hiddenOptions={hiddenOptions}
           runMoreMenu={
             <Menu>
               {allowExplain &&
