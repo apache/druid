@@ -1936,7 +1936,7 @@ notices:
       Copyright 2001-2018 The Apache Software Foundation
 ---
 
-name: Plexus :: Component Annotations
+name: Plexus Component Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
