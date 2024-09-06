@@ -1839,17 +1839,9 @@ module: java-core
 license_name: Apache License version 2.0
 version: 3.6.0
 libraries:
-  - org.apache.maven: maven-model
-  - org.apache.maven: maven-model-builder
   - org.apache.maven: maven-repository-metadata
   - org.apache.maven: maven-builder-support
 notices:
-  - maven-model: |
-      Maven Model
-      Copyright 2001-2018 The Apache Software Foundation
-  - maven-model-builder: |
-      Maven Model Builder
-      Copyright 2001-2018 The Apache Software Foundation
   - maven-repository-metadata: |
       Maven Repository Metadata Model
       Copyright 2001-2018 The Apache Software Foundation
@@ -1866,14 +1858,19 @@ license_name: Apache License version 2.0
 version: 3.6.0
 libraries:
   - org.apache.maven: maven-resolver-provider
-  - org.apache.maven.resolver: maven-resolver-impl
+  - org.apache.maven: maven-model
+  - org.apache.maven: maven-model-builder
 notices:
   - maven-resolver-provider: |
       Maven Artifact Resolver Provider
       Copyright 2001-2018 The Apache Software Foundation
-  - maven-resolver-impl: |
-      Maven Artifact Resolver Implementation
+  - maven-model: |
+      Maven Model
       Copyright 2001-2018 The Apache Software Foundation
+  - maven-model-builder: |
+      Maven Model Builder
+      Copyright 2001-2018 The Apache Software Foundation
+
 
 ---
 
@@ -1926,6 +1923,44 @@ libraries:
 notices:
   - maven-resolver-transport-http: |
       Maven Artifact Resolver Transport HTTP
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Maven Artifact Resolver Implementation
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-impl
+notices:
+  - maven-resolver-impl: |
+      Maven Artifact Resolver Implementation
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Plexus :: Component Annotations
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.7.1
+libraries:
+  - org.codehaus.plexus: plexus-component-annotations
+
+---
+
+name: Maven Artifact Resolver Implementation
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-impl
+notices:
+  - maven-resolver-impl: |
+      Maven Artifact Resolver Implementation
       Copyright 2001-2018 The Apache Software Foundation
 
 ---
@@ -2018,7 +2053,7 @@ name: Plexus Interpolation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.19
+version: 1.25
 libraries:
   - org.codehaus.plexus: plexus-interpolation
 
@@ -3296,7 +3331,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.43
+version: 1.0.50
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
