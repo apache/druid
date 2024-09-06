@@ -43,7 +43,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -174,24 +173,7 @@ public class CalciteMSQTestsHelper
           ));
           binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
           binder.bind(DataSegmentProvider.class)
-                .toInstance(new DataSegmentProvider()
-                {
-                  @Override
-                  public Supplier<ResourceHolder<Segment>> fetchSegment(
-                      SegmentId segmentId,
-                      ChannelCounters channelCounters,
-                      boolean isReindex
-                  )
-                  {
-                    return getSupplierForSegment(tempFolderProducer, segmentId);
-                  }
-
-                  @Override
-                  public DataSegment fetchDataSegment(SegmentId segmentId, boolean isReindex)
-                  {
-                    throw new UnsupportedOperationException();
-                  }
-                });
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
 
           GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();

@@ -24,7 +24,6 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -94,26 +93,6 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
 
       return holder;
     };
-  }
-
-  @Override
-  public DataSegment fetchDataSegment(SegmentId segmentId, boolean isReindex)
-  {
-    try {
-      return FutureUtils.get(
-          coordinatorClient.fetchSegment(
-              segmentId.getDataSource(),
-              segmentId.toString(),
-              !isReindex
-          ),
-          true
-      );
-    }
-    catch (InterruptedException | ExecutionException e) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(e, "Failed to fetch segment details from Coordinator for [%s]", segmentId);
-    }
   }
 
   /**

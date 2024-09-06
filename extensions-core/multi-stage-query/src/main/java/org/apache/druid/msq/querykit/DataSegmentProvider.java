@@ -22,7 +22,6 @@ package org.apache.druid.msq.querykit;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.function.Supplier;
@@ -39,11 +38,6 @@ public interface DataSegmentProvider
   Supplier<ResourceHolder<Segment>> fetchSegment(
       SegmentId segmentId,
       ChannelCounters channelCounters,
-      boolean isReindex
-  );
-
-  DataSegment fetchDataSegment(
-      SegmentId segmentId,
       boolean isReindex
   );
 }
