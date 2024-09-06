@@ -26,6 +26,7 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
+  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -86,44 +87,44 @@ import { RuleUtil } from '../../utils/load-rule';
 
 import './datasources-view.scss';
 
-const tableColumns: Record<CapabilitiesMode, string[]> = {
+const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
     'Datasource name',
     'Availability',
     'Historical load/drop queues',
     'Total data size',
-    'Running tasks',
+    { text: 'Running tasks', label: 'sys.tasks' },
     'Segment rows',
     'Segment size',
-    'Segment granularity',
+    { text: 'Segment granularity', label: '𝑓(sys.segments)' },
     'Total rows',
     'Avg. row size',
     'Replicated size',
-    'Compaction',
-    '% Compacted',
-    'Left to be compacted',
-    'Retention',
+    { text: 'Compaction', label: 'compaction API' },
+    { text: '% Compacted', label: 'compaction API' },
+    { text: 'Left to be compacted', label: 'compaction API' },
+    { text: 'Retention', label: 'rules API' },
   ],
   'no-sql': [
     'Datasource name',
     'Availability',
     'Historical load/drop queues',
     'Total data size',
-    'Running tasks',
-    'Compaction',
-    '% Compacted',
-    'Left to be compacted',
-    'Retention',
+    { text: 'Running tasks', label: 'tasks API' },
+    { text: 'Compaction', label: 'compaction API' },
+    { text: '% Compacted', label: 'compaction API' },
+    { text: 'Left to be compacted', label: 'compaction API' },
+    { text: 'Retention', label: 'rules API' },
   ],
   'no-proxy': [
     'Datasource name',
     'Availability',
     'Historical load/drop queues',
     'Total data size',
-    'Running tasks',
+    { text: 'Running tasks', label: 'sys.tasks' },
     'Segment rows',
     'Segment size',
-    'Segment granularity',
+    { text: 'Segment granularity', label: '𝑓(sys.segments)' },
     'Total rows',
     'Avg. row size',
     'Replicated size',
@@ -517,21 +518,18 @@ GROUP BY 1, 2`;
           if (capabilities.hasOverlordAccess()) {
             auxiliaryQueries.push(async (datasourcesAndDefaultRules, cancelToken) => {
               try {
-                const runningTasks = await queryDruidSql<RunningTaskRow>(
-                  {
-                    query: DatasourcesView.RUNNING_TASK_SQL,
-                  },
-                  cancelToken,
-                );
+                const taskList = (
+                  await Api.instance.get(`/druid/indexer/v1/tasks?state=running`, { cancelToken })
+                ).data;
 
                 const runningTasksByDatasource = groupByAsMap(
-                  runningTasks,
-                  x => x.datasource,
+                  taskList,
+                  (t: any) => t.dataSource,
                   xs =>
                     groupByAsMap(
                       xs,
                       x => normalizeTaskType(x.type),
-                      ys => sum(ys, y => y.num_running_tasks),
+                      ys => ys.length,
                     ),
                 );
 
@@ -1703,7 +1701,7 @@ GROUP BY 1, 2`;
             disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
           <TableColumnSelector
-            columns={tableColumns[capabilities.getMode()]}
+            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 visibleColumns: prevState.visibleColumns.toggle(column),
