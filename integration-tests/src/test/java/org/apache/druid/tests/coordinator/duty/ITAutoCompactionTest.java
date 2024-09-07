@@ -651,13 +651,16 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           ImmutableList.of("city"),
           false
       );
-      // Range spec is transformed to its effective maxRowsPerSegment equivalent
-      final DimensionRangePartitionsSpec expectedRangePartitionsSpec = new DimensionRangePartitionsSpec(
-          null,
-          7,
-          ImmutableList.of("city"),
-          false
-      );
+      DimensionRangePartitionsSpec expectedRangePartitionsSpec = inputRangePartitionsSpec;
+      if (engine == CompactionEngine.MSQ) {
+        // Range spec is transformed to its effective maxRowsPerSegment equivalent in MSQ
+        expectedRangePartitionsSpec = new DimensionRangePartitionsSpec(
+            null,
+            7,
+            ImmutableList.of("city"),
+            false
+        );
+      }
       submitCompactionConfig(inputRangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
