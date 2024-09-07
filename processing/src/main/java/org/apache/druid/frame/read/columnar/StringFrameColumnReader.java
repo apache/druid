@@ -19,11 +19,11 @@
 
 package org.apache.druid.frame.read.columnar;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReaderUtils;
 import org.apache.druid.frame.write.FrameWriterUtils;
@@ -86,8 +86,8 @@ public class StringFrameColumnReader implements FrameColumnReader
     validate(memory);
 
     if (isMultiValue(memory)) {
-      throw DruidException.defensive("Only Window Functions invoke readRACColumn and they do not support MVDs. "
-                                     + "Use MV_TO_ARRAY to convert them to Arrays");
+      throw InvalidInput.exception("Encountered a multi value column. Window processing does not support MVDs. "
+                         + "Consider using UNNEST or MV_TO_ARRAY.");
     }
     final long positionOfLengths = getStartOfStringLengthSection(frame.numRows(), false);
     final long positionOfPayloads = getStartOfStringDataSection(memory, frame.numRows(), false);
@@ -191,7 +191,6 @@ public class StringFrameColumnReader implements FrameColumnReader
     return getStartOfStringLengthSection(numRows, multiValue) + (long) Integer.BYTES * totalNumValues;
   }
 
-  @VisibleForTesting
   private static class StringFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
   {
     private final Frame frame;

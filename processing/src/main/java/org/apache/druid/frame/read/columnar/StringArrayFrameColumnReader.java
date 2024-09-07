@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.read.columnar;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
@@ -156,7 +155,6 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     return getStartOfStringLengthSection(numRows) + (long) Integer.BYTES * totalNumValues;
   }
 
-  @VisibleForTesting
   private static class StringArrayFrameColumn extends ObjectColumnAccessorBase implements BaseColumn
   {
     private final Frame frame;
