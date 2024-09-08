@@ -59,7 +59,7 @@ import java.util.concurrent.Executors;
  */
 public class DruidProcessingModule implements Module
 {
-  public static String PROCESSING_PROPERTY_PREFIX = "druid.processing";
+  public static final String PROCESSING_PROPERTY_PREFIX = "druid.processing";
 
   private static final Logger log = new Logger(DruidProcessingModule.class);
 

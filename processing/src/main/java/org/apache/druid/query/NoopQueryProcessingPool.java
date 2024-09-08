@@ -104,7 +104,7 @@ public class NoopQueryProcessingPool implements QueryProcessingPool
   }
 
   @Override
-  public boolean awaitTermination(long l, TimeUnit timeUnit) throws InterruptedException
+  public boolean awaitTermination(long l, TimeUnit timeUnit)
   {
     return true;
   }
