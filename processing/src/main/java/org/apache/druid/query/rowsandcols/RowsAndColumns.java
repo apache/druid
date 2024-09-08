@@ -44,6 +44,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -129,8 +130,15 @@ public interface RowsAndColumns
    * @return A concrete implementation of the interface, or null if there is no meaningful optimization to be had
    * through a local implementation of the interface.
    */
+  @SuppressWarnings("unchecked")
   @Nullable
-  <T> T as(Class<T> clazz);
+  default <T> T as(Class<T> clazz)
+  {
+    if (Arrays.asList(getClass().getInterfaces()).contains(clazz)) {
+      return (T) this;
+    }
+    return null;
+  }
 
   /**
    * Serializer for {@link RowsAndColumns} by converting the instance to {@link FrameRowsAndColumns}

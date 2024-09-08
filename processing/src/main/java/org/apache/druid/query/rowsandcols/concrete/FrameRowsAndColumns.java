@@ -76,10 +76,7 @@ public abstract class FrameRowsAndColumns implements RowsAndColumns, AutoCloseab
     if (StorageAdapter.class.equals(clazz)) {
       return (T) new FrameStorageAdapter(frame, FrameReader.create(signature), Intervals.ETERNITY);
     }
-    if (FrameRowsAndColumns.class.equals(clazz)) {
-      return (T) this;
-    }
-    return null;
+    return RowsAndColumns.super.as(clazz);
   }
 
   @Override

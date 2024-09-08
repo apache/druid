@@ -58,7 +58,7 @@ public class StorageAdapterRowsAndColumns implements CloseableShapeshifter, Rows
     if (StorageAdapter.class == clazz) {
       return (T) storageAdapter;
     }
-    return null;
+    return RowsAndColumns.super.as(clazz);
   }
 
   @Override
