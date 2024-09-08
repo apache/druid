@@ -39,10 +39,10 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ColumnSelectorFactoryMaker;
 import org.apache.druid.query.rowsandcols.semantic.DefaultRowsAndColumnsDecorator;
 import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
-import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -150,16 +150,13 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
 
   @SuppressWarnings("unused")
   @SemanticCreator
-  public WireTransferable toWireTransferable()
+  public FrameRowsAndColumns toFrameRowsAndColumns()
   {
-    return () -> {
-      final Pair<byte[], RowSignature> materialized = materialize();
-      if (materialized == null) {
-        return new byte[]{};
-      } else {
-        return materialized.lhs;
-      }
-    };
+    maybeMaterialize();
+    if (base instanceof FrameRowsAndColumns) {
+      return (FrameRowsAndColumns) base;
+    }
+    return null;
   }
 
   private void maybeMaterialize()
