@@ -42,7 +42,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.util.Arrays;
 import java.util.Collection;
@@ -165,12 +164,7 @@ public interface RowsAndColumns
 
       Frame frame = frameRAC.getFrame();
       final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      frame.writeTo(
-          Channels.newChannel(baos),
-          false,
-          ByteBuffer.allocate(Frame.compressionBufferSize((int) frame.numBytes())),
-          ByteTracker.unboundedTracker()
-      );
+      frame.writeTo(Channels.newChannel(baos), false, null, ByteTracker.unboundedTracker());
 
       jsonGenerator.writeBinary(baos.toByteArray());
     }

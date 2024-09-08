@@ -78,7 +78,7 @@ public class SemanticCreatorUsageTest
   }
 
   /**
-   * {@link SemanticCreator} must return with an interface.
+   * {@link SemanticCreator} must return with an interface or abstract class.
    * <p>
    * An exact implementation may indicate that some interface methods might be missing.
    */
@@ -87,8 +87,8 @@ public class SemanticCreatorUsageTest
   {
     Class<?> returnType = method.getReturnType();
     assertTrue(
-        returnType + " is not an interface; this method must return with an interface; ",
-        returnType.isInterface()
+        returnType + " is not an interface or abstract class; this method must return with either of them; ",
+        returnType.isInterface() || Modifier.isAbstract(returnType.getModifiers())
     );
   }
 
