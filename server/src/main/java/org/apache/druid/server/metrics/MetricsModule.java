@@ -50,6 +50,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitor;
+import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
@@ -86,7 +87,7 @@ public class MetricsModule implements Module
   {
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, DruidMonitorSchedulerConfig.class);
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, MonitorsConfig.class);
-    JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX + "." + OshiSysConfig.PREFIX, OshiSysConfig.class);
+    JsonConfigProvider.bind(binder, OshiSysMonitorConfig.PREFIX, OshiSysMonitorConfig.class);
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
@@ -204,7 +205,7 @@ public class MetricsModule implements Module
   public OshiSysMonitor getOshiSysMonitor(
       DataSourceTaskIdHolder dataSourceTaskIdHolder,
       @Self Set<NodeRole> nodeRoles,
-      OshiSysConfig oshiSysConfig
+      OshiSysMonitorConfig oshiSysConfig
   )
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
@@ -214,7 +215,7 @@ public class MetricsModule implements Module
           dataSourceTaskIdHolder.getDataSource(),
           dataSourceTaskIdHolder.getTaskId()
       );
-      return new OshiSysMonitor(dimensions, oshiSysConfig.getSkipEmitting());
+      return new OshiSysMonitor(dimensions, oshiSysConfig);
     }
   }
 }

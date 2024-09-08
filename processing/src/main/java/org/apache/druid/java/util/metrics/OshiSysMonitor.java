@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import oshi.SystemInfo;
@@ -41,7 +40,6 @@ import oshi.software.os.OperatingSystem;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 
 /**
@@ -76,7 +74,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   private final TcpStats tcpStats;
 
   private final Map<String, String[]> dimensions;
-  private final Set<String> skipEmitting;
+  private final OshiSysMonitorConfig config;
   private final Map<String, Consumer<ServiceEmitter>> monitoringFunctions = ImmutableMap.of(
       "mem", this::monitorMemStats,
       "swap", this::monitorSwapStats,
@@ -88,50 +86,19 @@ public class OshiSysMonitor extends FeedDefiningMonitor
       "tcp", this::monitorTcpStats
   );
 
-  public OshiSysMonitor()
+  public OshiSysMonitor(Map<String, String[]> dimensions, OshiSysMonitorConfig config)
   {
-    this(ImmutableMap.of(), ImmutableSet.of());
-  }
-
-  public OshiSysMonitor(Map<String, String[]> dimensions, Set<String> skipEmitting)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED, skipEmitting);
-  }
-
-  public OshiSysMonitor(Map<String, String[]> dimensions, String feed, Set<String> skipEmitting)
-  {
-    super(feed);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
-    this.skipEmitting = ImmutableSet.copyOf(skipEmitting);
-
-    this.si = new SystemInfo();
-    this.hal = si.getHardware();
-    this.os = si.getOperatingSystem();
-
-    this.memStats = new MemStats();
-    this.swapStats = new SwapStats();
-    this.fsStats = new FsStats();
-    this.diskStats = new DiskStats();
-    this.netStats = new NetStats();
-    this.cpuStats = new CpuStats();
-    this.sysStats = new SysStats();
-    this.tcpStats = new TcpStats();
-
+    this(dimensions, config, new SystemInfo());
   }
 
   // Create an object with mocked systemInfo for testing purposes
   @VisibleForTesting
-  public OshiSysMonitor(SystemInfo systemInfo)
+  public OshiSysMonitor(Map<String, String[]> dimensions, OshiSysMonitorConfig config, SystemInfo systemInfo)
   {
-    this(systemInfo, ImmutableSet.of());
-  }
-
-  public OshiSysMonitor(SystemInfo systemInfo, Set<String> skipEmitting)
-  {
-    super("metrics");
-    this.dimensions = ImmutableMap.of();
-    this.skipEmitting = ImmutableSet.copyOf(skipEmitting);
+    super(DEFAULT_METRICS_FEED);
+    Preconditions.checkNotNull(dimensions);
+    this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.config = config;
 
     this.si = systemInfo;
     this.hal = si.getHardware();
@@ -151,7 +118,7 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     monitoringFunctions.forEach((key, function) -> {
-      if (!skipEmitting.contains(key)) {
+      if (config.shouldEmitMetricCategory(key)) {
         function.accept(emitter);
       }
     });

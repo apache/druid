@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.java.util.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -27,21 +27,26 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class OshiSysConfig
+public class OshiSysMonitorConfig
 {
-  static final String PREFIX = "oshisys";
+  public static final String PREFIX = "druid.monitoring.oshisys";
 
-  @JsonProperty("skipEmitting")
+  @JsonProperty("categories")
   @NotNull
-  private List<String> skipEmitting;
+  private List<String> categories;
 
-  public OshiSysConfig(@JsonProperty("skipEmitting") List<String> skipEmitting)
+  public OshiSysMonitorConfig(@JsonProperty("categories") List<String> categories)
   {
-    this.skipEmitting = skipEmitting == null ? new ArrayList<>() : skipEmitting;
+    this.categories = categories == null ? new ArrayList<>() : categories;
   }
 
-  public Set<String> getSkipEmitting()
+  public Set<String> getCategories()
   {
-    return new HashSet<>(skipEmitting);
+    return new HashSet<>(categories);
+  }
+
+  public boolean shouldEmitMetricCategory(String category)
+  {
+    return categories.isEmpty() || categories.contains(category);
   }
 }
