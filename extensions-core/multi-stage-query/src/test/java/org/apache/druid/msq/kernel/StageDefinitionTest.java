@@ -74,7 +74,8 @@ public class StageDefinitionTest
         new GlobalSortMaxCountShuffleSpec(
             new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
             2,
-            false
+            false,
+            ShuffleSpec.UNLIMITED
         ),
         1,
         false
@@ -95,7 +96,8 @@ public class StageDefinitionTest
         new GlobalSortMaxCountShuffleSpec(
             new ClusterBy(ImmutableList.of(new KeyColumn("test", KeyOrder.ASCENDING)), 0),
             1,
-            false
+            false,
+            ShuffleSpec.UNLIMITED
         ),
         1,
         false

@@ -177,14 +177,20 @@ public class FrameChannelMerger implements FrameProcessor<Long>
       return ReturnOrAwait.awaitAll(awaitSet);
     }
 
+    // Check finished() after populateCurrentFramesAndTournamentTree().
     if (finished()) {
-      // Done!
       return ReturnOrAwait.returnObject(rowsOutput);
     }
 
     // Generate one output frame and stop for now.
     outputChannel.write(nextFrame());
-    return ReturnOrAwait.runAgain();
+
+    // Check finished() after nextFrame().
+    if (finished()) {
+      return ReturnOrAwait.returnObject(rowsOutput);
+    } else {
+      return ReturnOrAwait.runAgain();
+    }
   }
 
   private FrameWithPartition nextFrame()

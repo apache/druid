@@ -91,8 +91,8 @@ import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
-import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.guice.MultiStageQuery;
+import org.apache.druid.msq.guice.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -551,7 +551,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     final SqlEngine engine = new MSQTaskSqlEngine(
         indexingServiceClient,
         qf.queryJsonMapper().copy().registerModules(new MSQSqlModule().getJacksonModules()),
-        new MSQTerminalStageSpecFactory()
+        new SegmentGenerationTerminalStageSpecFactory()
     );
 
     PlannerFactory plannerFactory = new PlannerFactory(
