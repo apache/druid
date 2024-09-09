@@ -63,14 +63,12 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -163,11 +161,10 @@ public class CalciteMSQTestsHelper
               )
           );
           ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-          IndexIO indexIO = new IndexIO(testMapper, ColumnConfig.DEFAULT);
           SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
               .manufacturate(cacheManagerDir);
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-          MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
+          MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager);
           config.storageDirectory = storageDir;
           binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
               new LocalDataSegmentPusher(config),

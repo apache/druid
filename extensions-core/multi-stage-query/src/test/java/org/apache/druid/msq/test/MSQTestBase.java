@@ -423,7 +423,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     MSQSqlModule sqlModule = new MSQSqlModule();
 
-    segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
+    segmentManager = new MSQTestSegmentManager(segmentCacheManager);
 
     BrokerClient brokerClient = mock(BrokerClient.class);
     List<Module> modules = ImmutableList.of(
@@ -1211,17 +1211,17 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyLookupLoadingInfoInTaskContext(msqControllerTask.getContext());
         log.info(
             "found generated segments: %s",
-            segmentManager.getAllDataSegments().stream().map(s -> s.toString()).collect(
+            segmentManager.getAllTestGeneratedDataSegments().stream().map(s -> s.toString()).collect(
                 Collectors.joining("\n"))
         );
         // check if segments are created
         if (!expectedResultRows.isEmpty()) {
-          Assert.assertNotEquals(0, segmentManager.getAllDataSegments().size());
+          Assert.assertNotEquals(0, segmentManager.getAllTestGeneratedDataSegments().size());
         }
 
         String foundDataSource = null;
         SortedMap<SegmentId, List<List<Object>>> segmentIdVsOutputRowsMap = new TreeMap<>();
-        for (DataSegment dataSegment : segmentManager.getAllDataSegments()) {
+        for (DataSegment dataSegment : segmentManager.getAllTestGeneratedDataSegments()) {
 
           //Assert shard spec class
           Assert.assertEquals(expectedShardSpec, dataSegment.getShardSpec().getClass());
