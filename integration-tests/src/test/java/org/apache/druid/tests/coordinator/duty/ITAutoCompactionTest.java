@@ -692,16 +692,26 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       LOG.info("Auto compaction test with range partitioning");
 
-      final DimensionRangePartitionsSpec rangePartitionsSpec = new DimensionRangePartitionsSpec(
+      final DimensionRangePartitionsSpec inputRangePartitionsSpec = new DimensionRangePartitionsSpec(
           5,
           null,
           ImmutableList.of("city"),
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
+      DimensionRangePartitionsSpec expectedRangePartitionsSpec = inputRangePartitionsSpec;
+      if (engine == CompactionEngine.MSQ) {
+        // Range spec is transformed to its effective maxRowsPerSegment equivalent in MSQ
+        expectedRangePartitionsSpec = new DimensionRangePartitionsSpec(
+            null,
+            7,
+            ImmutableList.of("city"),
+            false
+        );
+      }
+      submitCompactionConfig(inputRangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(rangePartitionsSpec, 2);
+      verifySegmentsCompacted(expectedRangePartitionsSpec, 2);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }

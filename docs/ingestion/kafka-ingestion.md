@@ -36,7 +36,7 @@ This topic contains configuration information for the Kafka indexing service sup
 
 ## Setup
 
-To use the Kafka indexing service, you must first load the `druid-kafka-indexing-service` extension on both the Overlord and the MiddleManager. See [Loading extensions](../configuration/extensions.md) for more information.
+To use the Kafka indexing service, you must first load the `druid-kafka-indexing-service` extension on both the Overlord and the Middle Manager. See [Loading extensions](../configuration/extensions.md) for more information.
 
 ## Supervisor spec configuration
 
@@ -426,7 +426,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 
 Druid assigns Kafka partitions to each Kafka indexing task. A task writes the events it consumes from Kafka into a single segment for the segment granularity interval until it reaches one of the following limits: `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`. At this point, the task creates a new partition for this segment granularity to contain subsequent events.
 
-The Kafka indexing task also does incremental hand-offs. Therefore, segments become available as they are ready and you don't have to wait for all segments until the end of the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations without accumulating old segments locally on MiddleManager services.
+The Kafka indexing task also does incremental hand-offs. Therefore, segments become available as they are ready and you don't have to wait for all segments until the end of the task duration. When the task reaches one of `maxRowsPerSegment`, `maxTotalRows`, or `intermediateHandoffPeriod`, it hands off all the segments and creates a new set of segments for further events. This allows the task to run for longer durations without accumulating old segments locally on Middle Manager services.
 
 The Kafka indexing service may still produce some small segments. For example, consider the following scenario:
 - Task duration is 4 hours.
