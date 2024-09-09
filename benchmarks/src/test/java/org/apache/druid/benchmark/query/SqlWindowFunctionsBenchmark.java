@@ -55,8 +55,8 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -281,8 +281,8 @@ public class SqlWindowFunctionsBenchmark
     } else if (STORAGE_FRAME_ROW.equals(storageType)) {
       walker.add(
           descriptor,
-          FrameTestUtil.adapterToFrameSegment(
-              new QueryableIndexStorageAdapter(index),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(index),
               FrameType.ROW_BASED,
               descriptor.getId()
           )
@@ -290,8 +290,8 @@ public class SqlWindowFunctionsBenchmark
     } else if (STORAGE_FRAME_COLUMNAR.equals(storageType)) {
       walker.add(
           descriptor,
-          FrameTestUtil.adapterToFrameSegment(
-              new QueryableIndexStorageAdapter(index),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(index),
               FrameType.COLUMNAR,
               descriptor.getId()
           )

@@ -19,11 +19,7 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.SimpleSequence;
@@ -31,121 +27,26 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
-/**
- * A {@link StorageAdapter} that is based on a stream of objects. Generally created by a {@link RowBasedSegment}.
- *
- * @see RowBasedSegment#RowBasedSegment for implementation notes
- */
-public class RowBasedStorageAdapter<RowType> implements StorageAdapter
+public class RowBasedCursorFactory<RowType> implements CursorFactory
 {
   private final Sequence<RowType> rowSequence;
   private final RowAdapter<RowType> rowAdapter;
   private final RowSignature rowSignature;
 
-  public RowBasedStorageAdapter(
-      final Sequence<RowType> rowSequence,
-      final RowAdapter<RowType> rowAdapter,
-      final RowSignature rowSignature
+  public RowBasedCursorFactory(
+      Sequence<RowType> rowSequence,
+      RowAdapter<RowType> rowAdapter,
+      RowSignature rowSignature
   )
   {
-    this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
-    this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
-    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
-  }
-
-  /**
-   * Whether the provided time interval and granularity combination is allowed.
-   *
-   * We restrict ETERNITY with non-ALL granularity, because allowing it would involve creating a very high number
-   * of time grains. This would cause queries to take an excessive amount of time or run out of memory.
-   */
-  public static boolean isQueryGranularityAllowed(final Interval interval, final Granularity granularity)
-  {
-    return Granularities.ALL.equals(granularity) || !Intervals.ETERNITY.equals(interval);
-  }
-
-  @Override
-  public Interval getInterval()
-  {
-    return Intervals.ETERNITY;
-  }
-
-  @Override
-  public Indexed<String> getAvailableDimensions()
-  {
-    return new ListIndexed<>(new ArrayList<>(rowSignature.getColumnNames()));
-  }
-
-  @Override
-  public Iterable<String> getAvailableMetrics()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public RowSignature getRowSignature()
-  {
-    return rowSignature;
-  }
-
-  @Override
-  public int getDimensionCardinality(String column)
-  {
-    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMinValue(String column)
-  {
-    return null;
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMaxValue(String column)
-  {
-    return null;
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    return RowBasedColumnSelectorFactory.getColumnCapabilities(rowSignature, column);
-  }
-
-  @Override
-  public int getNumRows()
-  {
-    if (rowSequence instanceof SimpleSequence) {
-      final Iterable<RowType> rowIterable = ((SimpleSequence<RowType>) rowSequence).getIterable();
-
-      if (rowIterable instanceof Collection) {
-        return ((Collection<RowType>) rowIterable).size();
-      }
-    }
-
-    // getNumRows is only used by tests and by segmentMetadataQuery (which would be odd to call on inline datasources)
-    // so no big deal if it doesn't always work.
-    throw new UnsupportedOperationException("Cannot retrieve number of rows");
-  }
-
-  @Override
-  public Metadata getMetadata()
-  {
-    throw new UnsupportedOperationException("Cannot retrieve metadata");
+    this.rowSequence = rowSequence;
+    this.rowAdapter = rowAdapter;
+    this.rowSignature = rowSignature;
   }
 
   @Override
@@ -197,6 +98,19 @@ public class RowBasedStorageAdapter<RowType> implements StorageAdapter
         CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    return rowSignature;
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return RowBasedColumnSelectorFactory.getColumnCapabilities(rowSignature, column);
   }
 
   /**

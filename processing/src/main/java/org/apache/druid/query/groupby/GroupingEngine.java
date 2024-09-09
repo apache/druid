@@ -70,6 +70,7 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.groupby.epinephelinae.GroupByResultMergeFn;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import org.apache.druid.query.groupby.epinephelinae.GroupingSelector;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
@@ -77,9 +78,9 @@ import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -459,30 +460,30 @@ public class GroupingEngine
   }
 
   /**
-   * Process a groupBy query on a single {@link StorageAdapter}. This is used by
+   * Process a groupBy query on a single {@link CursorFactory}. This is used by
    * {@link GroupByQueryRunnerFactory#createRunner} to create per-segment
    * QueryRunners.
    *
    * This method is only called on data servers, like Historicals (not the Broker).
    *
    * @param query                 the groupBy query
-   * @param storageAdapter        storage adatper for the segment in question
+   * @param cursorFactory         cursor factory for the segment in question
    * @param timeBoundaryInspector time boundary inspector for the segment in question
    *
-   * @return result sequence for the storage adapter
+   * @return result sequence for the cursor factory
    */
   public Sequence<ResultRow> process(
       GroupByQuery query,
-      StorageAdapter storageAdapter,
+      CursorFactory cursorFactory,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
 
-    if (storageAdapter == null) {
+    if (cursorFactory == null) {
       throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 
@@ -505,9 +506,9 @@ public class GroupingEngine
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
       final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
-      final CursorHolder cursorHolder = closer.register(storageAdapter.makeCursorHolder(buildSpec));
+      final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
-      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(storageAdapter);
+      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(cursorFactory);
 
       // group by specific vectorization check
       final boolean canVectorize = cursorHolder.canVectorize() &&
@@ -517,7 +518,6 @@ public class GroupingEngine
       if (shouldVectorize) {
         result = VectorGroupByEngine.process(
             query,
-            storageAdapter,
             timeBoundaryInspector,
             cursorHolder,
             bufferHolder.get(),
@@ -529,7 +529,6 @@ public class GroupingEngine
       } else {
         result = GroupByQueryEngine.process(
             query,
-            storageAdapter,
             timeBoundaryInspector,
             cursorHolder,
             buildSpec,
@@ -874,7 +873,8 @@ public class GroupingEngine
   public static int getCardinalityForArrayAggregation(
       GroupByQueryConfig querySpecificConfig,
       GroupByQuery query,
-      StorageAdapter storageAdapter,
+      ColumnInspector columnInspector,
+      List<? extends GroupingSelector> groupingSelectors,
       ByteBuffer buffer
   )
   {
@@ -893,7 +893,7 @@ public class GroupingEngine
     } else if (dimensions.size() == 1) {
       // Only real columns can use array-based aggregation, since virtual columns cannot currently report their
       // cardinality. We need to check if a virtual column exists with the same name, since virtual columns can shadow
-      // real columns, and we might miss that since we're going directly to the StorageAdapter (which only knows about
+      // real columns, and we might miss that since we're going directly to the CursorFactory (which only knows about
       // real columns).
       if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
         return -1;
@@ -905,8 +905,8 @@ public class GroupingEngine
       }
 
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
-      columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
-      cardinality = storageAdapter.getDimensionCardinality(columnName);
+      columnCapabilities = columnInspector.getColumnCapabilities(columnName);
+      cardinality = groupingSelectors.get(0).getValueCardinality();
     } else {
       // Cannot use array-based aggregation with more than one dimension.
       return -1;

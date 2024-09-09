@@ -41,9 +41,9 @@ import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.RowBasedStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -374,9 +374,9 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
 
   @SuppressWarnings("unused")
   @SemanticCreator
-  public StorageAdapter toStorageAdapter()
+  public CursorFactory toCursorFactory()
   {
-    return new RowBasedStorageAdapter<RowType>(Sequences.simple(rows), rowAdapter, rowSignature);
+    return new RowBasedCursorFactory<>(Sequences.simple(rows), rowAdapter, rowSignature);
   }
 
   private class MyClusteredGroupPartitioner implements ClusteredGroupPartitioner
