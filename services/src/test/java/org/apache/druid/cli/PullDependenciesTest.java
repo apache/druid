@@ -34,7 +34,10 @@ import org.eclipse.aether.graph.DefaultDependencyNode;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyNode;
 import org.eclipse.aether.impl.DefaultServiceLocator;
+import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.LocalRepository;
+import org.eclipse.aether.repository.Proxy;
+import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
@@ -43,6 +46,7 @@ import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
 import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
+import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -322,6 +326,134 @@ public class PullDependenciesTest
     Assert.assertThat(dependencies, CoreMatchers.not(CoreMatchers.hasItem(HADOOP_CLIENT_VULNERABLE_JAR2)));
   }
 
+  @Test
+  public void testPullDependenciesCleanFlag() throws IOException
+  {
+    File dummyFile1 = new File(rootExtensionsDir, "dummy.txt");
+    File dummyFile2 = new File(rootHadoopDependenciesDir, "dummy.txt");
+    Assert.assertTrue(dummyFile1.createNewFile());
+    Assert.assertTrue(dummyFile2.createNewFile());
+
+    pullDependencies.clean = true;
+    pullDependencies.run();
+
+    Assert.assertFalse(dummyFile1.exists());
+    Assert.assertFalse(dummyFile2.exists());
+  }
+
+  @Test
+  public void testPullDependenciesNoDefaultRemoteRepositories()
+  {
+    pullDependencies.noDefaultRemoteRepositories = true;
+    pullDependencies.remoteRepositories = ImmutableList.of("https://custom.repo");
+
+    pullDependencies.run();
+
+    List<RemoteRepository> repositories = pullDependencies.getRemoteRepositories();
+    Assert.assertEquals(1, repositories.size());
+    Assert.assertEquals("https://custom.repo", repositories.get(0).getUrl());
+  }
+
+  @Test
+  public void testPullDependenciesDirectoryCreationFailure() throws IOException
+  {
+    if (rootExtensionsDir.exists()) {
+      rootExtensionsDir.delete();
+    }
+    Assert.assertTrue(rootExtensionsDir.createNewFile());
+
+    Assert.assertThrows(IllegalArgumentException.class, () -> pullDependencies.run());
+  }
+
+  @Test
+  public void testGetArtifactWithValidCoordinate()
+  {
+    String coordinate = "groupX:artifactX:1.0.0";
+    DefaultArtifact artifact = (DefaultArtifact) pullDependencies.getArtifact(coordinate);
+    Assert.assertEquals("groupX", artifact.getGroupId());
+    Assert.assertEquals("artifactX", artifact.getArtifactId());
+    Assert.assertEquals("1.0.0", artifact.getVersion());
+  }
+
+  @Test
+  public void testGetArtifactwithCoordinateWithoutDefaultVersion()
+  {
+    String coordinate = "groupY:artifactY";
+    Assert.assertThrows(
+        "Bad artifact coordinates groupY:artifactY, expected format is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>",
+        IllegalArgumentException.class,
+        () -> pullDependencies.getArtifact(coordinate)
+    );
+
+  }
+
+  @Test
+  public void testGetArtifactWithCoordinateWithoutVersion()
+  {
+    pullDependencies.defaultVersion = "2.0.0";
+    String coordinate = "groupY:artifactY";
+    DefaultArtifact artifact = (DefaultArtifact) pullDependencies.getArtifact(coordinate);
+    Assert.assertEquals("groupY", artifact.getGroupId());
+    Assert.assertEquals("artifactY", artifact.getArtifactId());
+    Assert.assertEquals("2.0.0", artifact.getVersion());
+  }
+
+  @Test
+  public void testGetRemoteRepositoriesWithDefaultRepositories()
+  {
+    pullDependencies.noDefaultRemoteRepositories = false; // Use default remote repositories
+    pullDependencies.remoteRepositories = ImmutableList.of("https://custom.repo");
+
+    List<RemoteRepository> repositories = pullDependencies.getRemoteRepositories();
+    Assert.assertEquals(2, repositories.size());
+    Assert.assertEquals("https://repo1.maven.org/maven2/", repositories.get(0).getUrl());
+    Assert.assertEquals("https://custom.repo", repositories.get(1).getUrl());
+  }
+
+  @Test
+  public void testGetRepositorySystemSessionWithProxyConfiguration()
+  {
+    pullDependencies.useProxy = true;
+    pullDependencies.proxyType = "http";
+    pullDependencies.proxyHost = "localhost";
+    pullDependencies.proxyPort = 8080;
+    pullDependencies.proxyUsername = "user";
+    pullDependencies.proxyPassword = "password";
+
+    DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
+
+    LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
+    Assert.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+
+    Proxy proxy = session.getProxySelector().getProxy(
+        new RemoteRepository.Builder("test", "default", "http://example.com").build()
+    );
+    RemoteRepository testRepository = new RemoteRepository.Builder("test", "default", "http://example.com")
+        .setProxy(proxy)
+        .build();
+
+    Assert.assertNotNull(proxy);
+    Assert.assertEquals("localhost", proxy.getHost());
+    Assert.assertEquals(8080, proxy.getPort());
+    Assert.assertEquals("http", proxy.getType());
+
+    Authentication auth = new AuthenticationBuilder().addUsername("user").addPassword("password").build();
+    Assert.assertEquals(auth, proxy.getAuthentication());
+  }
+
+  @Test
+  public void testGetRepositorySystemSessionWithoutProxyConfiguration()
+  {
+    pullDependencies.useProxy = false;
+    DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
+    LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
+    Assert.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+    Proxy proxy = session.getProxySelector().getProxy(
+        new RemoteRepository.Builder("test", "default", "http://example.com").build()
+    );
+    Assert.assertNull(proxy);
+  }
+
   private static class RealRepositorySystemUtil
   {
     public static RepositorySystem newRepositorySystem()
@@ -345,6 +477,5 @@ public class PullDependenciesTest
       return session;
     }
   }
-
 
 }

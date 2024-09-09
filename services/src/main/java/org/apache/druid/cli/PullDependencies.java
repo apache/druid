@@ -209,7 +209,7 @@ public class PullDependencies implements Runnable
     return locator.getService(RepositorySystem.class);
   }
 
-  private RepositorySystemSession getRepositorySystemSession()
+  protected RepositorySystemSession getRepositorySystemSession()
   {
     DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
     LocalRepository localRepo = new LocalRepository(localRepository);
@@ -236,7 +236,7 @@ public class PullDependencies implements Runnable
     return session;
   }
 
-  private List<RemoteRepository> getRemoteRepositories()
+  protected List<RemoteRepository> getRemoteRepositories()
   {
     List<RemoteRepository> repositories = new ArrayList<>();
 
@@ -317,7 +317,7 @@ public class PullDependencies implements Runnable
     }
   }
 
-  private Artifact getArtifact(String coordinate)
+  protected Artifact getArtifact(String coordinate)
   {
     DefaultArtifact versionedArtifact;
     try {
