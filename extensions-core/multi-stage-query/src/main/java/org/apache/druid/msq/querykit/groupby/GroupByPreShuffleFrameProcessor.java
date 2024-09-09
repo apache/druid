@@ -44,6 +44,7 @@ import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryResult;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -147,8 +148,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
-      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
-      final SegmentReference mappedSegment = mapSegment(segmentHolder.get());
+      final ResourceHolder<SegmentWithMetadata> segmentHolder = closer.register(segment.getOrLoad());
+      final SegmentReference mappedSegment = mapSegment(segmentHolder.get().getSegment());
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(

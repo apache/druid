@@ -29,6 +29,7 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.SegmentWrangler;
@@ -74,7 +75,7 @@ public class InlineInputSliceReader implements InputSliceReader
             segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY),
             segment -> ReadableInput.segment(
                 new SegmentWithDescriptor(
-                    () -> ResourceHolder.fromCloseable(segment),
+                    () -> ResourceHolder.fromCloseable(new SegmentWithMetadata(null, segment)),
                     DUMMY_SEGMENT_DESCRIPTOR
                 )
             )

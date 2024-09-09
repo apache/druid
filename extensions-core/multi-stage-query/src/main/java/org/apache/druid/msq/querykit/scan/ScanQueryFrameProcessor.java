@@ -54,6 +54,7 @@ import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
@@ -245,9 +246,9 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
+      final ResourceHolder<SegmentWithMetadata> segmentHolder = closer.register(segment.getOrLoad());
 
-      final StorageAdapter adapter = mapSegment(segmentHolder.get()).asStorageAdapter();
+      final StorageAdapter adapter = mapSegment(segmentHolder.get().getSegment()).asStorageAdapter();
       if (adapter == null) {
         throw new ISE(
             "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
@@ -263,7 +264,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         // No cursors!
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get());
+        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get().getSegment());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
       }
     }

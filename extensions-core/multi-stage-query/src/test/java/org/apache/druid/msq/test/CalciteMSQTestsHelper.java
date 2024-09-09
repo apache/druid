@@ -47,6 +47,7 @@ import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
@@ -86,6 +87,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.mockito.Mockito;
@@ -206,7 +208,10 @@ public class CalciteMSQTestsHelper
     return mockFactory;
   }
 
-  private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(Function<String, File> tempFolderProducer, SegmentId segmentId)
+  protected static Supplier<ResourceHolder<SegmentWithMetadata>> getSupplierForSegment(
+      Function<String, File> tempFolderProducer,
+      SegmentId segmentId
+  )
   {
     final QueryableIndex index;
     switch (segmentId.getDataSource()) {
@@ -450,6 +455,12 @@ public class CalciteMSQTestsHelper
       {
       }
     };
-    return () -> new ReferenceCountingResourceHolder<>(segment, Closer.create());
+    DataSegment dataSegment = DataSegment.builder()
+                                         .dataSource(segmentId.getDataSource())
+                                         .interval(segmentId.getInterval())
+                                         .version(segmentId.getVersion())
+                                         .shardSpec(new LinearShardSpec(0))
+                                         .build();
+    return () -> new ReferenceCountingResourceHolder<>(new SegmentWithMetadata(dataSegment, segment), Closer.create());
   }
 }

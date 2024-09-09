@@ -31,7 +31,7 @@ import java.util.function.Supplier;
  */
 public class SegmentWithDescriptor
 {
-  private final Supplier<? extends ResourceHolder<Segment>> segmentSupplier;
+  private final Supplier<? extends ResourceHolder<SegmentWithMetadata>> segmentSupplier;
   private final RichSegmentDescriptor descriptor;
 
   /**
@@ -42,7 +42,7 @@ public class SegmentWithDescriptor
    * @param descriptor                segment descriptor
    */
   public SegmentWithDescriptor(
-      final Supplier<? extends ResourceHolder<Segment>> segmentSupplier,
+      final Supplier<? extends ResourceHolder<SegmentWithMetadata>> segmentSupplier,
       final RichSegmentDescriptor descriptor
   )
   {
@@ -59,7 +59,7 @@ public class SegmentWithDescriptor
    * It is not necessary to call {@link Segment#close()} on the returned segment. Calling {@link ResourceHolder#close()}
    * is enough.
    */
-  public ResourceHolder<Segment> getOrLoad()
+  public ResourceHolder<SegmentWithMetadata> getOrLoad()
   {
     return segmentSupplier.get();
   }

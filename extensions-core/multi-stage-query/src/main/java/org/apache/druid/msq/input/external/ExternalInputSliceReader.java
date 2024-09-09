@@ -44,6 +44,7 @@ import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
+import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
@@ -163,7 +164,7 @@ public class ExternalInputSliceReader implements InputSliceReader
               signature
           );
           return new SegmentWithDescriptor(
-              () -> ResourceHolder.fromCloseable(segment),
+              () -> ResourceHolder.fromCloseable(new SegmentWithMetadata(null, segment)),
               new RichSegmentDescriptor(segmentId.toDescriptor(), null)
           );
         }

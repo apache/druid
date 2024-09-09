@@ -28,11 +28,11 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
@@ -70,7 +70,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
   }
 
   @Override
-  public Supplier<ResourceHolder<Segment>> fetchSegment(
+  public Supplier<ResourceHolder<SegmentWithMetadata>> fetchSegment(
       final SegmentId segmentId,
       final ChannelCounters channelCounters,
       final boolean isReindex
@@ -79,7 +79,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     // Returns Supplier<ResourceHolder> instead of ResourceHolder, so the Coordinator calls and segment downloads happen
     // in processing threads, rather than the main thread. (They happen when fetchSegmentInternal is called.)
     return () -> {
-      ResourceHolder<Segment> holder = null;
+      ResourceHolder<SegmentWithMetadata> holder = null;
 
       while (holder == null) {
         holder = holders.computeIfAbsent(
@@ -99,7 +99,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
    * Helper used by {@link #fetchSegment(SegmentId, ChannelCounters, boolean)}. Does the actual fetching of a segment, once it
    * is determined that we definitely need to go out and get one.
    */
-  private ReferenceCountingResourceHolder<Segment> fetchSegmentInternal(
+  private ReferenceCountingResourceHolder<SegmentWithMetadata> fetchSegmentInternal(
       final SegmentId segmentId,
       final ChannelCounters channelCounters,
       final boolean isReindex
@@ -133,7 +133,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
       final int numRows = index.getNumRows();
       final long size = dataSegment.getSize();
       closer.register(() -> channelCounters.addFile(numRows, size));
-      return new ReferenceCountingResourceHolder<>(segment, closer);
+      return new ReferenceCountingResourceHolder<>(new SegmentWithMetadata(dataSegment, segment), closer);
     }
     catch (IOException | SegmentLoadingException e) {
       throw CloseableUtils.closeInCatch(
@@ -143,13 +143,13 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     }
   }
 
-  private static class SegmentHolder implements Supplier<ResourceHolder<Segment>>
+  private static class SegmentHolder implements Supplier<ResourceHolder<SegmentWithMetadata>>
   {
-    private final Supplier<ResourceHolder<Segment>> holderSupplier;
+    private final Supplier<ResourceHolder<SegmentWithMetadata>> holderSupplier;
     private final Closeable cleanupFn;
 
     @GuardedBy("this")
-    private ReferenceCountingResourceHolder<Segment> holder;
+    private ReferenceCountingResourceHolder<SegmentWithMetadata> holder;
 
     @GuardedBy("this")
     private boolean closing;
@@ -157,7 +157,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
     @GuardedBy("this")
     private boolean closed;
 
-    public SegmentHolder(Supplier<ResourceHolder<Segment>> holderSupplier, Closeable cleanupFn)
+    public SegmentHolder(Supplier<ResourceHolder<SegmentWithMetadata>> holderSupplier, Closeable cleanupFn)
     {
       this.holderSupplier = holderSupplier;
       this.cleanupFn = cleanupFn;
@@ -165,7 +165,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
 
     @Override
     @Nullable
-    public ResourceHolder<Segment> get()
+    public ResourceHolder<SegmentWithMetadata> get()
     {
       synchronized (this) {
         if (closing) {
@@ -183,7 +183,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
           // Then, return null so "fetchSegment" will try again.
           return null;
         } else if (holder == null) {
-          final ResourceHolder<Segment> segmentHolder = holderSupplier.get();
+          final ResourceHolder<SegmentWithMetadata> segmentHolder = holderSupplier.get();
           holder = new ReferenceCountingResourceHolder<>(
               segmentHolder.get(),
               () -> {
@@ -210,7 +210,7 @@ public class TaskDataSegmentProvider implements DataSegmentProvider
                 }
               }
           );
-          final ResourceHolder<Segment> retVal = holder.increment();
+          final ResourceHolder<SegmentWithMetadata> retVal = holder.increment();
           // Store already-closed holder, so it disappears when the last reference is closed.
           holder.close();
           return retVal;
