@@ -183,6 +183,7 @@ public interface Task
    * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
    * even though it is not directly queryable via HTTP.
    */
+  @Deprecated
   boolean supportsQueries();
 
   /**

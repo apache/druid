@@ -180,8 +180,16 @@ public class CliPeon extends GuiceRunnable
    * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
    * queryable tasks, such as streaming ingestion tasks.
    */
+  @Deprecated
   @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
   public String loadBroadcastSegments = "false";
+
+  /**
+   * Broadcast datasources loading mode. the peon will bind classes necessary for loading broadcast segments. This is used for
+   * queryable tasks, such as streaming ingestion tasks.
+   */
+  @Option(name = "--loadBroadcastDatasourcesMode", title = "loadBroadcastDatasourcesMode", description = "Enable loading of broadcast datasources") // maybe there is a way to directly provide enum?
+  public String loadBroadcastDatasourcesMode = BroadcastLoadingSpec.Mode.ALL.toString();
 
   @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
   public String taskId = "";
@@ -275,7 +283,10 @@ public class CliPeon extends GuiceRunnable
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
 
-            if ("true".equals(loadBroadcastSegments)) {
+            BroadcastLoadingSpec.Mode mode = BroadcastLoadingSpec.Mode.valueOf(loadBroadcastDatasourcesMode);
+            if ("true".equals(loadBroadcastSegments)
+                || mode == BroadcastLoadingSpec.Mode.ALL
+                || mode == BroadcastLoadingSpec.Mode.ONLY_REQUIRED) {
               binder.install(new BroadcastSegmentLoadingModule());
             }
           }

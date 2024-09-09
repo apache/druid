@@ -443,12 +443,15 @@ public abstract class K8sTaskAdapter implements TaskAdapter
       command.add(nodeType);
     }
 
-    // If the task type is queryable, we need to load broadcast segments on the peon, used for
-    // join queries
+//    // If the task type is queryable, we need to load broadcast segments on the peon, used for
+//    // join queries
     if (task.supportsQueries()) {
       command.add("--loadBroadcastSegments");
       command.add("true");
     }
+
+    command.add("--loadBroadcastDatasourcesMode");
+    command.add(task.getBroadcastDatasourcesLoadingSpec().toString());
 
     command.add("--taskId");
     command.add(task.getId());
