@@ -265,5 +265,6 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
     if (inspector != null) {
       return inspector.getMetadata();
     }
+    return null;
   }
 }
