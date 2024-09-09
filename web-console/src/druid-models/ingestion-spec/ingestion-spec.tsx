@@ -1060,6 +1060,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.filter',
           label: 'Delta filter',
           type: 'json',
+          placeholder: '{"type": "=", "column": "name", "value": "foo"}',
           defaultValue: {},
           info: (
             <>
@@ -1069,6 +1070,19 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
                 filter
               </ExternalLink>
               <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.snapshotVersion',
+          label: 'Delta snapshot version',
+          type: 'number',
+          placeholder: '2',
+          defaultValue: {},
+          info: (
+            <>
+              The snapshot version to read from the Delta table. By default, the latest snapshot is
+              read.
             </>
           ),
         },

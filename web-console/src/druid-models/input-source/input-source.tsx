@@ -652,7 +652,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Delta filter',
     type: 'json',
     placeholder: '{"type": "=", "column": "name", "value": "foo"}',
-    defined: inputSource => inputSource.type === 'delta' && deepGet(inputSource, 'filter'),
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: false,
     info: (
       <>
@@ -660,6 +660,19 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
           filter
         </ExternalLink>
         <p>A Delta filter json object to filter Delta Lake scan files.</p>
+      </>
+    ),
+  },
+  {
+    name: 'snapshotVersion',
+    label: 'Delta snapshot version',
+    type: 'number',
+    placeholder: '3',
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
+    required: false,
+    info: (
+      <>
+        The snapshot version to read from the Delta table. By default, the latest snapshot is read.
       </>
     ),
   },
