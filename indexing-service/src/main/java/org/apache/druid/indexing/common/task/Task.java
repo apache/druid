@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.coordination.BroadcastLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -331,5 +332,10 @@ public interface Task
   default LookupLoadingSpec getLookupLoadingSpec()
   {
     return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.ALL);
+  }
+
+  default BroadcastLoadingSpec getBroadcastDatasourcesLoadingSpec()
+  {
+    return BroadcastLoadingSpec.createFromContext(getContext(), BroadcastLoadingSpec.ALL);
   }
 }

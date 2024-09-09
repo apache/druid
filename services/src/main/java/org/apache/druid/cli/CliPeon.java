@@ -123,6 +123,7 @@ import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.BroadcastLoadingSpec;
 import org.apache.druid.server.coordination.SegmentBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -339,6 +340,14 @@ public class CliPeon extends GuiceRunnable
           public LookupLoadingSpec getLookupsToLoad(final Task task)
           {
             return task.getLookupLoadingSpec();
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
+          public BroadcastLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
+          {
+            return task.getBroadcastDatasourcesLoadingSpec();
           }
         },
         new QueryablePeonModule(),

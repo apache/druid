@@ -137,7 +137,8 @@ public class SegmentBootstrapperCacheTest
         segmentManager,
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
-        emitter
+        emitter,
+        null
     );
 
     bootstrapper.start();
@@ -164,7 +165,8 @@ public class SegmentBootstrapperCacheTest
         segmentManager,
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
-        emitter
+        emitter,
+        null
     );
 
     bootstrapper.start();
@@ -204,7 +206,8 @@ public class SegmentBootstrapperCacheTest
         segmentManager,
         new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
-        emitter
+        emitter,
+        null
     );
 
     bootstrapper.start();
