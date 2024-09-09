@@ -731,11 +731,12 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
     // leading to indefinite refresh attempts for these segments.
     Set<SegmentId> segmentsWithoutTombstone =
-        StreamSupport.stream(Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY).spliterator(), false).filter(
-            segment ->
-                datasourceSegments.containsKey(segment) &&
-                !datasourceSegments.get(segment).getSegment().isTombstone()).collect(Collectors.toSet()
-        );
+        StreamSupport.stream(Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY).spliterator(), false)
+                     .filter(
+                         segment ->
+                             datasourceSegments.containsKey(segment) &&
+                             !datasourceSegments.get(segment).getSegment().isTombstone()).collect(Collectors.toSet()
+                     );
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
