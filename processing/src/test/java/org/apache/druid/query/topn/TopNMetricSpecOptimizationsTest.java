@@ -33,15 +33,17 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.SimpleTopNOptimizationInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class TopNMetricSpecOptimizationsTest
+public class TopNMetricSpecOptimizationsTest extends InitializedNullHandlingTest
 {
   private static final List<AggregatorFactory> AGGS = Lists.newArrayList(
       Iterables.concat(
@@ -227,7 +229,7 @@ public class TopNMetricSpecOptimizationsTest
             return null;
           }
         },
-        null,
+        new SimpleTopNOptimizationInspector(true),
         Intervals.of(start + "/" + end),
         cardinality
     );

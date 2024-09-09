@@ -1973,10 +1973,10 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_hasBuiltInFiltersForSingleJoinableClauseWithVariousJoinTypes()
   {
-    Assert.assertFalse(makeFactToCountrySegment(JoinType.INNER).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assert.assertTrue(makeFactToCountrySegment(JoinType.INNER).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
     Assert.assertFalse(makeFactToCountrySegment(JoinType.LEFT).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
     Assert.assertTrue(makeFactToCountrySegment(JoinType.RIGHT).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
-    Assert.assertTrue(makeFactToCountrySegment(JoinType.FULL).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assert.assertFalse(makeFactToCountrySegment(JoinType.FULL).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
     // cross join
     HashJoinSegment segment = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
@@ -1996,7 +1996,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         null
     );
     TopNOptimizationInspector inspector = segment.as(TopNOptimizationInspector.class);
-    Assert.assertFalse(inspector.areAllDictionaryIdsPresent());
+    Assert.assertTrue(inspector.areAllDictionaryIdsPresent());
   }
 
   @Test
@@ -2047,7 +2047,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         ),
         null
     );
-    Assert.assertTrue(segment3.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assert.assertFalse(segment3.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment4 = new HashJoinSegment(
         ReferenceCountingSegment.wrapRootGenerationSegment(factSegment),
@@ -2067,6 +2067,6 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         ),
         null
     );
-    Assert.assertTrue(segment4.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assert.assertFalse(segment4.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
   }
 }
