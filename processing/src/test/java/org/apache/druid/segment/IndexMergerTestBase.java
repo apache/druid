@@ -1712,7 +1712,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "C"),
-        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
   }
 
@@ -1788,7 +1788,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "C"),
-        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
 
   }
@@ -1860,7 +1860,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "B", "C"),
-        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
   }
 
@@ -1908,7 +1908,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
     Assert.assertEquals(
         ImmutableSet.of("A", "B", "C"),
-        Arrays.stream(segment.as(Metadata.class).getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
+        Arrays.stream(segment.as(PhysicalSegmentInspector.class).getMetadata().getAggregators()).map(AggregatorFactory::getName).collect(Collectors.toSet())
     );
   }
 

@@ -76,6 +76,8 @@ public class IncrementalIndexSegment implements Segment
       return (T) index.getMetadata();
     } else if (PhysicalSegmentInspector.class.equals(clazz)) {
       return (T) new IncrementalIndexPhysicalSegmentInspector(index);
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
+      return (T) new SimpleTopNOptimizationInspector(true);
     } else {
       return Segment.super.as(clazz);
     }

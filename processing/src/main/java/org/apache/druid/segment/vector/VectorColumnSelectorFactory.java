@@ -19,16 +19,13 @@
 
 package org.apache.druid.segment.vector;
 
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
-import org.apache.druid.segment.ColumnCardinalityInspector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
@@ -41,7 +38,7 @@ import javax.annotation.Nullable;
  *
  * @see org.apache.druid.segment.ColumnSelectorFactory the non-vectorized version.
  */
-public interface VectorColumnSelectorFactory extends ColumnCardinalityInspector
+public interface VectorColumnSelectorFactory extends ColumnInspector
 {
   /**
    * Returns a {@link ReadableVectorInspector} for the {@link VectorCursor} that generated this object.
@@ -117,30 +114,6 @@ public interface VectorColumnSelectorFactory extends ColumnCardinalityInspector
   @Override
   @Nullable
   ColumnCapabilities getColumnCapabilities(String column);
-
-  @Override
-  default int getColumnValueCardinality(String column)
-  {
-    final ColumnCapabilities capabilities = getColumnCapabilities(column);
-    if (capabilities == null) {
-      // null capabilities for a vector selector means the column doesn't exist, all values are null
-      return 1;
-    }
-    if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
-      if (capabilities.hasMultipleValues().isTrue()) {
-        MultiValueDimensionVectorSelector dimensionVectorSelector = makeMultiValueDimensionSelector(DefaultDimensionSpec.of(column));
-        if (dimensionVectorSelector != null) {
-          return dimensionVectorSelector.getValueCardinality();
-        }
-      } else {
-        SingleValueDimensionVectorSelector dimensionVectorSelector = makeSingleValueDimensionSelector(DefaultDimensionSpec.of(column));
-        if (dimensionVectorSelector != null) {
-          return dimensionVectorSelector.getValueCardinality();
-        }
-      }
-    }
-    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-  }
 
   /**
    * Returns a group-by selector. Allows columns to control their own grouping behavior.

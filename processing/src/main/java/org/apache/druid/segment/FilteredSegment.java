@@ -49,7 +49,7 @@ public class FilteredSegment extends WrappedSegmentReference
   public <T> T as(@Nonnull Class<T> clazz)
   {
     if (TopNOptimizationInspector.class.equals(clazz)) {
-      return (T) new SimpleTopNOptimizationInspector(filter != null);
+      return (T) new SimpleTopNOptimizationInspector(filter == null);
     }
     return super.as(clazz);
   }

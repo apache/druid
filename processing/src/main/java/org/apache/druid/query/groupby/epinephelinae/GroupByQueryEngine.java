@@ -63,6 +63,7 @@ import org.joda.time.DateTime;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -125,7 +126,7 @@ public class GroupByQueryEngine
             query.getDimensions(),
             columnSelectorFactory
         );
-    GroupByColumnSelectorPlus[] dims = new GroupByColumnSelectorPlus[selectorPlus.length];
+    final GroupByColumnSelectorPlus[] dims = new GroupByColumnSelectorPlus[selectorPlus.length];
     int curPos = 0;
     for (int i = 0; i < dims.length; i++) {
       dims[i] = new GroupByColumnSelectorPlus(
@@ -140,6 +141,7 @@ public class GroupByQueryEngine
         querySpecificConfig,
         query,
         columnSelectorFactory,
+        Arrays.asList(dims),
         processingBuffer
     );
 

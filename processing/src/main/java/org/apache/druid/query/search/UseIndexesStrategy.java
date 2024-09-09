@@ -74,7 +74,7 @@ public class UseIndexesStrategy extends SearchStrategy
   public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
     final ImmutableList.Builder<SearchQueryExecutor> builder = ImmutableList.builder();
-    final QueryableIndex index = segment.asQueryableIndex();
+    final QueryableIndex index = segment.as(QueryableIndex.class);
     final CursorFactory cursorFactory = segment.asCursorFactory();
     final List<DimensionSpec> searchDims = getDimsToSearch(segment, query.getDimensions());
 
@@ -265,7 +265,7 @@ public class UseIndexesStrategy extends SearchStrategy
     @Override
     public Object2IntRBTreeMap<SearchHit> execute(int limit)
     {
-      final QueryableIndex index = segment.asQueryableIndex();
+      final QueryableIndex index = segment.as(QueryableIndex.class);
       Preconditions.checkArgument(index != null, "Index should not be null");
 
       ColumnSelectorColumnIndexSelector indexSelector = new ColumnSelectorColumnIndexSelector(

@@ -234,6 +234,7 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   public void test_asQueryableIndex()
   {
     Assert.assertNull(hashJoinSegment.asQueryableIndex());
+    Assert.assertNull(hashJoinSegment.as(QueryableIndex.class));
   }
 
   @Test

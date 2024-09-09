@@ -28,6 +28,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -117,6 +118,7 @@ public class LookupSegmentTest
   @Test
   public void test_asQueryableIndex()
   {
+    Assert.assertNull(LOOKUP_SEGMENT.as(QueryableIndex.class));
     Assert.assertNull(LOOKUP_SEGMENT.asQueryableIndex());
   }
 

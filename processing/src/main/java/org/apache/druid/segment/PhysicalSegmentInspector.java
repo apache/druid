@@ -28,6 +28,11 @@ import javax.annotation.Nullable;
 public interface PhysicalSegmentInspector extends ColumnInspector
 {
   /**
+   * Returns {@link Metadata} which contains details about how the segment was created
+   */
+  @Nullable
+  Metadata getMetadata();
+  /**
    * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
    * if not known. Does not scan the column to find the minimum value.
    */

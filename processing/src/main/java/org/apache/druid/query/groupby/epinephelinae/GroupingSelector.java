@@ -17,15 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.query.groupby.epinephelinae;
 
-/**
- * {@link ColumnInspector} + value cardinality. This can probably be merged into {@link ColumnInspector} at some point
- * in the future.
- */
-public interface ColumnCardinalityInspector extends ColumnInspector
+import org.apache.druid.segment.DimensionDictionarySelector;
+
+public interface GroupingSelector
 {
-  default int getColumnValueCardinality(String column)
+  /**
+   * Returns the value cardinality if it is known (such as when backed by a {@link DimensionDictionarySelector}). If
+   * there are only null values, this method should return 1. If the cardinality is not known, returns
+   * {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN}.
+   */
+  default int getValueCardinality()
   {
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }

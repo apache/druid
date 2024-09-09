@@ -70,12 +70,12 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.groupby.epinephelinae.GroupByResultMergeFn;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import org.apache.druid.query.groupby.epinephelinae.GroupingSelector;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.ColumnCardinalityInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
@@ -873,7 +873,8 @@ public class GroupingEngine
   public static int getCardinalityForArrayAggregation(
       GroupByQueryConfig querySpecificConfig,
       GroupByQuery query,
-      ColumnCardinalityInspector inspector,
+      ColumnInspector columnInspector,
+      List<? extends GroupingSelector> groupingSelectors,
       ByteBuffer buffer
   )
   {
@@ -904,8 +905,8 @@ public class GroupingEngine
       }
 
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
-      columnCapabilities = inspector.getColumnCapabilities(columnName);
-      cardinality = inspector.getColumnValueCardinality(columnName);
+      columnCapabilities = columnInspector.getColumnCapabilities(columnName);
+      cardinality = groupingSelectors.get(0).getValueCardinality();
     } else {
       // Cannot use array-based aggregation with more than one dimension.
       return -1;

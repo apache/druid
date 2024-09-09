@@ -53,7 +53,7 @@ public class TopNCursorInspector
   }
 
   @Nullable
-  public TopNOptimizationInspector getFilteredSegmentInspector()
+  public TopNOptimizationInspector getOptimizationInspector()
   {
     return topNOptimizationInspector;
   }

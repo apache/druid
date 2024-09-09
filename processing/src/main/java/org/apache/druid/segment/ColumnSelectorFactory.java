@@ -20,10 +20,8 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
@@ -33,7 +31,7 @@ import javax.annotation.Nullable;
  * @see org.apache.druid.segment.vector.VectorColumnSelectorFactory, the vectorized version
  */
 @PublicApi
-public interface ColumnSelectorFactory extends ColumnCardinalityInspector
+public interface ColumnSelectorFactory extends ColumnInspector
 {
   DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
 
@@ -43,19 +41,6 @@ public interface ColumnSelectorFactory extends ColumnCardinalityInspector
    */
   ColumnValueSelector makeColumnValueSelector(String columnName);
 
-  @Override
-  default int getColumnValueCardinality(String columnName)
-  {
-    final ColumnCapabilities capabilities = getColumnCapabilities(columnName);
-    if (capabilities == null) {
-      return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-    }
-    if (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue()) {
-      final DimensionSelector dimensionSelector = makeDimensionSelector(DefaultDimensionSpec.of(columnName));
-      return dimensionSelector.getValueCardinality();
-    }
-    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-  }
   /**
    * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
    * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered

@@ -25,12 +25,13 @@ package org.apache.druid.segment;
 public interface TopNOptimizationInspector
 {
   /**
-   * Returns true if this segment can filter some rows out even if the query does not specify a filter. The actual
-   * column cardinality can be lower than what {@link DimensionDictionarySelector#getValueCardinality()} returns if
-   * this returns true. Dimension selectors for such cursors can return non-contiguous dictionary IDs because the
-   * dictionary IDs in filtered rows will not be returned. Note that the number of rows accessible via this cursor will
-   * not necessarily decrease because of the built-in filters. For inner joins, for example, the number of joined rows
-   * can be larger than the number of rows in the base segment even though this method returns true.
+   * Returns true if all values in the dictionary are present in rows. Returns false such as this segment can filter
+   * some rows out even if the query does not specify a filter, making the actual column cardinality be lower than
+   * what {@link DimensionDictionarySelector#getValueCardinality()} returns. Dimension selectors for such cursors can
+   * return non-contiguous dictionary IDs because the dictionary IDs in filtered rows will not be returned. Note that
+   * the number of rows accessible via cursors created on these segments will not necessarily decrease because of the
+   * built-in filters. For inner joins, for example, the number of joined rows can be larger than the number of rows in
+   * the base segment even though this method returns false.
    */
-  boolean isFiltered();
+  boolean areAllDictionaryIdsPresent();
 }

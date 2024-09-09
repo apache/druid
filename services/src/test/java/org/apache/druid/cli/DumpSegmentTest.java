@@ -133,7 +133,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
 
@@ -207,7 +207,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumn(
@@ -247,7 +247,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumnPath(

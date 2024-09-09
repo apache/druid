@@ -90,7 +90,7 @@ public class SegmentAnalyzer
     final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
 
     // index is null for incremental-index-based segments, but segmentInspector should always be available
-    final QueryableIndex index = segment.asQueryableIndex();
+    final QueryableIndex index = segment.as(QueryableIndex.class);
 
     final int numRows = segmentInspector != null ? segmentInspector.getNumRows() : 0;
 

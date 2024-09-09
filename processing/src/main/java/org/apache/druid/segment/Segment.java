@@ -59,7 +59,7 @@ public interface Segment extends Closeable
    * Request an implementation of a particular interface.
    *
    * If the passed-in interface is {@link QueryableIndex} or {@link CursorFactory}, then this method behaves
-   * identically to {@link #asQueryableIndex()} or {@link #asCursorFactory()} ()}. Other interfaces are only
+   * identically to {@link #asQueryableIndex()} or {@link #asCursorFactory()}. Other interfaces are only
    * expected to be requested by callers that have specific knowledge of extra features provided by specific
    * segment types. For example, an extension might provide a custom Segment type that can offer both
    * StorageAdapter and some new interface. That extension can also offer a Query that uses that new interface.
@@ -73,15 +73,15 @@ public interface Segment extends Closeable
    *
    * @return instance of clazz, or null if the interface is not supported by this segment
    *
-   * @see CursorFactory to make cursors to run queries
+   * @see CursorFactory to make cursors to run queries. Never null.
    * @see QueryableIndex index object, if this is a memory-mapped regular segment.
    * @see IndexedTable table object, if this is a joinable indexed table.
    * @see TimeBoundaryInspector inspector for min/max timestamps, if supported by this segment.
+   * @see PhysicalSegmentInspector inspector for physical segment details, if supported by this segment.
    * @see MaxIngestedEventTimeInspector inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}
-   * @see PhysicalSegmentInspector inspector for {@link org.apache.druid.query.metadata.SegmentAnalyzer}
-   * @see Metadata information about how a physical segment was created
-   * @see TopNOptimizationInspector inspector containing information for topN specific  optimizations
+   * @see TopNOptimizationInspector inspector containing information for topN specific optimizations
    * @see CloseableShapeshifter stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.
+   *
    */
   @SuppressWarnings({"unused", "unchecked"})
   @Nullable

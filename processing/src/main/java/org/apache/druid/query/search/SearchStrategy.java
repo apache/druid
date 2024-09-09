@@ -27,6 +27,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
@@ -58,19 +60,28 @@ public abstract class SearchStrategy
   static List<DimensionSpec> getDimsToSearch(Segment segment, List<DimensionSpec> dimensions)
   {
     if (dimensions == null || dimensions.isEmpty()) {
-      final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
       final Set<String> dims = new LinkedHashSet<>();
-      final Set<String> ignore = new HashSet<>();
-      ignore.add(ColumnHolder.TIME_COLUMN_NAME);
-      final Metadata metadata = segment.as(Metadata.class);
-      if (metadata != null && metadata.getAggregators() != null) {
-        for (AggregatorFactory factory : metadata.getAggregators()) {
-          ignore.add(factory.getName());
+      final QueryableIndex index = segment.as(QueryableIndex.class);
+      if (index != null) {
+        for (String dim : index.getAvailableDimensions()) {
+          dims.add(dim);
         }
-      }
-      for (String columnName : rowSignature.getColumnNames()) {
-        if (!ignore.contains(columnName)) {
-          dims.add(columnName);
+      } else {
+        // fallback to RowSignature and Metadata if QueryableIndex not available
+        final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+        final Metadata metadata = segmentInspector != null ? segmentInspector.getMetadata() : null;
+        final Set<String> ignore = new HashSet<>();
+        ignore.add(ColumnHolder.TIME_COLUMN_NAME);
+        if (metadata != null && metadata.getAggregators() != null) {
+          for (AggregatorFactory factory : metadata.getAggregators()) {
+            ignore.add(factory.getName());
+          }
+        }
+        final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+        for (String columnName : rowSignature.getColumnNames()) {
+          if (!ignore.contains(columnName)) {
+            dims.add(columnName);
+          }
         }
       }
       return ImmutableList.copyOf(

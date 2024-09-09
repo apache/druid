@@ -331,6 +331,7 @@ public class VectorGroupByEngine
           querySpecificConfig,
           query,
           columnSelectorFactory,
+          selectors,
           processingBuffer
       );
 

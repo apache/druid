@@ -61,7 +61,7 @@ public class TombstoneSegmentizerFactoryTest
     Assert.assertEquals("foo_2021-01-01T00:00:00.000Z_2022-01-01T00:00:00.000Z_1", segment.getId().toString());
     Assert.assertEquals(expectedInterval, segment.getDataInterval());
 
-    QueryableIndex queryableIndex = segment.asQueryableIndex();
+    QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
     Assert.assertNotNull(queryableIndex);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getNumRows);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getAvailableDimensions);

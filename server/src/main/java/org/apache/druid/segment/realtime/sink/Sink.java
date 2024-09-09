@@ -157,7 +157,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
       try {
         overwriteIndexDimensions(segment);
-        QueryableIndex index = segment.asQueryableIndex();
+        QueryableIndex index = segment.as(QueryableIndex.class);
         numRowsExcludingCurrIndex.addAndGet(index.getNumRows());
       }
       finally {
@@ -357,7 +357,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
             try {
               overwriteIndexDimensions(segment);
               if (variableDimensions) {
-                final QueryableIndex oldIndex = Preconditions.checkNotNull(segment.asQueryableIndex());
+                final QueryableIndex oldIndex = Preconditions.checkNotNull(segment.as(QueryableIndex.class));
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
                   oldFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());

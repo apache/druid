@@ -114,7 +114,7 @@ public interface StorageAdapter extends ColumnInspector
   default Indexed<String> getAvailableDimensions()
   {
     throw DruidException.defensive(
-        "getAvailableDimensions is no longer supported, use Segment.getRowSignature() and or Segment.as(Metadata.class) instead"
+        "getAvailableDimensions is no longer supported, use Segment.getRowSignature() and or Segment.as(PhysicalSegmentInspector.class) instead"
     );
   }
 
@@ -126,7 +126,7 @@ public interface StorageAdapter extends ColumnInspector
   default Iterable<String> getAvailableMetrics()
   {
     throw DruidException.defensive(
-        "getAvailableMetrics is no longer supported, use Segment.as(Metadata.class) instead"
+        "getAvailableMetrics is no longer supported, use Segment.as(PhysicalSegmentInspector.class) instead"
     );
   }
 
@@ -249,13 +249,13 @@ public interface StorageAdapter extends ColumnInspector
   default Metadata getMetadata()
   {
     throw DruidException.defensive(
-        "getMetadata is no longer supported, use Segment.as(Metadata.class) instead"
+        "getMetadata is no longer supported, use Segment.as(PhysicalSegmentInspector.class) instead"
     );
   }
 
   /**
    * @deprecated Use {@link Segment#as(Class)} to get a {@link TopNOptimizationInspector} if available and call
-   * {@link TopNOptimizationInspector#isFiltered()} instead.
+   * {@link TopNOptimizationInspector#areAllDictionaryIdsPresent()} instead.
    */
   @Deprecated
   default boolean hasBuiltInFilters()

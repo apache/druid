@@ -1255,7 +1255,7 @@ public class SegmentLocalCacheManagerTest
     Assert.assertNotNull(cursorFactory);
     Assert.assertTrue(segment.isTombstone());
 
-    final QueryableIndex queryableIndex = segment.asQueryableIndex();
+    final QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
     Assert.assertNotNull(queryableIndex);
     Assert.assertEquals(interval, queryableIndex.getDataInterval());
     Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getMetadata);

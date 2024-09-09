@@ -125,10 +125,10 @@ public class HashJoinSegment implements SegmentReference
       return (T) WrappedTimeBoundaryInspector.create(baseSegment.as(TimeBoundaryInspector.class));
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
       // if the baseFilter is not null, then rows from underlying cursor can be potentially filtered.
-      // otherwise, a filtering inner join can also filter rows.
+      // otherwise, a filtering inner or left join can also filter rows.
       return (T) new SimpleTopNOptimizationInspector(
-          baseFilter != null || clauses.stream().anyMatch(
-              clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue()
+          baseFilter == null && clauses.stream().noneMatch(
+              clause -> clause.getJoinType().isLefty() && !clause.getCondition().isAlwaysTrue()
           )
       );
     } else {

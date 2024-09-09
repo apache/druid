@@ -40,6 +40,12 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   }
 
   @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
+  }
+
+  @Override
   @Nullable
   public Comparable getMinValue(String dimension)
   {

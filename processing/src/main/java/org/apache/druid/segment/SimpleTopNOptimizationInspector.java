@@ -21,16 +21,16 @@ package org.apache.druid.segment;
 
 public class SimpleTopNOptimizationInspector implements TopNOptimizationInspector
 {
-  private final boolean isFiltered;
+  private final boolean allDictionaryIdsPresent;
 
-  public SimpleTopNOptimizationInspector(boolean isFiltered)
+  public SimpleTopNOptimizationInspector(boolean allDictionaryIdsPresent)
   {
-    this.isFiltered = isFiltered;
+    this.allDictionaryIdsPresent = allDictionaryIdsPresent;
   }
 
   @Override
-  public boolean isFiltered()
+  public boolean areAllDictionaryIdsPresent()
   {
-    return isFiltered;
+    return allDictionaryIdsPresent;
   }
 }

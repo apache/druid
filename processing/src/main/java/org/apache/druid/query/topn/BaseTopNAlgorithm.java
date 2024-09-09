@@ -316,10 +316,11 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       int endIndex = Math.min(ignoreFirstN + keepOnlyN, cardinality);
 
-      final TopNOptimizationInspector topNOptimizationInspector = cursorInspector.getFilteredSegmentInspector();
+      final TopNOptimizationInspector topNOptimizationInspector = cursorInspector.getOptimizationInspector();
       if (ignoreAfterThreshold &&
           query.getDimensionsFilter() == null &&
-          (topNOptimizationInspector == null || !topNOptimizationInspector.isFiltered()) &&
+          topNOptimizationInspector != null &&
+          topNOptimizationInspector.areAllDictionaryIdsPresent() &&
           query.getIntervals().stream().anyMatch(interval -> interval.contains(cursorInspector.getDataInterval()))) {
         endIndex = Math.min(endIndex, startIndex + query.getThreshold());
       }

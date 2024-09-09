@@ -25,16 +25,21 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
+import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.DimensionDictionarySelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.TimeBoundaryInspector;
@@ -90,7 +95,20 @@ public class TopNQueryEngine
     final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
 
     final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
-    final int cardinality = factory.getColumnValueCardinality(query.getDimensionSpec().getDimension());
+
+    final ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus =
+        DimensionHandlerUtils.createColumnSelectorPlus(
+            new TopNColumnAggregatesProcessorFactory(query.getDimensionSpec().getOutputType()),
+            query.getDimensionSpec(),
+            factory
+        );
+
+    final int cardinality;
+    if (selectorPlus.getSelector() instanceof DimensionDictionarySelector) {
+      cardinality = ((DimensionDictionarySelector) selectorPlus.getSelector()).getValueCardinality();
+    } else {
+      cardinality = DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    }
     final TopNCursorInspector cursorInspector = new TopNCursorInspector(
         factory,
         segment.as(TopNOptimizationInspector.class),
@@ -98,7 +116,6 @@ public class TopNQueryEngine
         cardinality
     );
 
-    final TopNMapFn mapFn = getMapFn(query, cursorInspector, queryMetrics);
     final CursorGranularizer granularizer = CursorGranularizer.create(
         cursor,
         timeBoundaryInspector,
@@ -106,18 +123,20 @@ public class TopNQueryEngine
         query.getGranularity(),
         buildSpec.getInterval()
     );
-    if (granularizer == null) {
+    if (granularizer == null || selectorPlus.getSelector() == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
+
 
     if (queryMetrics != null) {
       queryMetrics.cursor(cursor);
     }
+    final TopNMapFn mapFn = getMapFn(query, cursorInspector, queryMetrics);
     return Sequences.filter(
         Sequences.simple(granularizer.getBucketIterable())
                  .map(bucketInterval -> {
                    granularizer.advanceToBucket(bucketInterval);
-                   return mapFn.apply(cursor, granularizer, queryMetrics);
+                   return mapFn.apply(cursor, selectorPlus, granularizer, queryMetrics);
                  }),
                  Predicates.notNull()
     ).withBaggage(cursorHolder);

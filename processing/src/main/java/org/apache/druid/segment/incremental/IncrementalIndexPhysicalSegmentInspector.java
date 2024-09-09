@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -69,6 +70,13 @@ public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegment
   public IncrementalIndexPhysicalSegmentInspector(IncrementalIndex index)
   {
     this.index = index;
+  }
+
+  @Nullable
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
   }
 
   @Nullable

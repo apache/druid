@@ -101,6 +101,8 @@ public class QueryableIndexSegment implements Segment
       return (T) index.getMetadata();
     } else if (PhysicalSegmentInspector.class.equals(clazz)) {
       return (T) new QueryableIndexPhysicalSegmentInspector(index);
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
+      return (T) new SimpleTopNOptimizationInspector(true);
     }
 
     return Segment.super.as(clazz);

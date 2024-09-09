@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
@@ -79,7 +80,7 @@ public class FireHydrant
     if (hasSwapped()) {
       final Segment segment = adapter.get().getBaseSegment();
       if (segment != null) {
-        QueryableIndex queryableIndex = segment.asQueryableIndex();
+        QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
         if (queryableIndex != null) {
           return queryableIndex.getAvailableDimensions().size();
         }
@@ -94,7 +95,8 @@ public class FireHydrant
   {
     final Segment segment = adapter.get().getBaseSegment();
     if (segment != null) {
-      final Metadata metadata = segment.as(Metadata.class);
+      final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+      final Metadata metadata = segmentInspector == null ? null : segmentInspector.getMetadata();
       return metadata != null && metadata.getAggregators() != null ? metadata.getAggregators().length : 0;
     }
     return 0;

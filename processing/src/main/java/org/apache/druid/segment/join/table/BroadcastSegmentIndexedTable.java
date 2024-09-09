@@ -82,8 +82,8 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
         segment.getId()
     );
     this.queryableIndex = Preconditions.checkNotNull(
-        segment.asQueryableIndex(),
-        "Segment[%s] must have a QueryableIndexSegment",
+        segment.as(QueryableIndex.class),
+        "Segment[%s] must have a QueryableIndex",
         segment.getId()
     );
 
