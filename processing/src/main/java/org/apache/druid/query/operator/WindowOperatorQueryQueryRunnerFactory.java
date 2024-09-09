@@ -30,6 +30,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
@@ -97,7 +98,7 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
                       public RowsAndColumns apply(@Nullable RowsAndColumns input)
                       {
                         if (input instanceof LazilyDecoratedRowsAndColumns) {
-                          return ((LazilyDecoratedRowsAndColumns) input).toFrameRowsAndColumns();
+                          return input.as(FrameRowsAndColumns.class);
                         }
                         return input;
                       }

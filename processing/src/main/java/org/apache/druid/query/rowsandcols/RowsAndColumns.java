@@ -136,6 +136,13 @@ public interface RowsAndColumns
     if (Arrays.asList(getClass().getInterfaces()).contains(clazz)) {
       return (T) this;
     }
+    Class<?> superClass = this.getClass().getSuperclass();
+    while (superClass != null) {
+      if (superClass.equals(clazz)) {
+        return (T) this;
+      }
+      superClass = superClass.getSuperclass();
+    }
     return null;
   }
 
