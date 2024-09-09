@@ -36,7 +36,7 @@ Imagine you are interested in the number of visitors that watched episodes of a 
 
 There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take a very long time, meaning that an interactive data exploration is not possible.
 
-An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval<super>[^1]</super>, show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
+An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval<sup>[^1]</sup>, show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
 
 [^1]: Why 15 minutes and not just 1 hour? Intervals of 15 minutes work better with international timezones because those are not always aligned by hour. India, for instance, is 30 minutes off, and Nepal is even 45 minutes off. With 15 minute aggregates, you can get hourly sums for any of those timezones, too!
 
