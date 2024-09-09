@@ -431,10 +431,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @Nullable
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
-    if (!segmentMetadataInfo.containsKey(datasource)) {
-      return null;
-    }
-    return segmentMetadataInfo.get(datasource).get(segmentId);
+    return segmentMetadataInfo.getOrDefault(datasource, new ConcurrentSkipListMap<>()).get(segmentId);
   }
 
   /**
@@ -458,13 +455,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    // Skip adding tombstone segment to the cache. These segments lack data or column information.
-    // Additionally, segment metadata queries, which are not yet implemented for tombstone segments
-    // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
-    // leading to indefinite refresh attempts for these segments.
-    if (segment.isTombstone()) {
-      return;
-    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
@@ -537,10 +527,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void removeSegment(final DataSegment segment)
   {
-    // tombstone segments are not present in the cache
-    if (segment.isTombstone()) {
-      return;
-    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       log.debug("Segment [%s] is gone.", segment.getId());
@@ -732,18 +718,34 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     log.debug("Refreshing metadata for datasource[%s].", dataSource);
 
+    final Set<SegmentId> retVal = new HashSet<>();
+
+    ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> datasourceSegments = segmentMetadataInfo.get(dataSource);
+    // this datasource no longer exists, skip refresh
+    if (datasourceSegments == null) {
+      return retVal;
+    }
+
+    // Skip refreshing tombstone segments. These segments lack data or column information.
+    // Additionally, segment metadata queries, which are not yet implemented for tombstone segments
+    // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
+    // leading to indefinite refresh attempts for these segments.
+    Set<SegmentId> segmentsWithoutTombstone =
+        StreamSupport.stream(Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY).spliterator(), false).filter(
+            segment ->
+                datasourceSegments.containsKey(segment) &&
+                !datasourceSegments.get(segment).getSegment().isTombstone()).collect(Collectors.toSet()
+        );
+
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
 
-    emitter.emit(builder.setMetric("metadatacache/refresh/count", segments.size()));
+    emitter.emit(builder.setMetric("metadatacache/refresh/count", segmentsWithoutTombstone.size()));
 
     // Segment id string -> SegmentId object.
-    final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
+    final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segmentsWithoutTombstone, SegmentId::toString);
 
-    final Set<SegmentId> retVal = new HashSet<>();
-    final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
-        Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
-    );
+    final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(segmentsWithoutTombstone);
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
 
