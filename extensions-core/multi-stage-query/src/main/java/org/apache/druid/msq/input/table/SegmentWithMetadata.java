@@ -22,21 +22,28 @@ package org.apache.druid.msq.input.table;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Objects;
 
+/**
+ * Contains the {@link DataSegment} and {@link Segment}. The datasegment could be null if the segment is a dummy, such
+ * as those created by {@link org.apache.druid.msq.input.inline.InlineInputSliceReader}.
+ */
 public class SegmentWithMetadata implements Closeable
 {
+  @Nullable
   private final DataSegment dataSegment;
   private final Segment segment;
 
-  public SegmentWithMetadata(DataSegment dataSegment, Segment segment)
+  public SegmentWithMetadata(@Nullable DataSegment dataSegment, Segment segment)
   {
     this.dataSegment = dataSegment;
     this.segment = segment;
   }
 
+  @Nullable
   public DataSegment getDataSegment()
   {
     return dataSegment;
