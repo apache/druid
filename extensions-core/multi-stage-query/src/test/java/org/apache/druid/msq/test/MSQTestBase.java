@@ -720,6 +720,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                          .interval(segmentId.getInterval())
                                          .version(segmentId.getVersion())
                                          .shardSpec(new LinearShardSpec(0))
+                                         .size(0)
                                          .build();
     return () -> ReferenceCountingResourceHolder.fromCloseable(new SegmentWithMetadata(dataSegment, segmentManager.getSegment(segmentId)));
   }
