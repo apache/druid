@@ -127,9 +127,9 @@ public class HashJoinSegment implements SegmentReference
       // if the baseFilter is not null, then rows from underlying cursor can be potentially filtered.
       // otherwise, a filtering inner or left join can also filter rows.
       return (T) new SimpleTopNOptimizationInspector(
-          !(baseFilter != null || clauses.stream().anyMatch(
-              clause -> clause.getJoinType().isLefty() && !clause.getCondition().isAlwaysTrue()
-          ))
+          baseFilter == null && clauses.stream().allMatch(
+              clause -> clause.getJoinType().isLefty() || clause.getCondition().isAlwaysTrue()
+          )
       );
     } else {
       return SegmentReference.super.as(clazz);
