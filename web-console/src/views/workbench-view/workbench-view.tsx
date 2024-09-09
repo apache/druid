@@ -109,12 +109,7 @@ type MoreMenuItem =
 export interface WorkbenchViewProps
   extends Pick<
     QueryTabProps,
-    | 'maxTasksMenuHeader'
-    | 'enginesLabelFn'
-    | 'maxTasksLabelFn'
-    | 'fullClusterCapacityLabelFn'
-    | 'maxTasksOptions'
-    | 'hiddenOptions'
+    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
   > {
   capabilities: Capabilities;
   tabId: string | undefined;
@@ -129,6 +124,12 @@ export interface WorkbenchViewProps
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
+  maxTasksOptions?:
+    | QueryTabProps['maxTasksOptions']
+    | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
+  hiddenOptions?:
+    | QueryTabProps['hiddenOptions']
+    | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
 }
 
 export interface WorkbenchViewState {
@@ -716,9 +717,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           maxTasksMenuHeader={maxTasksMenuHeader}
           enginesLabelFn={enginesLabelFn}
           maxTasksLabelFn={maxTasksLabelFn}
-          maxTasksOptions={maxTasksOptions}
+          maxTasksOptions={
+            typeof maxTasksOptions === 'function'
+              ? maxTasksOptions(effectiveEngine)
+              : maxTasksOptions
+          }
           fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
-          hiddenOptions={hiddenOptions}
+          hiddenOptions={
+            typeof hiddenOptions === 'function' ? hiddenOptions(effectiveEngine) : hiddenOptions
+          }
           runMoreMenu={
             <Menu>
               {!hiddenMoreMenuItems.includes('explain') &&
