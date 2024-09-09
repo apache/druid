@@ -1077,7 +1077,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.snapshotVersion',
           label: 'Delta snapshot version',
           type: 'number',
-          placeholder: '2',
+          placeholder: '(latest)',
           defaultValue: {},
           info: (
             <>
