@@ -20,9 +20,9 @@
 package org.apache.druid.java.util.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -33,16 +33,11 @@ public class OshiSysMonitorConfig
 
   @JsonProperty("categories")
   @NotNull
-  private List<String> categories;
+  private Set<String> categories;
 
   public OshiSysMonitorConfig(@JsonProperty("categories") List<String> categories)
   {
-    this.categories = categories == null ? new ArrayList<>() : categories;
-  }
-
-  public Set<String> getCategories()
-  {
-    return new HashSet<>(categories);
+    this.categories = categories == null ? new HashSet<>() : ImmutableSet.copyOf(categories);
   }
 
   public boolean shouldEmitMetricCategory(String category)
