@@ -30,8 +30,8 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 
 import javax.annotation.Nullable;
@@ -88,14 +88,14 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
   private static class GroupByQueryRunner implements QueryRunner<ResultRow>
   {
-    private final StorageAdapter adapter;
+    private final CursorFactory cursorFactory;
     @Nullable
     private final TimeBoundaryInspector timeBoundaryInspector;
     private final GroupingEngine groupingEngine;
 
     public GroupByQueryRunner(Segment segment, final GroupingEngine groupingEngine)
     {
-      this.adapter = segment.asStorageAdapter();
+      this.cursorFactory = segment.asCursorFactory();
       this.timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
       this.groupingEngine = groupingEngine;
     }
@@ -110,7 +110,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
       return groupingEngine.process(
           (GroupByQuery) query,
-          adapter,
+          cursorFactory,
           timeBoundaryInspector,
           (GroupByQueryMetrics) queryPlus.getQueryMetrics()
       );

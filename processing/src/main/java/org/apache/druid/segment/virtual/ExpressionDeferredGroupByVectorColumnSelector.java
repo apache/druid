@@ -26,6 +26,7 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.HashMap;
@@ -88,6 +89,15 @@ public class ExpressionDeferredGroupByVectorColumnSelector implements GroupByVec
   public int getGroupingKeySize()
   {
     return exprKeyBytes;
+  }
+
+  @Override
+  public int getValueCardinality()
+  {
+    if (subSelectors.size() == 1) {
+      return subSelectors.get(0).getValueCardinality();
+    }
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override

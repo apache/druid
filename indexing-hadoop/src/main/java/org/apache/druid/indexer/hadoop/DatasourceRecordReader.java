@@ -47,11 +47,11 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.Transformer;
 import org.apache.hadoop.fs.Path;
@@ -98,12 +98,12 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
     spec = DatasourceInputFormat.getIngestionSpec(context.getConfiguration(), dataSource);
     logger.info("load schema [%s]", spec);
 
-    List<WindowedStorageAdapter> adapters = Lists.transform(
+    List<WindowedCursorFactory> adapters = Lists.transform(
         segments,
-        new Function<WindowedDataSegment, WindowedStorageAdapter>()
+        new Function<WindowedDataSegment, WindowedCursorFactory>()
         {
           @Override
-          public WindowedStorageAdapter apply(WindowedDataSegment segment)
+          public WindowedCursorFactory apply(WindowedDataSegment segment)
           {
             try {
               logger.info("Getting storage path for segment [%s]", segment.getSegment().getId());
@@ -122,10 +122,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
               indexes.add(index);
               numRows += index.getNumRows();
 
-              return new WindowedStorageAdapter(
-                  new QueryableIndexStorageAdapter(index),
-                  segment.getInterval()
-              );
+              return new WindowedCursorFactory(new QueryableIndexCursorFactory(index), segment.getInterval());
             }
             catch (IOException ex) {
               throw new RuntimeException(ex);
@@ -196,7 +193,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
     private Yielder<InputRow> rowYielder;
 
     public SegmentReader(
-        final List<WindowedStorageAdapter> adapters,
+        final List<WindowedCursorFactory> cursorFactories,
         final TransformSpec transformSpec,
         final List<String> dims,
         final List<String> metrics,
@@ -207,18 +204,18 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
 
       Sequence<InputRow> rows = Sequences.concat(
           Iterables.transform(
-              adapters,
-              new Function<WindowedStorageAdapter, Sequence<InputRow>>()
+              cursorFactories,
+              new Function<WindowedCursorFactory, Sequence<InputRow>>()
               {
                 @Nullable
                 @Override
-                public Sequence<InputRow> apply(WindowedStorageAdapter adapter)
+                public Sequence<InputRow> apply(WindowedCursorFactory windowed)
                 {
                   final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                                    .setFilter(Filters.toFilter(dimFilter))
-                                                                   .setInterval(adapter.getInterval())
+                                                                   .setInterval(windowed.getInterval())
                                                                    .build();
-                  final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(buildSpec);
+                  final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(buildSpec);
                   final Cursor cursor = cursorHolder.asCursor();
                   if (cursor == null) {
                     return Sequences.empty();
