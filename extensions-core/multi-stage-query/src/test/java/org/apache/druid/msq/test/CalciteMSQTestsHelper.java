@@ -460,6 +460,7 @@ public class CalciteMSQTestsHelper
                                          .interval(segmentId.getInterval())
                                          .version(segmentId.getVersion())
                                          .shardSpec(new LinearShardSpec(0))
+                                         .size(0)
                                          .build();
     return () -> new ReferenceCountingResourceHolder<>(new SegmentWithMetadata(dataSegment, segment), Closer.create());
   }
