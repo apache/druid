@@ -120,7 +120,7 @@ export interface WorkbenchViewProps
   mandatoryQueryContext?: QueryContext;
   serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
-  hiddenMoreMenuItems?: MoreMenuItem[];
+  hiddenMoreMenuItems?: MoreMenuItem[] | ((engine: DruidEngine) => MoreMenuItem[]);
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
@@ -679,7 +679,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       baseQueryContext,
       serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
-      hiddenMoreMenuItems = [],
       goToTask,
       getClusterCapacity,
       maxTasksMenuHeader,
@@ -692,6 +691,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
     const effectiveEngine = currentTabEntry.query.getEffectiveEngine();
+
+    const hiddenMoreMenuItems =
+      typeof this.props.hiddenMoreMenuItems === 'function'
+        ? this.props.hiddenMoreMenuItems(effectiveEngine)
+        : this.props.hiddenMoreMenuItems || [];
 
     return (
       <div className="center-panel">
