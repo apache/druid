@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -247,6 +248,28 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testFailure_partitionByMVD()
+  {
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("select cityName, countryName, array_to_mv(array[1,length(cityName)]),\n"
+                 + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName)\n"
+                 + "from wikipedia\n"
+                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
+                 + "order by 1, 2, 3")
+            .queryContext(DEFAULT_QUERY_CONTEXT)
+            .run()
+    );
+
+    assertEquals(
+        "Encountered a multi value column [v0]. Window processing does not support MVDs. "
+        + "Consider using UNNEST or MV_TO_ARRAY.",
+        e.getMessage()
+    );
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)
