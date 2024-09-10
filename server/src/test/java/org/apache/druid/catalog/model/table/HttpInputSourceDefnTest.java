@@ -57,7 +57,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(
         HttpInputSourceConfig.class,
-        new HttpInputSourceConfig(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS)
+        new HttpInputSourceConfig(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, null)
     ));
   }
 
@@ -100,7 +100,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         null,
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
@@ -121,7 +121,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         null,
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
@@ -153,7 +153,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         null,
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
@@ -220,7 +220,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         new DefaultPasswordProvider("secret"),
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
@@ -349,7 +349,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         new DefaultPasswordProvider("secret"),
         null,
          null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(httpToMap(inputSource))
@@ -388,7 +388,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         new EnvironmentVariablePasswordProvider("SECRET"),
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))
@@ -422,7 +422,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         new DefaultPasswordProvider("secret"),
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(httpToMap(inputSource))
@@ -492,7 +492,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         new EnvironmentVariablePasswordProvider("SECRET"),
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(inputSource))

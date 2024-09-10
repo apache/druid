@@ -46,11 +46,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class HttpInputSource
@@ -85,6 +87,7 @@ public class HttpInputSource
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
     this.headersMap = headersMap == null ? Maps.newHashMap() : headersMap;
+    throwIfForbiddenHeaders(config, this.headersMap);
     this.config = config;
   }
 
@@ -93,6 +96,21 @@ public class HttpInputSource
     for (URI uri : uris) {
       if (!config.getAllowedProtocols().contains(StringUtils.toLowerCase(uri.getScheme()))) {
         throw new IAE("Only %s protocols are allowed", config.getAllowedProtocols());
+      }
+    }
+  }
+
+  public static void throwIfForbiddenHeaders(HttpInputSourceConfig config, Map<String, String> headersMap)
+  {
+    if (!config.getAllowedHeaders().isEmpty() && headersMap.size() > 0) {
+      Set<String> forbiddenHeaderSet = headersMap.keySet()
+                                                 .stream()
+                                                 .map(StringUtils::toLowerCase)
+                                                 .filter(h -> !config.getAllowedHeaders().contains(h))
+                                                 .collect(Collectors.toSet());
+      if (!forbiddenHeaderSet.isEmpty()) {
+        throw new IAE("Got forbidden headers %s, allowed headers are only %s ",
+                      forbiddenHeaderSet, config.getAllowedHeaders());
       }
     }
   }

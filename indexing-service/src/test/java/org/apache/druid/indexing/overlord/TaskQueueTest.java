@@ -519,7 +519,7 @@ public class TaskQueueTest extends IngestionTestBase
     final String password = "AbCd_1234";
     final ObjectMapper mapper = getObjectMapper();
 
-    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"));
+    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"), null);
     mapper.setInjectableValues(new InjectableValues.Std()
                                    .addValue(HttpInputSourceConfig.class, httpInputSourceConfig)
                                    .addValue(ObjectMapper.class, new DefaultObjectMapper())

@@ -88,7 +88,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           new DefaultPasswordProvider("secret"),
           SystemFields.none(),
           null,
-          new HttpInputSourceConfig(null)
+          new HttpInputSourceConfig(null, null)
       ),
       new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
       RowSignature.builder()
@@ -262,7 +262,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
             ImmutableMap.of("Accept", "application/ndjson", "a", "b"),
-            new HttpInputSourceConfig(null)
+            new HttpInputSourceConfig(null, null)
         ),
         new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
         RowSignature.builder()
@@ -395,7 +395,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
             null,
-            new HttpInputSourceConfig(null)
+            new HttpInputSourceConfig(null, null)
         ),
         new JsonInputFormat(null, null, null, null, null),
         RowSignature.builder()

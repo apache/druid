@@ -171,7 +171,7 @@ public class ExternalTableTest extends BaseExternTableTest
         new DefaultPasswordProvider("secret"),
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     Map<String, Object> sourceMap = toMap(inputSource);
     sourceMap.remove("uris");
@@ -197,7 +197,7 @@ public class ExternalTableTest extends BaseExternTableTest
         new DefaultPasswordProvider("secret"),
         null,
         null,
-        new HttpInputSourceConfig(null)
+        new HttpInputSourceConfig(null, null)
     );
     TableMetadata table = TableBuilder.external("koala")
         .inputSource(toMap(inputSource))
