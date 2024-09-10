@@ -2682,7 +2682,7 @@ Returns the following:
 
 ## THETA_SKETCH_ESTIMATE
 
-Returns the distinct count estimate from a Theta sketch, where the `expr` argument must return a Theta sketch.
+Returns the distinct count estimate from a Theta sketch. The `expr` argument must return a Theta sketch.
 
 * **Syntax:** `THETA_SKETCH_ESTIMATE(expr)`
 * **Function type:** Scalar, sketch
@@ -2708,7 +2708,7 @@ Returns the following:
 
 ## THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS
 
-Returns the distinct count estimate and error bounds from a Theta sketch, where the `expr` argument must return a Theta sketch. The optional `errorBoundsStdDev` argument represents the standard deviation of the error bars and  must be 1, 2, or 3.
+Returns the distinct count estimate and error bounds from a Theta sketch. The `expr` argument must return a Theta sketch. The optional `errorBoundsStdDev` argument represents the standard deviation of the error bars and  must be 1, 2, or 3.
 
 * **Syntax:** `THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, errorBoundsStdDev)`
 * **Function type:** Scalar, sketch
