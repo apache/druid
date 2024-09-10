@@ -331,7 +331,6 @@ public interface Task
    * This behaviour can be overridden by passing parameters {@link LookupLoadingSpec#CTX_LOOKUP_LOADING_MODE}
    * and {@link LookupLoadingSpec#CTX_LOOKUPS_TO_LOAD} in the task context.
    */
-  @Nullable
   default LookupLoadingSpec getLookupLoadingSpec()
   {
     return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.ALL);
