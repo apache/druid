@@ -30,7 +30,6 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.file.FrameFileWriter;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -42,9 +41,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -182,10 +181,10 @@ public class FrameTestUtil
     }
   }
 
-  public static Frame adapterToFrame(final StorageAdapter adapter, final FrameType frameType)
+  public static Frame cursorFactoryToFrame(final CursorFactory adapter, final FrameType frameType)
   {
     return Iterables.getOnlyElement(
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(adapter)
                             .allocator(HeapMemoryAllocator.unlimited())
                             .frameType(frameType)
                             .frames()
@@ -193,34 +192,34 @@ public class FrameTestUtil
     );
   }
 
-  public static FrameSegment adapterToFrameSegment(
-      final StorageAdapter adapter,
+  public static FrameSegment cursorFactoryToFrameSegment(
+      final CursorFactory adapter,
       final FrameType frameType
   )
   {
     return new FrameSegment(
-        adapterToFrame(adapter, frameType),
+        cursorFactoryToFrame(adapter, frameType),
         FrameReader.create(adapter.getRowSignature()),
-        SegmentId.of("TestFrame", adapter.getInterval(), "0", 0)
+        SegmentId.of("TestFrame", Intervals.ETERNITY, "0", 0)
     );
   }
 
-  public static FrameSegment adapterToFrameSegment(
-      final StorageAdapter adapter,
+  public static FrameSegment cursorFactoryToFrameSegment(
+      final CursorFactory cursorFactory,
       final FrameType frameType,
       final SegmentId segmentId
   )
   {
     return new FrameSegment(
-        adapterToFrame(adapter, frameType),
-        FrameReader.create(adapter.getRowSignature()),
+        cursorFactoryToFrame(cursorFactory, frameType),
+        FrameReader.create(cursorFactory.getRowSignature()),
         segmentId
     );
   }
 
   /**
    * Reads a sequence of rows from a frame channel using a non-vectorized cursor from
-   * {@link FrameStorageAdapter#makeCursorHolder(CursorBuildSpec)}.
+   * {@link FrameReader#makeCursorFactory(Frame)}.
    *
    * @param channel     the channel
    * @param frameReader reader for this channel
@@ -233,8 +232,8 @@ public class FrameTestUtil
     return new FrameChannelSequence(channel)
         .flatMap(
             frame -> {
-              final CursorHolder cursorHolder = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-                  .makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+              final CursorHolder cursorHolder = frameReader.makeCursorFactory(frame)
+                                                           .makeCursorHolder(CursorBuildSpec.FULL_SCAN);
               final Cursor cursor = cursorHolder.asCursor();
               if (cursor == null) {
                 return Sequences.withBaggage(Sequences.empty(), cursorHolder);
@@ -245,23 +244,24 @@ public class FrameTestUtil
   }
 
   /**
-   * Reads a sequence of rows from a storage adapter.
+   * Reads a sequence of rows from a {@link CursorFactory}.
    *
    * If {@param populateRowNumberIfPresent} is set, and the provided signature contains {@link #ROW_NUMBER_COLUMN},
-   * then that column will be populated with a row number from the adapter.
+   * then that column will be populated with a row number from the cursor.
    *
-   * @param adapter           the adapter
-   * @param signature         optional signature for returned rows; will use {@code adapter.rowSignature()} if null
+   * @param cursorFactory     the cursor factory
+   * @param signature         optional signature for returned rows; will use {@code cursorFactory.rowSignature()} if
+   *                          null
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static Sequence<List<Object>> readRowsFromAdapter(
-      final StorageAdapter adapter,
+  public static Sequence<List<Object>> readRowsFromCursorFactory(
+      final CursorFactory cursorFactory,
       @Nullable final RowSignature signature,
       final boolean populateRowNumber
   )
   {
-    final RowSignature signatureToUse = signature == null ? adapter.getRowSignature() : signature;
-    final CursorHolder cursorHolder = makeCursorForAdapter(adapter, populateRowNumber);
+    final RowSignature signatureToUse = signature == null ? cursorFactory.getRowSignature() : signature;
+    final CursorHolder cursorHolder = makeCursorForCursorFactory(cursorFactory, populateRowNumber);
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
@@ -269,16 +269,26 @@ public class FrameTestUtil
     return readRowsFromCursor(cursor, signatureToUse).withBaggage(cursorHolder);
   }
 
+  public static Sequence<List<Object>> readRowsFromCursorFactory(CursorFactory cursorFactory)
+  {
+    return readRowsFromCursorFactory(cursorFactory, null, false);
+  }
+
+  public static Sequence<List<Object>> readRowsFromCursorFactoryWithRowNumber(CursorFactory cursorFactory)
+  {
+    return readRowsFromCursorFactory(cursorFactory, null, true);
+  }
+
   /**
-   * Creates a Cursor and  from a storage adapter.
+   * Creates a {@link CursorHolder} from a {@link CursorFactory}.
    *
    * If {@param populateRowNumber} is set, the row number will be populated into {@link #ROW_NUMBER_COLUMN}.
    *
-   * @param adapter           the adapter
+   * @param cursorFactory     the cursor factory
    * @param populateRowNumber whether to populate {@link #ROW_NUMBER_COLUMN}
    */
-  public static CursorHolder makeCursorForAdapter(
-      final StorageAdapter adapter,
+  public static CursorHolder makeCursorForCursorFactory(
+      final CursorFactory cursorFactory,
       final boolean populateRowNumber
   )
   {
@@ -297,7 +307,7 @@ public class FrameTestUtil
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
 
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec);
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
     if (populateRowNumber) {
       return new CursorHolder()
       {

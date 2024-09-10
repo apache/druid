@@ -36,7 +36,7 @@ import java.util.List;
  * This is used to test the base cursor of an UnnestCursor.
  * Usages can be found in tests of {@link UnnestColumnValueSelectorCursor} in {@link UnnestColumnValueSelectorCursorTest}
  * However this cannot help with {@link UnnestDimensionCursor}.
- * Tests for {@link UnnestDimensionCursor} are done alongside tests for {@link UnnestStorageAdapterTest}
+ * Tests for {@link UnnestDimensionCursor} are done alongside tests for {@link UnnestCursorFactoryTest}
  */
 public class ListCursor implements Cursor
 {

@@ -57,8 +57,10 @@ import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentMetadata;
@@ -1541,8 +1543,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             config
         );
 
-    QueryableIndexStorageAdapter index1StorageAdaptor = new QueryableIndexStorageAdapter(index1);
-    QueryableIndexStorageAdapter index2StorageAdaptor = new QueryableIndexStorageAdapter(index2);
+    QueryableIndexCursorFactory index1CursorFactory = new QueryableIndexCursorFactory(index1);
+    QueryableIndexCursorFactory index2CursorFactory = new QueryableIndexCursorFactory(index2);
 
     MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
@@ -1559,27 +1561,27 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     pluses.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(
         segment1.getId(),
         fingerprintGenerator.generateFingerprint(
-            new SchemaPayload(index1StorageAdaptor.getRowSignature()),
+            new SchemaPayload(index1CursorFactory.getRowSignature()),
             segment1.getDataSource(),
             CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
         ),
         new SchemaPayloadPlus(
             new SchemaPayload(
-                index1StorageAdaptor.getRowSignature()),
-            (long) index1StorageAdaptor.getNumRows()
+                index1CursorFactory.getRowSignature()),
+            (long) index1.getNumRows()
         )
     ));
     pluses.add(new SegmentSchemaManager.SegmentSchemaMetadataPlus(
         segment2.getId(),
         fingerprintGenerator.generateFingerprint(
-            new SchemaPayload(index2StorageAdaptor.getRowSignature()),
+            new SchemaPayload(index2CursorFactory.getRowSignature()),
             segment1.getDataSource(),
             CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
         ),
         new SchemaPayloadPlus(
             new SchemaPayload(
-                index2StorageAdaptor.getRowSignature()),
-            (long) index2StorageAdaptor.getNumRows()
+                index2CursorFactory.getRowSignature()),
+            (long) index2.getNumRows()
         )
     ));
 
@@ -1685,9 +1687,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
               try {
                 SchemaPayload schemaPayload = mapper.readValue(r.getBytes(1), SchemaPayload.class);
                 long numRows = r.getLong(2);
-                QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
-                Assert.assertEquals(adapter.getRowSignature(), schemaPayload.getRowSignature());
-                Assert.assertEquals(adapter.getNumRows(), numRows);
+                QueryableIndexCursorFactory cursorFa = new QueryableIndexCursorFactory(index2);
+                Assert.assertEquals(cursorFa.getRowSignature(), schemaPayload.getRowSignature());
+                Assert.assertEquals(index2.getNumRows(), numRows);
               }
               catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1712,12 +1714,14 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     config.setDisableSegmentMetadataQueries(true);
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(config);
 
-    QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(index2);
+    QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(index2, SegmentId.dummy("test"));
+    PhysicalSegmentInspector rowCountInspector = queryableIndexSegment.as(PhysicalSegmentInspector.class);
+    QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index2);
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
-    segmentStatsMap.put(segment3.getId(), new SegmentMetadata((long) adapter.getNumRows(), "fp"));
+    segmentStatsMap.put(segment3.getId(), new SegmentMetadata((long) rowCountInspector.getNumRows(), "fp"));
     ImmutableMap.Builder<String, SchemaPayload> schemaPayloadMap = new ImmutableMap.Builder<>();
-    schemaPayloadMap.put("fp", new SchemaPayload(adapter.getRowSignature()));
+    schemaPayloadMap.put("fp", new SchemaPayload(cursorFactory.getRowSignature()));
     segmentSchemaCache.updateFinalizedSegmentSchema(
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );

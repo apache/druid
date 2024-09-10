@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
@@ -100,7 +99,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -304,38 +302,29 @@ public class SystemSchema extends AbstractSchema
     )
     {
       // get available segments from druidSchema
-      final Map<SegmentId, AvailableSegmentMetadata> availableSegmentMetadata =
-          druidSchema.cache().getSegmentMetadataSnapshot();
-      final Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries =
-          availableSegmentMetadata.entrySet().iterator();
+      final BrokerSegmentMetadataCache availableMetadataCache = druidSchema.cache();
 
-      // in memory map to store segment data from available segments
-      final Map<SegmentId, PartialSegmentData> partialSegmentDataMap =
-          Maps.newHashMapWithExpectedSize(druidSchema.cache().getTotalSegments());
-      for (AvailableSegmentMetadata h : availableSegmentMetadata.values()) {
-        PartialSegmentData partialSegmentData =
-            new PartialSegmentData(IS_AVAILABLE_TRUE, h.isRealtime(), h.getNumReplicas(), h.getNumRows());
-        partialSegmentDataMap.put(h.getSegment().getId(), partialSegmentData);
-      }
+      // Keep track of which segments we emitted from the publishedSegments iterator, so we don't emit them again
+      // from the availableSegments iterator.
+      final Set<SegmentId> segmentsAlreadySeen =
+          Sets.newHashSetWithExpectedSize(availableMetadataCache.getTotalSegments());
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator. This may include both published and realtime segments.
       final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
-
-      final Set<SegmentId> segmentsAlreadySeen = Sets.newHashSetWithExpectedSize(druidSchema.cache().getTotalSegments());
-
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
             final DataSegment segment = val.getDataSegment();
+            final AvailableSegmentMetadata availableSegmentMetadata =
+                availableMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
             segmentsAlreadySeen.add(segment.getId());
-            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(segment.getId());
             long numReplicas = 0L, numRows = 0L, isRealtime, isAvailable = 0L;
 
-            if (partialSegmentData != null) {
-              numReplicas = partialSegmentData.getNumReplicas();
-              isAvailable = partialSegmentData.isAvailable();
-              numRows = partialSegmentData.getNumRows();
+            if (availableSegmentMetadata != null) {
+              numReplicas = availableSegmentMetadata.getNumReplicas();
+              isAvailable = availableSegmentMetadata.getNumReplicas() > 0 ? IS_AVAILABLE_TRUE : IS_ACTIVE_FALSE;
+              numRows = availableSegmentMetadata.getNumRows();
             }
 
             // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, SegmentMetadataCache on the
@@ -383,34 +372,29 @@ public class SystemSchema extends AbstractSchema
       // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
       // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> getAuthorizedAvailableSegments(
-              availableSegmentEntries,
-              root
-          ))
+          .from(() -> getAuthorizedAvailableSegments(availableMetadataCache.iterateSegmentMetadata(), root))
           .transform(val -> {
-            if (segmentsAlreadySeen.contains(val.getKey())) {
+            final DataSegment segment = val.getSegment();
+            if (segmentsAlreadySeen.contains(segment.getId())) {
               return null;
             }
-            final DataSegment segment = val.getValue().getSegment();
-            final PartialSegmentData partialSegmentData = partialSegmentDataMap.get(val.getKey());
-            final long numReplicas = partialSegmentData == null ? 0L : partialSegmentData.getNumReplicas();
             return new Object[]{
-                val.getKey(),
-                val.getKey().getDataSource(),
-                val.getKey().getInterval().getStart(),
-                val.getKey().getInterval().getEnd(),
+                segment.getId(),
+                segment.getDataSource(),
+                segment.getInterval().getStart(),
+                segment.getInterval().getEnd(),
                 segment.getSize(),
-                val.getKey().getVersion(),
+                segment.getVersion(),
                 (long) segment.getShardSpec().getPartitionNum(),
-                numReplicas,
-                val.getValue().getNumRows(),
+                val.getNumReplicas(),
+                val.getNumRows(),
                 // is_active is true for unpublished segments iff they are realtime
-                val.getValue().isRealtime() /* is_active */,
+                val.isRealtime() /* is_active */,
                 // is_published is false for unpublished segments
                 IS_PUBLISHED_FALSE,
                 // is_available is assumed to be always true for segments announced by historicals or realtime tasks
                 IS_AVAILABLE_TRUE,
-                val.getValue().isRealtime(),
+                val.isRealtime(),
                 IS_OVERSHADOWED_FALSE,
                 // there is an assumption here that unpublished segments are never overshadowed
                 segment.getShardSpec(),
@@ -450,8 +434,8 @@ public class SystemSchema extends AbstractSchema
       return authorizedSegments.iterator();
     }
 
-    private Iterator<Entry<SegmentId, AvailableSegmentMetadata>> getAuthorizedAvailableSegments(
-        Iterator<Entry<SegmentId, AvailableSegmentMetadata>> availableSegmentEntries,
+    private Iterator<AvailableSegmentMetadata> getAuthorizedAvailableSegments(
+        Iterator<AvailableSegmentMetadata> availableSegmentEntries,
         DataContext root
     )
     {
@@ -460,12 +444,12 @@ public class SystemSchema extends AbstractSchema
           "authenticationResult in dataContext"
       );
 
-      Function<Entry<SegmentId, AvailableSegmentMetadata>, Iterable<ResourceAction>> raGenerator = segment ->
+      Function<AvailableSegmentMetadata, Iterable<ResourceAction>> raGenerator = segment ->
           Collections.singletonList(
-              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getKey().getDataSource())
+              AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegment().getDataSource())
           );
 
-      final Iterable<Entry<SegmentId, AvailableSegmentMetadata>> authorizedSegments =
+      final Iterable<AvailableSegmentMetadata> authorizedSegments =
           AuthorizationUtils.filterAuthorizedResources(
               authenticationResult,
               () -> availableSegmentEntries,

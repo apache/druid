@@ -1603,9 +1603,10 @@ public class ControllerImpl implements Controller
     if (shardSpec != null) {
       if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
         List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+        // Effective maxRowsPerSegment is propagated as rowsPerSegment in MSQ
         partitionSpec = new DimensionRangePartitionsSpec(
-            tuningConfig.getRowsPerSegment(),
             null,
+            tuningConfig.getRowsPerSegment(),
             partitionDimensions,
             false
         );
@@ -1623,9 +1624,10 @@ public class ControllerImpl implements Controller
                 )));
       }
     } else if (clusterBy != null && !clusterBy.getColumns().isEmpty()) {
+      // Effective maxRowsPerSegment is propagated as rowsPerSegment in MSQ
       partitionSpec = new DimensionRangePartitionsSpec(
-          tuningConfig.getRowsPerSegment(),
           null,
+          tuningConfig.getRowsPerSegment(),
           clusterBy.getColumns()
                    .stream()
                    .map(KeyColumn::columnName).collect(Collectors.toList()),

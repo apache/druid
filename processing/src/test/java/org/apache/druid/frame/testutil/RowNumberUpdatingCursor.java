@@ -24,7 +24,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 
 /**
- * Used by {@link FrameTestUtil#readRowsFromAdapter} and {@link FrameTestUtil#readRowsFromCursor}.
+ * Used by {@link FrameTestUtil#readRowsFromCursorFactory} and {@link FrameTestUtil#readRowsFromCursor}.
  */
 public class RowNumberUpdatingCursor implements Cursor
 {

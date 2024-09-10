@@ -2643,8 +2643,8 @@ public class MSQReplaceTest extends MSQTestBase
       );
     } else {
       partitionsSpec = new DimensionRangePartitionsSpec(
-          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
           null,
+          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
           partitionDimensions,
           false
       );

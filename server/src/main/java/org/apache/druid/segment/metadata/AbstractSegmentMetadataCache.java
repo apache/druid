@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -413,11 +414,26 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
-    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-      segmentMetadata.putAll(val);
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
+    final Iterator<AvailableSegmentMetadata> it = iterateSegmentMetadata();
+    while (it.hasNext()) {
+      final AvailableSegmentMetadata availableSegmentMetadata = it.next();
+      segmentMetadata.put(availableSegmentMetadata.getSegment().getId(), availableSegmentMetadata);
     }
     return segmentMetadata;
+  }
+
+  /**
+   * Get metadata for all the cached segments, which includes information like RowSignature, realtime & numRows etc.
+   * This is a lower-overhead method than {@link #getSegmentMetadataSnapshot()}.
+   *
+   * @return iterator of metadata.
+   */
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata()
+  {
+    return FluentIterable.from(segmentMetadataInfo.values())
+                         .transformAndConcat(Map::values)
+                         .iterator();
   }
 
   /**
@@ -431,7 +447,18 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @Nullable
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
+<<<<<<< HEAD
     return segmentMetadataInfo.getOrDefault(datasource, new ConcurrentSkipListMap<>()).get(segmentId);
+=======
+    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceMap =
+        segmentMetadataInfo.get(datasource);
+
+    if (dataSourceMap == null) {
+      return null;
+    } else {
+      return dataSourceMap.get(segmentId);
+    }
+>>>>>>> upstream/master
   }
 
   /**
@@ -746,6 +773,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segmentsWithoutTombstone, SegmentId::toString);
 
+    logSegmentsToRefresh(dataSource, segmentsWithoutTombstone);
+
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(segmentsWithoutTombstone);
 
     Yielder<SegmentAnalysis> yielder = Yielders.each(sequence);
@@ -786,6 +815,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     );
 
     return retVal;
+  }
+
+  /**
+   * Log the segment details for a datasource to be refreshed for debugging purpose.
+   */
+  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  {
+    // no-op
   }
 
   /**

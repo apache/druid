@@ -66,7 +66,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   {
     ColumnSelectorFactory columnSelectorFactory =
         new IncrementalIndexColumnSelectorFactory(
-            new IncrementalIndexStorageAdapter(incrementalIndex),
+            incrementalIndex,
             VirtualColumns.EMPTY,
             incrementalIndex.timePosition == 0 ? Order.ASCENDING : Order.NONE,
             rowHolder
