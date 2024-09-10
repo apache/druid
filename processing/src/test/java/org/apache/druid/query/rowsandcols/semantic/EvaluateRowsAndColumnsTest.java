@@ -38,31 +38,43 @@ import java.util.function.Function;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeNotNull;
 
-public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestBase
+public class EvaluateRowsAndColumnsTest extends SemanticTestBase
 {
-  public TestVirtualColumnEvaluationRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
+  public EvaluateRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
   {
     super(name, fn);
   }
 
   @Test
-  public void testMaterializeVirtualColumns()
+  public void testMaterializeColumns()
   {
     Object[][] vals = new Object[][] {
-        {1L, "a", 123L, 0L},
-        {2L, "a", 456L, 1L},
-        {3L, "b", 789L, 2L},
-        {4L, "b", 123L, 3L},
+        {1L, "a", 123L, new Object[]{"xyz", "x"}, 0L},
+        {2L, "a", 456L, new Object[]{"abc"}, 1L},
+        {3L, "b", 789L, new Object[]{null}, 2L},
+        {4L, null, 123L, null, 3L},
     };
 
     RowSignature siggy = RowSignature.builder()
         .add("__time", ColumnType.LONG)
         .add("dim", ColumnType.STRING)
         .add("val", ColumnType.LONG)
+        .add("array", ColumnType.STRING_ARRAY)
         .add("arrayIndex", ColumnType.LONG)
         .build();
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
+
+    Object[] expectedArr = new Object[][] {
+        {"xyz", "x"},
+        {"abc"},
+        {null},
+        null
+    };
+
+    new RowsAndColumnsHelper()
+        .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
+        .validate(base);
 
     assumeNotNull("skipping: CursorFactory not supported", base.as(CursorFactory.class));
 
@@ -82,12 +94,18 @@ public class TestVirtualColumnEvaluationRowsAndColumnsTest extends SemanticTestB
     // do the materialziation
     ras.numRows();
 
-    assertEquals(Lists.newArrayList("__time", "dim", "val", "arrayIndex", "expr"), ras.getColumnNames());
+    assertEquals(Lists.newArrayList("__time", "dim", "val", "array", "arrayIndex", "expr"), ras.getColumnNames());
 
     new RowsAndColumnsHelper()
         .expectColumn("expr", new long[] {123 * 2, 456L * 2, 789 * 2, 123 * 2})
         .validate(ras);
 
-  }
+    new RowsAndColumnsHelper()
+        .expectColumn("dim", new String[] {"a", "a", "b", null}, ColumnType.STRING)
+        .validate(ras);
 
+    new RowsAndColumnsHelper()
+        .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
+        .validate(ras);
+  }
 }
