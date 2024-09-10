@@ -7803,4 +7803,18 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   {
     windowQueryTest();
   }
+
+  @DrillTest("druid_queries/array_concat_agg/only_sorting_column_1")
+  @Test
+  public void test_array_concat_agg_with_only_sorting_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/empty_over_1")
+  @Test
+  public void test_array_concat_agg_with_empty_over_1()
+  {
+    windowQueryTest();
+  }
 }
