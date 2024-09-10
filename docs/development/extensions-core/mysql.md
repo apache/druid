@@ -25,24 +25,34 @@ title: "MySQL Metadata Store"
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
-:::info
- The MySQL extension requires the MySQL Connector/J library or MariaDB Connector/J library, neither of which are included in the Druid distribution.
- Refer to the following section for instructions on how to install this library.
-:::
+The MySQL extension lets you use MySQL as a metadata store or ingest from a MySQL database.
 
-## Installing the MySQL connector library
+The extension requires a connector library that's not included with Druid.
+See the [Prerequisites](#prerequisites) for installation instructions.
 
-This extension can use Oracle's MySQL JDBC driver which is not included in the Druid distribution. You must
-install it separately. There are a few ways to obtain this library:
+## Prerequisites
 
-- It can be downloaded from the MySQL site at: https://dev.mysql.com/downloads/connector/j/
-- It can be fetched from Maven Central at: https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar
-- It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
+To use the MySQL extension, you need to install one of the following libraries:
+* [MySQL Connector/J](#install-the-mysql-connector-library)
+* [MariaDB Connector/J](#install-the-mariadb-connector-library)
 
-This fetches the MySQL connector JAR file with a name like `mysql-connector-j-8.2.0.jar`.
+### Install the MySQL connector library
+
+The MySQL extension uses Oracle's MySQL JDBC driver.
+The current version of Druid uses version 8.2.0.
+Other versions may not work with this extension.
+
+You can download the library from various sources:
+
+- [Maven Central (direct download)](https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar)
+- [MySQL website](https://dev.mysql.com/downloads/connector/j/)  
+  Visit the archives page to download older product versions.
+- Your package manager. For example, `libmysql-java` on APT for a Debian-based OS.
+
+The download includes the MySQL connector JAR file with a name like `mysql-connector-j-8.2.0.jar`.
 Copy or symlink this file inside the folder `lib` under the distribution root directory.
 
-## Alternative: Installing the MariaDB connector library
+### Install the MariaDB connector library
 
 This extension also supports using the MariaDB connector jar, though it is also not included in the Druid distribution, so you must install it separately.
 
