@@ -122,7 +122,7 @@ jobs:
         if: ${{ failure() }}
         id: check_for_heap_dump
         run: |
-          if ls /home/runner/work/druid/druid/*.hprof 1> /dev/null 2>&1; then
+          if ls ${GITHUB_WORKSPACE}/*.hprof 1> /dev/null 2>&1; then
             echo "::set-output name=found_hprof::true"
           else
             echo "::set-output name=found_hprof::false"
@@ -132,7 +132,7 @@ jobs:
       - name: Collect tarball hprof dumps on failure
         if: ${{ failure() && steps.check_for_heap_dump.outputs.found_hprof == 'true' }}
         run: |
-          tar cvzf ./hprof-dumps.tgz /home/runner/work/druid/druid/*.hprof
+          tar cvzf ${RUNNER_TEMP}/hprof-dumps.tgz ${GITHUB_WORKSPACE}/*.hprof
 
       # Upload the heap dump tarball on failure and if the heap dump exists
       - name: Upload hprof dumps to GitHub
@@ -140,7 +140,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: Hprof-${{ inputs.group }} hprof dumps (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }})
-          path: hprof-dumps.tgz
+          path: ${{ runner.temp }}/hprof-dumps.tgz
 
       - name: set outputs on failure
         id: set_outputs
