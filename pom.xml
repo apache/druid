@@ -1778,6 +1778,9 @@
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             -Ddruid.test.stupidPool.poison=true
+                            <!-- the path needs to come from a maven option or so -->
+                            -XX:OnOutOfMemoryError='chmod 644 /home/runner/work/druid/druid/*.hprof'
+                            -XX:HeapDumpPath=/home/runner/work/druid/druid/
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                             ${jfrProfilerArgLine}
