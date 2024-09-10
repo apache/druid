@@ -217,10 +217,8 @@ If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credential
 
 ## Google Cloud Storage input source
 
-:::info
-
-You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
-
+:::info Required extension
+To use the Google Cloud Storage input source, load the extension [`druid-google-extensions`](../development/extensions-core/google.md) in your `common.runtime.properties` file.
 :::
 
 The Google Cloud Storage input source is to support reading objects directly
@@ -305,10 +303,8 @@ Google Cloud Storage object:
 
 ## Azure input source
 
-:::info
-
-You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
-
+:::info Required extension
+To use the Azure input source, load the extension [`druid-azure-extensions`](../development/extensions-core/azure.md) in your `common.runtime.properties` file.
 :::
 
 The Azure input source (that uses the type `azureStorage`) reads objects directly from Azure Blob store or Azure Data Lake sources. You can
@@ -489,10 +485,8 @@ The `objects` property is:
 
 ## HDFS input source
 
-:::info
-
-You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
-
+:::info Required extension
+To use the HDFS input source, load the extension [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) in your `common.runtime.properties` file.
 :::
 
 The HDFS input source is to support reading files directly
