@@ -24,7 +24,6 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
 
 /**
  * Heap based topn algorithm that handles aggregates on dimension extractions and numeric typed dimension columns.
@@ -38,11 +37,11 @@ public class HeapBasedTopNAlgorithm
   private final TopNQuery query;
 
   public HeapBasedTopNAlgorithm(
-      StorageAdapter storageAdapter,
-      TopNQuery query
+      TopNQuery query,
+      TopNCursorInspector cursorInspector
   )
   {
-    super(storageAdapter);
+    super(cursorInspector);
     this.query = query;
   }
 
@@ -68,7 +67,7 @@ public class HeapBasedTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
     ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
-    return selectorPlus.getColumnSelectorStrategy().getRowSelector(query, params, storageAdapter);
+    return selectorPlus.getColumnSelectorStrategy().getRowSelector(query, params, cursorInspector);
   }
 
   @Override

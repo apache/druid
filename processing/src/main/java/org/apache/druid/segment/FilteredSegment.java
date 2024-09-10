@@ -17,38 +17,40 @@
  * under the License.
  */
 
-package org.apache.druid.segment.realtime;
+package org.apache.druid.segment;
 
-import org.apache.druid.segment.StorageAdapter;
-import org.joda.time.Interval;
+import org.apache.druid.query.filter.DimFilter;
 
-public class WindowedStorageAdapter
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class FilteredSegment extends WrappedSegmentReference
 {
-  private final StorageAdapter adapter;
-  private final Interval interval;
+  @Nullable
+  private final DimFilter filter;
 
-  public WindowedStorageAdapter(StorageAdapter adapter, Interval interval)
+  public FilteredSegment(
+      SegmentReference delegate,
+      @Nullable DimFilter filter
+  )
   {
-    this.adapter = adapter;
-    this.interval = interval;
-  }
-
-  public StorageAdapter getAdapter()
-  {
-    return adapter;
-  }
-
-  public Interval getInterval()
-  {
-    return interval;
+    super(delegate);
+    this.filter = filter;
   }
 
   @Override
-  public String toString()
+  public CursorFactory asCursorFactory()
   {
-    return "WindowedStorageAdapter{" +
-           "adapter=" + adapter +
-           ", interval=" + interval +
-           '}';
+    return new FilteredCursorFactory(delegate.asCursorFactory(), filter);
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(@Nonnull Class<T> clazz)
+  {
+    if (TopNOptimizationInspector.class.equals(clazz)) {
+      return (T) new SimpleTopNOptimizationInspector(filter == null);
+    }
+    return super.as(clazz);
   }
 }

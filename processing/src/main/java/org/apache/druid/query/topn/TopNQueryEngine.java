@@ -25,17 +25,25 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
+import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.DimensionDictionarySelector;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMissingException;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
+import org.apache.druid.segment.TopNOptimizationInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.Types;
@@ -59,32 +67,55 @@ public class TopNQueryEngine
   }
 
   /**
-   * Do the thing - process a {@link StorageAdapter} into a {@link Sequence} of {@link TopNResultValue}, with one of the
+   * Do the thing - process a {@link Segment} into a {@link Sequence} of {@link TopNResultValue}, with one of the
    * fine {@link TopNAlgorithm} available chosen based on the type of column being aggregated. The algorithm provides a
    * mapping function to process rows from the adapter {@link Cursor} to apply {@link AggregatorFactory} and create or
    * update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
       final TopNQuery query,
-      final StorageAdapter adapter,
-      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      final Segment segment,
       @Nullable final TopNQueryMetrics queryMetrics
   )
   {
-    if (adapter == null) {
+    final CursorFactory cursorFactory = segment.asCursorFactory();
+    if (cursorFactory == null) {
       throw new SegmentMissingException(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 
-    final TopNMapFn mapFn = getMapFn(query, adapter, queryMetrics);
-
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec);
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
+
+    final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+
+    final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+
+    final ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus =
+        DimensionHandlerUtils.createColumnSelectorPlus(
+            new TopNColumnAggregatesProcessorFactory(query.getDimensionSpec().getOutputType()),
+            query.getDimensionSpec(),
+            factory
+        );
+
+    final int cardinality;
+    if (selectorPlus.getSelector() instanceof DimensionDictionarySelector) {
+      cardinality = ((DimensionDictionarySelector) selectorPlus.getSelector()).getValueCardinality();
+    } else {
+      cardinality = DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+    }
+    final TopNCursorInspector cursorInspector = new TopNCursorInspector(
+        factory,
+        segment.as(TopNOptimizationInspector.class),
+        segment.getDataInterval(),
+        cardinality
+    );
+
     final CursorGranularizer granularizer = CursorGranularizer.create(
         cursor,
         timeBoundaryInspector,
@@ -92,18 +123,20 @@ public class TopNQueryEngine
         query.getGranularity(),
         buildSpec.getInterval()
     );
-    if (granularizer == null) {
+    if (granularizer == null || selectorPlus.getSelector() == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
+
 
     if (queryMetrics != null) {
       queryMetrics.cursor(cursor);
     }
+    final TopNMapFn mapFn = getMapFn(query, cursorInspector, queryMetrics);
     return Sequences.filter(
         Sequences.simple(granularizer.getBucketIterable())
                  .map(bucketInterval -> {
                    granularizer.advanceToBucket(bucketInterval);
-                   return mapFn.apply(cursor, granularizer, queryMetrics);
+                   return mapFn.apply(cursor, selectorPlus, granularizer, queryMetrics);
                  }),
                  Predicates.notNull()
     ).withBaggage(cursorHolder);
@@ -114,14 +147,15 @@ public class TopNQueryEngine
    */
   private TopNMapFn getMapFn(
       final TopNQuery query,
-      final StorageAdapter adapter,
+      final TopNCursorInspector cursorInspector,
       final @Nullable TopNQueryMetrics queryMetrics
   )
   {
     final String dimension = query.getDimensionSpec().getDimension();
-    final int cardinality = adapter.getDimensionCardinality(dimension);
+
+
     if (queryMetrics != null) {
-      queryMetrics.dimensionCardinality(cardinality);
+      queryMetrics.dimensionCardinality(cursorInspector.getDimensionCardinality());
     }
 
     int numBytesPerRecord = 0;
@@ -129,27 +163,43 @@ public class TopNQueryEngine
       numBytesPerRecord += aggregatorFactory.getMaxIntermediateSizeWithNulls();
     }
 
-    final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(cardinality, numBytesPerRecord);
+    final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(
+        cursorInspector.getDimensionCardinality(),
+        numBytesPerRecord
+    );
     query.initTopNAlgorithmSelector(selector);
 
-    final ColumnCapabilities columnCapabilities = query.getVirtualColumns()
-                                                       .getColumnCapabilitiesWithFallback(adapter, dimension);
-
+    final ColumnCapabilities columnCapabilities = query.getVirtualColumns().getColumnCapabilitiesWithFallback(
+        cursorInspector.getColumnInspector(),
+        dimension
+    );
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
-    if (canUsePooledAlgorithm(selector, query, columnCapabilities, bufferPool, cardinality, numBytesPerRecord)) {
+    if (canUsePooledAlgorithm(selector, query, columnCapabilities, bufferPool, cursorInspector.getDimensionCardinality(), numBytesPerRecord)) {
       // pool based algorithm selection, if we can
       if (selector.isAggregateAllMetrics()) {
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for
         // this
-        topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
+        topNAlgorithm = new PooledTopNAlgorithm(
+            query,
+            cursorInspector,
+            bufferPool
+        );
       } else if (shouldUseAggregateMetricFirstAlgorithm(query, selector)) {
         // for high cardinality dimensions with larger result sets we aggregate with only the ordering aggregation to
         // compute the first 'n' values, and then for the rest of the metrics but for only the 'n' values
-        topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(adapter, query, bufferPool);
+        topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(
+            query,
+            cursorInspector,
+            bufferPool
+        );
       } else {
         // anything else, use the regular pooled algorithm
-        topNAlgorithm = new PooledTopNAlgorithm(adapter, query, bufferPool);
+        topNAlgorithm = new PooledTopNAlgorithm(
+            query,
+            cursorInspector,
+            bufferPool
+        );
       }
     } else {
       // heap based algorithm selection, if we must
@@ -161,9 +211,9 @@ public class TopNQueryEngine
 
         // A special TimeExtractionTopNAlgorithm is required since HeapBasedTopNAlgorithm
         // currently relies on the dimension cardinality to support lexicographic sorting
-        topNAlgorithm = new TimeExtractionTopNAlgorithm(adapter, query);
+        topNAlgorithm = new TimeExtractionTopNAlgorithm(query, cursorInspector);
       } else {
-        topNAlgorithm = new HeapBasedTopNAlgorithm(adapter, query);
+        topNAlgorithm = new HeapBasedTopNAlgorithm(query, cursorInspector);
       }
     }
     if (queryMetrics != null) {

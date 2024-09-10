@@ -21,9 +21,7 @@ package org.apache.druid.query;
 
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -88,10 +86,9 @@ public class FrameBasedInlineDataSource implements DataSource
                        Frame frame = frameSignaturePair.getFrame();
                        RowSignature frameSignature = frameSignaturePair.getRowSignature();
                        FrameReader frameReader = FrameReader.create(frameSignature);
-                       final CursorHolder holder =
-                           new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY).makeCursorHolder(
-                               CursorBuildSpec.FULL_SCAN
-                           );
+                       final CursorHolder holder = frameReader.makeCursorFactory(frame).makeCursorHolder(
+                           CursorBuildSpec.FULL_SCAN
+                       );
                        return Sequences.simple(Collections.singletonList(holder.asCursor())).withBaggage(holder);
                      }
                  );
