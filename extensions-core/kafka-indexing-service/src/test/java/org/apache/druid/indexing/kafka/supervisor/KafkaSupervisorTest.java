@@ -347,7 +347,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-        null
+          null
     );
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(kafkaSupervisorIOConfig).anyTimes();

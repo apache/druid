@@ -369,6 +369,6 @@ public class KinesisIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningC
            ", maxBytesPerPoll=" + maxBytesPerPoll +
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
-        '}';
+           '}';
   }
 }
