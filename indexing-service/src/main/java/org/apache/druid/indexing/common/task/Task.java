@@ -176,6 +176,8 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
+   * <p> Deprecated, see {@link #getBroadcastDatasourceLoadingSpec} instead. </p>
+   *
    * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
    * that may be needed by queries.
    *

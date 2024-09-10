@@ -177,18 +177,22 @@ public class CliPeon extends GuiceRunnable
   private boolean isZkEnabled = true;
 
   /**
+   * <p> This option is deprecated, see {@link #loadBroadcastDatasourcesMode} option. </p>
+   *
    * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
    * queryable tasks, such as streaming ingestion tasks.
+   *
    */
   @Deprecated
   @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
   public String loadBroadcastSegments = "false";
 
   /**
-   * Broadcast datasources loading mode. the peon will bind classes necessary for loading broadcast segments. This is used for
-   * queryable tasks, such as streaming ingestion tasks.
+   * Broadcast datasource loading mode. The peon will bind classes necessary required for loading broadcast segments if
+   * the mode is {@link BroadcastDatasourceLoadingSpec.Mode#ALL} or {@link BroadcastDatasourceLoadingSpec.Mode#ONLY_REQUIRED}.
    */
-  @Option(name = "--loadBroadcastDatasourcesMode", title = "loadBroadcastDatasourcesMode", description = "Enable loading of broadcast datasources") // maybe there is a way to directly provide enum?
+  @Option(name = "--loadBroadcastDatasourceMode", title = "loadBroadcastDatasourceMode",
+      description = "Specify the broadcast datasource loading mode for the peon. Supported values are ALL, NONE, ONLY_REQUIRED.")
   public String loadBroadcastDatasourcesMode = BroadcastDatasourceLoadingSpec.Mode.ALL.toString();
 
   @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
@@ -283,7 +287,8 @@ public class CliPeon extends GuiceRunnable
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
 
-            BroadcastDatasourceLoadingSpec.Mode mode = BroadcastDatasourceLoadingSpec.Mode.valueOf(loadBroadcastDatasourcesMode);
+            final BroadcastDatasourceLoadingSpec.Mode mode =
+                BroadcastDatasourceLoadingSpec.Mode.valueOf(loadBroadcastDatasourcesMode);
             if ("true".equals(loadBroadcastSegments)
                 || mode == BroadcastDatasourceLoadingSpec.Mode.ALL
                 || mode == BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED) {

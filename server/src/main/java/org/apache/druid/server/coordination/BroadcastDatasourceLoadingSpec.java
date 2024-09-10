@@ -40,13 +40,13 @@ import java.util.Set;
  *    <li> NONE: Load no broadcast datasources. </li>
  *    <li> ONLY_REQUIRED: Load only the broadcast datasources defined in broadcastDatasourcesToLoad </li>
  *   </ul>
- * <li>{@link BroadcastDatasourceLoadingSpec#broadcastDatasourcesToLoad}: Defines the broadcastDatasources to load when the broacastDatasourceLoadingMode is set to ONLY_REQUIRED.</li>
+ * <li>{@link BroadcastDatasourceLoadingSpec#broadcastDatasourcesToLoad}: Defines the broadcastDatasources to load when the broadcastDatasourceLoadingMode is set to ONLY_REQUIRED.</li>
  * </ol>
  */
 public class BroadcastDatasourceLoadingSpec
 {
 
-  public static final String CTX_BROADCAST_DATASOURCE_LOADING_MODE = "broacastDatasourceLoadingMode";
+  public static final String CTX_BROADCAST_DATASOURCE_LOADING_MODE = "broadcastDatasourceLoadingMode";
   public static final String CTX_BROADCAST_DATASOURCES_TO_LOAD = "broadcastDatasourcesToLoad";
 
   public enum Mode
@@ -102,9 +102,9 @@ public class BroadcastDatasourceLoadingSpec
       return defaultSpec;
     }
 
-    final BroadcastDatasourceLoadingSpec.Mode broacastDatasourceLoadingMode;
+    final BroadcastDatasourceLoadingSpec.Mode broadcastDatasourceLoadingMode;
     try {
-      broacastDatasourceLoadingMode = BroadcastDatasourceLoadingSpec.Mode.valueOf(broadcastDatasourceModeValue.toString());
+      broadcastDatasourceLoadingMode = BroadcastDatasourceLoadingSpec.Mode.valueOf(broadcastDatasourceModeValue.toString());
     }
     catch (IllegalArgumentException e) {
       throw InvalidInput.exception(
@@ -114,11 +114,11 @@ public class BroadcastDatasourceLoadingSpec
       );
     }
 
-    if (broacastDatasourceLoadingMode == Mode.NONE) {
+    if (broadcastDatasourceLoadingMode == Mode.NONE) {
       return NONE;
-    } else if (broacastDatasourceLoadingMode == Mode.ALL) {
+    } else if (broadcastDatasourceLoadingMode == Mode.ALL) {
       return ALL;
-    } else if (broacastDatasourceLoadingMode == Mode.ONLY_REQUIRED) {
+    } else if (broadcastDatasourceLoadingMode == Mode.ONLY_REQUIRED) {
       final Collection<String> broadcastDatasourcesToLoad;
       try {
         broadcastDatasourcesToLoad = (Collection<String>) context.get(CTX_BROADCAST_DATASOURCES_TO_LOAD);
