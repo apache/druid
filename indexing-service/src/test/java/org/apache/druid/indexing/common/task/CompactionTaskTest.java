@@ -129,7 +129,6 @@ import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
-import org.apache.druid.server.coordination.BroadcastLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -1606,34 +1605,6 @@ public class CompactionTaskTest
         .build();
     Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
   }
-
-  @Test
-  public void testGetDefaultBroadcastLoadingSpec()
-  {
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-    final CompactionTask task = builder
-        .interval(Intervals.of("2000-01-01/2000-01-02"))
-        .build();
-    Assert.assertEquals(BroadcastLoadingSpec.NONE, task.getBroadcastDatasourcesLoadingSpec());
-  }
-
-  @Test
-  public void testGetDefaultBroadcastLoadingSpecWithTransformSpec()
-  {
-    final Builder builder = new Builder(
-        DATA_SOURCE,
-        segmentCacheManagerFactory
-    );
-    final CompactionTask task = builder
-        .interval(Intervals.of("2000-01-01/2000-01-02"))
-        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
-        .build();
-    Assert.assertEquals(BroadcastLoadingSpec.ALL, task.getBroadcastDatasourcesLoadingSpec());
-  }
-
 
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
   {

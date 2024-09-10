@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
-import org.apache.druid.server.coordination.BroadcastLoadingSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.assertj.core.api.Assertions;
@@ -609,7 +609,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
         .dataSource(DATA_SOURCE)
         .interval(Intervals.of("2019-03-01/2019-04-01"))
         .build();
-    Assert.assertEquals(BroadcastLoadingSpec.Mode.NONE, task.getBroadcastDatasourcesLoadingSpec().getMode());
+    Assert.assertEquals(BroadcastDatasourceLoadingSpec.Mode.NONE, task.getBroadcastDatasourceLoadingSpec().getMode());
   }
 
   @Test

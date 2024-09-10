@@ -21,13 +21,11 @@ package org.apache.druid.server.coordination;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.ISE;
@@ -59,7 +57,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * Responsible for bootstrapping segments already cached on disk and bootstrap segments fetched from the coordinator.
@@ -109,7 +106,6 @@ public class SegmentBootstrapper
     this.coordinatorClient = coordinatorClient;
     this.emitter = emitter;
     this.datasourceHolder = datasourceHolder;
-    log.info("Datsource holder broadcastLoadingSpec:[%s] and lookupLoadingSpec:[%s]", datasourceHolder.getBroadcastLoadingSpec(), datasourceHolder.getLookupLoadingSpec());
   }
 
   @LifecycleStart
@@ -270,14 +266,15 @@ public class SegmentBootstrapper
   }
 
   /**
-   * @return a list of bootstrap segments based on {@link #datasourceHolder#getBroadcastLoadingSpec()}. When bootstrap segments cannot be found, an empty list is returned.
+   * @return a list of bootstrap segments. When bootstrap segments cannot be found, an empty list is returned.
+   * The bootstrap segments returned are filtered by the broadcast datasources indicated by {@link DataSourceTaskIdHolder#getBroadcastDatasourceLoadingSpec()}
+   * if applicable.
    */
   private List<DataSegment> getBootstrapSegments()
   {
-    final BroadcastLoadingSpec.Mode mode = datasourceHolder.getBroadcastLoadingSpec().getMode();
-    if (mode == BroadcastLoadingSpec.Mode.NONE) {
-      log.info("NONE");
-      return ImmutableList.of(); // null?
+    final BroadcastDatasourceLoadingSpec.Mode mode = datasourceHolder.getBroadcastDatasourceLoadingSpec().getMode();
+    if (mode == BroadcastDatasourceLoadingSpec.Mode.NONE) {
+      return ImmutableList.of();
     }
 
     log.info("Fetching bootstrap segments from the coordinator.");
@@ -288,8 +285,8 @@ public class SegmentBootstrapper
     try {
       final BootstrapSegmentsResponse response =
           FutureUtils.getUnchecked(coordinatorClient.fetchBootstrapSegments(), true);
-      if (mode == BroadcastLoadingSpec.Mode.ONLY_REQUIRED) {
-        final Set<String> broadcastDatasourcesToLoad = datasourceHolder.getBroadcastLoadingSpec().getbroadcastDatasourcesToLoad();
+      if (mode == BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED) {
+        final Set<String> broadcastDatasourcesToLoad = datasourceHolder.getBroadcastDatasourceLoadingSpec().getBroadcastDatasourcesToLoad();
         final List<DataSegment> filteredBroadcast = new ArrayList<>();
         response.getIterator().forEachRemaining(segment -> {
           if (broadcastDatasourcesToLoad.contains(segment.getDataSource())) {
@@ -297,7 +294,6 @@ public class SegmentBootstrapper
           }
         });
         bootstrapSegments = filteredBroadcast;
-        log.info("GRRRR shrunk size[%d]", bootstrapSegments.size());
       } else {
         bootstrapSegments = ImmutableList.copyOf(response.getIterator());
       }

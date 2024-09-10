@@ -21,7 +21,7 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import org.apache.druid.server.coordination.BroadcastLoadingSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 public class DataSourceTaskIdHolder
@@ -44,7 +44,7 @@ public class DataSourceTaskIdHolder
 
   @Named(BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
   @Inject(optional = true)
-  BroadcastLoadingSpec broadcastLoadingSpec = BroadcastLoadingSpec.ALL;
+  BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
 
   public String getDataSource()
   {
@@ -61,8 +61,8 @@ public class DataSourceTaskIdHolder
     return lookupLoadingSpec;
   }
 
-  public BroadcastLoadingSpec getBroadcastLoadingSpec()
+  public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
   {
-    return broadcastLoadingSpec;
+    return broadcastDatasourceLoadingSpec;
   }
 }

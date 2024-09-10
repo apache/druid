@@ -89,7 +89,7 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.apache.druid.server.coordination.BroadcastLoadingSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -241,13 +241,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
                             : compactionRunner;
     this.currentSubTaskHolder = this.compactionRunner.getCurrentSubTaskHolder();
 
-    // Do not load any lookups and broadcast segments in sub-tasks launched by compaction task, unless transformSpec is present.
+    // Do not load any lookups in sub-tasks launched by compaction task, unless transformSpec is present.
     // If transformSpec is present, we will not modify the context so that the sub-tasks can make the
-    // decision based on context values, loading all lookups and broadcast segments by default.
+    // decision based on context values, loading all lookups by default.
     // This is done to ensure backward compatibility since transformSpec can reference lookups.
     if (transformSpec == null) {
       addToContextIfAbsent(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
-      addToContextIfAbsent(BroadcastLoadingSpec.CTX_BROADCAST_DATASOURCES_LOADING_MODE, BroadcastLoadingSpec.Mode.NONE.toString());
     }
   }
 

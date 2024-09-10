@@ -41,7 +41,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.server.coordination.BroadcastLoadingSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -335,8 +335,13 @@ public interface Task
     return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.ALL);
   }
 
-  default BroadcastLoadingSpec getBroadcastDatasourcesLoadingSpec()
+  /**
+   * Specifies the list of broadcast datasources to load for this task. Tasks load ALL broadcast datasources by default.
+   * This behavior can be overridden by passing parameters {@link BroadcastDatasourceLoadingSpec#CTX_BROADCAST_DATASOURCE_LOADING_MODE}
+   * and {@link BroadcastDatasourceLoadingSpec#CTX_BROADCAST_DATASOURCES_TO_LOAD} in the task context.
+   */
+  default BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
   {
-    return BroadcastLoadingSpec.createFromContext(getContext(), BroadcastLoadingSpec.ALL);
+    return BroadcastDatasourceLoadingSpec.createFromContext(getContext(), BroadcastDatasourceLoadingSpec.ALL);
   }
 }

@@ -123,7 +123,7 @@ import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.coordination.BroadcastLoadingSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.coordination.SegmentBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -189,7 +189,7 @@ public class CliPeon extends GuiceRunnable
    * queryable tasks, such as streaming ingestion tasks.
    */
   @Option(name = "--loadBroadcastDatasourcesMode", title = "loadBroadcastDatasourcesMode", description = "Enable loading of broadcast datasources") // maybe there is a way to directly provide enum?
-  public String loadBroadcastDatasourcesMode = BroadcastLoadingSpec.Mode.ALL.toString();
+  public String loadBroadcastDatasourcesMode = BroadcastDatasourceLoadingSpec.Mode.ALL.toString();
 
   @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
   public String taskId = "";
@@ -283,10 +283,10 @@ public class CliPeon extends GuiceRunnable
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
 
-            BroadcastLoadingSpec.Mode mode = BroadcastLoadingSpec.Mode.valueOf(loadBroadcastDatasourcesMode);
+            BroadcastDatasourceLoadingSpec.Mode mode = BroadcastDatasourceLoadingSpec.Mode.valueOf(loadBroadcastDatasourcesMode);
             if ("true".equals(loadBroadcastSegments)
-                || mode == BroadcastLoadingSpec.Mode.ALL
-                || mode == BroadcastLoadingSpec.Mode.ONLY_REQUIRED) {
+                || mode == BroadcastDatasourceLoadingSpec.Mode.ALL
+                || mode == BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED) {
               binder.install(new BroadcastSegmentLoadingModule());
             }
           }
@@ -356,9 +356,9 @@ public class CliPeon extends GuiceRunnable
           @Provides
           @LazySingleton
           @Named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
-          public BroadcastLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
+          public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
           {
-            return task.getBroadcastDatasourcesLoadingSpec();
+            return task.getBroadcastDatasourceLoadingSpec();
           }
         },
         new QueryablePeonModule(),

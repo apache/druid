@@ -25,23 +25,18 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Scopes;
-import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
-import org.apache.druid.server.metrics.MetricsModule;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,15 +44,11 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
 import java.util.Set;
 
 import static org.apache.druid.server.TestSegmentUtils.makeSegment;
@@ -305,8 +296,8 @@ public class SegmentBootstrapperTest
         new LifecycleModule(),
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          final BroadcastLoadingSpec broadcastMode = BroadcastLoadingSpec.NONE;
-          binder.bind(Key.get(BroadcastLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
+          final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.NONE;
+          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
                 .toInstance(broadcastMode);
         }
     );
@@ -344,8 +335,6 @@ public class SegmentBootstrapperTest
 
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
     Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegmentsLoadedIntoPageCache());
-//    serviceEmitter.verifyValue("segment/bootstrap/count", expectedBootstrapSegments.size());
-//    serviceEmitter.verifyEmitted("segment/bootstrap/time", 0);
 
     bootstrapper.stop();
   }
@@ -368,8 +357,8 @@ public class SegmentBootstrapperTest
         new LifecycleModule(),
         binder -> {
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          final BroadcastLoadingSpec broadcastMode = BroadcastLoadingSpec.loadOnly(ImmutableSet.of("test1"));
-          binder.bind(Key.get(BroadcastLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
+          final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.loadOnly(ImmutableSet.of("test1"));
+          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
                 .toInstance(broadcastMode);
         }
     );

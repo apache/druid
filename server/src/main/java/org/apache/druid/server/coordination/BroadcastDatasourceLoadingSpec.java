@@ -31,22 +31,22 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * This class defines the spec for loading of broadcastDatasources for a given task. It contains 2 fields:
+ * This class defines the spec for loading of broadcast datasources for a given task. It contains 2 fields:
  * <ol>
- *   <li>{@link BroadcastLoadingSpec#mode}: This mode defines whether broadcastDatasources need to be
+ *   <li>{@link BroadcastDatasourceLoadingSpec#mode}: This mode defines whether broadcastDatasources need to be
  *   loaded for the given task, or not. It can take 3 values: </li>
  *   <ul>
- *    <li> ALL: Load all the broadcastDatasources.</li>
- *    <li> NONE: Load no broadcastDatasources. </li>
- *    <li> ONLY_REQUIRED: Load only the broadcastDatasources defined in broadcastDatasourcesToLoad </li>
+ *    <li> ALL: Load all the broadcast datasources.</li>
+ *    <li> NONE: Load no broadcast datasources. </li>
+ *    <li> ONLY_REQUIRED: Load only the broadcast datasources defined in broadcastDatasourcesToLoad </li>
  *   </ul>
- * <li>{@link BroadcastLoadingSpec#broadcastDatasourcesToLoad}: Defines the broadcastDatasources to load when the broadcastDatasourceLoadingMode is set to ONLY_REQUIRED.</li>
+ * <li>{@link BroadcastDatasourceLoadingSpec#broadcastDatasourcesToLoad}: Defines the broadcastDatasources to load when the broacastDatasourceLoadingMode is set to ONLY_REQUIRED.</li>
  * </ol>
  */
-public class BroadcastLoadingSpec
+public class BroadcastDatasourceLoadingSpec
 {
 
-  public static final String CTX_BROADCAST_DATASOURCES_LOADING_MODE = "broadcastDatasourceLoadingMode";
+  public static final String CTX_BROADCAST_DATASOURCE_LOADING_MODE = "broacastDatasourceLoadingMode";
   public static final String CTX_BROADCAST_DATASOURCES_TO_LOAD = "broadcastDatasourcesToLoad";
 
   public enum Mode
@@ -58,24 +58,24 @@ public class BroadcastLoadingSpec
   @Nullable
   private final ImmutableSet<String> broadcastDatasourcesToLoad;
 
-  public static final BroadcastLoadingSpec ALL = new BroadcastLoadingSpec(Mode.ALL, null);
-  public static final BroadcastLoadingSpec NONE = new BroadcastLoadingSpec(Mode.NONE, null);
+  public static final BroadcastDatasourceLoadingSpec ALL = new BroadcastDatasourceLoadingSpec(Mode.ALL, null);
+  public static final BroadcastDatasourceLoadingSpec NONE = new BroadcastDatasourceLoadingSpec(Mode.NONE, null);
 
-  private BroadcastLoadingSpec(Mode mode, @Nullable Set<String> broadcastDatasourcesToLoad)
+  private BroadcastDatasourceLoadingSpec(Mode mode, @Nullable Set<String> broadcastDatasourcesToLoad)
   {
     this.mode = mode;
     this.broadcastDatasourcesToLoad = broadcastDatasourcesToLoad == null ? null : ImmutableSet.copyOf(broadcastDatasourcesToLoad);
   }
 
   /**
-   * Creates a broadcastDatasourceLoadingSpec which loads only the broadcastDatasources present in the given set.
+   * Creates a BroadcastSegmentLoadingSpec which loads only the broadcast datasources present in the given set.
    */
-  public static BroadcastLoadingSpec loadOnly(Set<String> broadcastDatasourcesToLoad)
+  public static BroadcastDatasourceLoadingSpec loadOnly(Set<String> broadcastDatasourcesToLoad)
   {
     if (broadcastDatasourcesToLoad == null) {
       throw InvalidInput.exception("Expected non-null set of broadcastDatasources to load.");
     }
-    return new BroadcastLoadingSpec(Mode.ONLY_REQUIRED, broadcastDatasourcesToLoad);
+    return new BroadcastDatasourceLoadingSpec(Mode.ONLY_REQUIRED, broadcastDatasourcesToLoad);
   }
 
   public Mode getMode()
@@ -84,53 +84,57 @@ public class BroadcastLoadingSpec
   }
 
   /**
-   * @return A non-null immutable set of broadcastDatasource names when {@link BroadcastLoadingSpec#mode} is ONLY_REQUIRED, null otherwise.
+   * @return A non-null immutable set of broadcast datasource names when {@link BroadcastDatasourceLoadingSpec#mode} is ONLY_REQUIRED, null otherwise.
    */
-  public ImmutableSet<String> getbroadcastDatasourcesToLoad()
+  public ImmutableSet<String> getBroadcastDatasourcesToLoad()
   {
     return broadcastDatasourcesToLoad;
   }
 
-  public static BroadcastLoadingSpec createFromContext(Map<String, Object> context, BroadcastLoadingSpec defaultSpec)
+  public static BroadcastDatasourceLoadingSpec createFromContext(Map<String, Object> context, BroadcastDatasourceLoadingSpec defaultSpec)
   {
     if (context == null) {
       return defaultSpec;
     }
 
-    final Object broadcastDatasourceModeValue = context.get(CTX_BROADCAST_DATASOURCES_LOADING_MODE);
+    final Object broadcastDatasourceModeValue = context.get(CTX_BROADCAST_DATASOURCE_LOADING_MODE);
     if (broadcastDatasourceModeValue == null) {
       return defaultSpec;
     }
 
-    final BroadcastLoadingSpec.Mode broadcastDatasourceLoadingMode;
+    final BroadcastDatasourceLoadingSpec.Mode broacastDatasourceLoadingMode;
     try {
-      broadcastDatasourceLoadingMode = BroadcastLoadingSpec.Mode.valueOf(broadcastDatasourceModeValue.toString());
+      broacastDatasourceLoadingMode = BroadcastDatasourceLoadingSpec.Mode.valueOf(broadcastDatasourceModeValue.toString());
     }
     catch (IllegalArgumentException e) {
-      throw InvalidInput.exception("Invalid value of %s[%s]. Allowed values are %s",
-                                   CTX_BROADCAST_DATASOURCES_LOADING_MODE, broadcastDatasourceModeValue.toString(), Arrays.asList(
-              BroadcastLoadingSpec.Mode.values()));
+      throw InvalidInput.exception(
+          "Invalid value of %s[%s]. Allowed values are %s",
+          CTX_BROADCAST_DATASOURCE_LOADING_MODE, broadcastDatasourceModeValue.toString(),
+          Arrays.asList(BroadcastDatasourceLoadingSpec.Mode.values())
+      );
     }
 
-    if (broadcastDatasourceLoadingMode == Mode.NONE) {
+    if (broacastDatasourceLoadingMode == Mode.NONE) {
       return NONE;
-    } else if (broadcastDatasourceLoadingMode == Mode.ALL) {
+    } else if (broacastDatasourceLoadingMode == Mode.ALL) {
       return ALL;
-    } else if (broadcastDatasourceLoadingMode == Mode.ONLY_REQUIRED) {
-      Collection<String> broadcastDatasourcesToLoad;
+    } else if (broacastDatasourceLoadingMode == Mode.ONLY_REQUIRED) {
+      final Collection<String> broadcastDatasourcesToLoad;
       try {
         broadcastDatasourcesToLoad = (Collection<String>) context.get(CTX_BROADCAST_DATASOURCES_TO_LOAD);
       }
       catch (ClassCastException e) {
-        throw InvalidInput.exception("Invalid value of %s[%s]. Please provide a comma-separated list of "
-                                     + "broadcastDatasource names. For example: [\"broadcastDatasourceName1\", \"broadcastDatasourceName2\"]",
-                                     CTX_BROADCAST_DATASOURCES_TO_LOAD, context.get(CTX_BROADCAST_DATASOURCES_TO_LOAD));
+        throw InvalidInput.exception(
+            "Invalid value of %s[%s]. Please provide a comma-separated list of broadcast datasource names."
+            + " For example: [\"datasourceName1\", \"datasourceName2\"]",
+            CTX_BROADCAST_DATASOURCES_TO_LOAD, context.get(CTX_BROADCAST_DATASOURCES_TO_LOAD)
+        );
       }
 
       if (broadcastDatasourcesToLoad == null || broadcastDatasourcesToLoad.isEmpty()) {
         throw InvalidInput.exception("Set of broadcastDatasources to load cannot be %s for mode[ONLY_REQUIRED].", broadcastDatasourcesToLoad);
       }
-      return BroadcastLoadingSpec.loadOnly(new HashSet<>(broadcastDatasourcesToLoad));
+      return BroadcastDatasourceLoadingSpec.loadOnly(new HashSet<>(broadcastDatasourcesToLoad));
     } else {
       return defaultSpec;
     }
@@ -154,7 +158,7 @@ public class BroadcastLoadingSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    BroadcastLoadingSpec that = (BroadcastLoadingSpec) o;
+    BroadcastDatasourceLoadingSpec that = (BroadcastDatasourceLoadingSpec) o;
     return mode == that.mode && Objects.equals(broadcastDatasourcesToLoad, that.broadcastDatasourcesToLoad);
   }
 

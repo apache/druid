@@ -451,7 +451,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     }
 
     command.add("--loadBroadcastDatasourcesMode");
-    command.add(task.getBroadcastDatasourcesLoadingSpec().toString());
+    command.add(task.getBroadcastDatasourceLoadingSpec().toString());
 
     command.add("--taskId");
     command.add(task.getId());
