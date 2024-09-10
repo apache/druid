@@ -184,7 +184,9 @@ public class CliPeon extends GuiceRunnable
    *
    */
   @Deprecated
-  @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
+  @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments",
+      description = "Enable loading of broadcast segments. This option is deprecated and will be removed in a"
+                    + " future release. Use --loadBroadcastDatasourceMode instead.")
   public String loadBroadcastSegments = "false";
 
   /**
