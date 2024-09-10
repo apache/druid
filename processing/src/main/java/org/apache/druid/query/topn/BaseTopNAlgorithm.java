@@ -28,7 +28,7 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TopNOptimizationInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 
 import javax.annotation.Nullable;
@@ -63,11 +63,11 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     return aggregators;
   }
 
-  protected final StorageAdapter storageAdapter;
+  protected TopNCursorInspector cursorInspector;
 
-  protected BaseTopNAlgorithm(StorageAdapter storageAdapter)
+  protected BaseTopNAlgorithm(TopNCursorInspector cursorInspector)
   {
-    this.storageAdapter = storageAdapter;
+    this.cursorInspector = cursorInspector;
   }
 
   @Override
@@ -212,11 +212,11 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     public AggregatorArrayProvider(
         DimensionSelector dimSelector,
         TopNQuery query,
-        int cardinality,
-        StorageAdapter storageAdapter
+        TopNCursorInspector cursorInspector,
+        int cardinality
     )
     {
-      super(dimSelector, query, storageAdapter);
+      super(dimSelector, query, cursorInspector);
 
       this.expansionAggs = new Aggregator[cardinality][];
       this.cardinality = cardinality;
@@ -244,17 +244,17 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
     private final IdLookup idLookup;
     private final TopNQuery query;
-    private final StorageAdapter storageAdapter;
+    private final TopNCursorInspector cursorInspector;
 
     public BaseArrayProvider(
         DimensionSelector dimSelector,
         TopNQuery query,
-        StorageAdapter storageAdapter
+        TopNCursorInspector cursorInspector
     )
     {
       this.idLookup = dimSelector.idLookup();
       this.query = query;
-      this.storageAdapter = storageAdapter;
+      this.cursorInspector = cursorInspector;
 
       previousStop = null;
       ignoreAfterThreshold = false;
@@ -269,7 +269,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     @Override
     public void skipTo(String previousStop)
     {
-      ColumnCapabilities capabilities = storageAdapter.getColumnCapabilities(query.getDimensionSpec().getDimension());
+      ColumnCapabilities capabilities = cursorInspector.getColumnInspector()
+                                                       .getColumnCapabilities(query.getDimensionSpec().getDimension());
       if (capabilities != null && capabilities.areDictionaryValuesSorted().isTrue()) {
         this.previousStop = previousStop;
       }
@@ -315,10 +316,12 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
 
       int endIndex = Math.min(ignoreFirstN + keepOnlyN, cardinality);
 
+      final TopNOptimizationInspector topNOptimizationInspector = cursorInspector.getOptimizationInspector();
       if (ignoreAfterThreshold &&
           query.getDimensionsFilter() == null &&
-          !storageAdapter.hasBuiltInFilters() &&
-          query.getIntervals().stream().anyMatch(interval -> interval.contains(storageAdapter.getInterval()))) {
+          topNOptimizationInspector != null &&
+          topNOptimizationInspector.areAllDictionaryIdsPresent() &&
+          query.getIntervals().stream().anyMatch(interval -> interval.contains(cursorInspector.getDataInterval()))) {
         endIndex = Math.min(endIndex, startIndex + query.getThreshold());
       }
 

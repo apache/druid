@@ -26,8 +26,9 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.BaseColumn;
@@ -49,10 +50,10 @@ public class FieldReaderRACTest extends InitializedNullHandlingTest
   public void testDataSet() throws IOException
   {
     final QueryableIndex index = TestIndex.getMMappedTestIndex();
-    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
-    final Frame frame = FrameTestUtil.adapterToFrame(storageAdapter, FrameType.ROW_BASED);
+    final CursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    final Frame frame = FrameTestUtil.cursorFactoryToFrame(cursorFactory, FrameType.ROW_BASED);
 
-    final RowSignature siggy = storageAdapter.getRowSignature();
+    final RowSignature siggy = cursorFactory.getRowSignature();
     final RowBasedFrameRowsAndColumns rowBasedRAC = new RowBasedFrameRowsAndColumns(frame, siggy);
 
     for (String columnName : siggy.getColumnNames()) {

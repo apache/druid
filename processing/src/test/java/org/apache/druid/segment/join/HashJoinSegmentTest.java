@@ -23,12 +23,12 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.MaxIngestedEventTimeInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -163,9 +163,9 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public StorageAdapter asStorageAdapter()
+      public CursorFactory asCursorFactory()
       {
-        return referencedSegment.asStorageAdapter();
+        return referencedSegment.asCursorFactory();
       }
 
       @Nullable
@@ -234,14 +234,15 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   public void test_asQueryableIndex()
   {
     Assert.assertNull(hashJoinSegment.asQueryableIndex());
+    Assert.assertNull(hashJoinSegment.as(QueryableIndex.class));
   }
 
   @Test
   public void test_asStorageAdapter()
   {
     Assert.assertThat(
-        hashJoinSegment.asStorageAdapter(),
-        CoreMatchers.instanceOf(HashJoinSegmentStorageAdapter.class)
+        hashJoinSegment.asCursorFactory(),
+        CoreMatchers.instanceOf(HashJoinSegmentCursorFactory.class)
     );
   }
 

@@ -73,7 +73,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
@@ -93,7 +93,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -536,11 +536,11 @@ public class IndexTaskTest extends IngestionTestBase
     DataSegment segment = segments.get(0);
     final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-    final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-        new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
+    final WindowedCursorFactory windowed = new WindowedCursorFactory(
+        new QueryableIndexCursorFactory(indexIO.loadIndex(segmentFile)),
         segment.getInterval()
     );
-    try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       final List<Map<String, Object>> transforms = new ArrayList<>();
 
@@ -765,12 +765,12 @@ public class IndexTaskTest extends IngestionTestBase
 
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(indexIO.loadIndex(segmentFile)),
           segment.getInterval()
       );
 
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         final List<Integer> hashes = new ArrayList<>();
         final DimensionSelector selector = cursor.getColumnSelectorFactory()

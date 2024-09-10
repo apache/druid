@@ -53,8 +53,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
@@ -241,7 +241,7 @@ public class SuperSorterTest
     private final boolean partitionsDeferred;
     private final long limitHint;
 
-    private StorageAdapter adapter;
+    private CursorFactory cursorFactory;
     private RowSignature signature;
     private FrameProcessorExecutor exec;
     private List<ReadableFrameChannel> inputChannels;
@@ -326,7 +326,7 @@ public class SuperSorterTest
       exec = new FrameProcessorExecutor(
           MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, getClass().getSimpleName() + "[%d]"))
       );
-      adapter = new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
+      cursorFactory = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
     }
 
     @After
@@ -352,7 +352,7 @@ public class SuperSorterTest
       }
 
       final FrameSequenceBuilder frameSequenceBuilder =
-          FrameSequenceBuilder.fromAdapter(adapter)
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .maxRowsPerFrame(maxRowsPerFrame)
                               .sortBy(clusterBy.getColumns())
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(maxBytesPerFrame)))
@@ -465,7 +465,7 @@ public class SuperSorterTest
       }
 
       final Sequence<List<Object>> expectedRows = Sequences.sort(
-          FrameTestUtil.readRowsFromAdapter(adapter, signature, true),
+          FrameTestUtil.readRowsFromCursorFactory(cursorFactory, signature, true),
           Comparator.comparing(
               row -> {
                 final Object[] array = new Object[clusterByPartColumns.length];

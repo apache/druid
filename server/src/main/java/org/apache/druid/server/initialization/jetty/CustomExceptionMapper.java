@@ -23,6 +23,7 @@ package org.apache.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
@@ -38,6 +39,7 @@ public class CustomExceptionMapper implements ExceptionMapper<JsonMappingExcepti
                        "error",
                        exception.getMessage() == null ? "unknown json mapping exception" : exception.getMessage()
                    ))
+                   .type(MediaType.APPLICATION_JSON)
                    .build();
   }
 }

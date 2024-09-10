@@ -13662,7 +13662,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private void assumeTimeOrdered()
   {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asStorageAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

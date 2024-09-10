@@ -139,4 +139,18 @@ public class DeltaInputSourceSerdeTest
         exception.getCause().getMessage()
     );
   }
+
+  @Test
+  public void testDeltaInputSourceWithSnapshotVersion() throws JsonProcessingException
+  {
+    final String payload = "{\n"
+                           + "      \"type\": \"delta\",\n"
+                           + "      \"tablePath\": \"foo/bar\",\n"
+                           + "      \"snapshotVersion\": 56\n"
+                           + "    }";
+
+    final DeltaInputSource deltaInputSource = OBJECT_MAPPER.readValue(payload, DeltaInputSource.class);
+    Assert.assertEquals("foo/bar", deltaInputSource.getTablePath());
+    Assert.assertEquals((Long) 56L, deltaInputSource.getSnapshotVersion());
+  }
 }

@@ -33,6 +33,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -61,11 +62,16 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
     this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
     ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
-    for (String column : columns.keySet()) {
-      if (!ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
-        columnNamesBuilder.add(column);
+    LinkedHashSet<String> dimsFirst = new LinkedHashSet<>();
+    for (String dimName : dimNames) {
+      dimsFirst.add(dimName);
+    }
+    for (String columnName : columns.keySet()) {
+      if (!ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+        dimsFirst.add(columnName);
       }
     }
+    columnNamesBuilder.addAll(dimsFirst);
     this.columnNames = columnNamesBuilder.build();
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;

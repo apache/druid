@@ -30,7 +30,6 @@ import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
-import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -286,19 +285,10 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static Integer getRowsPerSegment(CompactionTask compactionTask)
   {
-    Integer rowsPerSegment = PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
-    if (compactionTask.getTuningConfig() != null) {
-      PartitionsSpec partitionsSpec = compactionTask.getTuningConfig().getPartitionsSpec();
-      if (partitionsSpec instanceof DynamicPartitionsSpec) {
-        rowsPerSegment = partitionsSpec.getMaxRowsPerSegment();
-      } else if (partitionsSpec instanceof DimensionRangePartitionsSpec) {
-        DimensionRangePartitionsSpec dimensionRangePartitionsSpec = (DimensionRangePartitionsSpec) partitionsSpec;
-        rowsPerSegment = dimensionRangePartitionsSpec.getTargetRowsPerSegment() != null
-                         ? dimensionRangePartitionsSpec.getTargetRowsPerSegment()
-                         : dimensionRangePartitionsSpec.getMaxRowsPerSegment();
-      }
+    if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
+      return compactionTask.getTuningConfig().getPartitionsSpec().getMaxRowsPerSegment();
     }
-    return rowsPerSegment;
+    return PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT;
   }
 
   private static RowSignature getRowSignature(DataSchema dataSchema)

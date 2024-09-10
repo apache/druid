@@ -1147,11 +1147,12 @@ To use the Delta Lake input source, load the extension [`druid-deltalake-extensi
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
 the latest snapshot from the configured table. Druid ingests the underlying delta files from the table.
 
-| Property|Description|Required|
-|---------|-----------|--------|
-| type|Set this value to `delta`.|yes|
-| tablePath|The location of the Delta table.|yes|
-| filter|The JSON Object that filters data files within a snapshot.|no|
+| Property|Description| Default|Required |
+|---------|-----------|-----------------|
+|type|Set this value to `delta`.| None|yes|
+|tablePath|The location of the Delta table.|None|yes|
+|filter|The JSON Object that filters data files within a snapshot.|None|no|
+|snapshotVersion|The snapshot version to read from the Delta table. An integer value must be specified.|Latest|no|
 
 ### Delta filter object
 
@@ -1224,7 +1225,7 @@ filters on partitioned columns.
 | column   | The table column to apply the filter on. | yes      |
 | value    | The value to use in the filter.          | yes      |
 
-The following is a sample spec to read all records from the Delta table `/delta-table/foo`:
+The following is a sample spec to read all records from the latest snapshot from Delta table `/delta-table/foo`:
 
 ```json
 ...
@@ -1237,7 +1238,8 @@ The following is a sample spec to read all records from the Delta table `/delta-
     }
 ```
 
-The following is a sample spec to read records from the Delta table `/delta-table/foo` to select records where `name = 'Employee4' and age >= 30`:
+The following is a sample spec to read records from the Delta table `/delta-table/foo` snapshot version `3` to select records where
+`name = 'Employee4' and age >= 30`:
 
 ```json
 ...
@@ -1260,7 +1262,8 @@ The following is a sample spec to read records from the Delta table `/delta-tabl
               "value": "30"
             }
           ]
-        }
+        },
+       "snapshotVersion":  3
       },
     }
 ```
