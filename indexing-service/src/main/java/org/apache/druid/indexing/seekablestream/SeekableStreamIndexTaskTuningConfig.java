@@ -41,6 +41,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
+  private static final int DEFAULT_MAX_COLUMNS_TO_MERGE = -1;
 
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
@@ -141,7 +142,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
                               : logParseExceptions;
     this.numPersistThreads = numPersistThreads == null ?
                                 DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
-    this.maxColumnsToMerge = maxColumnsToMerge == null ? -1 : maxColumnsToMerge;
+    this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
   }
 
   @Override

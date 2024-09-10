@@ -73,6 +73,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(false, config.isReportParseExceptions());
     Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
     Assert.assertEquals(1, config.getNumPersistThreads());
+    Assert.assertEquals(-1, config.getMaxColumnsToMerge());
   }
 
   @Test
@@ -123,6 +124,7 @@ public class KafkaIndexTaskTuningConfigTest
         config.getIndexSpecForIntermediatePersists()
     );
     Assert.assertEquals(2, config.getNumPersistThreads());
+    Assert.assertEquals(-1, config.getMaxColumnsToMerge());
   }
 
   @Test
@@ -153,7 +155,7 @@ public class KafkaIndexTaskTuningConfigTest
         null,
         null,
         2,
-        null
+        5
     );
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
@@ -169,6 +171,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(true, copy.isReportParseExceptions());
     Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
     Assert.assertEquals(2, copy.getNumPersistThreads());
+    Assert.assertEquals(5, copy.getMaxColumnsToMerge());
   }
 
   @Test
@@ -221,6 +224,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
+    Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
   }
 
   @Test
@@ -272,6 +276,7 @@ public class KafkaIndexTaskTuningConfigTest
     Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
     Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
     Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
+    Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
   }
 
   @Test
