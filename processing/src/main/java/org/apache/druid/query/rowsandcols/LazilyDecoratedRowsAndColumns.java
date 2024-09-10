@@ -153,10 +153,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   public FrameRowsAndColumns toFrameRowsAndColumns()
   {
     maybeMaterialize();
-    if (base instanceof FrameRowsAndColumns) {
-      return (FrameRowsAndColumns) base;
-    }
-    return null;
+    return base.as(FrameRowsAndColumns.class);
   }
 
   private void maybeMaterialize()

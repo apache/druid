@@ -43,7 +43,6 @@ import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
-import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -133,15 +132,8 @@ public interface RowsAndColumns
   @Nullable
   default <T> T as(Class<T> clazz)
   {
-    if (Arrays.asList(getClass().getInterfaces()).contains(clazz)) {
+    if (clazz.isInstance(this)) {
       return (T) this;
-    }
-    Class<?> superClass = this.getClass().getSuperclass();
-    while (superClass != null) {
-      if (superClass.equals(clazz)) {
-        return (T) this;
-      }
-      superClass = superClass.getSuperclass();
     }
     return null;
   }
@@ -197,9 +189,11 @@ public interface RowsAndColumns
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       jsonParser.readBinaryValue(baos);
       Frame frame = Frame.wrap(baos.toByteArray());
-      return (frame.type() == FrameType.COLUMNAR)
-             ? new ColumnBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig)
-             : new RowBasedFrameRowsAndColumns(Frame.wrap(baos.toByteArray()), sig);
+      if (frame.type() == FrameType.COLUMNAR) {
+        return new ColumnBasedFrameRowsAndColumns(frame, sig);
+      } else {
+        return new RowBasedFrameRowsAndColumns(frame, sig);
+      }
     }
   }
 }
