@@ -65,7 +65,6 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
 
     final RowsAndColumns base = make(MapOfColumnsRowsAndColumns.fromRowObjects(vals, siggy));
 
-<<<<<<< HEAD:processing/src/test/java/org/apache/druid/query/rowsandcols/semantic/EvaluateRowsAndColumnsTest.java
     Object[] expectedArr = new Object[][] {
         {"xyz", "x"},
         {"abc"},
@@ -77,10 +76,7 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
         .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
         .validate(base);
 
-    assumeNotNull("skipping: StorageAdapter not supported", base.as(StorageAdapter.class));
-=======
     assumeNotNull("skipping: CursorFactory not supported", base.as(CursorFactory.class));
->>>>>>> master:processing/src/test/java/org/apache/druid/query/rowsandcols/semantic/TestVirtualColumnEvaluationRowsAndColumnsTest.java
 
     LazilyDecoratedRowsAndColumns ras = new LazilyDecoratedRowsAndColumns(
         base,
