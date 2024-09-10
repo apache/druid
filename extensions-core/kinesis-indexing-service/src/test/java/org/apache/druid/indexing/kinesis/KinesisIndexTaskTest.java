@@ -2374,7 +2374,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxSavedParseExceptions,
         maxRecordsPerPoll,
         maxBytesPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        null
     );
     return createTask(taskId, dataSchema, ioConfig, tuningConfig, context);
   }

@@ -939,7 +939,7 @@ public class StreamAppenderator implements Appenderator
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);
         }
-
+        log.info("Merging stream persists with maxColumns %s", tuningConfig.getMaxColumnsToMerge());
         mergedFile = indexMerger.mergeQueryableIndex(
             indexes,
             schema.getGranularitySpec().isRollup(),

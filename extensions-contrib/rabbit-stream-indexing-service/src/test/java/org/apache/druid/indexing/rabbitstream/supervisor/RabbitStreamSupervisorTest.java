@@ -158,7 +158,9 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        100);
+        100,
+        null
+    );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new StubServiceEmitter("RabbitStreamSupervisorTest", "localhost");
     EmittingLogger.registerEmitter(serviceEmitter);

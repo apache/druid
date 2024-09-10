@@ -166,7 +166,8 @@ public class KinesisIndexTaskTuningConfigTest
         500,
         6000,
         1_000_000,
-        new Period("P3D")
+        new Period("P3D"),
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
@@ -229,7 +230,8 @@ public class KinesisIndexTaskTuningConfigTest
         500,
         1_000_000,
         6000,
-        new Period("P3D")
+        new Period("P3D"),
+        null
     );
 
     String serialized = mapper.writeValueAsString(new TestModifiedKinesisIndexTaskTuningConfig(base, "loool"));
@@ -319,6 +321,7 @@ public class KinesisIndexTaskTuningConfigTest
         null,
         10,
         1_000_000,
+        null,
         null,
         null,
         null,
