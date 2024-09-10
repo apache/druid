@@ -40,8 +40,7 @@ install it separately. There are a few ways to obtain this library:
 - It may be available through your package manager, e.g. as `libmysql-java` on APT for a Debian-based OS
 
 This fetches the MySQL connector JAR file with a name like `mysql-connector-j-8.2.0.jar`.
-
-Copy or symlink this file inside the folder `extensions/mysql-metadata-storage` under the distribution root directory.
+Copy or symlink this file inside the folder `lib` under the distribution root directory.
 
 ## Alternative: Installing the MariaDB connector library
 
