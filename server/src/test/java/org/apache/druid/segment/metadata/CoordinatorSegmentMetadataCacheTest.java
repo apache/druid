@@ -2362,22 +2362,19 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
     );
 
-    List<ImmutableDruidDataSource> druidDataSources = new ArrayList<>();
-
     Map<SegmentId, DataSegment> segmentMap = new HashMap<>();
     segmentMap.put(segments.get(0).getId(), segments.get(0));
     segmentMap.put(segments.get(1).getId(), segments.get(1));
 
-    druidDataSources.add(
+    ImmutableDruidDataSource druidDataSource =
         new ImmutableDruidDataSource(
             "xyz",
             Collections.emptyMap(),
             segmentMap
-        )
-    );
+        );
 
-    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourcesWithAllUsedSegments())
-           .thenReturn(druidDataSources);
+    Mockito.when(sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(ArgumentMatchers.anyString()))
+           .thenReturn(druidDataSource);
 
     Set<SegmentId> segmentsToRefresh = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
     segmentsToRefresh.remove(segments.get(1).getId());
