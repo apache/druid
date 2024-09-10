@@ -2353,7 +2353,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     // make segment3 unused
     segmentStatsMap = new ImmutableMap.Builder<>();
     segmentStatsMap.put(segments.get(0).getId(), new SegmentMetadata(20L, "fp"));
-    segmentStatsMap.put(segments.get(1).getId(), new SegmentMetadata(20L, "fp"));
 
     segmentSchemaCache.updateFinalizedSegmentSchema(
         new SegmentSchemaCache.FinalizedSegmentSchemaInfo(segmentStatsMap.build(), schemaPayloadMap.build())
@@ -2364,7 +2363,6 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Map<SegmentId, DataSegment> segmentMap = new HashMap<>();
     segmentMap.put(segments.get(0).getId(), segments.get(0));
     segmentMap.put(segments.get(1).getId(), segments.get(1));
-    segmentMap.put(segments.get(2).getId(), segments.get(2));
 
     druidDataSources.add(
         new ImmutableDruidDataSource(
@@ -2378,10 +2376,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
            .thenReturn(druidDataSources);
 
     Set<SegmentId> segmentsToRefresh = segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+    segmentsToRefresh.remove(segments.get(1).getId());
     segmentsToRefresh.remove(segments.get(2).getId());
 
     schema.refresh(segmentsToRefresh, Sets.newHashSet(dataSource));
 
+    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(segments.get(1).getId()));
     Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(2).getId()));
   }
 
