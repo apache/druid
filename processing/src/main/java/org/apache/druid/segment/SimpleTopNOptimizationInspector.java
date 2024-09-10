@@ -19,11 +19,18 @@
 
 package org.apache.druid.segment;
 
-/**
- * @deprecated use {@link Segment} directly as this does nothing
- */
-@Deprecated
-public abstract class AbstractSegment implements Segment
+public class SimpleTopNOptimizationInspector implements TopNOptimizationInspector
 {
-  // i used to have a purpose
+  private final boolean allDictionaryIdsPresent;
+
+  public SimpleTopNOptimizationInspector(boolean allDictionaryIdsPresent)
+  {
+    this.allDictionaryIdsPresent = allDictionaryIdsPresent;
+  }
+
+  @Override
+  public boolean areAllDictionaryIdsPresent()
+  {
+    return allDictionaryIdsPresent;
+  }
 }

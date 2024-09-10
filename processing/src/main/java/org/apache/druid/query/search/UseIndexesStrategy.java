@@ -35,11 +35,11 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
 import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -74,14 +74,15 @@ public class UseIndexesStrategy extends SearchStrategy
   public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
     final ImmutableList.Builder<SearchQueryExecutor> builder = ImmutableList.builder();
-    final QueryableIndex index = segment.asQueryableIndex();
-    final StorageAdapter adapter = segment.asStorageAdapter();
-    final List<DimensionSpec> searchDims = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
+    final QueryableIndex index = segment.as(QueryableIndex.class);
+    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final List<DimensionSpec> searchDims = getDimsToSearch(segment, query.getDimensions());
 
     if (index != null) {
       // pair of bitmap dims and non-bitmap dims
       final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = partitionDimensionList(
-          adapter,
+          segment,
+          cursorFactory,
           query.getVirtualColumns(),
           searchDims
       );
@@ -131,7 +132,8 @@ public class UseIndexesStrategy extends SearchStrategy
    * Note that the returned lists are free to modify.
    */
   private static Pair<List<DimensionSpec>, List<DimensionSpec>> partitionDimensionList(
-      StorageAdapter adapter,
+      Segment segment,
+      CursorFactory cursorFactory,
       VirtualColumns virtualColumns,
       List<DimensionSpec> dimensions
   )
@@ -139,10 +141,10 @@ public class UseIndexesStrategy extends SearchStrategy
     final List<DimensionSpec> bitmapDims = new ArrayList<>();
     final List<DimensionSpec> nonBitmapDims = new ArrayList<>();
     final List<DimensionSpec> dimsToSearch = getDimsToSearch(
-        adapter.getAvailableDimensions(),
+        segment,
         dimensions
     );
-    VirtualizedColumnInspector columnInspector = new VirtualizedColumnInspector(adapter, virtualColumns);
+    VirtualizedColumnInspector columnInspector = new VirtualizedColumnInspector(cursorFactory, virtualColumns);
 
     for (DimensionSpec spec : dimsToSearch) {
       ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(spec.getDimension());
@@ -263,7 +265,7 @@ public class UseIndexesStrategy extends SearchStrategy
     @Override
     public Object2IntRBTreeMap<SearchHit> execute(int limit)
     {
-      final QueryableIndex index = segment.asQueryableIndex();
+      final QueryableIndex index = segment.as(QueryableIndex.class);
       Preconditions.checkArgument(index != null, "Index should not be null");
 
       ColumnSelectorColumnIndexSelector indexSelector = new ColumnSelectorColumnIndexSelector(

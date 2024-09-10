@@ -134,12 +134,12 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -699,9 +699,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         }
 
         @Override
-        public StorageAdapter asStorageAdapter()
+        public CursorFactory asCursorFactory()
         {
-          return new QueryableIndexStorageAdapter(index);
+          return new QueryableIndexCursorFactory(index);
         }
 
         @Override
@@ -1246,12 +1246,11 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(
-              dataSegment));
-          final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(queryableIndex);
+          final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
+          final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 
           // assert rowSignature
-          Assert.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(storageAdapter.getRowSignature()));
+          Assert.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
 
           // assert rollup
           Assert.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
@@ -1265,7 +1264,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
               queryableIndex.getMetadata().getAggregators()
           );
 
-          for (List<Object> row : FrameTestUtil.readRowsFromAdapter(storageAdapter, null, false).toList()) {
+          for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
             // transforming rows for sketch assertions
             List<Object> transformedRow = row.stream()
                                              .map(r -> {

@@ -58,7 +58,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
-public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTest
+public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
 {
   @Test
   public void test_filterPushDown_factToRegionToCountryLeftFilterOnChannel()
@@ -75,14 +75,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -147,14 +148,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -198,14 +200,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -260,14 +263,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -326,14 +330,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -391,14 +396,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         virtualColumns
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder()
                            .setFilter(originalFilter)
                            .setVirtualColumns(virtualColumns)
@@ -463,14 +469,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses.getJoinableClauses(),
         virtualColumns
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder()
                            .setFilter(originalFilter)
                            .setVirtualColumns(virtualColumns)
@@ -565,14 +572,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -687,14 +695,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -777,13 +786,14 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     expectedException.expectMessage(
         "Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -821,14 +831,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -918,14 +929,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
@@ -1003,14 +1015,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
@@ -1072,14 +1085,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1125,14 +1139,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1177,14 +1192,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1228,14 +1244,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1280,14 +1297,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1330,8 +1348,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
@@ -1339,7 +1358,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1389,8 +1408,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
@@ -1398,7 +1418,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     // In non-SQL-compatible mode, we get an extra row, since the 'null' countryNumber for "Talk:Oswald Tilghman"
     // is interpreted as 0 (a.k.a. Australia).
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1447,14 +1467,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1497,14 +1518,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1546,14 +1568,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
@@ -1599,14 +1622,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(filter).build()
         ),
         ImmutableList.of(
@@ -1651,14 +1675,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1702,14 +1727,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1764,14 +1790,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1830,14 +1857,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1898,8 +1926,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
@@ -1913,7 +1942,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -1962,14 +1991,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -2037,14 +2067,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses.getJoinableClauses(),
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -2206,8 +2237,9 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
@@ -2242,7 +2274,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
     }
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -2364,14 +2396,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         VirtualColumns.EMPTY
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
@@ -2439,14 +2472,15 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentStorageAdapterTes
         )
     );
 
-    HashJoinSegmentStorageAdapter adapter = new HashJoinSegmentStorageAdapter(
-        factSegment.asStorageAdapter(),
+    HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
+        factSegment.asCursorFactory(),
+        null,
         joinableClauses,
         joinFilterPreAnalysis
     );
 
     JoinTestHelper.verifyCursor(
-        adapter.makeCursorHolder(
+        cursorFactory.makeCursorHolder(
             CursorBuildSpec.builder().setFilter(originalFilter).build()
         ),
         ImmutableList.of(
