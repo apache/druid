@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
