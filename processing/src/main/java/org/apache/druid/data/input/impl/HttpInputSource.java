@@ -86,7 +86,7 @@ public class HttpInputSource
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
-    this.headersMap = headersMap == null ? Maps.newHashMap() : headersMap;
+    this.headersMap = headersMap == null ? Collections.emptyMap() : headersMap;
     throwIfForbiddenHeaders(config, this.headersMap);
     this.config = config;
   }
