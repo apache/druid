@@ -526,7 +526,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     try (final Closeable ignored = unloader(fullDatasourceName)) {
       final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
       intervalsBeforeCompaction.sort(null);
-      // 4 segments across 2 days (4 total)...
+      // 4 segments across 2 days (4 total)
       verifySegmentsCount(4);
       verifyQuery(INDEX_QUERIES_RESOURCE);
 
@@ -548,8 +548,54 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           true,
           engine
       );
-      //...compacted into 1 segment for the entire year.
+      // Compacted into 1 segment for the entire year.
       forceTriggerAutoCompaction(1);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifySegmentsCompactedDimensionSchema(dimensionSchemas);
+    }
+  }
+
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionRollsUpMultiValueDimensionsWithoutUnnest(CompactionEngine engine) throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      LOG.info("Auto compaction test with YEAR segment granularity, DAY query granularity, dropExisting is true");
+
+      List<DimensionSchema> dimensionSchemas = ImmutableList.of(
+          new StringDimensionSchema("language", null, true),
+          new StringDimensionSchema("tags", DimensionSchema.MultiValueHandling.SORTED_ARRAY, true)
+      );
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(Granularities.YEAR, Granularities.DAY, true),
+          new UserCompactionTaskDimensionsConfig(dimensionSchemas),
+          null,
+          new AggregatorFactory[] {new LongSumAggregatorFactory("added", "added")},
+          true,
+          engine
+      );
+      // Compacted into 1 segment for the entire year.
+      forceTriggerAutoCompaction(1);
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%",
+          "added",
+          "%%EXPECTED_COUNT_RESULT%%",
+          1,
+          "%%EXPECTED_SCAN_RESULT%%",
+          ImmutableList.of(
+              ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516)))
+          )
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
       verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
       verifySegmentsCompactedDimensionSchema(dimensionSchemas);
     }
@@ -636,25 +682,36 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
         final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
         submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
-        // 2 segments published per day after compaction.
-        forceTriggerAutoCompaction(4);
+        // 3 segments for both 2013-08-31 and 2013-09-01. (Note that numShards guarantees max shards but not exact
+        // number of final shards, since some shards may end up empty.)
+        forceTriggerAutoCompaction(6);
         verifyQuery(INDEX_QUERIES_RESOURCE);
-        verifySegmentsCompacted(hashedPartitionsSpec, 4);
+        verifySegmentsCompacted(hashedPartitionsSpec, 6);
         checkCompactionIntervals(intervalsBeforeCompaction);
       }
 
       LOG.info("Auto compaction test with range partitioning");
 
-      final DimensionRangePartitionsSpec rangePartitionsSpec = new DimensionRangePartitionsSpec(
+      final DimensionRangePartitionsSpec inputRangePartitionsSpec = new DimensionRangePartitionsSpec(
           5,
           null,
           ImmutableList.of("city"),
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
+      DimensionRangePartitionsSpec expectedRangePartitionsSpec = inputRangePartitionsSpec;
+      if (engine == CompactionEngine.MSQ) {
+        // Range spec is transformed to its effective maxRowsPerSegment equivalent in MSQ
+        expectedRangePartitionsSpec = new DimensionRangePartitionsSpec(
+            null,
+            7,
+            ImmutableList.of("city"),
+            false
+        );
+      }
+      submitCompactionConfig(inputRangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(rangePartitionsSpec, 2);
+      verifySegmentsCompacted(expectedRangePartitionsSpec, 2);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }

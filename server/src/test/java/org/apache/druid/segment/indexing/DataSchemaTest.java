@@ -779,4 +779,26 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     Assert.assertSame(oldSchema.getParserMap(), newSchema.getParserMap());
 
   }
+
+  @Test
+  public void testCombinedDataSchemaSetsMultiValuedColumnsInfo()
+  {
+    Set<String> multiValuedDimensions = ImmutableSet.of("dimA");
+
+    CombinedDataSchema schema = new CombinedDataSchema(
+        IdUtilsTest.VALID_ID_CHARS,
+        new TimestampSpec("time", "auto", null),
+        DimensionsSpec.builder()
+                      .setDimensions(
+                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimA", "dimB", "metric1"))
+                      )
+                      .setDimensionExclusions(ImmutableList.of("dimC"))
+                      .build(),
+        null,
+        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        null,
+        multiValuedDimensions
+    );
+    Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
+  }
 }

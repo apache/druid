@@ -934,7 +934,7 @@ public class StreamAppenderator implements Appenderator
       try {
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);

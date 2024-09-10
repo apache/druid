@@ -699,4 +699,13 @@
     ]]></notes>
     <vulnerabilityName>CVE-2024-25638</vulnerabilityName>
   </suppress>
+  <suppress>
+    <!-- The CVE is also not applicable to xz-java because it does not implement xzgrep and therefore is not vulnerable
+     ~ to the filename validation problem. Druid does not use xzgrep but this CVE is popping up because the CPE matches the
+     ~ Java package too. -->
+    <notes><![CDATA[
+    file name: xz-1.9.jar
+    ]]></notes>
+    <vulnerabilityName>CVE-2022-1271</vulnerabilityName>
+  </suppress>
 </suppressions>

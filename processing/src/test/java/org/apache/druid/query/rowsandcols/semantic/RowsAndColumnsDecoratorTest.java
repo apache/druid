@@ -291,7 +291,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       if (interval != null) {
         builder.setInterval(interval);
       }
-      try (final CursorHolder cursorHolder = seggy.asStorageAdapter().makeCursorHolder(builder.build())) {
+      try (final CursorHolder cursorHolder = seggy.asCursorFactory().makeCursorHolder(builder.build())) {
         final Cursor cursor = cursorHolder.asCursor();
 
         vals = new ArrayList<>();

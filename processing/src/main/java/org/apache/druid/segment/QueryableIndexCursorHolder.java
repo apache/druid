@@ -77,7 +77,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Nullable
   private final Filter filter;
   @Nullable
-  private final QueryMetrics<? extends Query> metrics;
+  private final QueryMetrics<? extends Query<?>> metrics;
   private final List<OrderBy> ordering;
   private final QueryContext queryContext;
   private final int vectorSize;

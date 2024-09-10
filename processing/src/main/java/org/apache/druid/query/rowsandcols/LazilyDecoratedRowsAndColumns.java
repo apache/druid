@@ -46,8 +46,8 @@ import org.apache.druid.query.rowsandcols.semantic.RowsAndColumnsDecorator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
@@ -182,11 +182,11 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       throw new ISE("Cannot reorder[%s] scan data right now", ordering);
     }
 
-    final StorageAdapter as = base.as(StorageAdapter.class);
+    final CursorFactory as = base.as(CursorFactory.class);
     if (as == null) {
       return naiveMaterialize(base);
     } else {
-      return materializeStorageAdapter(as);
+      return materializeCursorFactory(as);
     }
   }
 
@@ -202,7 +202,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   }
 
   @Nullable
-  private Pair<byte[], RowSignature> materializeStorageAdapter(StorageAdapter as)
+  private Pair<byte[], RowSignature> materializeCursorFactory(CursorFactory cursorFactory)
   {
     final Collection<String> cols;
     if (viewableColumns != null) {
@@ -225,7 +225,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     if (virtualColumns != null) {
       builder.setVirtualColumns(virtualColumns);
     }
-    try (final CursorHolder cursorHolder = as.makeCursorHolder(builder.build())) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(builder.build())) {
       final Cursor cursor = cursorHolder.asCursor();
 
       if (cursor == null) {
