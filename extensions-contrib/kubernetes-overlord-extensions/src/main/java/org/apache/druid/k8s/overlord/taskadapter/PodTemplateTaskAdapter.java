@@ -281,9 +281,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
             .withValue(task.getId())
             .build(),
         new EnvVarBuilder()
-          .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
-          .withValue(task.getBroadcastDatasourceLoadingSpec().toString())
-          .build(),
+            .withName(DruidK8sConstants.LOAD_BROADCAST_DATASOURCE_MODE_ENV)
+            .withValue(task.getBroadcastDatasourceLoadingSpec().getMode().toString())
+            .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
             .withValue(Boolean.toString(task.supportsQueries()))

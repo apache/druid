@@ -37,6 +37,7 @@ public class DruidK8sConstants
   public static final String TASK_JSON_ENV = "TASK_JSON";
   public static final String TASK_DIR_ENV = "TASK_DIR";
   public static final String TASK_ID_ENV = "TASK_ID";
+  public static final String LOAD_BROADCAST_DATASOURCE_MODE_ENV = "LOAD_BROADCAST_DATASOURCE_MODE";
   public static final String LOAD_BROADCAST_SEGMENTS_ENV = "LOAD_BROADCAST_SEGMENTS";
   public static final String JAVA_OPTS = "JAVA_OPTS";
   public static final String DRUID_HOST_ENV = "druid_host";
