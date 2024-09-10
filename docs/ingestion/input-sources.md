@@ -853,7 +853,7 @@ Refer to the [recommended practices](#recommended-practices) before using this i
 |--------|-----------|---------|
 |type|Set the value to `sql`.|Yes|
 |database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support.<br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
-|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
+|foldCase|Boolean to toggle case folding of database column names. For example, to ingest a database column named `Entry_Date` as `entry_date`, set `foldCase` to true and include `entry_date` in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec).|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
 The following is an example of an SQL input source spec:

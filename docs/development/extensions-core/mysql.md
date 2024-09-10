@@ -1,6 +1,6 @@
 ---
 id: mysql
-title: "MySQL Metadata Store"
+title: "MySQL metadata store"
 ---
 
 <!--
@@ -36,39 +36,47 @@ To use the MySQL extension, you need to install one of the following libraries:
 * [MySQL Connector/J](#install-the-mysql-connector-library)
 * [MariaDB Connector/J](#install-the-mariadb-connector-library)
 
-### Install the MySQL connector library
+### Install MySQL Connector/J
 
 The MySQL extension uses Oracle's MySQL JDBC driver.
 The current version of Druid uses version 8.2.0.
 Other versions may not work with this extension.
 
-You can download the library from various sources:
+You can download the library from one of the following sources:
 
-- [Maven Central (direct download)](https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar)
 - [MySQL website](https://dev.mysql.com/downloads/connector/j/)  
-  Visit the archives page to download older product versions.
+  Visit the archives page to access older product versions.
+- [Maven Central (direct download)](https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar)
 - Your package manager. For example, `libmysql-java` on APT for a Debian-based OS.
 
 The download includes the MySQL connector JAR file with a name like `mysql-connector-j-8.2.0.jar`.
-Copy or symlink this file inside the folder `lib` under the distribution root directory.
+Copy or create a symbolic link to this file inside the `lib` folder in the distribution root directory.
 
-### Install the MariaDB connector library
+### Install MariaDB Connector/J
 
-This extension also supports using the MariaDB connector jar, though it is also not included in the Druid distribution, so you must install it separately.
+This extension also supports using the MariaDB connector jar.
+The current version of Druid uses version 2.7.3.
+Other versions may not work with this extension.
 
-- Download from the MariaDB site: https://mariadb.com/downloads/connector
-- Download from Maven Central: https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/2.7.3/mariadb-java-client-2.7.3.jar
+You can download the library from one of the following sources:
 
-This fetches the MariaDB connector JAR file with a name like `maria-java-client-2.7.3.jar`.
+- [MariaDB website](https://mariadb.com/downloads/connectors/connectors-data-access/java8-connector)  
+  Click **Show All Files** to access older product versions.
+- [Maven Central (direct download)](https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/2.7.3/mariadb-java-client-2.7.3.jar)
 
-Copy or symlink this file to `extensions/mysql-metadata-storage` under the distribution root directory.
+The download includes the MariaDB connector JAR file with a name like `maria-java-client-2.7.3.jar`.
+Copy or create a symbolic link to this file inside the `lib` folder in the distribution root directory.
 
 To configure the `mysql-metadata-storage` extension to use the MariaDB connector library instead of MySQL, set `druid.metadata.mysql.driver.driverClassName=org.mariadb.jdbc.Driver`.
 
-Depending on the MariaDB client library version, the connector supports both `jdbc:mysql:` and `jdbc:mariadb:` connection URIs. However, the parameters to configure the connection vary between implementations, so be sure to [check the documentation](https://mariadb.com/kb/en/about-mariadb-connector-j/#connection-strings) for details.
+The protocol of the connection string is `jdbc:mysql:` or `jdbc:mariadb:`,
+depending on your specific version of the MariaDB client library.
+For more information on the parameters to configure a connection,
+[see the MariaDB documentation](https://mariadb.com/kb/en/about-mariadb-connector-j/#connection-strings)
+for your connector version.
 
 
-## Setting up MySQL
+## Set up MySQL
 
 To avoid issues with upgrades that require schema changes to a large metadata table, consider a MySQL version that supports instant ADD COLUMN semantics. For example, MySQL 8.
 
@@ -99,7 +107,7 @@ This extension also supports using MariaDB server, https://mariadb.org/download/
   CREATE DATABASE druid DEFAULT CHARACTER SET utf8mb4;
 
   -- create a druid user
-  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'diurd';
+  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'druid';
 
   -- grant the user all the permissions on the database we just created
   GRANT ALL PRIVILEGES ON druid.* TO 'druid'@'localhost';
@@ -120,10 +128,11 @@ This extension also supports using MariaDB server, https://mariadb.org/download/
 
 If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverClassName=org.mariadb.jdbc.Driver`.
 
-## Encrypting MySQL connections
-  This extension provides support for encrypting MySQL connections. To get more information about encrypting MySQL connections using TLS/SSL in general, please refer to this [guide](https://dev.mysql.com/doc/refman/5.7/en/using-encrypted-connections.html).
+## Encrypt MySQL connections
 
-## Configuration
+This extension provides support for encrypting MySQL connections. To get more information about encrypting MySQL connections using TLS/SSL in general, please refer to this [guide](https://dev.mysql.com/doc/refman/5.7/en/using-encrypted-connections.html).
+
+## Configuration properties
 
 |Property|Description|Default|Required|
 |--------|-----------|-------|--------|
@@ -138,7 +147,10 @@ If using the MariaDB connector library, set `druid.metadata.mysql.driver.driverC
 |`druid.metadata.mysql.ssl.enabledSSLCipherSuites`|Overrides the existing cipher suites with these cipher suites.|none|no|
 |`druid.metadata.mysql.ssl.enabledTLSProtocols`|Overrides the TLS protocols with these protocols.|none|no|
 
-### MySQL InputSource
+## MySQL input source
+
+The MySQL extension provides an implementation of an SQL input source to ingest data into Druid from a MySQL database.
+For more information on the input source parameters, see [SQL input source](../../ingestion/input-sources.md#sql-input-source).
 
 ```json
 {
