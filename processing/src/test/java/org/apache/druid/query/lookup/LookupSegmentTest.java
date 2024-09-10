@@ -21,7 +21,6 @@ package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -29,14 +28,15 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.RowBasedStorageAdapter;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -118,6 +118,7 @@ public class LookupSegmentTest
   @Test
   public void test_asQueryableIndex()
   {
+    Assert.assertNull(LOOKUP_SEGMENT.as(QueryableIndex.class));
     Assert.assertNull(LOOKUP_SEGMENT.asQueryableIndex());
   }
 
@@ -129,32 +130,14 @@ public class LookupSegmentTest
                     .add("k", ColumnType.STRING)
                     .add("v", ColumnType.STRING)
                     .build(),
-        LOOKUP_SEGMENT.asStorageAdapter().getRowSignature()
-    );
-  }
-
-  @Test
-  public void test_asStorageAdapter_getAvailableDimensions()
-  {
-    Assert.assertEquals(
-        ImmutableList.of("k", "v"),
-        Lists.newArrayList(LOOKUP_SEGMENT.asStorageAdapter().getAvailableDimensions().iterator())
-    );
-  }
-
-  @Test
-  public void test_asStorageAdapter_getAvailableMetrics()
-  {
-    Assert.assertEquals(
-        ImmutableList.of(),
-        Lists.newArrayList(LOOKUP_SEGMENT.asStorageAdapter().getAvailableMetrics())
+        LOOKUP_SEGMENT.asCursorFactory().getRowSignature()
     );
   }
 
   @Test
   public void test_asStorageAdapter_getColumnCapabilitiesK()
   {
-    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asStorageAdapter().getColumnCapabilities("k");
+    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asCursorFactory().getColumnCapabilities("k");
 
     Assert.assertEquals(ValueType.STRING, capabilities.getType());
 
@@ -168,7 +151,7 @@ public class LookupSegmentTest
   @Test
   public void test_asStorageAdapter_getColumnCapabilitiesV()
   {
-    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asStorageAdapter().getColumnCapabilities("v");
+    final ColumnCapabilities capabilities = LOOKUP_SEGMENT.asCursorFactory().getColumnCapabilities("v");
 
     // Note: the "v" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
@@ -179,36 +162,12 @@ public class LookupSegmentTest
   }
 
   @Test
-  public void test_asStorageAdapter_getInterval()
-  {
-    Assert.assertEquals(Intervals.ETERNITY, LOOKUP_SEGMENT.asStorageAdapter().getInterval());
-  }
-
-  @Test
-  public void test_asStorageAdapter_getDimensionCardinalityK()
-  {
-    Assert.assertEquals(
-        DimensionDictionarySelector.CARDINALITY_UNKNOWN,
-        LOOKUP_SEGMENT.asStorageAdapter().getDimensionCardinality("k")
-    );
-  }
-
-  @Test
-  public void test_asStorageAdapter_getDimensionCardinalityV()
-  {
-    Assert.assertEquals(
-        DimensionDictionarySelector.CARDINALITY_UNKNOWN,
-        LOOKUP_SEGMENT.asStorageAdapter().getDimensionCardinality("v")
-    );
-  }
-
-  @Test
   public void test_asStorageAdapter_makeCursor()
   {
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.of("1970/PT1H"))
                                                      .build();
-    try (final CursorHolder cursorHolder = LOOKUP_SEGMENT.asStorageAdapter().makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = LOOKUP_SEGMENT.asCursorFactory().makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       final List<Pair<String, String>> kvs = new ArrayList<>();
@@ -234,8 +193,8 @@ public class LookupSegmentTest
   @Test
   public void test_asStorageAdapter_isRowBasedAdapter()
   {
-    // This allows us to assume that RowBasedStorageAdapterTest is further exercising makeCursor and verifying misc.
+    // This allows us to assume that LookupSegmentTest is further exercising makeCursor and verifying misc.
     // methods like getMinTime, getMaxTime, getMetadata, etc, without checking them explicitly in _this_ test class.
-    Assert.assertThat(LOOKUP_SEGMENT.asStorageAdapter(), CoreMatchers.instanceOf(RowBasedStorageAdapter.class));
+    MatcherAssert.assertThat(LOOKUP_SEGMENT.asCursorFactory(), CoreMatchers.instanceOf(RowBasedCursorFactory.class));
   }
 }

@@ -20,8 +20,12 @@
 package org.apache.druid.query.groupby.epinephelinae.column;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.groupby.epinephelinae.GroupingSelector;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionDictionarySelector;
 
-public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnSelectorStrategy>
+public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnSelectorStrategy> implements
+    GroupingSelector
 {
   /**
    * Indicates the offset of this dimension's value within ResultRows.
@@ -57,5 +61,15 @@ public class GroupByColumnSelectorPlus extends ColumnSelectorPlus<GroupByColumnS
   public int getResultRowPosition()
   {
     return resultRowPosition;
+  }
+
+  @Override
+  public int getValueCardinality()
+  {
+    final ColumnValueSelector<?> selector = getSelector();
+    if (selector instanceof DimensionDictionarySelector) {
+      return ((DimensionDictionarySelector) selector).getValueCardinality();
+    }
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 }

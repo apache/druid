@@ -19,19 +19,14 @@
 
 package org.apache.druid.msq.guice;
 
-import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
 import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
-public class MSQTerminalStageSpecFactory
+public interface MSQTerminalStageSpecFactory
 {
   /**
-   * Creates a {@link TerminalStageSpec} which determines the final of a query. Currently, always returns a segment
-   * generation spec, but this can be used to configure a wide range of behaviours.
+   * Creates a {@link TerminalStageSpec} which determines the final of a query.
    */
-  public TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext)
-  {
-    return SegmentGenerationStageSpec.instance();
-  }
+  TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext);
 }

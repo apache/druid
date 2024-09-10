@@ -23,24 +23,21 @@ import com.google.common.math.IntMath;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.TestArrayStorageAdapter;
+import org.apache.druid.frame.TestArrayCursorFactory;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.RowAdapters;
-import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -73,39 +70,59 @@ public class FrameFileTest extends InitializedNullHandlingTest
   {
     INCREMENTAL {
       @Override
-      StorageAdapter getAdapter()
+      CursorFactory getCursorFactory()
       {
-        return new IncrementalIndexStorageAdapter(TestIndex.getNoRollupIncrementalTestIndex());
+        return new IncrementalIndexCursorFactory(TestIndex.getNoRollupIncrementalTestIndex());
+      }
+
+      @Override
+      int getRowCount()
+      {
+        return TestIndex.getNoRollupIncrementalTestIndex().size();
       }
     },
     MMAP {
       @Override
-      StorageAdapter getAdapter()
+      CursorFactory getCursorFactory()
       {
-        return new QueryableIndexStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
+        return new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
+      }
+
+      @Override
+      int getRowCount()
+      {
+        return TestIndex.getNoRollupMMappedTestIndex().getNumRows();
       }
     },
     MV_AS_STRING_ARRAYS {
       @Override
-      StorageAdapter getAdapter()
+      CursorFactory getCursorFactory()
       {
-        return new TestArrayStorageAdapter(TestIndex.getNoRollupMMappedTestIndex());
+        return new TestArrayCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
+      }
+
+      @Override
+      int getRowCount()
+      {
+        return TestIndex.getNoRollupMMappedTestIndex().getNumRows();
       }
     },
     EMPTY {
       @Override
-      StorageAdapter getAdapter()
+      CursorFactory getCursorFactory()
       {
-        return new RowBasedSegment<>(
-            SegmentId.dummy("EMPTY"),
-            Sequences.empty(),
-            RowAdapters.standardRow(),
-            RowSignature.empty()
-        ).asStorageAdapter();
+        return new RowBasedCursorFactory<>(Sequences.empty(), RowAdapters.standardRow(), RowSignature.empty());
+      }
+
+      @Override
+      int getRowCount()
+      {
+        return 0;
       }
     };
 
-    abstract StorageAdapter getAdapter();
+    abstract CursorFactory getCursorFactory();
+    abstract int getRowCount();
   }
 
   @Rule
@@ -120,7 +137,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
   private final AdapterType adapterType;
   private final int maxMmapSize;
 
-  private StorageAdapter adapter;
+  private CursorFactory cursorFactory;
+  private int rowCount;
   private File file;
 
   public FrameFileTest(
@@ -175,12 +193,13 @@ public class FrameFileTest extends InitializedNullHandlingTest
   @Before
   public void setUp() throws IOException
   {
-    adapter = adapterType.getAdapter();
+    cursorFactory = adapterType.getCursorFactory();
+    rowCount = adapterType.getRowCount();
 
     if (partitioned) {
       // Partition every PARTITION_SIZE rows.
       file = FrameTestUtil.writeFrameFileWithPartitions(
-          FrameSequenceBuilder.fromAdapter(adapter).frameType(frameType).maxRowsPerFrame(maxRowsPerFrame).frames().map(
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory).frameType(frameType).maxRowsPerFrame(maxRowsPerFrame).frames().map(
               new Function<Frame, IntObjectPair<Frame>>()
               {
                 private int rows = 0;
@@ -202,7 +221,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
 
     } else {
       file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromAdapter(adapter).frameType(frameType).maxRowsPerFrame(maxRowsPerFrame).frames(),
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory).frameType(frameType).maxRowsPerFrame(maxRowsPerFrame).frames(),
           temporaryFolder.newFile()
       );
     }
@@ -232,7 +251,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
       Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
 
       final Frame firstFrame = frameFile.frame(0);
-      Assert.assertEquals(Math.min(adapter.getNumRows(), maxRowsPerFrame), firstFrame.numRows());
+      Assert.assertEquals(Math.min(rowCount, maxRowsPerFrame), firstFrame.numRows());
     }
   }
 
@@ -245,9 +264,9 @@ public class FrameFileTest extends InitializedNullHandlingTest
 
       final Frame lastFrame = frameFile.frame(frameFile.numFrames() - 1);
       Assert.assertEquals(
-          adapter.getNumRows() % maxRowsPerFrame != 0
-          ? adapter.getNumRows() % maxRowsPerFrame
-          : Math.min(adapter.getNumRows(), maxRowsPerFrame),
+          rowCount % maxRowsPerFrame != 0
+          ? rowCount % maxRowsPerFrame
+          : Math.min(rowCount, maxRowsPerFrame),
           lastFrame.numRows()
       );
     }
@@ -274,20 +293,20 @@ public class FrameFileTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_frame_readAllDataViaStorageAdapter() throws IOException
+  public void test_frame_readAllDataViaCursorFactory() throws IOException
   {
-    final FrameReader frameReader = FrameReader.create(adapter.getRowSignature());
+    final FrameReader frameReader = FrameReader.create(cursorFactory.getRowSignature());
 
     try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
       final Sequence<List<Object>> frameFileRows = Sequences.concat(
           () -> IntStream.range(0, frameFile.numFrames())
                          .mapToObj(frameFile::frame)
-                         .map(frame -> new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY))
-                         .map(adapter -> FrameTestUtil.readRowsFromAdapter(adapter, null, true))
+                         .map(frameReader::makeCursorFactory)
+                         .map(FrameTestUtil::readRowsFromCursorFactoryWithRowNumber)
                          .iterator()
       );
 
-      final Sequence<List<Object>> adapterRows = FrameTestUtil.readRowsFromAdapter(adapter, null, true);
+      final Sequence<List<Object>> adapterRows = FrameTestUtil.readRowsFromCursorFactoryWithRowNumber(cursorFactory);
       FrameTestUtil.assertRowsEqual(adapterRows, frameFileRows);
     }
   }
@@ -373,7 +392,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
 
   private int computeExpectedNumFrames()
   {
-    return IntMath.divide(countRows(adapter), maxRowsPerFrame, RoundingMode.CEILING);
+    return IntMath.divide(countRows(cursorFactory), maxRowsPerFrame, RoundingMode.CEILING);
   }
 
   private int computeExpectedNumPartitions()
@@ -381,7 +400,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
     if (partitioned) {
       return Math.min(
           computeExpectedNumFrames(),
-          IntMath.divide(countRows(adapter), PARTITION_SIZE, RoundingMode.CEILING)
+          IntMath.divide(countRows(cursorFactory), PARTITION_SIZE, RoundingMode.CEILING)
       );
     } else {
       // 0 = not partitioned.
@@ -389,10 +408,10 @@ public class FrameFileTest extends InitializedNullHandlingTest
     }
   }
 
-  private static int countRows(final StorageAdapter adapter)
+  private static int countRows(final CursorFactory cursorFactory)
   {
-    // Not using adapter.getNumRows(), because RowBasedStorageAdapter doesn't support it.
-    return FrameTestUtil.readRowsFromAdapter(adapter, RowSignature.empty(), false)
+    // Not using adapter.getNumRows(), because RowBasedCursorFactory doesn't support it.
+    return FrameTestUtil.readRowsFromCursorFactory(cursorFactory, RowSignature.empty(), false)
                         .accumulate(0, (i, in) -> i + 1);
   }
 }

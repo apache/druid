@@ -55,7 +55,7 @@ The parallel task type `index_parallel` is a task for multi-threaded batch index
 The `index_parallel` task is a supervisor task that orchestrates
 the whole indexing process. The supervisor task splits the input data and creates worker tasks to process the individual portions of data.
 
-Druid issues the worker tasks to the Overlord. The Overlord schedules and runs the workers on MiddleManagers or Indexers. After a worker task successfully processes the assigned input portion, it reports the resulting segment list to the Supervisor task.
+Druid issues the worker tasks to the Overlord. The Overlord schedules and runs the workers on Middle Managers or Indexers. After a worker task successfully processes the assigned input portion, it reports the resulting segment list to the Supervisor task.
 
 The Supervisor task periodically checks the status of worker tasks. If a task fails, the Supervisor retries the task until the number of retries reaches the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalizes ingestion.
 
@@ -369,11 +369,11 @@ the Parallel task splits the input data based on the split hint spec
 and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split, and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
 The partitioned data is stored in local storage of
-the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+the [middle Manager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 
 The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
 The Parallel task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned data created in the previous phase. Here, the partitioned data is shuffled based on
-the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges them to create the final segments. Finally, they push the final segments to the deep storage at once.
+the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data falling in the same time chunk and the same hash value from multiple Middle Manager/Indexer processes and merges them to create the final segments. Finally, they push the final segments to the deep storage at once.
 
 ##### Hash partition function
 
@@ -426,12 +426,12 @@ to create partitioned data. Each worker task reads a split created as in the pre
 partitions rows by the time chunk from the `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the range partitioning found in the previous phase.
 The partitioned data is stored in local storage of
-the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+the [Middle Manager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 
 In the `partial segment merge` phase, the parallel index task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned
 data created in the previous phase. Here, the partitioned data is shuffled based on
 the time chunk and the value of `partitionDimension`; each worker task reads the segments
-falling in the same partition of the same range from multiple MiddleManager/Indexer processes and merges
+falling in the same partition of the same range from multiple Middle Manager/Indexer processes and merges
 them to create the final segments. Finally, they push the final segments to the deep storage.
 
 :::info

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.realtime.sink;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
@@ -33,10 +34,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -44,7 +44,6 @@ import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.FireHydrant;
@@ -157,8 +156,8 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       maxCount = hydrant.getCount();
       ReferenceCountingSegment segment = hydrant.getIncrementedSegment();
       try {
-        QueryableIndex index = segment.asQueryableIndex();
-        overwriteIndexDimensions(new QueryableIndexStorageAdapter(index));
+        overwriteIndexDimensions(segment);
+        QueryableIndex index = segment.as(QueryableIndex.class);
         numRowsExcludingCurrIndex.addAndGet(index.getNumRows());
       }
       finally {
@@ -287,7 +286,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return 0;
       }
 
-      return currHydrant.getIndex().size();
+      return index.size();
     }
   }
 
@@ -299,7 +298,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return 0;
       }
 
-      return currHydrant.getIndex().getBytesInMemory().get();
+      return index.getBytesInMemory().get();
     }
   }
 
@@ -354,11 +353,11 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
 
           if (lastHydrant.hasSwapped()) {
             oldFormat = new HashMap<>();
-            ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
+            final ReferenceCountingSegment segment = lastHydrant.getIncrementedSegment();
             try {
-              QueryableIndex oldIndex = segment.asQueryableIndex();
-              overwriteIndexDimensions(new QueryableIndexStorageAdapter(oldIndex));
+              overwriteIndexDimensions(segment);
               if (variableDimensions) {
+                final QueryableIndex oldIndex = Preconditions.checkNotNull(segment.as(QueryableIndex.class));
                 for (String dim : oldIndex.getAvailableDimensions()) {
                   dimOrder.add(dim);
                   oldFormat.put(dim, oldIndex.getColumnHolder(dim).getColumnFormat());
@@ -369,9 +368,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
               segment.decrement();
             }
           } else {
-            IncrementalIndex oldIndex = lastHydrant.getIndex();
-            overwriteIndexDimensions(new IncrementalIndexStorageAdapter(oldIndex));
+            overwriteIndexDimensions(lastHydrant.getHydrantSegment());
             if (variableDimensions) {
+              IncrementalIndex oldIndex = lastHydrant.getIndex();
               dimOrder.addAll(oldIndex.getDimensionOrder());
               oldFormat = oldIndex.getColumnFormats();
             }
@@ -399,9 +398,9 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
    * Merge the column from the index with the existing columns.
    */
   @GuardedBy("hydrantLock")
-  private void overwriteIndexDimensions(StorageAdapter storageAdapter)
+  private void overwriteIndexDimensions(Segment segment)
   {
-    RowSignature rowSignature = storageAdapter.getRowSignature();
+    RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
     for (String dim : rowSignature.getColumnNames()) {
       columnsExcludingCurrIndex.add(dim);
       rowSignature.getColumnType(dim).ifPresent(type -> columnTypeExcludingCurrIndex.put(dim, type));
@@ -422,9 +421,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
       }
 
       // Add columns from the currHydrant that do not yet exist in columnsExcludingCurrIndex.
-      IncrementalIndexStorageAdapter currStorageAdapter =
-          new IncrementalIndexStorageAdapter(currHydrant.getIndex());
-      RowSignature currSignature = currStorageAdapter.getRowSignature();
+      RowSignature currSignature = currHydrant.getHydrantSegment().asCursorFactory().getRowSignature();
 
       for (String dim : currSignature.getColumnNames()) {
         if (!columnsExcludingCurrIndex.contains(dim)) {

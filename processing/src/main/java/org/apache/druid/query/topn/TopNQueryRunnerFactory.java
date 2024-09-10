@@ -34,7 +34,6 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.TimeBoundaryInspector;
 
 import java.nio.ByteBuffer;
 
@@ -78,8 +77,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
         TopNQuery query = (TopNQuery) input.getQuery();
         return queryEngine.query(
             query,
-            segment.asStorageAdapter(),
-            segment.as(TimeBoundaryInspector.class),
+            segment,
             (TopNQueryMetrics) input.getQueryMetrics()
         );
       }

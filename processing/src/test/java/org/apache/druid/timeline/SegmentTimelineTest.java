@@ -20,6 +20,7 @@
 package org.apache.druid.timeline;
 
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -67,7 +68,7 @@ public class SegmentTimelineTest
   private DataSegment createSegment(String interval, String version, int partitionNum, int totalNumPartitions)
   {
     return new DataSegment(
-        "wiki",
+        TestDataSource.WIKI,
         Intervals.of(interval),
         version,
         Collections.emptyMap(),

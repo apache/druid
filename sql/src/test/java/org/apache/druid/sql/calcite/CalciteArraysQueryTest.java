@@ -116,8 +116,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  // test some query stuffs, sort of limited since no native array column types so either need to use constructor or
-  // array aggregator
   @Test
   public void testSelectConstantArrayExpressionFromTable()
   {
@@ -7475,6 +7473,28 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{3L}
+        )
+    );
+  }
+
+  @Test
+  public void testNullArray()
+  {
+    testQuery(
+        "SELECT arrayLongNulls = ARRAY[null, null] FROM druid.arrays LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "(\"arrayLongNulls\" == array(null,null))", ColumnType.LONG))
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{false}
         )
     );
   }

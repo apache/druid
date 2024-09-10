@@ -30,18 +30,19 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -57,8 +58,9 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private StorageAdapter adapter;
+  private CursorFactory cursorFactory;
   private TimeBoundaryInspector timeBoundaryInspector;
+  private Interval interval;
 
   @Before
   public void setup() throws IOException
@@ -152,21 +154,22 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                     .tmpDir(temporaryFolder.newFolder());
 
     final QueryableIndex index = bob.buildMMappedIndex();
-    adapter = new QueryableIndexStorageAdapter(index);
+    interval = index.getDataInterval();
+    cursorFactory = new QueryableIndexCursorFactory(index);
     timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
   }
 
   @Test
   public void testGranularizeFullScan()
   {
-    try (CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       CursorGranularizer granularizer = CursorGranularizer.create(
           cursor,
           timeBoundaryInspector,
           Order.ASCENDING,
           Granularities.HOUR,
-          adapter.getInterval()
+          interval
       );
 
       final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
@@ -212,14 +215,14 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
     final CursorBuildSpec descending = CursorBuildSpec.builder()
                                                       .setPreferredOrdering(Cursors.descendingTimeOrder())
                                                       .build();
-    try (CursorHolder cursorHolder = adapter.makeCursorHolder(descending)) {
+    try (CursorHolder cursorHolder = cursorFactory.makeCursorHolder(descending)) {
       final Cursor cursor = cursorHolder.asCursor();
       CursorGranularizer granularizer = CursorGranularizer.create(
           cursor,
           timeBoundaryInspector,
           Order.DESCENDING,
           Granularities.HOUR,
-          adapter.getInterval()
+          interval
       );
 
       final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
