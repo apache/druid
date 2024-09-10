@@ -58,7 +58,6 @@ import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
@@ -278,8 +277,11 @@ public class ServerManager implements QuerySegmentWalker
       final AtomicLong cpuTimeAccumulator
   )
   {
-
-
+    // Short-circuit when the index comes from a tombstone (it has no data by definition),
+    // check for null also since no all segments (higher level ones) will have QueryableIndex...
+    if (segment.isTombstone()) {
+      return new NoopQueryRunner<>();
+    }
 
     final SpecificSegmentSpec segmentSpec = new SpecificSegmentSpec(segmentDescriptor);
     final SegmentId segmentId = segment.getId();
@@ -291,12 +293,6 @@ public class ServerManager implements QuerySegmentWalker
       return new ReportTimelineMissingSegmentQueryRunner<>(segmentDescriptor);
     }
 
-    StorageAdapter storageAdapter = segment.asStorageAdapter();
-    // Short-circuit when the index comes from a tombstone (it has no data by definition),
-    // check for null also since no all segments (higher level ones) will have QueryableIndex...
-    if (storageAdapter.isFromTombstone()) {
-      return new NoopQueryRunner<>();
-    }
     String segmentIdString = segmentId.toString();
 
     MetricsEmittingQueryRunner<T> metricsEmittingQueryRunnerInner = new MetricsEmittingQueryRunner<>(

@@ -33,13 +33,13 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
-import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Before;
@@ -133,8 +133,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
     final Iterable<Result<TopNResultValue>> results =
         engine.query(
             query,
-            new IncrementalIndexStorageAdapter(index),
-            new IncrementalIndexTimeBoundaryInspector(index),
+            new IncrementalIndexSegment(index, SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)),
             null
         ).toList();
 

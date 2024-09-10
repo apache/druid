@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -40,7 +39,8 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorFactory;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -69,16 +69,16 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.RowBasedStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -91,8 +91,8 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -404,7 +404,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   private final List<InputRow> rows;
 
   protected final IndexBuilder indexBuilder;
-  protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
+  protected final Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher;
   protected final boolean cnf;
   protected final boolean optimize;
   protected final String testName;
@@ -414,22 +414,22 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   // In other words, numeric null values will be treated as nulls instead of the default value
   protected final boolean canTestNumericNullsAsDefaultValues;
 
-  protected StorageAdapter adapter;
+  protected CursorFactory cursorFactory;
 
   protected VirtualColumns virtualColumns;
 
   // JUnit creates a new test instance for every test method call.
   // For filter tests, the test setup creates a segment.
-  // Creating a new segment for every test method call is pretty slow, so cache the StorageAdapters.
+  // Creating a new segment for every test method call is pretty slow, so cache the CursorFactory.
   // Each thread gets its own map.
-  private static ThreadLocal<Map<String, Map<String, AdapterStuff>>> adapterCache =
+  private static ThreadLocal<Map<String, Map<String, CursorStuff>>> adapterCache =
       ThreadLocal.withInitial(HashMap::new);
 
   public BaseFilterTest(
       String testName,
       List<InputRow> rows,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )
@@ -449,18 +449,18 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   {
     BuiltInTypesModule.registerHandlersAndSerde();
     String className = getClass().getName();
-    Map<String, AdapterStuff> adaptersForClass = adapterCache.get().get(className);
+    Map<String, CursorStuff> adaptersForClass = adapterCache.get().get(className);
     if (adaptersForClass == null) {
       adaptersForClass = new HashMap<>();
       adapterCache.get().put(className, adaptersForClass);
     }
 
-    AdapterStuff adapterStuff = adaptersForClass.get(testName);
-    if (adapterStuff == null) {
-      Pair<StorageAdapter, Closeable> pair = finisher.apply(
+    CursorStuff cursorStuff = adaptersForClass.get(testName);
+    if (cursorStuff == null) {
+      Pair<CursorFactory, Closeable> pair = finisher.apply(
           indexBuilder.tmpDir(temporaryFolder.newFolder()).rows(rows)
       );
-      adapterStuff = new AdapterStuff(
+      cursorStuff = new CursorStuff(
           pair.lhs,
           VirtualColumns.create(
               Arrays.stream(VIRTUAL_COLUMNS.getVirtualColumns())
@@ -469,19 +469,19 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           ),
           pair.rhs
       );
-      adaptersForClass.put(testName, adapterStuff);
+      adaptersForClass.put(testName, cursorStuff);
     }
 
-    this.adapter = adapterStuff.adapter;
-    this.virtualColumns = adapterStuff.virtualColumns;
+    this.cursorFactory = cursorStuff.cursorFactory;
+    this.virtualColumns = cursorStuff.virtualColumns;
   }
 
   public static void tearDown(String className) throws Exception
   {
-    Map<String, AdapterStuff> adaptersForClass = adapterCache.get().get(className);
+    Map<String, CursorStuff> adaptersForClass = adapterCache.get().get(className);
 
     if (adaptersForClass != null) {
-      for (Map.Entry<String, AdapterStuff> entry : adaptersForClass.entrySet()) {
+      for (Map.Entry<String, CursorStuff> entry : adaptersForClass.entrySet()) {
         entry.getValue().closeable.close();
       }
       adapterCache.get().put(className, null);
@@ -508,13 +508,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         "off-heap memory segment write-out medium", OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
 
-    final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers =
-        ImmutableMap.<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>>builder()
+    final Map<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>> finishers =
+        ImmutableMap.<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>>builder()
                     .put(
                         "incremental",
                         input -> {
                           final IncrementalIndex index = input.buildIncrementalIndex();
-                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                          return Pair.of(new IncrementalIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -542,7 +542,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   )
                           );
                           final IncrementalIndex index = input.buildIncrementalIndex();
-                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                          return Pair.of(new IncrementalIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -570,7 +570,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   )
                           );
                           final QueryableIndex index = input.buildMMappedIndex();
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -605,21 +605,21 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   .intermediaryPersistSize(3)
                                   .buildMMappedIndex();
 
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
                         "mmapped",
                         input -> {
                           final QueryableIndex index = input.buildMMappedIndex();
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
                         "mmappedMerged",
                         input -> {
                           final QueryableIndex index = input.buildMMappedMergedIndex();
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -640,7 +640,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                           Assert.assertTrue(NullHandling.replaceWithDefault());
                           try {
                             final QueryableIndex index = input.getIndexIO().loadIndex(file);
-                            return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                            return Pair.of(new QueryableIndexCursorFactory(index), index);
                           }
                           catch (IOException e) {
                             throw new RuntimeException(e);
@@ -649,11 +649,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                     )
                     .put(
                         "rowBasedWithoutTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asCursorFactory(), () -> {})
                     )
                     .put(
                         "rowBasedWithTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asCursorFactory(), () -> {})
                     )
                     .put("frame (row-based)", input -> {
                       // remove variant type columns from row frames since they aren't currently supported
@@ -676,7 +676,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
-                      return Pair.of(segment.asStorageAdapter(), segment);
+                      return Pair.of(segment.asCursorFactory(), segment);
                     })
                     .put("frame (columnar)", input -> {
                       // remove array type columns from columnar frames since they aren't currently supported
@@ -699,7 +699,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
-                      return Pair.of(segment.asStorageAdapter(), segment);
+                      return Pair.of(segment.asCursorFactory(), segment);
                     })
                     .build();
 
@@ -711,7 +711,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
-        for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry :
+        for (Map.Entry<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>> finisherEntry :
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
@@ -815,7 +815,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   private VectorCursor makeVectorCursor(final Filter filter)
   {
     final CursorBuildSpec buildSpec = makeVectorCursorBuildSpec(filter);
-    return adapter.makeCursorHolder(buildSpec).asVectorCursor();
+    return cursorFactory.makeCursorHolder(buildSpec).asVectorCursor();
   }
 
   /**
@@ -823,7 +823,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
    */
   private List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(makeFilter(filter)))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(makeFilter(filter)))) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -843,7 +843,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   private long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(null))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(null))) {
       final Cursor cursor = cursorHolder.asCursor();
       Aggregator agg = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
@@ -861,13 +861,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   private long selectCountUsingVectorizedFilteredAggregator(final DimFilter dimFilter)
   {
     Preconditions.checkState(
-        makeFilter(dimFilter).canVectorizeMatcher(adapter),
+        makeFilter(dimFilter).canVectorizeMatcher(cursorFactory),
         "Cannot vectorize filter: %s",
         dimFilter
     );
 
 
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(null))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(null))) {
       final VectorCursor cursor = cursorHolder.asVectorCursor();
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
@@ -934,7 +934,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(postFilteringFilter))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(postFilteringFilter))) {
       final Cursor cursor = cursorHolder.asCursor();
       final DimensionSelector selector = cursor
           .getColumnSelectorFactory()
@@ -994,7 +994,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(postFilteringFilter))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(postFilteringFilter))) {
       final VectorCursor cursor = cursorHolder.asVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
@@ -1019,7 +1019,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
       final VectorCursor cursor = cursorHolder.asVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
@@ -1046,7 +1046,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
       final VectorCursor cursor = cursorHolder.asVectorCursor();
 
       final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
@@ -1102,10 +1102,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     // Generate rowSignature
-    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).toColumnType());
-    }
 
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
@@ -1114,7 +1110,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             RowBasedColumnSelectorFactory.create(
                 RowAdapters.standardRow(),
                 rowSupplier::get,
-                rowSignatureBuilder.build(),
+                cursorFactory.getRowSignature(),
                 false,
                 false
             )
@@ -1136,12 +1132,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     // IncrementalIndex, RowBasedSegment cannot vectorize.
-    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
-    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
+    // ColumnarFrameCursorFactory *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexCursorFactory due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter)
-        && !(adapter instanceof RowBasedStorageAdapter)
-        && !(adapter instanceof FrameStorageAdapter);
+        !(cursorFactory instanceof IncrementalIndexCursorFactory)
+        && !(cursorFactory instanceof RowBasedCursorFactory)
+        && !(cursorFactory instanceof RowFrameCursorFactory)
+        && !(cursorFactory instanceof ColumnarFrameCursorFactory);
 
     assertFilterMatches(filter, expectedRows, testVectorized);
     // test double inverted
@@ -1156,12 +1153,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     // IncrementalIndex, RowBasedSegment cannot vectorize.
-    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
-    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
+    // ColumnarFrameCursorHolderFactory *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexCursorFactory due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter)
-        && !(adapter instanceof RowBasedStorageAdapter)
-        && !(adapter instanceof FrameStorageAdapter);
+        !(cursorFactory instanceof IncrementalIndexCursorFactory)
+        && !(cursorFactory instanceof RowBasedCursorFactory)
+        && !(cursorFactory instanceof RowFrameCursorFactory)
+        && !(cursorFactory instanceof ColumnarFrameCursorFactory);
 
     if (isAutoSchema()) {
       Throwable t = Assert.assertThrows(
@@ -1246,19 +1244,19 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     }
   }
 
-  private static class AdapterStuff
+  private static class CursorStuff
   {
-    private final StorageAdapter adapter;
+    private final CursorFactory cursorFactory;
     private final VirtualColumns virtualColumns;
     private final Closeable closeable;
 
-    private AdapterStuff(
-        StorageAdapter adapter,
+    private CursorStuff(
+        CursorFactory cursorFactory,
         VirtualColumns virtualColumns,
         Closeable closeable
     )
     {
-      this.adapter = adapter;
+      this.cursorFactory = cursorFactory;
       this.virtualColumns = virtualColumns;
       this.closeable = closeable;
     }
