@@ -7737,7 +7737,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_empty_and_non_empty_over_wikipedia_query_1()
   {
-    sqlNativeIncompatible();
     windowQueryTest();
   }
 
