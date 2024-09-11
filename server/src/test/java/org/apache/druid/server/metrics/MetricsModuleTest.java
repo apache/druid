@@ -218,7 +218,7 @@ public class MetricsModuleTest
   public void testGetOshiSysMonitorViaInjectorBroker()
   {
     Properties properties = new Properties();
-    properties.setProperty("druid.monitoring.oshisys.categories", "[\"mem\"]");
+    properties.setProperty("druid.monitoring.sys.categories", "[\"mem\"]");
     final Injector injector = createInjector(properties, ImmutableSet.of(NodeRole.BROKER));
     final OshiSysMonitor sysMonitor = injector.getInstance(OshiSysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);

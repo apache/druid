@@ -29,7 +29,7 @@ import java.util.Set;
 
 public class OshiSysMonitorConfig
 {
-  public static final String PREFIX = "druid.monitoring.oshisys";
+  public static final String PREFIX = "druid.monitoring.sys";
 
   @JsonProperty("categories")
   @NotNull
