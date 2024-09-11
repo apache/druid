@@ -1064,7 +1064,7 @@ Creates an HLL sketch on a column containing HLL sketches or a regular column. T
 
 <details><summary>Example</summary>
 
-The following example creates an HLL sketch on the `Tail_number` column from the `flight-carriers` dataset, grouping by `originState` and `DestState`.
+The following example creates an HLL sketch on the `Tail_number` column from the `flight-carriers` dataset, grouping by `OriginState` and `DestState`.
 
 ```sql
 SELECT
@@ -1269,7 +1269,7 @@ Returns a number for each output row of a groupBy query, indicating whether the 
 
 ## HLL_SKETCH_ESTIMATE
 
-Returns the distinct count estimate from an HLL sketch. The `expr` argument must return an HLL sketch. The optional `round` boolean argument rounds the estimate if set to true, with a default of false.
+Returns a distinct count estimate from an HLL sketch. To round the distinct count estimate, set `round` to true. Otherwise, `round` defaults to false.
 
 * **Syntax:** `HLL_SKETCH_ESTIMATE(expr, [round])`
 * **Function type:** Scalar, sketch
@@ -1281,7 +1281,7 @@ The following example estimates the number of unique tail numbers in the `flight
 
 ```sql
 SELECT
-  HLL_SKETCH_ESTIMATE(DS_HLL("Tail_Number"), False) AS "estimate"
+  HLL_SKETCH_ESTIMATE(DS_HLL("Tail_Number")) AS "estimate"
 FROM "flight-carriers"
 ```
 
@@ -1379,7 +1379,7 @@ Returns the following:
 
 ## HLL_SKETCH_UNION
 
-Returns a union of HLL sketches, where each input expression must return an HLL sketch. The [HLL sketch documentation](../development//extensions-core//datasketches-hll.md) describes the optional `lgK` and `tgtHllType` arguments.
+Returns a union of HLL sketches, where each input expression is an HLL sketch. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
 * **Syntax:** `HLL_SKETCH_UNION([lgK, tgtHllType], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
