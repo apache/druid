@@ -158,6 +158,10 @@ public class DruidQueryGenerator
     {
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
+      /**
+       * Workaround flag mostly relating to that under DruidJoinQueryRel passes `false` to underlying
+       * queries - which may not be the desired behavior; but we can't change that without breaking.
+       */
       private boolean forceFinalize;
 
       public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, boolean forceFinalize)
