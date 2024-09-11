@@ -207,12 +207,41 @@ public class ExtensionsLoader
    *
    * @return a URLClassLoader that loads all the jars on which the extension is dependent
    */
-  public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
+  public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst, File[] loadedExtensions)
   {
     return loaders.computeIfAbsent(
         Pair.of(extension, useExtensionClassloaderFirst),
-        k -> makeClassLoaderForExtension(k.lhs, k.rhs)
+        k -> makeClassLoaderWithExtensionDependencies(k.lhs, k.rhs, loadedExtensions)
     );
+  }
+
+  private URLClassLoader makeClassLoaderWithExtensionDependencies(File extension, boolean useExtensionClassloaderFirst, File[] loadedExtensions) {
+    URLClassLoader classLoader = makeClassLoaderForExtension(extension, useExtensionClassloaderFirst);
+    Optional<ExtensionDependencies> extensionDependencies = getExtensionDependencies(extension);
+    List<String> extensionDependencyNames = extensionDependencies.isPresent()
+        ? extensionDependencies.get().getDependsOnDruidExtensions()
+        : ImmutableList.of();
+
+    List<ClassLoader> extensionDependencyClassLoaders = new ArrayList<>();
+    for (String extensionDependencyName: extensionDependencyNames) {
+      Optional<File> extensionDependencyFile = Arrays.stream(loadedExtensions)
+          .filter(file -> file.getName().equals(extensionDependencyName))
+          .findAny();
+      if (!extensionDependencyFile.isPresent()) {
+        throw new RE(
+            StringUtils.format(
+                "%s depends on %s which is not a valid extension or not loaded.",
+                extension.getName(),
+                extensionDependencyName
+            )
+        );
+      }
+      extensionDependencyClassLoaders.add(
+          getClassLoaderForExtension(extensionDependencyFile.get(), useExtensionClassloaderFirst, loadedExtensions)
+      );
+    }
+    ((StandardClassLoader) classLoader).setExtensionDependencyClassLoaders(extensionDependencyClassLoaders);
+    return classLoader;
   }
 
   private static URLClassLoader makeClassLoaderForExtension(
@@ -278,6 +307,35 @@ public class ExtensionsLoader
     }
   }
 
+  private Optional<ExtensionDependencies> getExtensionDependencies(File extension)
+  {
+    final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
+    for (File extensionFile : jars) {
+      if (extensionFile.getName().startsWith("druid")) {
+        try (JarFile jarFile = new JarFile(extensionFile.getPath())) {
+          Enumeration<JarEntry> entries = jarFile.entries();
+
+          while (entries.hasMoreElements()) {
+            JarEntry entry = entries.nextElement();
+            String entryName = entry.getName();
+
+            if (!entry.isDirectory() && EXTENSION_DEPENDENCIES_JSON.equals(entryName)) {
+              log.info("Found extension dependency entry in druid jar %s", extensionFile.getPath());
+              return Optional.of(objectMapper.readValue(
+                  jarFile.getInputStream(entry),
+                  ExtensionDependencies.class
+              ));
+            }
+          }
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+    return Optional.empty();
+  }
+
   private class ServiceLoadingFromExtensions<T>
   {
     private final Class<T> serviceClass;
@@ -302,45 +360,15 @@ public class ExtensionsLoader
 
     private void addAllFromFileSystem()
     {
-      Map<String, URLClassLoader> extensionClassLoaderMap = new HashMap<>();
-
-      for (File extension : getExtensionFilesToLoad()) {
-        extensionClassLoaderMap.put(
-            extension.getName(),
-            getClassLoaderForExtension(
-                extension,
-                extensionsConfig.isUseExtensionClassloaderFirst()
-            )
-        );
-      }
-
-      for (File extension : getExtensionFilesToLoad()) {
+      File[] extensionFilesToLoad = getExtensionFilesToLoad();
+      for (File extension : extensionFilesToLoad) {
         log.debug("Loading extension [%s] for class [%s]", extension.getName(), serviceClass);
         try {
           final URLClassLoader loader = getClassLoaderForExtension(
               extension,
-              extensionsConfig.isUseExtensionClassloaderFirst()
+              extensionsConfig.isUseExtensionClassloaderFirst(),
+              extensionFilesToLoad
           );
-          Optional<ExtensionDependencies> extensionDependencies = getExtensionDependencies(loader);
-          List<String> extensionDruidExtensionDependencies = extensionDependencies.isPresent()
-              ? extensionDependencies.get().getDependsOnDruidExtensions()
-              : ImmutableList.of();
-
-          List<ClassLoader> chainedClassLoadersForExtension = new ArrayList<>();
-          for (String druidExtensionDependency : extensionDruidExtensionDependencies) {
-            if (!extensionClassLoaderMap.containsKey(druidExtensionDependency)) {
-              throw new RE(
-                  StringUtils.format(
-                      "%s depends on %s which is not a valid extension or not loaded.",
-                      extension.getName(),
-                      druidExtensionDependency
-                  )
-              );
-            }
-            chainedClassLoadersForExtension.add(extensionClassLoaderMap.get(druidExtensionDependency));
-          }
-          ((StandardClassLoader) loader).setExtensionDependencyClassLoaders(chainedClassLoadersForExtension);
-
           log.info(
               "Loading extension [%s], jars: %s",
               extension.getName(),
@@ -376,35 +404,6 @@ public class ExtensionsLoader
         implClassNamesToLoad.add(serviceImplName);
         implsToLoad.add(serviceImpl);
       }
-    }
-
-    private Optional<ExtensionDependencies> getExtensionDependencies(URLClassLoader loader)
-    {
-      for (URL url : loader.getURLs()) {
-        File jarFileLocation = new File(url.getPath());
-        if (jarFileLocation.getName().startsWith("druid")) {
-          try (JarFile jarFile = new JarFile(url.getPath())) {
-            Enumeration<JarEntry> entries = jarFile.entries();
-
-            while (entries.hasMoreElements()) {
-              JarEntry entry = entries.nextElement();
-              String entryName = entry.getName();
-
-              if (!entry.isDirectory() && EXTENSION_DEPENDENCIES_JSON.equals(entryName)) {
-                log.info("Found extension dependency entry in druid jar %s", url.getPath());
-                return Optional.of(objectMapper.readValue(
-                    jarFile.getInputStream(entry),
-                    ExtensionDependencies.class
-                ));
-              }
-            }
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      }
-      return Optional.empty();
     }
   }
 }

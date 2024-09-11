@@ -154,8 +154,9 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     }
 
     final List<URL> extensionURLs = new ArrayList<>();
-    for (final File extension : EXTENSIONS_LOADER.getExtensionFilesToLoad()) {
-      final URLClassLoader extensionLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(extension, false);
+    final File[] extensionFiles = EXTENSIONS_LOADER.getExtensionFilesToLoad();
+    for (final File extension : extensionFiles) {
+      final URLClassLoader extensionLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(extension, false, extensionFiles);
       extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
     }
 
@@ -164,12 +165,12 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     final List<URL> localClassLoaderURLs = new ArrayList<>(jobURLs);
 
     // hadoop dependencies come before druid classes because some extensions depend on them
-    for (final File hadoopDependency :
-        Initialization.getHadoopDependencyFilesToLoad(
-            finalHadoopDependencyCoordinates,
-            EXTENSIONS_LOADER.config()
-        )) {
-      final URLClassLoader hadoopLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(hadoopDependency, false);
+    final File[] hadoopDependencyFiles = Initialization.getHadoopDependencyFilesToLoad(
+        finalHadoopDependencyCoordinates,
+        EXTENSIONS_LOADER.config()
+    );
+    for (final File hadoopDependency : hadoopDependencyFiles) {
+      final URLClassLoader hadoopLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(hadoopDependency, false, hadoopDependencyFiles);
       localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }
 

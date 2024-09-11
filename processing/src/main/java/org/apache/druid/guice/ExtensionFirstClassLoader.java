@@ -99,8 +99,8 @@ public class ExtensionFirstClassLoader extends StandardClassLoader
   {
     final List<URL> urls = new ArrayList<>();
     Iterators.addAll(urls, Iterators.forEnumeration(super.getResources(name)));
-    Iterators.addAll(urls, Iterators.forEnumeration(druidLoader.getResources(name)));
     addExtensionResources(name, urls);
+    Iterators.addAll(urls, Iterators.forEnumeration(druidLoader.getResources(name)));
     return Iterators.asEnumeration(urls.iterator());
   }
 }
