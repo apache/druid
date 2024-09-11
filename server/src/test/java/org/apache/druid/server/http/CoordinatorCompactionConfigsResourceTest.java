@@ -223,16 +223,16 @@ public class CoordinatorCompactionConfigsResourceTest
         .build();
 
     response = resource.addOrUpdateDatasourceCompactionConfig(updatedDatasourceConfig, mockHttpServletRequest);
-    verifyStatus(Response.Status.OK, response);
+    verifyStatus(Response.Status.BAD_REQUEST, response);
 
     final DataSourceCompactionConfig latestDatasourceConfig
         = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), DataSourceCompactionConfig.class);
-    Assert.assertEquals(updatedDatasourceConfig, latestDatasourceConfig);
+    Assert.assertEquals(originalDatasourceConfig, latestDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
     Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
-    Assert.assertEquals(updatedDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
+    Assert.assertEquals(originalDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
 
   @Test
@@ -299,7 +299,7 @@ public class CoordinatorCompactionConfigsResourceTest
     resource.addOrUpdateDatasourceCompactionConfig(configV2, mockHttpServletRequest);
 
     final DataSourceCompactionConfig configV3 = builder
-        .withEngine(CompactionEngine.MSQ)
+        .withEngine(CompactionEngine.NATIVE)
         .withSkipOffsetFromLatest(Period.hours(1))
         .build();
     resource.addOrUpdateDatasourceCompactionConfig(configV3, mockHttpServletRequest);
@@ -337,36 +337,10 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.BAD_REQUEST, response);
     Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
     Assert.assertEquals(
-        "Compaction config not supported. Reason[MSQ: Context maxNumTasks[1]"
-        + " must be at least 2 (1 controller + 1 worker)].",
+        "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
   }
-
-  @Test
-  public void testUpdateEngineToMSQWithInvalidDatasourceConfigThrowsBadRequest()
-  {
-    final DataSourceCompactionConfig datasourceConfig = DataSourceCompactionConfig
-        .builder()
-        .forDataSource(TestDataSource.WIKI)
-        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
-        .build();
-    Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
-    verifyStatus(Response.Status.OK, response);
-
-    response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(null, null, null, null),
-        mockHttpServletRequest
-    );
-    verifyStatus(Response.Status.BAD_REQUEST, response);
-    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
-    Assert.assertEquals(
-        "Cannot update engine to [msq] as it does not support compaction config of DataSource[wiki]."
-        + " Reason[MSQ: Context maxNumTasks[1] must be at least 2 (1 controller + 1 worker)].",
-        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
-    );
-  }
-
   @SuppressWarnings("unchecked")
   private <T> T verifyAndGetPayload(Response response, Class<T> type)
   {

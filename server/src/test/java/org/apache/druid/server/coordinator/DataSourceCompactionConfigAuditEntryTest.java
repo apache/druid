@@ -56,7 +56,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithDifferentClusterConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, false, null),
+        new ClusterCompactionConfig(0.2, 9, false, null),
         DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
@@ -65,7 +65,7 @@ public class DataSourceCompactionConfigAuditEntryTest
     Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, null),
+        new ClusterCompactionConfig(0.1, 10, true, null),
         DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
@@ -79,7 +79,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 9, true, null),
-        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
