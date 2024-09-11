@@ -46,6 +46,8 @@ public class HttpEntity extends RetryingInputEntity
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
+  private final Map<String, String> additionalHeaders;
+
   HttpEntity(
       URI uri,
       @Nullable String httpAuthenticationUsername,
@@ -56,6 +58,7 @@ public class HttpEntity extends RetryingInputEntity
     this.uri = uri;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+    this.additionalHeaders = additionalHeaders;
   }
 
   @Override
@@ -67,7 +70,7 @@ public class HttpEntity extends RetryingInputEntity
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
-    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset);
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset, additionalHeaders);
   }
 
   @Override
@@ -82,10 +85,15 @@ public class HttpEntity extends RetryingInputEntity
     return t -> t instanceof IOException;
   }
 
-  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset)
+  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset, final Map<String, String> additionalHeaders)
       throws IOException
   {
     final URLConnection urlConnection = object.toURL().openConnection();
+    if (additionalHeaders.size() > 0) {
+      for (Map.Entry<String, String> entry : additionalHeaders.entrySet()) {
+        urlConnection.addRequestProperty(entry.getKey(), entry.getValue());
+      }
+    }
     if (!Strings.isNullOrEmpty(userName) && passwordProvider != null) {
       String userPass = userName + ":" + passwordProvider.getPassword();
       String basicAuthString = "Basic " + Base64.getEncoder().encodeToString(StringUtils.toUtf8(userPass));

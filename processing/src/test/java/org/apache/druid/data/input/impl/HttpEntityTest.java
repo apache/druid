@@ -42,6 +42,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 public class HttpEntityTest
 {
@@ -96,8 +97,8 @@ public class HttpEntityTest
       server.start();
 
       URI url = new URI("http://" + server.getAddress().getHostName() + ":" + server.getAddress().getPort() + "/test");
-      inputStream = HttpEntity.openInputStream(url, "", null, 0);
-      inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5);
+      inputStream = HttpEntity.openInputStream(url, "", null, 0, Collections.emptyMap());
+      inputStreamPartial = HttpEntity.openInputStream(url, "", null, 5, Collections.emptyMap());
       inputStream.skip(5);
       Assert.assertTrue(IOUtils.contentEquals(inputStream, inputStreamPartial));
     }
@@ -119,7 +120,7 @@ public class HttpEntityTest
     long offset = 15;
     String contentRange = StringUtils.format("bytes %d-%d/%d", offset, 1000, 1000);
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(contentRange);
-    HttpEntity.openInputStream(uri, "", null, offset);
+    HttpEntity.openInputStream(uri, "", null, offset, Collections.emptyMap());
     Mockito.verify(inputStreamMock, Mockito.times(0)).skip(offset);
   }
 
@@ -128,7 +129,7 @@ public class HttpEntityTest
   {
     long offset = 15;
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn(null);
-    HttpEntity.openInputStream(uri, "", null, offset);
+    HttpEntity.openInputStream(uri, "", null, offset, Collections.emptyMap());
     Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
   }
 
@@ -137,7 +138,7 @@ public class HttpEntityTest
   {
     long offset = 15;
     Mockito.when(urlConnection.getHeaderField(HttpHeaders.CONTENT_RANGE)).thenReturn("token 2-12/12");
-    HttpEntity.openInputStream(uri, "", null, offset);
+    HttpEntity.openInputStream(uri, "", null, offset, Collections.emptyMap());
     Mockito.verify(inputStreamMock, Mockito.times(1)).skip(offset);
   }
 }
