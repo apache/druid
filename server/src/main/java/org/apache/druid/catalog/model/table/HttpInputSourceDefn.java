@@ -115,7 +115,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
   protected static final String URIS_FIELD = "uris";
   protected static final String PASSWORD_FIELD = "httpAuthenticationPassword";
   protected static final String USERNAME_FIELD = "httpAuthenticationUsername";
-  protected static final String HEADERS_FIELD = "additionalHeaders";
+  protected static final String HEADERS_FIELD = "requestHeaders";
 
   @Override
   public String typeValue()
@@ -306,11 +306,11 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
    */
   private void convertHeaderArg(Map<String, Object> jsonMap, Map<String, Object> args)
   {
-    String additionalHeaders = CatalogUtils.getString(args, HEADERS);
+    String requestHeaders = CatalogUtils.getString(args, HEADERS);
     Map<String, String> headersMap;
-    if (additionalHeaders != null) {
+    if (requestHeaders != null) {
       try {
-        headersMap = DefaultObjectMapper.INSTANCE.readValue(additionalHeaders, new TypeReference<Map<String, String>>(){});
+        headersMap = DefaultObjectMapper.INSTANCE.readValue(requestHeaders, new TypeReference<Map<String, String>>(){});
       }
       catch (JsonProcessingException e) {
         throw new ISE("Failed read map from headers json");

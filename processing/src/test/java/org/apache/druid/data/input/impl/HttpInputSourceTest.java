@@ -147,7 +147,7 @@ public class HttpInputSourceTest
 
     Assert.assertEquals("https://example.com/foo", inputSource.getSystemFieldValue(entity, SystemField.URI));
     Assert.assertEquals("/foo", inputSource.getSystemFieldValue(entity, SystemField.PATH));
-    Assert.assertEquals(inputSource.getAdditionalHeaders(), Collections.emptyMap());
+    Assert.assertEquals(inputSource.getRequestHeaders(), Collections.emptyMap());
   }
 
   @Test
@@ -165,7 +165,7 @@ public class HttpInputSourceTest
         ImmutableMap.of("r-Cookie", "test", "Content-Type", "application/json"),
         httpInputSourceConfig
     );
-    Set<String> expectedSet = inputSource.getAdditionalHeaders()
+    Set<String> expectedSet = inputSource.getRequestHeaders()
                                          .keySet()
                                          .stream()
                                          .map(StringUtils::toLowerCase)

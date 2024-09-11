@@ -46,19 +46,19 @@ public class HttpEntity extends RetryingInputEntity
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
 
-  private final Map<String, String> additionalHeaders;
+  private final Map<String, String> requestHeaders;
 
   HttpEntity(
       URI uri,
       @Nullable String httpAuthenticationUsername,
       @Nullable PasswordProvider httpAuthenticationPasswordProvider,
-      @Nullable Map<String, String> additionalHeaders
+      @Nullable Map<String, String> requestHeaders
   )
   {
     this.uri = uri;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
-    this.additionalHeaders = additionalHeaders;
+    this.requestHeaders = requestHeaders;
   }
 
   @Override
@@ -70,7 +70,7 @@ public class HttpEntity extends RetryingInputEntity
   @Override
   protected InputStream readFrom(long offset) throws IOException
   {
-    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset, additionalHeaders);
+    return openInputStream(uri, httpAuthenticationUsername, httpAuthenticationPasswordProvider, offset, requestHeaders);
   }
 
   @Override
@@ -85,12 +85,12 @@ public class HttpEntity extends RetryingInputEntity
     return t -> t instanceof IOException;
   }
 
-  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset, final Map<String, String> additionalHeaders)
+  public static InputStream openInputStream(URI object, String userName, PasswordProvider passwordProvider, long offset, final Map<String, String> requestHeaders)
       throws IOException
   {
     final URLConnection urlConnection = object.toURL().openConnection();
-    if (additionalHeaders.size() > 0) {
-      for (Map.Entry<String, String> entry : additionalHeaders.entrySet()) {
+    if (requestHeaders.size() > 0) {
+      for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
         urlConnection.addRequestProperty(entry.getKey(), entry.getValue());
       }
     }

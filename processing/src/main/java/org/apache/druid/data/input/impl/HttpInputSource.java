@@ -74,7 +74,7 @@ public class HttpInputSource
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
       @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields,
-      @JsonProperty("additionalHeaders") @Nullable Map<String, String> headersMap,
+      @JsonProperty("requestHeaders") @Nullable Map<String, String> headersMap,
       @JacksonInject HttpInputSourceConfig config
   )
   {
@@ -150,9 +150,9 @@ public class HttpInputSource
   }
 
   @Nullable
-  @JsonProperty("additionalHeaders")
+  @JsonProperty("requestHeaders")
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Map<String, String> getAdditionalHeaders()
+  public Map<String, String> getRequestHeaders()
   {
     return headersMap;
   }
@@ -265,7 +265,7 @@ public class HttpInputSource
            ", httpAuthenticationUsername=" + httpAuthenticationUsername +
            ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
            (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
-           ", additionalHeaders = " + headersMap +
+           ", requestHeaders = " + headersMap +
            "}";
   }
 }
