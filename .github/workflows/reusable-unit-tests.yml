@@ -121,7 +121,7 @@ jobs:
         if: ${{ failure() }}
         id: check_for_heap_dump
         run: |
-          if ls ${GITHUB_WORKSPACE}/*.hprof 1> /dev/null 2>&1; then
+          if ls ${GITHUB_WORKSPACE}/target/*.hprof 1> /dev/null 2>&1; then
             echo "found_hprof=true" >> "$GITHUB_ENV"
           else
             echo "found_hprof=false" >> "$GITHUB_ENV"
@@ -130,7 +130,7 @@ jobs:
       - name: Collect tarball hprof dumps if they exist on failure
         if: ${{ failure() && env.found_hprof == 'true' }}
         run: |
-          tar cvzf ${RUNNER_TEMP}/hprof-dumps.tgz ${GITHUB_WORKSPACE}/*.hprof
+          tar cvzf ${RUNNER_TEMP}/hprof-dumps.tgz ${GITHUB_WORKSPACE}/target/*.hprof
 
       - name: Upload hprof dumps to GitHub if they exist on failure
         if: ${{ failure() && env.found_hprof == 'true' }}
