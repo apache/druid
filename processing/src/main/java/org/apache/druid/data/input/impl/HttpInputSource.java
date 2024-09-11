@@ -265,7 +265,7 @@ public class HttpInputSource
            ", httpAuthenticationUsername=" + httpAuthenticationUsername +
            ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
            (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
-           ", additionalHeaders = " + headersMap.toString() +
+           ", additionalHeaders = " + headersMap +
            "}";
   }
 }
