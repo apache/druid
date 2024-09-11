@@ -175,8 +175,6 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
-   * <p> Deprecated, see {@link #getBroadcastDatasourceLoadingSpec} instead. </p>
-   *
    * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
    * that may be needed by queries. Tasks supporting queries are also allocated processing buffers, processing threads
    * and merge buffers. Those which do not should not assume that these resources are present and must explicitly allocate
@@ -186,7 +184,6 @@ public interface Task
    * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
    * even though it is not directly queryable via HTTP.
    */
-  @Deprecated
   boolean supportsQueries();
 
   /**
