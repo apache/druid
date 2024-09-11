@@ -375,8 +375,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                                                .build();
               } else {
                 // mark it for refresh, however, this case shouldn't arise by design
-                markSegmentAsNeedRefresh(segmentId);
-                log.debug("SchemaMetadata for segmentId[%s] is absent.", segmentId);
+                log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
+
+                if (availableSegmentMetadata.getSegment().isTombstone()) {
+                  log.debug("Skipping refresh for tombstone segment.");
+                } else {
+                  markSegmentAsNeedRefresh(segmentId);
+                }
                 return availableSegmentMetadata;
               }
             }
@@ -404,8 +409,13 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                                        .build();
     } else {
       // mark it for refresh, however, this case shouldn't arise by design
-      markSegmentAsNeedRefresh(segmentId);
       log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
+
+      if (availableSegmentMetadata.getSegment().isTombstone()) {
+        log.debug("Skipping refresh for tombstone segment.");
+      } else {
+        markSegmentAsNeedRefresh(segmentId);
+      }
     }
     return availableSegmentMetadata;
   }
@@ -531,7 +541,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
-  void logSegmentsToRefresh(String dataSource, Iterable<SegmentId> ids)
+  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
   {
     log.info("Logging a sample of 5 segments [%s] to be refreshed for datasource [%s]", Iterables.limit(ids, 5), dataSource);
   }
@@ -686,15 +696,21 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
     final Map<String, ColumnType> columnTypes = new LinkedHashMap<>();
 
     if (segmentsMap != null && !segmentsMap.isEmpty()) {
-      for (SegmentId segmentId : segmentsMap.keySet()) {
+      for (Map.Entry<SegmentId, AvailableSegmentMetadata> entry : segmentsMap.entrySet()) {
+        SegmentId segmentId = entry.getKey();
         Optional<SchemaPayloadPlus> optionalSchema = segmentSchemaCache.getSchemaForSegment(segmentId);
         if (optionalSchema.isPresent()) {
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
           mergeRowSignature(columnTypes, rowSignature);
         } else {
           // mark it for refresh, however, this case shouldn't arise by design
-          markSegmentAsNeedRefresh(segmentId);
           log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
+
+          if (entry.getValue().getSegment().isTombstone()) {
+            log.debug("Skipping refresh for tombstone segment.");
+          } else {
+            markSegmentAsNeedRefresh(segmentId);
+          }
         }
       }
     } else {

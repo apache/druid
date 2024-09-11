@@ -2221,7 +2221,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
-  public void testTombstoneSegmentIsNotRefreshed() throws IOException
+  public void testTombstoneSegmentIsNotRefreshed() throws IOException, InterruptedException
   {
     String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
 
@@ -2277,6 +2277,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.addSegment(historicalServerMetadata, segment);
     schema.addSegment(historicalServerMetadata, tombstone);
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
 
     List<SegmentId> segmentIterable = ImmutableList.of(segment.getId(), tombstone.getId());
 
@@ -2303,15 +2304,26 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     EasyMock.replay(factoryMock, lifecycleMock);
 
-    schema.refreshSegmentsForDataSource("test", new HashSet<>(segmentIterable));
+    schema.refresh(Collections.singleton(segment.getId()), Collections.singleton("test"));
 
+    // verify that metadata query is not issued for tombstone segment
     EasyMock.verify(factoryMock, lifecycleMock);
 
-    // refresh only the tombstone segment
-    segmentIterable = ImmutableList.of(tombstone.getId());
+    // Verify that datasource schema building logic doesn't mark the tombstone segment for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
 
-    // make sure this call doesn't trigger refresh, as the mocks expect only a single call to runSimple
-    schema.refreshSegmentsForDataSource("test", new HashSet<>(segmentIterable));
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata("test", tombstone.getId());
+    Assert.assertNotNull(availableSegmentMetadata);
+    // fetching metadata for tombstone segment shouldn't mark it for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
+    schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
+
+    Assert.assertEquals(1, metadatas.stream().filter(metadata -> metadata.getSegment().isTombstone()).count());
+
+    // iterating over entire metadata doesn't cause tombstone to be marked for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
