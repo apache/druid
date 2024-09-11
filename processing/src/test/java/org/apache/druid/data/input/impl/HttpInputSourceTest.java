@@ -29,6 +29,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
@@ -180,9 +181,9 @@ public class HttpInputSourceTest
         null,
         Sets.newHashSet("R-cookie", "Content-type")
     );
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage(
-        "Got forbidden headers [g-cookie], allowed headers are only [r-cookie, content-type]");
+        "Got forbidden header G-Cookie, allowed headers are only [r-cookie, content-type]");
     new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
         "myName",
