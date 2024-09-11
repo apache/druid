@@ -163,6 +163,12 @@ public class DruidQueryGenerator
        * queries - which may not be the desired behavior; but we can't change that without breaking.
        */
       private boolean forceFinalize;
+      /**
+       * Forces this vertex to be a subquery.
+       *
+       * Disables unwrapping.
+       */
+      private boolean forceSubQuery;
 
       public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, boolean forceFinalize)
       {
@@ -304,6 +310,9 @@ public class DruidQueryGenerator
       @Override
       public boolean canUnwrapSourceDesc()
       {
+        if(forceSubQuery) {
+          return false;
+        }
         if (partialDruidQuery.stage() == Stage.SCAN) {
           return true;
         }

@@ -37,6 +37,7 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
+import org.apache.calcite.rel.rules.JoinProjectTransposeRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
@@ -454,6 +455,7 @@ public class CalciteRulesManager
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
         .add(CoreRules.SORT_REMOVE)
+        .add(JoinProjectTransposeRule.Config.DEFAULT.toRule())
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }

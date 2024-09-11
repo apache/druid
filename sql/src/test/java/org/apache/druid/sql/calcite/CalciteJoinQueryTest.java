@@ -3776,7 +3776,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoin(Map<String, Object> queryContext)
