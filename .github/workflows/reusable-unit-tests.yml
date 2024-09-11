@@ -123,9 +123,9 @@ jobs:
         id: check_for_heap_dump
         run: |
           if ls ${GITHUB_WORKSPACE}/*.hprof 1> /dev/null 2>&1; then
-            echo "::set-output name=found_hprof::true"
+            echo "found_hprof=true" >> $GITHUB_ENV
           else
-            echo "::set-output name=found_hprof::false"
+            echo "found_hprof=false" >> $GITHUB_ENV
           fi
 
       # Tarball the heap dumps on failure and if the heap dump exists
