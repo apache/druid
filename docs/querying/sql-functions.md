@@ -116,7 +116,7 @@ Counts distinct values of a string, numeric, or `hyperUnique` column using Druid
 
 ## APPROX_COUNT_DISTINCT_DS_HLL
 
-Approximates distinct values of an HLL sketch column or a regular column. The [HLL sketch documentation](../development/extensions-core/datasketches-hll.md) describes the optional `lgK` and `tgtHllType` arguments.
+Approximates distinct values of a HLL sketch column or a regular column. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
 * **Syntax:** `APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`
 * **Function type:** Aggregation
@@ -1057,14 +1057,14 @@ Returns a string representing an approximation to the histogram given the specif
 
 ## DS_HLL
 
-Creates an HLL sketch on a column containing HLL sketches or a regular column. The [HLL sketch documentation](../development/extensions-core/datasketches-hll.md) describes the optional `lgK` and `tgtHllType` arguments.
+Creates a HLL sketch on a column containing HLL sketches or a regular column. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
 * **Syntax:**`DS_HLL(expr, [lgK, tgtHllType])`
 * **Function type:** Aggregation
 
 <details><summary>Example</summary>
 
-The following example creates an HLL sketch on the `Tail_number` column from the `flight-carriers` dataset, grouping by `OriginState` and `DestState`.
+The following example creates a HLL sketch on the `Tail_number` column from the `flight-carriers` dataset, grouping by `OriginState` and `DestState`.
 
 ```sql
 SELECT
@@ -1269,7 +1269,7 @@ Returns a number for each output row of a groupBy query, indicating whether the 
 
 ## HLL_SKETCH_ESTIMATE
 
-Returns a distinct count estimate from an HLL sketch. To round the distinct count estimate, set `round` to true. Otherwise, `round` defaults to false.
+Returns a distinct count estimate from a HLL sketch. To round the distinct count estimate, set `round` to true. Otherwise, `round` defaults to false.
 
 * **Syntax:** `HLL_SKETCH_ESTIMATE(expr, [round])`
 * **Function type:** Scalar, sketch
@@ -1289,7 +1289,7 @@ Returns the following:
 
 | `estimate` | 
 | -- |
-| `4,685.8815405960595` |
+| `4685.8815405960595` |
 
 </details>
 
@@ -1297,7 +1297,7 @@ Returns the following:
 
 ## HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS
 
-Returns the distinct count estimate and error bounds from an HLL sketch. The `expr` argument must return an HLL sketch. The optional round `numStdDev` argument rounds the estimate if set to true, with a default of false.
+Returns the distinct count estimate and error bounds from a HLL sketch. To specify the number of standard deviations of the bounds use `numStdDev`.
 
 * **Syntax:** `HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, [numStdDev])`
 * **Function type:** Scalar, sketch
@@ -1316,7 +1316,7 @@ Returns the following:
 
 | `estimate_with_errors` |
 | -- |
-| `[4685.8815405960595, 4536.952802775876, 4839.925808688653]` |
+| `[4685.8815405960595,4611.381540678335,4762.978259800803]` |
 
 
 </details>
@@ -1325,7 +1325,7 @@ Returns the following:
 
 ## HLL_SKETCH_TO_STRING
 
-Returns a human-readable string representation of an HLL sketch for debugging. The `expr` argument must return an HLL sketch.
+Returns a human-readable string representation of a HLL sketch for debugging.
 
 * **Syntax:** `HLL_SKETCH_TO_STRING(expr)`
 * **Function type:** Scalar, sketch
@@ -1371,15 +1371,13 @@ Returns the following:
 </tr>
 </table>
 
-
 </details>
 
 [Learn more](sql-scalar.md#sketch-functions)
 
-
 ## HLL_SKETCH_UNION
 
-Returns a union of HLL sketches, where each input expression is an HLL sketch. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
+Returns a union of HLL sketches. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
 * **Syntax:** `HLL_SKETCH_UNION([lgK, tgtHllType], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
@@ -1387,7 +1385,7 @@ Returns a union of HLL sketches, where each input expression is an HLL sketch. S
 
 <details><summary>Example</summary>
 
-The following example estimates the number of unique tail numbers that took off from California or Texas by estimating on the union of the HLL sketch of tail numbers that took off from `CA` and the HLL sketch of tail numbers that took off from `TX` from the `flight-carriers` datasource. 
+The following example estimates the union of the HLL sketch of tail numbers that took off from `CA` and the HLL sketch of tail numbers that took off from `TX`. The examples uses the `Tail_Number` and `OriginState` columns from the `flight-carriers` datasource. 
 
 ```sql
 SELECT
