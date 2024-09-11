@@ -118,7 +118,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
   @DataProvider(name = "engine")
   public static Object[][] engine()
   {
-    return new Object[][]{{CompactionEngine.NATIVE}, {CompactionEngine.MSQ}};
+    return new Object[][]{{CompactionEngine.NATIVE}};
   }
 
   @Inject

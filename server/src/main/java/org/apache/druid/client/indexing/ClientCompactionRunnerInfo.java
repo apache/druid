@@ -135,9 +135,8 @@ public class ClientCompactionRunnerInfo
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
       return CompactionConfigValidationResult.failure(
-          "MSQ: Invalid partitioning type[%s]. Must be either 'dynamic' or 'range'",
+          "MSQ: Invalid partitioning type[%s]. Must be either dynamic or range",
           partitionsSpec.getClass().getSimpleName()
-
       );
     }
     if (partitionsSpec instanceof DynamicPartitionsSpec

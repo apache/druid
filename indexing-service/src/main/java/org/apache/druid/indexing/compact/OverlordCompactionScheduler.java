@@ -202,7 +202,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     } else {
       return ClientCompactionRunnerInfo.validateCompactionConfig(
           compactionConfig,
-          compactionConfigSupplier.get().getEngine()
+          supervisorConfig.getDefaultEngine()
       );
     }
   }
@@ -272,7 +272,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private synchronized void runCompactionDuty()
   {
     final CoordinatorRunStats stats = new CoordinatorRunStats();
-    duty.run(getLatestConfig(), getCurrentDatasourceTimelines(), stats);
+    duty.run(getLatestConfig(), getCurrentDatasourceTimelines(), supervisorConfig.getDefaultEngine(), stats);
 
     // Emit stats only if emission period has elapsed
     if (!sinceStatsEmitted.isRunning() || sinceStatsEmitted.hasElapsed(METRIC_EMISSION_PERIOD)) {
@@ -309,7 +309,8 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isRunning()) {
       return new CompactionRunSimulator(statusTracker, overlordClient).simulateRunWithConfig(
           getLatestConfig().withClusterConfig(updateRequest),
-          getCurrentDatasourceTimelines()
+          getCurrentDatasourceTimelines(),
+          supervisorConfig.getDefaultEngine()
       );
     } else {
       return new CompactionSimulateResult(Collections.emptyMap());

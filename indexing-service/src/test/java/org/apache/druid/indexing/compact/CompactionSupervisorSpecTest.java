@@ -82,18 +82,30 @@ public class CompactionSupervisorSpecTest
   }
 
   @Test
-  public void testInvalidSpecThrowsException()
+  public void testSupervisorWithInvalidSpecThrowsExceptionForStatus()
   {
     Mockito.when(scheduler.validateCompactionConfig(ArgumentMatchers.any()))
            .thenReturn(CompactionConfigValidationResult.failure("bad spec"));
     final DruidException exception = Assert.assertThrows(
         DruidException.class,
-        () -> new CompactionSupervisorSpec(null, false, scheduler)
+        () -> new CompactionSupervisorSpec(
+            new DataSourceCompactionConfig.Builder().forDataSource("datasource").build(),
+            false,
+            scheduler
+        ).createSupervisor().getStatus()
     );
     Assert.assertEquals(
-        "Compaction supervisor 'spec' is invalid. Reason[bad spec].",
+        "Compaction supervisor spec is invalid. Reason[bad spec].",
         exception.getMessage()
     );
+  }
+
+  @Test
+  public void testInvalidSpecReturnsInvalid()
+  {
+    Mockito.when(scheduler.validateCompactionConfig(ArgumentMatchers.any()))
+           .thenReturn(CompactionConfigValidationResult.failure("bad spec"));
+    Assert.assertFalse(new CompactionSupervisorSpec(null, false, scheduler).getValidationResult().isValid());
   }
 
   @Test

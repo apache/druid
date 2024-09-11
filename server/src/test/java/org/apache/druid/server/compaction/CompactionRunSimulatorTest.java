@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -76,7 +77,8 @@ public class CompactionRunSimulatorTest
             DataSourceCompactionConfig.builder().forDataSource("wiki").build()
         ),
         segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
-                               .getUsedSegmentsTimelinesPerDataSource()
+                               .getUsedSegmentsTimelinesPerDataSource(),
+        CompactionEngine.NATIVE
     );
 
     Assert.assertNotNull(simulateResult);

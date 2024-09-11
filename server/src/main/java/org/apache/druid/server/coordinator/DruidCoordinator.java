@@ -40,6 +40,7 @@ import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -362,7 +363,8 @@ public class DruidCoordinator
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
         metadataManager.segments()
                        .getSnapshotOfDataSourcesWithAllUsedSegments()
-                       .getUsedSegmentsTimelinesPerDataSource()
+                       .getUsedSegmentsTimelinesPerDataSource(),
+        CompactionEngine.NATIVE
     );
   }
 

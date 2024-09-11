@@ -106,14 +106,13 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
     Assert.assertFalse(defaultConfig.isUseAutoScaleSlots());
     Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
-    Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
   }
 
   @Test
   public void testUpdateClusterConfig()
   {
     Response response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(0.5, 10, true, CompactionEngine.MSQ, null),
+        new ClusterCompactionConfig(0.5, 10, true, null),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.OK, response);
@@ -127,7 +126,6 @@ public class CoordinatorCompactionConfigsResourceTest
     Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
     Assert.assertEquals(10, updatedConfig.getMaxCompactionTaskSlots());
     Assert.assertTrue(updatedConfig.isUseAutoScaleSlots());
-    Assert.assertEquals(CompactionEngine.MSQ, updatedConfig.getEngine());
   }
 
   @Test
@@ -149,7 +147,6 @@ public class CoordinatorCompactionConfigsResourceTest
 
     // Verify that the other fields are unchanged
     Assert.assertEquals(defaultConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
-    Assert.assertEquals(defaultConfig.getEngine(), updatedConfig.getEngine());
   }
 
   @Test
@@ -175,6 +172,23 @@ public class CoordinatorCompactionConfigsResourceTest
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
     Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
     Assert.assertEquals(newDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
+  }
+
+  @Test
+  public void testAddDatasourceConfigWithMSQEngineIsInvalid()
+  {
+    final DataSourceCompactionConfig newDatasourceConfig
+        = DataSourceCompactionConfig.builder()
+                                    .forDataSource(TestDataSource.WIKI)
+                                    .withEngine(CompactionEngine.MSQ)
+                                    .build();
+    Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
+    verifyStatus(Response.Status.BAD_REQUEST, response);
+    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assert.assertEquals(
+        "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.",
+        ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
+    );
   }
 
   @Test
@@ -341,7 +355,7 @@ public class CoordinatorCompactionConfigsResourceTest
     verifyStatus(Response.Status.OK, response);
 
     response = resource.updateClusterCompactionConfig(
-        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ, null),
+        new ClusterCompactionConfig(null, null, null, null),
         mockHttpServletRequest
     );
     verifyStatus(Response.Status.BAD_REQUEST, response);
