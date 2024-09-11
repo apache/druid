@@ -531,7 +531,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   }
 
   @Override
-  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  void logSegmentsToRefresh(String dataSource, Iterable<SegmentId> ids)
   {
     log.info("Logging a sample of 5 segments [%s] to be refreshed for datasource [%s]", Iterables.limit(ids, 5), dataSource);
   }

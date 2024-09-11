@@ -1216,7 +1216,6 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     );
 
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
-    // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
     EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -1225,5 +1224,11 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     schema.refreshSegmentsForDataSource("test", new HashSet<>(segmentIterable));
 
     EasyMock.verify(factoryMock, lifecycleMock);
+
+    // refresh only the tombstone segment
+    segmentIterable = ImmutableList.of(tombstone.getId());
+
+    // make sure this call doesn't trigger refresh, as the mocks expect only a single call to runSimple
+    schema.refreshSegmentsForDataSource("test", new HashSet<>(segmentIterable));
   }
 }

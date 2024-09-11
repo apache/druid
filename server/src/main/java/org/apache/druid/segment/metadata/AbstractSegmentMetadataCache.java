@@ -84,6 +84,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
@@ -447,18 +448,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @Nullable
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
-<<<<<<< HEAD
-    return segmentMetadataInfo.getOrDefault(datasource, new ConcurrentSkipListMap<>()).get(segmentId);
-=======
-    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceMap =
-        segmentMetadataInfo.get(datasource);
-
-    if (dataSourceMap == null) {
-      return null;
-    } else {
-      return dataSourceMap.get(segmentId);
-    }
->>>>>>> upstream/master
+    ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> metadata = segmentMetadataInfo.get(datasource);
+    return metadata == null ? null : metadata.get(segmentId);
   }
 
   /**
@@ -729,6 +720,19 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     return historicalServer.isPresent() ? 0 : 1;
   }
 
+  private Stream<SegmentId> getTombstoneFilteredStream(
+      final Set<SegmentId> segments,
+      final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> datasourceSegments
+  )
+  {
+    return StreamSupport.stream(Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY).spliterator(), false)
+                        .filter(
+                            segment ->
+                                datasourceSegments.containsKey(segment) &&
+                                !datasourceSegments.get(segment).getSegment().isTombstone()
+                        );
+  }
+
   /**
    * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
    * segments actually refreshed, which may be a subset of the asked-for set.
@@ -753,27 +757,28 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       return retVal;
     }
 
+    long count = getTombstoneFilteredStream(segments, datasourceSegments).count();
+
+    if (count == 0) {
+      return retVal;
+    }
+
     // Skip refreshing tombstone segments. These segments lack data or column information.
     // Additionally, segment metadata queries, which are not yet implemented for tombstone segments
     // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
     // leading to indefinite refresh attempts for these segments.
-    Set<SegmentId> segmentsWithoutTombstone =
-        StreamSupport.stream(Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY).spliterator(), false)
-                     .filter(
-                         segment ->
-                             datasourceSegments.containsKey(segment) &&
-                             !datasourceSegments.get(segment).getSegment().isTombstone()).collect(Collectors.toSet()
-                     );
+    Iterable<SegmentId> segmentsWithoutTombstone =
+        () -> getTombstoneFilteredStream(segments, datasourceSegments).iterator();
+
+    logSegmentsToRefresh(dataSource, segmentsWithoutTombstone);
 
     final ServiceMetricEvent.Builder builder =
         new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
 
-    emitter.emit(builder.setMetric("metadatacache/refresh/count", segmentsWithoutTombstone.size()));
+    emitter.emit(builder.setMetric("metadatacache/refresh/count", count));
 
     // Segment id string -> SegmentId object.
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segmentsWithoutTombstone, SegmentId::toString);
-
-    logSegmentsToRefresh(dataSource, segmentsWithoutTombstone);
 
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(segmentsWithoutTombstone);
 
@@ -820,7 +825,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   /**
    * Log the segment details for a datasource to be refreshed for debugging purpose.
    */
-  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  void logSegmentsToRefresh(String dataSource, Iterable<SegmentId> ids)
   {
     // no-op
   }
