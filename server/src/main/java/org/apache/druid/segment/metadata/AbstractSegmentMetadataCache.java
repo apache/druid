@@ -448,8 +448,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @Nullable
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
-    ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> metadata = segmentMetadataInfo.get(datasource);
-    return metadata == null ? null : metadata.get(segmentId);
+    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceMap =
+        segmentMetadataInfo.get(datasource);
+
+    if (dataSourceMap == null) {
+      return null;
+    } else {
+      return dataSourceMap.get(segmentId);
+    }
   }
 
   /**
