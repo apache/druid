@@ -31,7 +31,7 @@ This module can be used side to side with other lookup module like the global ca
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-lookups-cached-single` in the extensions load list.
 
 :::info
- If using JDBC, you will need to add your database's client JAR files to the extension's directory.
+To use JDBC, you must add your database client JAR files to the extension's directory.
  For Postgres, the connector JAR is already included.
  See the MySQL extension documentation for instructions to obtain [MySQL](./mysql.md#install-mysql-connectorj) or [MariaDB](./mysql.md#install-mariadb-connectorj) connector libraries.
  Copy or symlink the downloaded file to `extensions/druid-lookups-cached-single` under the distribution root directory.

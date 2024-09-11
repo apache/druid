@@ -835,7 +835,7 @@ For more information, see the [Installing the MySQL connector library](../develo
 :::
 
 The SQL input source is used to read data directly from RDBMS.
-The SQL input source is _splittable_ and can be used by the [parallel task](./native-batch.md), where each worker task will read from one SQL query from the list of queries.
+You can _split_ the ingestion tasks for a SQL input source. When you use the [parallel task](./native-batch.md) type, each worker task reads from one SQL query from the list of queries.
 This input source does not support Split Hint Spec.
 
 The SQL input source has a fixed input format for reading events.
@@ -891,7 +891,7 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 
 The Combining input source lets you read data from multiple input sources.
 It identifies the splits from delegate input sources and uses a worker task to process each split.
-Use the Combining input source only if all the delegates are splittable and can be used by the [parallel task](./native-batch.md).
+Each delegate input source must be splittable and compatible with the [parallel task type](./native-batch.md).
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.

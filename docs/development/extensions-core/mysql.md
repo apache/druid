@@ -25,7 +25,7 @@ title: "MySQL metadata store"
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
-The MySQL extension lets you use MySQL as a metadata store or ingest from a MySQL database.
+With the MySQL extension, you can use MySQL as a metadata store or ingest from a MySQL database.
 
 The extension requires a connector library that's not included with Druid.
 See the [Prerequisites](#prerequisites) for installation instructions.
@@ -107,7 +107,7 @@ This extension also supports using MariaDB server, https://mariadb.org/download/
   CREATE DATABASE druid DEFAULT CHARACTER SET utf8mb4;
 
   -- create a druid user
-  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'druid';
+  CREATE USER 'druid'@'localhost' IDENTIFIED BY 'password';
 
   -- grant the user all the permissions on the database we just created
   GRANT ALL PRIVILEGES ON druid.* TO 'druid'@'localhost';
