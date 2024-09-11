@@ -36,6 +36,7 @@ import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
 import org.apache.druid.data.input.impl.systemfield.SystemFieldInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -50,7 +51,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class HttpInputSource
@@ -66,7 +66,7 @@ public class HttpInputSource
   private final PasswordProvider httpAuthenticationPasswordProvider;
   private final SystemFields systemFields;
   private final HttpInputSourceConfig config;
-  private final Map<String, String> headersMap;
+  private final Map<String, String> requestHeaders;
 
   @JsonCreator
   public HttpInputSource(
@@ -74,7 +74,7 @@ public class HttpInputSource
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
       @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields,
-      @JsonProperty("requestHeaders") @Nullable Map<String, String> headersMap,
+      @JsonProperty("requestHeaders") @Nullable Map<String, String> requestHeaders,
       @JacksonInject HttpInputSourceConfig config
   )
   {
@@ -84,8 +84,8 @@ public class HttpInputSource
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
     this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
-    this.headersMap = headersMap == null ? Collections.emptyMap() : headersMap;
-    throwIfForbiddenHeaders(config, this.headersMap);
+    this.requestHeaders = requestHeaders == null ? Collections.emptyMap() : requestHeaders;
+    throwIfForbiddenHeaders(config, this.requestHeaders);
     this.config = config;
   }
 
@@ -98,17 +98,13 @@ public class HttpInputSource
     }
   }
 
-  public static void throwIfForbiddenHeaders(HttpInputSourceConfig config, Map<String, String> headersMap)
+  public static void throwIfForbiddenHeaders(HttpInputSourceConfig config, Map<String, String> requestHeaders)
   {
-    if (!config.getAllowedHeaders().isEmpty() && headersMap.size() > 0) {
-      Set<String> forbiddenHeaderSet = headersMap.keySet()
-                                                 .stream()
-                                                 .map(StringUtils::toLowerCase)
-                                                 .filter(h -> !config.getAllowedHeaders().contains(h))
-                                                 .collect(Collectors.toSet());
-      if (!forbiddenHeaderSet.isEmpty()) {
-        throw new IAE("Got forbidden headers %s, allowed headers are only %s ",
-                      forbiddenHeaderSet, config.getAllowedHeaders());
+    for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+      if (!config.getAllowedHeaders().contains(StringUtils.toLowerCase(entry.getKey()))) {
+        throw InvalidInput.exception("Got forbidden header %s, allowed headers are only %s ",
+                                     entry.getKey(), config.getAllowedHeaders()
+        );
       }
     }
   }
@@ -154,7 +150,7 @@ public class HttpInputSource
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public Map<String, String> getRequestHeaders()
   {
-    return headersMap;
+    return requestHeaders;
   }
 
   @Override
@@ -177,7 +173,7 @@ public class HttpInputSource
         httpAuthenticationUsername,
         httpAuthenticationPasswordProvider,
         systemFields,
-        headersMap,
+        requestHeaders,
         config
     );
   }
@@ -212,7 +208,7 @@ public class HttpInputSource
                 split.get(),
                 httpAuthenticationUsername,
                 httpAuthenticationPasswordProvider,
-                headersMap
+                requestHeaders
             )).iterator()
         ),
         SystemFieldDecoratorFactory.fromInputSource(this),
@@ -234,7 +230,7 @@ public class HttpInputSource
            && Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername)
            && Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider)
            && Objects.equals(systemFields, that.systemFields)
-           && Objects.equals(headersMap, that.headersMap)
+           && Objects.equals(requestHeaders, that.requestHeaders)
            && Objects.equals(config, that.config);
   }
 
@@ -246,7 +242,7 @@ public class HttpInputSource
         httpAuthenticationUsername,
         httpAuthenticationPasswordProvider,
         systemFields,
-        headersMap,
+        requestHeaders,
         config
     );
   }
@@ -265,7 +261,7 @@ public class HttpInputSource
            ", httpAuthenticationUsername=" + httpAuthenticationUsername +
            ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
            (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
-           ", requestHeaders = " + headersMap +
+           ", requestHeaders = " + requestHeaders +
            "}";
   }
 }

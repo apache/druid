@@ -89,7 +89,7 @@ public class HttpEntity extends RetryingInputEntity
       throws IOException
   {
     final URLConnection urlConnection = object.toURL().openConnection();
-    if (requestHeaders.size() > 0) {
+    if (requestHeaders != null && requestHeaders.size() > 0) {
       for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
         urlConnection.addRequestProperty(entry.getKey(), entry.getValue());
       }
