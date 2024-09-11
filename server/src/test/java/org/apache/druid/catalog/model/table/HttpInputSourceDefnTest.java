@@ -276,11 +276,12 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
-    assertEquals(4, fn.parameters().size());
+    assertEquals(5, fn.parameters().size());
     assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
     assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
     assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_PARAMETER));
     assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_ENV_VAR_PARAMETER));
+    assertTrue(hasParam(fn, HttpInputSourceDefn.HEADERS));
 
     // Convert to an external table.
     ExternalTableSpec externSpec = fn.apply(
@@ -324,8 +325,9 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
-    assertEquals(1, fn.parameters().size());
+    assertEquals(2, fn.parameters().size());
     assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    assertTrue(hasParam(fn, HttpInputSourceDefn.HEADERS));
 
     // Convert to an external table.
     ExternalTableSpec externSpec = fn.apply(
