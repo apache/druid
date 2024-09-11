@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
+import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 
@@ -83,7 +84,7 @@ public class DruidQueryGenerator
   {
     DruidLogicalNode node = stack.peek();
     if (node instanceof SourceDescProducer) {
-      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
+      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs, false);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -93,7 +94,8 @@ public class DruidQueryGenerator
       }
       inputVertex = vertexFactory.createVertex(
           PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery, vertexFactory.plannerContext),
-          ImmutableList.of(inputVertex)
+          ImmutableList.of(inputVertex),
+          false
       );
       newVertex = inputVertex.extendWith(stack);
       if (newVertex.isPresent()) {
@@ -147,20 +149,22 @@ public class DruidQueryGenerator
       this.rexBuilder = rexBuilder;
     }
 
-    Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+    Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, boolean forceFinalize)
     {
-      return new PDQVertex(partialDruidQuery, inputs);
+      return new PDQVertex(partialDruidQuery, inputs, forceFinalize);
     }
 
     public class PDQVertex implements Vertex
     {
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
+      private boolean forceFinalize;
 
-      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, boolean forceFinalize)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
+        this.forceFinalize = forceFinalize;
       }
 
       @Override
@@ -172,7 +176,7 @@ public class DruidQueryGenerator
             source.rowSignature,
             plannerContext,
             rexBuilder,
-            !topLevel
+            !(topLevel) && !forceFinalize
         );
       }
 
@@ -213,7 +217,8 @@ public class DruidQueryGenerator
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
         }
-        return Optional.of(createVertex(newPartialQuery.get(), inputs));
+        boolean forceFinalize = (stack.size() > 2 && stack.get(stack.size() - 2) instanceof DruidJoin);
+        return Optional.of(createVertex(newPartialQuery.get(), inputs, forceFinalize));
       }
 
       /**
