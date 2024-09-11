@@ -33,8 +33,8 @@ See the [Prerequisites](#prerequisites) for installation instructions.
 ## Prerequisites
 
 To use the MySQL extension, you need to install one of the following libraries:
-* [MySQL Connector/J](#install-the-mysql-connector-library)
-* [MariaDB Connector/J](#install-the-mariadb-connector-library)
+* [MySQL Connector/J](#install-mysql-connectorj)
+* [MariaDB Connector/J](#install-mariadb-connectorj)
 
 ### Install MySQL Connector/J
 
