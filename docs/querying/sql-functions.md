@@ -144,7 +144,7 @@ Deprecated in favor of [`APPROX_QUANTILE_DS`](#approx_quantile_ds).
 
 ## APPROX_QUANTILE_DS
 
-Computes approximate quantiles on a Quantiles sketch column or a regular numeric column. The `fraction` argument must be a value between zero and one. The optional argument `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on what values of `k` are accepted..
+Computes approximate quantiles on a Quantiles sketch column or a regular numeric column. The parameter `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on the parameter `k`.
 
 * **Syntax:** `APPROX_QUANTILE_DS(expr, fraction, [k])`
 * **Function type:** Aggregation
@@ -171,7 +171,7 @@ May return the following:
 
 ## APPROX_QUANTILE_FIXED_BUCKETS
 
-Computes approximate quantiles on fixed buckets histogram column or a regular numeric column. Parameters are described in the [fixed buckets histogram](../development//extensions-core//approximate-histograms.md) documentation.
+Computes approximate quantiles on fixed buckets histogram column or a regular numeric column. The [fixed buckets histogram](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) documentation describes the parameters.
 
 * **Syntax:** `APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`
 * **Function type:** Aggregation
@@ -179,7 +179,7 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 
 <details><summary>Example</summary>
 
-The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource where the histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and outliers are ignored. 
+The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and outliers are ignored. 
 
 ```sql
 SELECT APPROX_QUANTILE_FIXED_BUCKETS("Distance", 0.5, 10, 0, 2500, 'ignore')  AS "estimate_median"
@@ -1068,7 +1068,7 @@ Returns the result of integer division of `x` by `y`.
 
 ## DS_CDF
 
-Returns a string representing an approximation to the Cumulative Distribution Function given a list of split points that define the edges of the bins from a Quantiles sketch. The `expr` argument must return a Quantiles sketch.  
+Returns a string representing an approximation to the cumulative distribution function given a list of split points that define the edges of the bins from a Quantiles sketch.  
 
 * **Syntax:** `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
 * **Function type:** Scalar, sketch
@@ -1094,7 +1094,7 @@ May return the following:
 
 ## DS_GET_QUANTILE
 
-Returns the quantile estimate corresponding to `fraction` from a Quantiles sketch. The `fraction` argument must be a value between zero and one. The `expr` argument must return a Quantiles sketch.   
+Returns the quantile estimate corresponding to `fraction` from a Quantiles sketch. 
 
 * **Syntax:** `DS_GET_QUANTILE(expr, fraction)`
 * **Function type:** Scalar, sketch
@@ -1120,7 +1120,7 @@ May return the following:
 
 ## DS_GET_QUANTILES
 
-Returns a string representing an array of quantile estimates corresponding to a list of fractions from a Quantiles sketch. Each fraction must be a value between zero and one. The `expr` argument must return a Quantiles sketch.   
+Returns a string representing an array of quantile estimates corresponding to a list of fractions from a Quantiles sketch. 
 
 * **Syntax:** `DS_GET_QUANTILES(expr, fraction0, fraction1, ...)`
 * **Function type:** Scalar, sketch
@@ -1146,7 +1146,7 @@ May returns the following:
 
 ## DS_HISTOGRAM
 
-Returns a string representing an approximation to the histogram given a list of split points that define the histogram bins from a quantiles sketch. The `expr` argument must return a Quantiles sketch.    
+Returns a string representing an approximation to the histogram given a list of split points that define the histogram bins from a Quantiles sketch. 
 
 * **Syntax:** `DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`
 * **Function type:** Scalar, sketch
@@ -1181,8 +1181,7 @@ Creates an HLL sketch on a column containing HLL sketches or a regular column.
 
 ## DS_QUANTILE_SUMMARY
 
-Returns a string summary of a quantiles sketch. The `expr` argument must return a Quantiles sketch.
-
+Returns a string summary of a Quantiles sketch. 
 * **Syntax:** `DS_QUANTILE_SUMMARY(expr)`
 * **Function type:** Scalar, sketch
 
@@ -1235,7 +1234,7 @@ Returns the following:
 
 ## DS_QUANTILES_SKETCH
 
-Creates a Quantiles sketch on a column containing Quantiles sketches or a regular column. The optional argument `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on what values of `k` are accepted..
+Creates a Quantiles sketch on a column containing Quantiles sketches or a regular column. The parameter `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on the parameter `k`.
 
 * **Syntax:** `DS_QUANTILES_SKETCH(expr, [k])`
 * **Function type:** Aggregation
@@ -1261,7 +1260,7 @@ Returns the following:
 
 ## DS_RANK
 
-Returns an approximate rank for `value` between zero and one, in which the rank signifies the fraction of the distribution less than the given value. The `expr` argument must return a Quantiles sketch.  
+Returns an approximate rank for `value` between zero and one, in which the rank signifies the fraction of the distribution less than `value`.
 
 * **Syntax:** `DS_RANK(expr, value)`
 * **Function type:** Scalar, sketch
