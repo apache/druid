@@ -317,8 +317,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
 
   protected FilterBundle makeFilterBundle(final Filter filter)
   {
-    return filter.makeFilterBundle(
-        indexSelector,
+    return new FilterBundle.Builder(filter, indexSelector).build(
         new DefaultBitmapResultFactory(bitmapFactory),
         indexSelector.getNumRows(),
         indexSelector.getNumRows(),

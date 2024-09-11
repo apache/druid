@@ -346,7 +346,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
    * @param timestamp  the timestamp to search for
    * @param startIndex first index to search, inclusive
    * @param endIndex   last index to search, exclusive
-   *
    * @return first index that has a timestamp equal to, or greater, than "timestamp"
    */
   @VisibleForTesting
@@ -708,7 +707,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
 
   /**
    * Create a {@link FilterBundle} for a cursor hold instance.
-   *
+   * <p>
    * The provided filter must include the query-level interface if needed. To compute this properly, use
    * {@link #computeFilterWithIntervalIfNeeded}.
    */
@@ -732,8 +731,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
       return null;
     }
     final long bitmapConstructionStartNs = System.nanoTime();
-    final FilterBundle filterBundle = filter.makeFilterBundle(
-        bitmapIndexSelector,
+    final FilterBundle filterBundle = new FilterBundle.Builder(filter, bitmapIndexSelector).build(
         bitmapResultFactory,
         numRows,
         numRows,

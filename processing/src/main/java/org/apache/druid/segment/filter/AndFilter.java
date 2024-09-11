@@ -46,10 +46,12 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Logical AND filter operation
@@ -73,8 +75,13 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
+  public String getFilterString() {
+    return "AND";
+  }
+
+  @Override
   public <T> FilterBundle makeFilterBundle(
-      ColumnIndexSelector columnIndexSelector,
+      FilterBundle.Builder filterBundleBuilder,
       BitmapResultFactory<T> bitmapResultFactory,
       int applyRowCount,
       int totalRowCount,
@@ -97,20 +104,20 @@ public class AndFilter implements BooleanFilter
     // a nested AND filter might also partition itself into indexes and bundles, and since it is part of a logical AND
     // operation, this is valid (and even preferable).
     final long bitmapConstructionStartNs = System.nanoTime();
-    for (Filter subfilter : filters) {
-      final FilterBundle subBundle = subfilter.makeFilterBundle(
-          columnIndexSelector,
+    for (FilterBundle.Builder subFilterBundleBuilder : filterBundleBuilder.getChildBuilders()) {
+      final FilterBundle subBundle = subFilterBundleBuilder.getFilter().makeFilterBundle(
+          subFilterBundleBuilder,
           bitmapResultFactory,
           Math.min(applyRowCount, indexIntersectionSize),
           totalRowCount,
           includeUnknown
       );
-      if (subBundle.getIndex() != null) {
+      if (subBundle.hasIndex()) {
         if (subBundle.getIndex().getBitmap().isEmpty()) {
           // if nothing matches for any sub filter, short-circuit, because nothing can possibly match
           return FilterBundle.allFalse(
               System.nanoTime() - bitmapConstructionStartNs,
-              columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
+              subFilterBundleBuilder.getColumnIndexSelector().getBitmapFactory().makeEmptyImmutableBitmap()
           );
         }
         merged = merged.merge(subBundle.getIndex().getIndexCapabilities());
@@ -122,7 +129,7 @@ public class AndFilter implements BooleanFilter
         }
         indexIntersectionSize = index.size();
       }
-      if (subBundle.getMatcherBundle() != null) {
+      if (subBundle.hasMatcher()) {
         matcherBundles.add(subBundle.getMatcherBundle());
         matcherBundleInfos.add(subBundle.getMatcherBundle().getMatcherInfo());
       }
@@ -180,7 +187,10 @@ public class AndFilter implements BooleanFilter
         }
 
         @Override
-        public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+        public VectorValueMatcher vectorMatcher(
+            VectorColumnSelectorFactory selectorFactory,
+            ReadableVectorOffset baseOffset
+        )
         {
           final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherBundles.size()];
           for (int i = 0; i < matcherBundles.size(); i++) {
@@ -237,6 +247,13 @@ public class AndFilter implements BooleanFilter
       public ColumnIndexCapabilities getIndexCapabilities()
       {
         return finalMerged;
+      }
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        // There's no additional cost on AND filter, cost in child filters would be used.
+        return 0;
       }
 
       @Override

@@ -25,14 +25,6 @@ import java.util.Set;
 
 public interface BooleanFilter extends Filter
 {
-  /**
-   * Returns the child filters for this filter.
-   *
-   * This is a LinkedHashSet because we don't want duplicates, but the order is also important in some cases (such
-   * as when filters are provided in an order that encourages short-circuiting.)
-   */
-  LinkedHashSet<Filter> getFilters();
-
   @Override
   default Set<String> getRequiredColumns()
   {

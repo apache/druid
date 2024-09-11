@@ -80,7 +80,7 @@ public class OrFilter implements BooleanFilter
 
   @Override
   public <T> FilterBundle makeFilterBundle(
-      ColumnIndexSelector columnIndexSelector,
+      FilterBundle.Builder filterBundleBuilder,
       BitmapResultFactory<T> bitmapResultFactory,
       int applyRowCount,
       int totalRowCount,
@@ -107,10 +107,9 @@ public class OrFilter implements BooleanFilter
     int emptyCount = 0;
 
     final long bitmapConstructionStartNs = System.nanoTime();
-
-    for (Filter subfilter : filters) {
-      final FilterBundle bundle = subfilter.makeFilterBundle(
-          columnIndexSelector,
+    for (FilterBundle.Builder subFilterBundleBuilder : filterBundleBuilder.getChildBuilders()) {
+      final FilterBundle bundle = subFilterBundleBuilder.getFilter().makeFilterBundle(
+          subFilterBundleBuilder,
           bitmapResultFactory,
           Math.min(applyRowCount, totalRowCount - indexUnionSize),
           totalRowCount,
@@ -156,7 +155,7 @@ public class OrFilter implements BooleanFilter
       if (index == null || index.isEmpty()) {
         return FilterBundle.allFalse(
             totalBitmapConstructTimeNs,
-            columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
+            filterBundleBuilder.getColumnIndexSelector().getBitmapFactory().makeEmptyImmutableBitmap()
         );
       }
       if (indexOnlyBundles.size() == 1) {
@@ -288,10 +287,19 @@ public class OrFilter implements BooleanFilter
       }
 
       @Override
+      public int estimatedComputeCost()
+      {
+        // There's no additional cost on OR filter, cost in child filters would be used.
+        return 0;
+      }
+
+      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         return bitmapResultFactory.union(
-            () -> bitmapColumnIndices.stream().map(x -> x.computeBitmapResult(bitmapResultFactory, includeUnknown)).iterator()
+            () -> bitmapColumnIndices.stream()
+                                     .map(x -> x.computeBitmapResult(bitmapResultFactory, includeUnknown))
+                                     .iterator()
         );
       }
 
@@ -693,6 +701,7 @@ public class OrFilter implements BooleanFilter
     {
       final VectorMatch match = VectorMatch.wrap(new int[vectorOffset.getMaxVectorSize()]);
       int iterOffset = -1;
+
       @Override
       public ReadableVectorMatch match(ReadableVectorMatch mask, boolean includeUnknown)
       {

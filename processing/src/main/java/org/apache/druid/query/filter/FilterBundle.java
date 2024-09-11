@@ -24,16 +24,20 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 import org.apache.druid.segment.column.SimpleColumnIndexCapabilities;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.filter.FalseFilter;
+import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -59,29 +63,26 @@ public class FilterBundle
 {
   public static FilterBundle allFalse(long constructionTime, ImmutableBitmap emptyBitmap)
   {
-    return new FilterBundle(
-        new FilterBundle.SimpleIndexBundle(
-            new FilterBundle.IndexBundleInfo(() -> FalseFilter.instance().toString(), 0, constructionTime, null),
-            emptyBitmap,
-            SimpleColumnIndexCapabilities.getConstant()
-        ),
-        null
-    );
+    return new FilterBundle(new FilterBundle.SimpleIndexBundle(
+        new FilterBundle.IndexBundleInfo(() -> FalseFilter.instance().toString(), 0, constructionTime, null),
+        emptyBitmap,
+        SimpleColumnIndexCapabilities.getConstant()
+    ), null);
   }
 
+  // The index that actually gets used in a filter.
+  // The index bundle is nullable, meaning in a query not a single index has been chosen. When it's non-null, all fields have values.
   @Nullable
   private final IndexBundle indexBundle;
   @Nullable
   private final MatcherBundle matcherBundle;
 
   public FilterBundle(
-      @Nullable IndexBundle index,
-      @Nullable MatcherBundle matcherBundle
+      @Nullable IndexBundle index, @Nullable MatcherBundle matcherBundle
   )
   {
-    Preconditions.checkArgument(
-        index != null || matcherBundle != null,
-        "At least one of index or matcher must be not null"
+    Preconditions.checkArgument(index != null || matcherBundle != null,
+                                "At least one of index or matcher must be not null"
     );
     this.indexBundle = index;
     this.matcherBundle = matcherBundle;
@@ -100,11 +101,91 @@ public class FilterBundle
     return matcherBundle;
   }
 
+  public static class Builder
+  {
+    private final Filter filter;
+    private final ColumnIndexSelector columnIndexSelector;
+    @Nullable
+    private final BitmapColumnIndex bitmapColumnIndex;
+    private final List<FilterBundle.Builder> childBuilders;
+    private final int estimatedComputeCost;
+
+    public Builder(
+        Filter filter, ColumnIndexSelector columnIndexSelector
+    )
+    {
+      this.filter = filter;
+      this.columnIndexSelector = columnIndexSelector;
+      this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
+      // Construct Builder instances for all child filters recursively.
+      this.childBuilders = new ArrayList<>(filter.getFilters().size());
+      for (Filter childFilter : filter.getFilters()) {
+        childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector));
+      }
+      // Sort child builders by cost in ASCENDING order, should be stable by default.
+      this.childBuilders.sort(Comparator.comparingInt(FilterBundle.Builder::getEstimatedComputeCost));
+      this.estimatedComputeCost = calculateEstimatedComputeCost();
+    }
+
+    private int calculateEstimatedComputeCost()
+    {
+      if (this.bitmapColumnIndex == null) {
+        return Integer.MAX_VALUE;
+      }
+      int cost = this.bitmapColumnIndex.estimatedComputeCost();
+      if (cost == Integer.MAX_VALUE) {
+        return Integer.MAX_VALUE;
+      }
+
+      for (FilterBundle.Builder childBuilder : this.childBuilders) {
+        int childCost = childBuilder.getEstimatedComputeCost();
+        if (childCost >= Integer.MAX_VALUE - cost) {
+          return Integer.MAX_VALUE;
+        }
+        cost += childCost;
+      }
+      return cost;
+    }
+
+    public Filter getFilter()
+    {
+      return this.filter;
+    }
+
+    public ColumnIndexSelector getColumnIndexSelector()
+    {
+      return this.columnIndexSelector;
+    }
+
+    @Nullable
+    public BitmapColumnIndex getBitmapColumnIndex()
+    {
+      return this.bitmapColumnIndex;
+    }
+
+    public List<FilterBundle.Builder> getChildBuilders()
+    {
+      return this.childBuilders;
+    }
+
+    public int getEstimatedComputeCost()
+    {
+      return this.estimatedComputeCost;
+    }
+
+    public <T> FilterBundle build(
+        BitmapResultFactory<T> bitmapResultFactory, int applyRowCount, int totalRowCount, boolean includeUnknown
+    )
+    {
+      return this.filter.makeFilterBundle(this, bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
+    }
+  }
+
+
   public BundleInfo getInfo()
   {
-    return new BundleInfo(
-        indexBundle == null ? null : indexBundle.getIndexInfo(),
-        matcherBundle == null ? null : matcherBundle.getMatcherInfo()
+    return new BundleInfo(indexBundle == null ? null : indexBundle.getIndexInfo(),
+                          matcherBundle == null ? null : matcherBundle.getMatcherInfo()
     );
   }
 
@@ -123,10 +204,12 @@ public class FilterBundle
     return matcherBundle == null || matcherBundle.canVectorize();
   }
 
+  // This interface only has one implementation
   public interface IndexBundle
   {
     IndexBundleInfo getIndexInfo();
 
+    // The computed bitmap from the index
     ImmutableBitmap getBitmap();
 
     ColumnIndexCapabilities getIndexCapabilities();
@@ -212,9 +295,7 @@ public class FilterBundle
 
     @Override
     public ValueMatcher valueMatcher(
-        ColumnSelectorFactory selectorFactory,
-        Offset baseOffset,
-        boolean descending
+        ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending
     )
     {
       return matcherFn.apply(selectorFactory);
@@ -222,8 +303,7 @@ public class FilterBundle
 
     @Override
     public VectorValueMatcher vectorMatcher(
-        VectorColumnSelectorFactory selectorFactory,
-        ReadableVectorOffset baseOffset
+        VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset
     )
     {
       return vectorMatcherFn.apply(selectorFactory);
@@ -297,10 +377,7 @@ public class FilterBundle
     private final long buildTimeNs;
 
     public IndexBundleInfo(
-        Supplier<String> filterString,
-        int selectionSize,
-        long buildTimeNs,
-        @Nullable List<IndexBundleInfo> indexes
+        Supplier<String> filterString, int selectionSize, long buildTimeNs, @Nullable List<IndexBundleInfo> indexes
     )
     {
       this.filter = filterString;
@@ -339,12 +416,11 @@ public class FilterBundle
      */
     public String describe()
     {
-      final StringBuilder sb = new StringBuilder()
-          .append("index: ")
-          .append(filter.get())
-          .append(" (selectionSize = ")
-          .append(selectionSize)
-          .append(")\n");
+      final StringBuilder sb = new StringBuilder().append("index: ")
+                                                  .append(filter.get())
+                                                  .append(" (selectionSize = ")
+                                                  .append(selectionSize)
+                                                  .append(")\n");
 
       if (indexes != null) {
         for (final IndexBundleInfo info : indexes) {
@@ -358,12 +434,17 @@ public class FilterBundle
     @Override
     public String toString()
     {
-      return "{" +
-             "filter=\"" + filter.get() + '\"' +
-             ", selectionSize=" + selectionSize +
-             ", buildTime=" + TimeUnit.NANOSECONDS.toMicros(buildTimeNs) + "μs" +
-             (indexes != null ? ", indexes=" + indexes : "") +
-             '}';
+      return "{"
+             + "filter=\""
+             + filter.get()
+             + '\"'
+             + ", selectionSize="
+             + selectionSize
+             + ", buildTime="
+             + TimeUnit.NANOSECONDS.toMicros(buildTimeNs)
+             + "μs"
+             + (indexes != null ? ", indexes=" + indexes : "")
+             + '}';
     }
   }
 
@@ -379,9 +460,7 @@ public class FilterBundle
     private final IndexBundleInfo partialIndex;
 
     public MatcherBundleInfo(
-        Supplier<String> filter,
-        @Nullable IndexBundleInfo partialIndex,
-        @Nullable List<MatcherBundleInfo> matchers
+        Supplier<String> filter, @Nullable IndexBundleInfo partialIndex, @Nullable List<MatcherBundleInfo> matchers
     )
     {
       this.filter = filter;
@@ -415,10 +494,7 @@ public class FilterBundle
      */
     public String describe()
     {
-      final StringBuilder sb = new StringBuilder()
-          .append("matcher: ")
-          .append(filter.get())
-          .append("\n");
+      final StringBuilder sb = new StringBuilder().append("matcher: ").append(filter.get()).append("\n");
 
       if (partialIndex != null) {
         sb.append("  with partial ")
@@ -437,11 +513,13 @@ public class FilterBundle
     @Override
     public String toString()
     {
-      return "{" +
-             "filter=\"" + filter.get() + '\"' +
-             (partialIndex != null ? ", partialIndex=" + partialIndex : "") +
-             (matchers != null ? ", matchers=" + matchers : "") +
-             '}';
+      return "{"
+             + "filter=\""
+             + filter.get()
+             + '\"'
+             + (partialIndex != null ? ", partialIndex=" + partialIndex : "")
+             + (matchers != null ? ", matchers=" + matchers : "")
+             + '}';
     }
   }
 }

@@ -31,12 +31,28 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 @SubclassesMustOverrideEqualsAndHashCode
 public interface Filter
 {
+  default String getFilterString()
+  {
+    return toString();
+  }
+
+  /**
+   * Returns a LinkedHashSet of all child filters for this filter with no duplicates.
+   *
+   * <p>The ordering of child filters is important in some cases, e.x.short-curcuiting.</p>
+   */
+  default LinkedHashSet<Filter> getFilters()
+  {
+    return new LinkedHashSet<>();
+  }
+
   /**
    * Compute indexes and build a container {@link FilterBundle} to be used during
    * {@link org.apache.druid.segment.Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} creation, combining
@@ -48,26 +64,26 @@ public interface Filter
    * See {@link FilterBundle} for additional details.
    *
    * @param columnIndexSelector - provides {@link org.apache.druid.segment.column.ColumnIndexSupplier} to fetch column
-   *                              indexes and {@link org.apache.druid.collections.bitmap.BitmapFactory} to manipulate
-   *                              them
+   *                            indexes and {@link org.apache.druid.collections.bitmap.BitmapFactory} to manipulate
+   *                            them
    * @param bitmapResultFactory - wrapper for {@link ImmutableBitmap} operations to tie into
-   *                              {@link org.apache.druid.query.QueryMetrics} and build the output indexes
+   *                            {@link org.apache.druid.query.QueryMetrics} and build the output indexes
    * @param applyRowCount       - upper bound on number of rows this filter would be applied to, after removing rows
-   *                              short-circuited by prior bundle operations. For example, given "x AND y", if "x" is
-   *                              resolved using an index, then "y" will receive the number of rows that matched
-   *                              the filter "x". As another example, given "x OR y", if "x" is resolved using an
-   *                              index, then "y" will receive the number of rows that did *not* match the filter "x".
+   *                            short-circuited by prior bundle operations. For example, given "x AND y", if "x" is
+   *                            resolved using an index, then "y" will receive the number of rows that matched
+   *                            the filter "x". As another example, given "x OR y", if "x" is resolved using an
+   *                            index, then "y" will receive the number of rows that did *not* match the filter "x".
    * @param totalRowCount       - total number of rows to be scanned if no indexes are applied
    * @param includeUnknown      - mapping for Druid native two state logic system into SQL three-state logic system. If
-   *                              set to true, bitmaps returned by this method should include true bits for any rows
-   *                              where the matching result is 'unknown', such as from the input being null valued.
-   *                              See {@link NullHandling#useThreeValueLogic()}
-   * @return                    - {@link FilterBundle} containing any indexes and/or matchers that are needed to build
-   *                              a cursor
+   *                            set to true, bitmaps returned by this method should include true bits for any rows
+   *                            where the matching result is 'unknown', such as from the input being null valued.
+   *                            See {@link NullHandling#useThreeValueLogic()}
    * @param <T>                 - Type of {@link BitmapResultFactory} results, {@link ImmutableBitmap} by default
+   * @return - {@link FilterBundle} containing any indexes and/or matchers that are needed to build
+   * a cursor
    */
   default <T> FilterBundle makeFilterBundle(
-      ColumnIndexSelector columnIndexSelector,
+      FilterBundle.Builder filterBundleBuilder,
       BitmapResultFactory<T> bitmapResultFactory,
       int applyRowCount,
       int totalRowCount,
@@ -76,24 +92,26 @@ public interface Filter
   {
     final FilterBundle.IndexBundle indexBundle;
     final boolean needMatcher;
-    final BitmapColumnIndex columnIndex = getBitmapColumnIndex(columnIndexSelector);
+    final BitmapColumnIndex columnIndex = filterBundleBuilder.getBitmapColumnIndex();
     if (columnIndex != null) {
       final long bitmapConstructionStartNs = System.nanoTime();
-      final T result = columnIndex.computeBitmapResult(
-          bitmapResultFactory,
-          applyRowCount,
-          totalRowCount,
-          includeUnknown
+      final T result = columnIndex.computeBitmapResult(bitmapResultFactory,
+                                                       applyRowCount,
+                                                       totalRowCount,
+                                                       includeUnknown
       );
       final long totalConstructionTimeNs = System.nanoTime() - bitmapConstructionStartNs;
       if (result == null) {
         indexBundle = null;
       } else {
         final ImmutableBitmap bitmap = bitmapResultFactory.toImmutableBitmap(result);
-        indexBundle = new FilterBundle.SimpleIndexBundle(
-            new FilterBundle.IndexBundleInfo(this::toString, bitmap.size(), totalConstructionTimeNs, null),
-            bitmap,
-            columnIndex.getIndexCapabilities()
+        indexBundle = new FilterBundle.SimpleIndexBundle(new FilterBundle.IndexBundleInfo(this::getFilterString,
+                                                                                          bitmap.size(),
+                                                                                          totalConstructionTimeNs,
+                                                                                          null
+        ),
+                                                         bitmap,
+                                                         columnIndex.getIndexCapabilities()
         );
       }
       needMatcher = result == null || !columnIndex.getIndexCapabilities().isExact();
@@ -103,11 +121,14 @@ public interface Filter
     }
     final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
-      matcherBundle = new FilterBundle.SimpleMatcherBundle(
-          new FilterBundle.MatcherBundleInfo(this::toString, null, null),
-          this::makeMatcher,
-          this::makeVectorMatcher,
-          this.canVectorizeMatcher(columnIndexSelector)
+      matcherBundle = new FilterBundle.SimpleMatcherBundle(new FilterBundle.MatcherBundleInfo(
+          this::getFilterString,
+          null,
+          null
+      ),
+                                                           this::makeMatcher,
+                                                           this::makeVectorMatcher,
+                                                           this.canVectorizeMatcher(filterBundleBuilder.getColumnIndexSelector())
       );
     } else {
       matcherBundle = null;
@@ -122,7 +143,6 @@ public interface Filter
    * examine details about the index prior to computing it, via {@link BitmapColumnIndex#getIndexCapabilities()}.
    *
    * @param selector Object used to create BitmapColumnIndex
-   *
    * @return BitmapColumnIndex that can build ImmutableBitmap of matched row numbers
    */
   @Nullable
@@ -132,7 +152,6 @@ public interface Filter
    * Get a {@link ValueMatcher} that applies this filter to row values.
    *
    * @param factory Object used to create ValueMatchers
-   *
    * @return ValueMatcher that applies this filter to row values.
    */
   ValueMatcher makeMatcher(ColumnSelectorFactory factory);
@@ -141,7 +160,6 @@ public interface Filter
    * Get a {@link VectorValueMatcher} that applies this filter to row vectors.
    *
    * @param factory Object used to create ValueMatchers
-   *
    * @return VectorValueMatcher that applies this filter to row vectors.
    */
   default VectorValueMatcher makeVectorMatcher(VectorColumnSelectorFactory factory)
@@ -151,6 +169,7 @@ public interface Filter
 
   /**
    * Returns true if this filter can produce a vectorized matcher from its "makeVectorMatcher" method.
+   *
    * @param inspector Supplies type information for the selectors this filter will match against
    */
   default boolean canVectorizeMatcher(ColumnInspector inspector)
@@ -176,7 +195,7 @@ public interface Filter
    * Return a copy of this filter that is identical to the this filter except that it operates on different columns,
    * based on a renaming map where the key is the column to be renamed in the filter, and the value is the new
    * column name.
-   *
+   * <p>
    * For example, if I have a filter (A = hello), and I have a renaming map (A -> B),
    * this should return the filter (B = hello)
    *
