@@ -2045,7 +2045,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxRowsInMemory',
     type: 'number',
-    defaultValue: 1000000,
+    defaultValue: (spec: IngestionSpec) => (isStreamingSpec(spec) ? 150000 : 1000000),
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
