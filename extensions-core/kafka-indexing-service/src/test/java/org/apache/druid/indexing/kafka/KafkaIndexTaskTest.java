@@ -2861,6 +2861,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
+        null,
         null
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
