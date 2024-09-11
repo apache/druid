@@ -176,7 +176,9 @@ public interface Task
 
   /**
    * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
-   * that may be needed by queries.
+   * that may be needed by queries. Tasks supporting queries are also allocated processing buffers, processing threads
+   * and merge buffers. Those which do not should not assume that these resources are present and must explicitly allocate
+   * any direct buffers or processing pools if required.
    *
    * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
    * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
