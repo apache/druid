@@ -100,11 +100,13 @@ public class HttpInputSource
 
   public static void throwIfForbiddenHeaders(HttpInputSourceConfig config, Map<String, String> requestHeaders)
   {
-    for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
-      if (!config.getAllowedHeaders().contains(StringUtils.toLowerCase(entry.getKey()))) {
-        throw InvalidInput.exception("Got forbidden header %s, allowed headers are only %s ",
-                                     entry.getKey(), config.getAllowedHeaders()
-        );
+    if (config.getAllowedHeaders().size() > 0) {
+      for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+        if (!config.getAllowedHeaders().contains(StringUtils.toLowerCase(entry.getKey()))) {
+          throw InvalidInput.exception("Got forbidden header %s, allowed headers are only %s ",
+                                       entry.getKey(), config.getAllowedHeaders()
+          );
+        }
       }
     }
   }
