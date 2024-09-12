@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.runtime.Hook;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -169,6 +170,8 @@ public class NativeQueryMaker implements QueryMaker
       final List<RelDataType> newTypes
   )
   {
+    Hook.QUERY_PLAN.run(query);
+
     if (query.getId() == null) {
       final String queryId = UUID.randomUUID().toString();
       plannerContext.addNativeQueryId(queryId);
