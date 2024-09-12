@@ -2740,6 +2740,7 @@ public class ControllerImpl implements Controller
             queryListener
         );
 
+        resultReaderExec.registerCancellationId(cancellationId);
         queryResultsReaderFuture = resultReaderExec.runFully(resultsReader, cancellationId);
 
         // When results are done being read, kick the main thread.
@@ -2757,7 +2758,7 @@ public class ControllerImpl implements Controller
             e,
             () -> CloseableUtils.closeAll(
                 finalResultsChannel,
-                () -> resultReaderExec.getExecutorService().shutdownNow()
+                resultReaderExec::shutdownNow
             )
         );
       }
@@ -2771,7 +2772,7 @@ public class ControllerImpl implements Controller
           throw new RuntimeException(e);
         }
         finally {
-          resultReaderExec.getExecutorService().shutdownNow();
+          resultReaderExec.shutdownNow();
         }
       });
     }

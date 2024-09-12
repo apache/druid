@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -61,6 +62,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.CpuCounters;
@@ -94,7 +96,6 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
@@ -104,7 +105,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -112,7 +113,16 @@ import java.util.stream.Collectors;
  */
 public class RunWorkOrder
 {
-  private final String controllerTaskId;
+  enum State
+  {
+    INIT,
+    STARTED,
+    STOPPING,
+    STOPPED
+  }
+
+  private static final Logger log = new Logger(RunWorkOrder.class);
+
   private final WorkOrder workOrder;
   private final InputChannelFactory inputChannelFactory;
   private final CounterTracker counterTracker;
@@ -125,7 +135,8 @@ public class RunWorkOrder
   private final boolean reindex;
   private final boolean removeNullBytes;
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
-  private final AtomicBoolean started = new AtomicBoolean();
+  private final AtomicReference<State> state = new AtomicReference<>(State.INIT);
+  private final SettableFuture<Object> finishedFuture = SettableFuture.create();
 
   @MonotonicNonNull
   private InputSliceReader inputSliceReader;
@@ -141,7 +152,6 @@ public class RunWorkOrder
   private ListenableFuture<OutputChannels> stageOutputChannelsFuture;
 
   public RunWorkOrder(
-      final String controllerTaskId,
       final WorkOrder workOrder,
       final InputChannelFactory inputChannelFactory,
       final CounterTracker counterTracker,
@@ -154,7 +164,6 @@ public class RunWorkOrder
       final boolean removeNullBytes
   )
   {
-    this.controllerTaskId = controllerTaskId;
     this.workOrder = workOrder;
     this.inputChannelFactory = inputChannelFactory;
     this.counterTracker = counterTracker;
@@ -180,15 +189,16 @@ public class RunWorkOrder
    * Execution proceeds asynchronously after this method returns. The {@link RunWorkOrderListener} passed to the
    * constructor of this instance can be used to track progress.
    */
-  public void start() throws IOException
+  public void startAsync()
   {
-    if (started.getAndSet(true)) {
-      throw new ISE("Already started");
+    if (!state.compareAndSet(State.INIT, State.STARTED)) {
+      throw new ISE("Cannot start from state[%s]", state);
     }
 
     final StageDefinition stageDef = workOrder.getStageDefinition();
 
     try {
+      exec.registerCancellationId(cancellationId);
       makeInputSliceReader();
       makeWorkOutputChannelFactory();
       makeShuffleOutputChannelFactory();
@@ -205,16 +215,60 @@ public class RunWorkOrder
       setUpCompletionCallbacks();
     }
     catch (Throwable t) {
-      // If start() has problems, cancel anything that was already kicked off, and close the FrameContext.
+      stopUnchecked();
+    }
+  }
+
+  /**
+   * Stops an execution that was previously initiated through {@link #startAsync()}.
+   * Blocks until execution is fully stopped.
+   * Closes the {@link FrameContext}.
+   */
+  public void stop() throws InterruptedException
+  {
+    if (state.compareAndSet(State.INIT, State.STOPPING)
+        || state.compareAndSet(State.STARTED, State.STOPPING)) {
+      // Initiate stopping.
+      Throwable e = null;
+
       try {
         exec.cancel(cancellationId);
       }
-      catch (Throwable t2) {
-        t.addSuppressed(t2);
+      catch (Throwable e2) {
+        e = e2;
       }
 
-      CloseableUtils.closeAndSuppressExceptions(frameContext, t::addSuppressed);
-      throw t;
+      try {
+        frameContext.close();
+      }
+      catch (Throwable e2) {
+        if (e == null) {
+          e = e2;
+        } else {
+          e.addSuppressed(e2);
+        }
+      }
+
+      if (e != null) {
+        Throwables.throwIfInstanceOf(e, InterruptedException.class);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  /**
+   * Calls {@link #stop()}. If the call to {@link #stop()} throws {@link InterruptedException}, this method sets
+   * the interrupt flag and throws an unchecked exception.
+   */
+  public void stopUnchecked()
+  {
+    try {
+      stop();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
     }
   }
 
@@ -571,7 +625,7 @@ public class RunWorkOrder
   )
   {
     return DurableStorageOutputChannelFactory.createStandardImplementation(
-        controllerTaskId,
+        workerContext.queryId(),
         workOrder.getWorkerNumber(),
         workOrder.getStageNumber(),
         workerContext.workerId(),
