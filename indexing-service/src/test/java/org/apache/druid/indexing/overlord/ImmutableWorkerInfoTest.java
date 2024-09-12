@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
@@ -32,12 +33,21 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class ImmutableWorkerInfoTest
 {
+
+  private static final String MSQ_CONTROLLER_TYPE = "query_controller";
+  private static final String RANDOM_TYPE = "blah";
+  private static final String AVAILABILITY_GROUP = "grp1";
+
   @Test
   public void testSerde() throws Exception
   {
@@ -200,7 +210,7 @@ public class ImmutableWorkerInfoTest
             "http", "testWorker1", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
         ),
         3,
-        0,
+        new HashMap<>(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:01Z"),
@@ -210,7 +220,7 @@ public class ImmutableWorkerInfoTest
             "http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
         ),
         2,
-        0,
+        new HashMap<>(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z"),
@@ -224,7 +234,7 @@ public class ImmutableWorkerInfoTest
     ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
         new Worker("http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY),
         6,
-        0,
+        new HashMap<>(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z")
@@ -238,44 +248,71 @@ public class ImmutableWorkerInfoTest
     when(parallelIndexTask.getType()).thenReturn(ParallelIndexSupervisorTask.TYPE);
     when(parallelIndexTask.getTaskResource()).thenReturn(taskResource0);
 
+    Map<String, Number> taskLimitsMap = new HashMap<>();
+
     // Since task satisifies parallel and total slot constraints, can run
-    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, 0.5));
+    taskLimitsMap.put(ParallelIndexSupervisorTask.TYPE, 0.5);
+    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, taskLimitsMap));
 
     // Since task fails the parallel slot constraint, it cannot run (3 > 1)
-    Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, 0.1));
+    taskLimitsMap.put(ParallelIndexSupervisorTask.TYPE, 0.1);
+    Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, taskLimitsMap));
+
+    taskLimitsMap.put(ParallelIndexSupervisorTask.TYPE, 1.0);
+    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, taskLimitsMap));
 
 
     // Some other indexing task
     TaskResource taskResource1 = mock(TaskResource.class);
     when(taskResource1.getRequiredCapacity()).thenReturn(5);
     Task anyOtherTask = mock(IndexTask.class);
-    when(anyOtherTask.getType()).thenReturn("index");
+    when(anyOtherTask.getType()).thenReturn(IndexTask.TYPE);
     when(anyOtherTask.getTaskResource()).thenReturn(taskResource1);
 
     // Not a parallel index task ->  satisfies parallel index constraint
     // But does not satisfy the total slot constraint and cannot run (11 > 10)
-    Assert.assertFalse(workerInfo.canRunTask(anyOtherTask, 0.5));
-
+    taskLimitsMap.put(IndexTask.TYPE, 0.5);
+    Assert.assertFalse(workerInfo.canRunTask(anyOtherTask, taskLimitsMap));
 
     // Task has an availability conflict ("grp1")
     TaskResource taskResource2 = mock(TaskResource.class);
     when(taskResource2.getRequiredCapacity()).thenReturn(1);
-    when(taskResource2.getAvailabilityGroup()).thenReturn("grp1");
+    when(taskResource2.getAvailabilityGroup()).thenReturn(AVAILABILITY_GROUP);
     Task grp1Task = mock(IndexTask.class);
-    when(grp1Task.getType()).thenReturn("blah");
+    when(grp1Task.getType()).thenReturn(RANDOM_TYPE);
     when(grp1Task.getTaskResource()).thenReturn(taskResource2);
 
     // Satisifies parallel index and total index slot constraints but cannot run due availability
-    Assert.assertFalse(workerInfo.canRunTask(grp1Task, 0.3));
+    taskLimitsMap.put(RANDOM_TYPE, 0.3);
+    Assert.assertFalse(workerInfo.canRunTask(grp1Task, taskLimitsMap));
+
+    TaskResource taskResource3 = mock(TaskResource.class);
+    when(taskResource1.getRequiredCapacity()).thenReturn(1);
+
+    Task msqControllerTask = mock(AbstractTask.class);
+    when(msqControllerTask.getType()).thenReturn(MSQ_CONTROLLER_TYPE);
+    when(msqControllerTask.getTaskResource()).thenReturn(taskResource3);
+
+    Map<String, Integer> mockStatusMap = new HashMap<>();
+    mockStatusMap.put(MSQ_CONTROLLER_TYPE, 4);
+
+    ImmutableWorkerInfo spyInfo = Mockito.spy(workerInfo);
+    when(spyInfo.getTypeSpecificCapacityMap()).thenReturn(mockStatusMap);
+    when(taskResource3.getRequiredCapacity()).thenReturn(1);
+
+    taskLimitsMap.put(MSQ_CONTROLLER_TYPE, 4);
+    Assert.assertFalse(spyInfo.canRunTask(msqControllerTask, taskLimitsMap));
+    taskLimitsMap.put(MSQ_CONTROLLER_TYPE, 5);
+    Assert.assertTrue(spyInfo.canRunTask(msqControllerTask, taskLimitsMap));
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)
   {
     if (shouldMatch) {
-      Assert.assertTrue(o1.equals(o2));
+      Assert.assertEquals(o1, o2);
       Assert.assertEquals(o1.hashCode(), o2.hashCode());
     } else {
-      Assert.assertFalse(o1.equals(o2));
+      Assert.assertNotEquals(o1, o2);
       Assert.assertNotEquals(o1.hashCode(), o2.hashCode());
     }
   }

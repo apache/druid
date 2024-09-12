@@ -483,12 +483,6 @@ public class ThreadingTaskRunner
     return ImmutableMap.of(workerConfig.getCategory(), Long.valueOf(workerConfig.getCapacity()));
   }
 
-  @Override
-  public int getTotalCapacity()
-  {
-    return workerConfig.getCapacity();
-  }
-
   public long getTotalTaskSlotCountLong()
   {
     return workerConfig.getCapacity();

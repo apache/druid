@@ -150,7 +150,7 @@ public class WorkerSelectUtils
   {
     return allWorkers.values()
                      .stream()
-                     .filter(worker -> worker.canRunTask(task, workerTaskRunnerConfig.getParallelIndexTaskSlotRatio())
+                     .filter(worker -> worker.canRunTask(task, workerTaskRunnerConfig.getCustomJobTypeLimits())
                                        && worker.isValidVersion(workerTaskRunnerConfig.getMinWorkerVersion()))
                      .collect(Collectors.toMap(w -> w.getWorker().getHost(), Function.identity()));
   }

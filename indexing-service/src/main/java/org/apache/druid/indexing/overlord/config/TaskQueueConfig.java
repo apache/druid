@@ -48,14 +48,6 @@ public class TaskQueueConfig
   @JsonProperty
   private HumanReadableBytes maxTaskPayloadSize;
 
-  @Nullable
-  @JsonProperty
-  private Float controllerTaskSlotRatio;
-
-  @Nullable
-  @JsonProperty
-  private Integer maxControllerTaskSlots;
-
   @JsonCreator
   public TaskQueueConfig(
       @JsonProperty("maxSize") final Integer maxSize,
@@ -63,9 +55,7 @@ public class TaskQueueConfig
       @JsonProperty("restartDelay") final Period restartDelay,
       @JsonProperty("storageSyncRate") final Period storageSyncRate,
       @JsonProperty("taskCompleteHandlerNumThreads") final Integer taskCompleteHandlerNumThreads,
-      @JsonProperty("maxTaskPayloadSize") @Nullable final HumanReadableBytes maxTaskPayloadSize,
-      @Nullable @JsonProperty("controllerTaskSlotRatio") final Float controllerTaskSlotRatio,
-      @Nullable @JsonProperty("maxControllerTaskSlots") final Integer maxControllerTaskSlots
+      @JsonProperty("maxTaskPayloadSize") @Nullable final HumanReadableBytes maxTaskPayloadSize
   )
   {
     this.maxSize = Configs.valueOrDefault(maxSize, Integer.MAX_VALUE);
@@ -74,15 +64,6 @@ public class TaskQueueConfig
     this.restartDelay = defaultDuration(restartDelay, "PT30S");
     this.storageSyncRate = defaultDuration(storageSyncRate, "PT1M");
     this.maxTaskPayloadSize = maxTaskPayloadSize;
-    if (controllerTaskSlotRatio != null && maxControllerTaskSlots != null) {
-      throw new IllegalArgumentException(
-          "Only one controller task limit parameter should be specified, controllerTaskSlotRatio or maxControllerTaskSlots");
-    } else if (controllerTaskSlotRatio != null && controllerTaskSlotRatio > 1 && controllerTaskSlotRatio <= 0) {
-      throw new IllegalArgumentException(
-          "controllerTaskSlotRatio is out of range (0;1]");
-    }
-    this.controllerTaskSlotRatio = controllerTaskSlotRatio;
-    this.maxControllerTaskSlots = maxControllerTaskSlots;
   }
 
   public int getMaxSize()
@@ -118,17 +99,5 @@ public class TaskQueueConfig
   private static Duration defaultDuration(final Period period, final String theDefault)
   {
     return (period == null ? new Period(theDefault) : period).toStandardDuration();
-  }
-
-  @Nullable
-  public Integer getMaxControllerTaskSlots()
-  {
-    return maxControllerTaskSlots;
-  }
-
-  @Nullable
-  public Float getControllerTaskSlotRatio()
-  {
-    return controllerTaskSlotRatio;
   }
 }

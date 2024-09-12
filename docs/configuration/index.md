@@ -1127,8 +1127,6 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.indexer.queue.restartDelay`|Sleep this long when Overlord queue management throws an exception before trying again.|`PT30S`|
 |`druid.indexer.queue.storageSyncRate`|Sync Overlord state this often with an underlying task persistence mechanism.|`PT1M`|
 |`druid.indexer.queue.maxTaskPayloadSize`|Maximum allowed size in bytes of a single task payload accepted by the Overlord.|none (allow all task payload sizes)|
-|`druid.indexer.queue.controllerTaskSlotRatio`|Optional value which defines the proportion of available task slots that can be allocated to `query_controller` tasks. This is a floating-point value between 0 and 1.|`null`|
-|`druid.indexer.queue.maxControllerTaskSlots`|Optional value which specifies the maximum number of task slots that can be allocated to controller tasks. This is an integer value that provides a hard limit on the number of task slots available for `query_controller` tasks.|`null`|
 
 The following configs only apply if the Overlord is running in remote mode. For a description of local vs. remote mode, see [Overlord service](../design/overlord.md).
 
@@ -1136,7 +1134,7 @@ The following configs only apply if the Overlord is running in remote mode. For 
 |--------|-----------|-------|
 |`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task has been assigned to a Middle Manager before throwing an error.|`PT5M`|
 |`druid.indexer.runner.minWorkerVersion`|The minimum Middle Manager version to send tasks to. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.worker.version`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons. |"0"|
-| `druid.indexer.runner.parallelIndexTaskSlotRatio`| The ratio of task slots available for parallel indexing supervisor tasks per worker. The specified value must be in the range `[0, 1]`. |1|
+|`druid.indexer.runner.customJobTypeLimits`| A map where each key is a task type, and the corresponding value represents the limit on the number of task slots that a task of that type can occupy on a worker. The key is a `String` that specifies the task type. The value can either be a Double or Integer. A `Double` in the range [0, 1], representing a ratio of the available task slots that tasks of this type can occupy. An `Integer` that is greater than or equal to 0, representing an absolute limit on the number of task slots that tasks of this type can occupy.|Empty map|
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect Middle Managers to compress Znodes.|true|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of `[10KiB, 2GiB)`. [Human-readable format](human-readable-byte.md) is supported.| 512 KiB |
 |`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a Middle Manager is disconnected from ZooKeeper.|`PT15M`|

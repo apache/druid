@@ -72,7 +72,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -97,7 +96,6 @@ import java.util.stream.Collectors;
  */
 public class TaskQueue
 {
-  private static final String MSQ_CONTROLLER = "query_controller";
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
 
@@ -442,7 +440,7 @@ public class TaskQueue
             notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
             continue;
           }
-          if (taskIsReady && !isControllerTaskLimitReached(task.getType(), true)) {
+          if (taskIsReady) {
             log.info("Asking taskRunner to run: %s", task.getId());
             runnerTaskFuture = taskRunner.run(task);
           } else {
@@ -458,9 +456,6 @@ public class TaskQueue
         // if the taskFutures contain this task and this task is pending, also let the taskRunner
         // to run it to guarantee it will be assigned to run
         // see https://github.com/apache/druid/pull/6991
-        if (isControllerTaskLimitReached(task.getType(), false)) {
-          continue;
-        }
         taskRunner.run(task);
       }
     }
@@ -493,32 +488,6 @@ public class TaskQueue
         }
       }
     }
-  }
-
-  private boolean isControllerTaskLimitReached(final String type, final boolean includePending)
-  {
-    if (!MSQ_CONTROLLER.equals(type)) {
-      return false;
-    }
-
-    Integer maxSlots = config.getMaxControllerTaskSlots();
-    Float slotRatio = config.getControllerTaskSlotRatio();
-
-    if (maxSlots == null && slotRatio == null) {
-      return false;
-    }
-
-    long runningTasks = getRunningControllerTaskCount();
-
-    if (includePending) {
-      runningTasks += getPendingControllerTaskCount();
-    }
-
-    if (maxSlots != null && runningTasks >= maxSlots) {
-      return true;
-    }
-
-    return slotRatio != null && runningTasks >= Math.floor(taskRunner.getTotalCapacity() * slotRatio);
   }
 
   private boolean isTaskPending(Task task)
@@ -954,21 +923,6 @@ public class TaskQueue
                          e -> 1L,
                          Long::sum
                      ));
-  }
-
-  public Long getRunningControllerTaskCount()
-  {
-    return taskRunner.getRunningTasks()
-                     .stream()
-                     .filter(workItem -> Objects.equals(workItem.getTaskType(), MSQ_CONTROLLER))
-                     .count();
-  }
-  public Long getPendingControllerTaskCount()
-  {
-    return taskRunner.getPendingTasks()
-                     .stream()
-                     .filter(workItem -> Objects.equals(workItem.getTaskType(), MSQ_CONTROLLER))
-                     .count();
   }
 
   public Map<String, Long> getPendingTaskCount()
