@@ -81,8 +81,9 @@ public class FilterBundle
       @Nullable IndexBundle index, @Nullable MatcherBundle matcherBundle
   )
   {
-    Preconditions.checkArgument(index != null || matcherBundle != null,
-                                "At least one of index or matcher must be not null"
+    Preconditions.checkArgument(
+        index != null || matcherBundle != null,
+        "At least one of index or matcher must be not null"
     );
     this.indexBundle = index;
     this.matcherBundle = matcherBundle;
@@ -101,6 +102,10 @@ public class FilterBundle
     return matcherBundle;
   }
 
+  /**
+   * Wraps info needed to build a {@link FilterBundle}, and provides an estimated compute cost for
+   * {@link BitmapColumnIndex#computeBitmapResult}.
+   */
   public static class Builder
   {
     private final Filter filter;
@@ -110,9 +115,7 @@ public class FilterBundle
     private final List<FilterBundle.Builder> childBuilders;
     private final int estimatedComputeCost;
 
-    public Builder(
-        Filter filter, ColumnIndexSelector columnIndexSelector
-    )
+    public Builder(Filter filter, ColumnIndexSelector columnIndexSelector)
     {
       this.filter = filter;
       this.columnIndexSelector = columnIndexSelector;
@@ -184,8 +187,9 @@ public class FilterBundle
 
   public BundleInfo getInfo()
   {
-    return new BundleInfo(indexBundle == null ? null : indexBundle.getIndexInfo(),
-                          matcherBundle == null ? null : matcherBundle.getMatcherInfo()
+    return new BundleInfo(
+        indexBundle == null ? null : indexBundle.getIndexInfo(),
+        matcherBundle == null ? null : matcherBundle.getMatcherInfo()
     );
   }
 
