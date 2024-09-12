@@ -121,7 +121,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(3, null, null, null, null, null, null, null),
+        new TaskQueueConfig(3, null, null, null, null, null),
         new DefaultTaskConfig()
         {
           @Override
@@ -222,7 +222,7 @@ public class TaskQueueTest extends IngestionTestBase
     HumanReadableBytes maxPayloadSize10Mib = HumanReadableBytes.valueOf(10 * 1024 * 1024);
     TaskQueue maxPayloadTaskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize10Mib, null, null),
+        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize10Mib),
         new DefaultTaskConfig()
         {
           @Override
@@ -405,7 +405,7 @@ public class TaskQueueTest extends IngestionTestBase
     EasyMock.replay(workerHolder);
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -493,7 +493,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
@@ -538,7 +538,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
