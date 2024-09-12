@@ -19,8 +19,10 @@
 
 package org.apache.druid.indexing.compact;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.CompactionEngine;
@@ -144,6 +146,19 @@ public class OverlordCompactionSchedulerTest
         serviceEmitter,
         OBJECT_MAPPER
     );
+  }
+
+  @Test
+  public void testCompactionSupervisorConfigSerde() throws JsonProcessingException
+  {
+    boolean enabled = true;
+    CompactionEngine defaultEngine = CompactionEngine.MSQ;
+    CompactionSupervisorConfig compactionSupervisorConfig =
+        OBJECT_MAPPER.readValue(
+            OBJECT_MAPPER.writeValueAsString(ImmutableMap.of("enabled", enabled, "defaultEngine", defaultEngine)),
+            CompactionSupervisorConfig.class
+        );
+    Assert.assertEquals(new CompactionSupervisorConfig(enabled, defaultEngine), compactionSupervisorConfig);
   }
 
   @Test
