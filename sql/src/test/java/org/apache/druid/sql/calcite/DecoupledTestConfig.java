@@ -102,7 +102,8 @@ public @interface DecoupledTestConfig
      * Join (l=r && lCol='a') -> Gby
      * Join (l=r) -> Gby[lCol='a]
      */
-    FILTER_PUSHED_DOWN_FROM_JOIN_CAN_BE_MORE;
+    FILTER_PUSHED_DOWN_FROM_JOIN_CAN_BE_MORE,
+    IRRELEVANT_SCANQUERY;
 
     public boolean isPresent()
     {

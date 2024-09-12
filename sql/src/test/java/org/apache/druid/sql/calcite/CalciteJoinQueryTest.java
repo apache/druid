@@ -678,9 +678,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
-  @NotYetSupported(Modes.CANNOT_JOIN_LOOKUP_NON_KEY)
   public void testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothing(Map<String, Object> queryContext)
 
   {
@@ -760,9 +760,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testFilterAndGroupByLookupUsingJoinOperatorBackwards(Map<String, Object> queryContext)
   {
     // Like "testFilterAndGroupByLookupUsingJoinOperator", but with the table and lookup reversed.
@@ -816,7 +816,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
@@ -917,7 +917,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.CANNOT_JOIN_LOOKUP_NON_KEY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testFilterAndGroupByLookupUsingJoinOperator(Map<String, Object> queryContext)
@@ -1127,7 +1126,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinTableLookupLookupWithFilterWithOuterLimit(Map<String, Object> queryContext)
@@ -3979,7 +3977,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
@@ -4220,7 +4217,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
     testQuery(
@@ -4747,7 +4743,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testJoinWithEquiAndNonEquiCondition(Map<String, Object> queryContext)
@@ -4792,7 +4787,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryAsPartOfAndFilter(Map<String, Object> queryContext)
@@ -4950,8 +4944,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
-  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.IRRELEVANT_SCANQUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testNestedGroupByOnInlineDataSourceWithFilter(Map<String, Object> queryContext)
@@ -5363,7 +5356,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithFilterPushdownAndManyFiltersEmptyResults(Map<String, Object> queryContext)
@@ -5471,7 +5463,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults(Map<String, Object> queryContext)
