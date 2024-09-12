@@ -20,6 +20,7 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
@@ -30,8 +31,13 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SchemaPayload;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Utility to generate fingerprint for an object.
@@ -53,12 +59,20 @@ public class FingerprintGenerator
    * Generates fingerprint or hash string for an object using SHA-256 hash algorithm.
    */
   @SuppressWarnings("UnstableApiUsage")
-  public String generateFingerprint(SchemaPayload schemaPayload, String dataSource, int version)
+  public String generateFingerprint(final SchemaPayload schemaPayload, final String dataSource, final int version)
   {
+    final RowSignature rowSignature = schemaPayload.getRowSignature();
+    // Sort the column names in lexicographic order
+    // This ensures that all permutations of a given columns would result in the same fingerprint
+    // thus avoiding schema explosion in the metadata database
+    // Note that this signature is not persisted anywhere, it is only used for fingerprint computation
+    final RowSignature sortedSignature = getLexicographicallySortedSignature(rowSignature);
+    final SchemaPayload updatedPayload = new SchemaPayload(sortedSignature, schemaPayload.getAggregatorFactories());
     try {
+
       final Hasher hasher = Hashing.sha256().newHasher();
 
-      hasher.putBytes(objectMapper.writeValueAsBytes(schemaPayload));
+      hasher.putBytes(objectMapper.writeValueAsBytes(updatedPayload));
       // add delimiter, inspired from org.apache.druid.metadata.PendingSegmentRecord.computeSequenceNamePrevIdSha1
       hasher.putByte((byte) 0xff);
 
@@ -81,5 +95,22 @@ public class FingerprintGenerator
           dataSource, version
       );
     }
+  }
+
+  @VisibleForTesting
+  protected RowSignature getLexicographicallySortedSignature(final RowSignature rowSignature)
+  {
+    final List<String> columns = new ArrayList<>(rowSignature.getColumnNames());
+
+    Collections.sort(columns);
+
+    final RowSignature.Builder sortedSignature = RowSignature.builder();
+
+    for (String column : columns) {
+      ColumnType type = rowSignature.getColumnType(column).orElse(null);
+      sortedSignature.add(column, type);
+    }
+
+    return sortedSignature.build();
   }
 }

@@ -22,6 +22,7 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.TestHelper;
@@ -45,13 +46,20 @@ public class FingerprintGeneratorTest
   @Test
   public void testGenerateFingerprint_precalculatedHash()
   {
-    RowSignature rowSignature = RowSignature.builder().add("c1", ColumnType.FLOAT).build();
+    RowSignature rowSignature =
+        RowSignature.builder()
+                    .add("c1", ColumnType.LONG)
+                    .add("c0", ColumnType.STRING)
+                    .add("c2", ColumnType.FLOAT)
+                    .add("c3", ColumnType.DOUBLE)
+                    .build();
     Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
-    aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
+    aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "c1", null));
+    aggregatorFactoryMap.put("stringAny", new StringAnyAggregatorFactory("stringAny", "c0", 1024, true));
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
 
-    String expected = "DEE5E8F59833102F0FA5B10F8B8884EA15220D1D2A5F6097A93D8309132E1039";
+    String expected = "82E774457D26D0B8D481B6C39872070B25EA3C72C6EFC107B346FA42641740E1";
     Assert.assertEquals(expected, fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0));
   }
 
@@ -60,25 +68,38 @@ public class FingerprintGeneratorTest
   {
     RowSignature rowSignature =
         RowSignature.builder()
-                    .add("c1", ColumnType.FLOAT)
                     .add("c2", ColumnType.LONG)
+                    .add("c1", ColumnType.FLOAT)
                     .add("c3", ColumnType.DOUBLE)
+                    .add("c0", ColumnType.STRING)
                     .build();
 
     Map<String, AggregatorFactory> aggregatorFactoryMap = new HashMap<>();
-    aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "long-col", null));
+    aggregatorFactoryMap.put("longFirst", new LongFirstAggregatorFactory("longFirst", "c2", null));
+    aggregatorFactoryMap.put("stringAny", new StringAnyAggregatorFactory("stringAny", "c0", 1024, true));
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
 
     RowSignature rowSignaturePermutation =
         RowSignature.builder()
                     .add("c2", ColumnType.LONG)
+                    .add("c0", ColumnType.STRING)
                     .add("c3", ColumnType.DOUBLE)
                     .add("c1", ColumnType.FLOAT)
                     .build();
 
-    SchemaPayload schemaPayloadNew = new SchemaPayload(rowSignaturePermutation, aggregatorFactoryMap);
-    Assert.assertNotEquals(
+    Map<String, AggregatorFactory> aggregatorFactoryMapForPermutation = new HashMap<>();
+    aggregatorFactoryMapForPermutation.put(
+        "stringAny",
+        new StringAnyAggregatorFactory("stringAny", "c0", 1024, true)
+    );
+    aggregatorFactoryMapForPermutation.put(
+        "longFirst",
+        new LongFirstAggregatorFactory("longFirst", "c2", null)
+    );
+
+    SchemaPayload schemaPayloadNew = new SchemaPayload(rowSignaturePermutation, aggregatorFactoryMapForPermutation);
+    Assert.assertEquals(
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0),
         fingerprintGenerator.generateFingerprint(schemaPayloadNew, "ds", 0)
     );
