@@ -16085,24 +16085,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.CANNOT_RETRIEVE_ROWS)
   @Test
   public void testWindowingOverJoin()
   {
     msqIncompatible();
+    String sql = "with "
+        + "main as "
+        + "(select dim1 as pickup,count(*) as cnt from foo group by 1 order by 2 desc limit 200),"
+        + "compare0 as "
+        + "(select dim1 as pickup,count(*) as cnt from numfoo group by 1 order by 2 desc limit 200) "
+        + "SELECT "
+        + " main.pickup,"
+        + " main.cnt,"
+        + " compare0.cnt,"
+        + " SUM(main.cnt) OVER (ORDER BY main.pickup)"
+        + "from main "
+        + "left join compare0 on main.pickup is not distinct from compare0.pickup ";
+    System.out.println(sql);
     testBuilder()
-        .sql("with "
-            + "main as "
-            + "(select dim1 as pickup,count(*) as cnt from foo group by 1 order by 2 desc limit 200),"
-            + "compare0 as "
-            + "(select dim1 as pickup,count(*) as cnt from numfoo group by 1 order by 2 desc limit 200) "
-            + "SELECT "
-            + " main.pickup,"
-            + " main.cnt,"
-            + " compare0.cnt,"
-            + " SUM(main.cnt) OVER (ORDER BY main.pickup)"
-            + "from main "
-            + "left join compare0 on main.pickup is not distinct from compare0.pickup "
+        .sql(sql
         )
         .queryContext(
             ImmutableMap.of(

@@ -47,6 +47,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
@@ -582,6 +583,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       DruidQuery finalBaseQuery = baseQuery;
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);
 
+      if (explain != null) {
+        return planExplanation(possiblyLimitedRoot, newRoot, true);
+      }
+
       return new PlannerResult(resultsSupplier, finalBaseQuery.getOutputRowType());
     } else {
       final DruidRel<?> druidRel = (DruidRel<?>) planner.transform(
@@ -595,6 +600,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       handlerContext.hook().captureDruidRel(druidRel);
 
       plannerContext.dispatchHook(DruidHook.DRUID_PLAN, druidRel);
+      Hook.QUERY_PLAN.run(druidRel);
 
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, druidRel, true);

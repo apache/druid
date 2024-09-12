@@ -1,126 +1,59 @@
+!set enableWindowing true
+!set debug true
 !use druidtest://?numMergeBuffers=3
 !set outputformat mysql
 
-SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k where f.dim2 is null;
-LogicalProject(dim1=[$1], v=[$9])
-  LogicalFilter(condition=[IS NULL($2)])
-    LogicalJoin(condition=[=($1, $8)], joinType=[inner])
-      LogicalTableScan(table=[[druid, foo]])
-      LogicalTableScan(table=[[lookup, lookyloo]])
+with
+ main as (select dim1 as pickup,count(*) as cnt from foo group by 1 order by 2 desc limit 200),
+ compare0 as (select dim1 as pickup,count(*) as cnt from numfoo group by 1 order by 2 desc limit 200)
+SELECT  main.pickup, main.cnt, compare0.cnt, SUM(main.cnt) OVER (ORDER BY main.pickup) 
+from main left join compare0 on main.pickup is not distinct from compare0.pickup;
+LogicalWindow(window#0=[window(order by [0] aggs [SUM($1)])])
+  LogicalProject(pickup=[$0], cnt=[$1], cnt0=[$3])
+    LogicalJoin(condition=[IS NOT DISTINCT FROM($0, $2)], joinType=[left])
+      LogicalSort(sort0=[$1], dir0=[DESC], fetch=[200])
+        LogicalAggregate(group=[{0}], cnt=[COUNT()])
+          LogicalProject(pickup=[$1])
+            LogicalTableScan(table=[[druid, foo]])
+      LogicalSort(sort0=[$1], dir0=[DESC], fetch=[200])
+        LogicalAggregate(group=[{0}], cnt=[COUNT()])
+          LogicalProject(pickup=[$1])
+            LogicalTableScan(table=[[druid, numfoo]])
 
 !druidPlan
-{
-  "queryType" : "scan",
-  "dataSource" : {
-    "type" : "join",
-    "left" : {
-      "type" : "table",
-      "name" : "foo"
-    },
-    "right" : {
-      "type" : "lookup",
-      "lookup" : "lookyloo"
-    },
-    "rightPrefix" : "j0.",
-    "condition" : "(\"dim1\" == \"j0.k\")",
-    "joinType" : "INNER"
-  },
-  "intervals" : {
-    "type" : "intervals",
-    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-  },
-  "resultFormat" : "compactedList",
-  "filter" : {
-    "type" : "null",
-    "column" : "dim2"
-  },
-  "columns" : [ "dim1", "j0.v" ],
-  "columnTypes" : [ "STRING", "STRING" ],
-  "granularity" : {
-    "type" : "all"
-  },
-  "legacy" : false
-}
 !nativePlan
++--------+-----+-----+--------+
+| pickup | cnt | cnt | EXPR$2 |
++--------+-----+-----+--------+
+|        |   1 |   1 |      1 |
+| 1      |   1 |   1 |      2 |
+| 10.1   |   1 |   1 |      3 |
+| 2      |   1 |   1 |      4 |
+| abc    |   1 |   1 |      5 |
+| def    |   1 |   1 |      6 |
++--------+-----+-----+--------+
+(6 rows)
+
+!ok
 !set plannerStrategy DECOUPLED
 !use druidtest://?numMergeBuffers=3
 
-SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k where f.dim2 is null;
-J	DruidProject(dim1=[$0], v=[$3], druid=[logical])
-J      DruidJoin(condition=[=($0, $2)], joinType=[inner])
-LS        DruidAggregate
-		    DruidFilter(condition=[IS NULL($1)])
-		      DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
-		        DruidTableScan(table=[[druid, foo]], druid=[logical])
-RS	    DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
 
-
-
-
-
-LogicalProject(dim1=[$1], v=[$9])
-  LogicalFilter(condition=[IS NULL($2)])
-J   LogicalJoin(condition=[=($1, $8)], joinType=[inner])
-S     DruidAggregate
-        LogicalTableScan(table=[[druid, foo]])
-      LogicalTableScan(table=[[lookup, lookyloo]])
-
-scan
-	join
-		gby
-			T
-		T2
-
-
+with
+ main as (select dim1 as pickup,count(*) as cnt from foo group by 1 order by 2 desc limit 200),
+ compare0 as (select dim1 as pickup,count(*) as cnt from numfoo group by 1 order by 2 desc limit 200)
+SELECT  main.pickup, main.cnt, compare0.cnt, SUM(main.cnt) OVER (ORDER BY main.pickup) 
+from main left join compare0 on main.pickup is not distinct from compare0.pickup;
+DruidWindow(window#0=[window(order by [0] aggs [SUM($1)])])
+  DruidProject(pickup=[$0], cnt=[$1], cnt0=[$3], druid=[logical])
+    DruidJoin(condition=[IS NOT DISTINCT FROM($0, $2)], joinType=[left])
+      DruidSort(sort0=[$1], dir0=[DESC], fetch=[200], druid=[logical])
+        DruidAggregate(group=[{1}], cnt=[COUNT()], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidSort(sort0=[$1], dir0=[DESC], fetch=[200], druid=[logical])
+        DruidAggregate(group=[{1}], cnt=[COUNT()], druid=[logical])
+          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
-{
-  "queryType" : "scan",
-  "dataSource" : {
-    "type" : "join",
-    "left" : {
-      "type" : "query",
-      "query" : {
-        "queryType" : "scan",
-        "dataSource" : {
-          "type" : "table",
-          "name" : "foo"
-        },
-        "intervals" : {
-          "type" : "intervals",
-          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-        },
-        "resultFormat" : "compactedList",
-        "filter" : {
-          "type" : "null",
-          "column" : "dim2"
-        },
-        "columns" : [ "dim1", "dim2" ],
-        "columnTypes" : [ "STRING", "STRING" ],
-        "granularity" : {
-          "type" : "all"
-        },
-        "legacy" : false
-      }
-    },
-    "right" : {
-      "type" : "lookup",
-      "lookup" : "lookyloo"
-    },
-    "rightPrefix" : "j0.",
-    "condition" : "(\"dim1\" == \"j0.k\")",
-    "joinType" : "INNER"
-  },
-  "intervals" : {
-    "type" : "intervals",
-    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-  },
-  "resultFormat" : "compactedList",
-  "columns" : [ "dim1", "j0.v" ],
-  "columnTypes" : [ "STRING", "STRING" ],
-  "granularity" : {
-    "type" : "all"
-  },
-  "legacy" : false
-}
-!nativePlan
+# !nativePlan
+# !ok

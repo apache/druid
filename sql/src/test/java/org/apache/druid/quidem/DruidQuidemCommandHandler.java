@@ -107,9 +107,20 @@ public class DruidQuidemCommandHandler implements CommandHandler
     protected final void executeQuery(Context x)
     {
       final SqlCommand sqlCommand = x.previousSqlCommand();
+      executeQuery(x, sqlCommand.sql);
+    }
+
+    protected final void executeExplainQuery(Context x)
+    {
+      final SqlCommand sqlCommand = x.previousSqlCommand();
+      executeQuery(x, "explain plan for " + sqlCommand.sql);
+    }
+
+    protected final void executeQuery(Context x, String sql)
+    {
       try (
           final Statement statement = x.connection().createStatement();
-          final ResultSet resultSet = statement.executeQuery(sqlCommand.sql)) {
+          final ResultSet resultSet = statement.executeQuery(sql)) {
         // throw away all results
         while (resultSet.next()) {
           Util.discard(false);
@@ -183,7 +194,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
       try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
         logged.add(relNode);
       })) {
-        executeQuery(x);
+        executeExplainQuery(x);
       }
 
       for (RelNode node : logged) {
