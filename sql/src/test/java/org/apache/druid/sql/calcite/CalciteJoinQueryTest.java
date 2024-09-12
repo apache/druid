@@ -232,7 +232,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_EXTRA_COLUMNS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_EXTRA_COLUMNS, separateDefaultModeTest = true)
   @Test
   public void testJoinOuterGroupByAndSubqueryHasLimit()
   {
@@ -2791,7 +2791,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN, separateDefaultModeTest = true)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithIsNullFilter(Map<String, Object> queryContext)

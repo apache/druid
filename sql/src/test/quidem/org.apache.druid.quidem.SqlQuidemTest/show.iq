@@ -1,0 +1,24 @@
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k where f.dim2 is null;
+LogicalProject(dim1=[$1], v=[$9])
+  LogicalFilter(condition=[IS NULL($2)])
+    LogicalJoin(condition=[=($1, $8)], joinType=[inner])
+      LogicalTableScan(table=[[druid, foo]])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+
+!druidPlan
+
+!set plannerStrategy DECOUPLED
+!use druidtest://?numMergeBuffers=3
+
+SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k where f.dim2 is null;
+DruidProject(dim1=[$0], v=[$3], druid=[logical])
+  DruidJoin(condition=[=($0, $2)], joinType=[inner])
+    DruidFilter(condition=[IS NULL($1)])
+      DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
