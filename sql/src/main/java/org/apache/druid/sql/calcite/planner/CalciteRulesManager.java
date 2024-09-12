@@ -469,7 +469,6 @@ public class CalciteRulesManager
     final ImmutableList.Builder<RelOptRule> retVal = ImmutableList
         .<RelOptRule>builder()
         .add(CoreRules.SORT_REMOVE)
-        // .add(JoinProjectTransposeRule.Config.DEFAULT.toRule())
         .add(new DruidLogicalRules(plannerContext).rules().toArray(new RelOptRule[0]));
     return retVal.build();
   }
