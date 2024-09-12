@@ -81,7 +81,6 @@ import java.util.Stack;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -716,12 +715,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           subqueryStatsProvider.incrementQueriesExceedingByteLimit();
           throw ResourceLimitExceededException.withMessage(byteLimitExceededMessage(memoryLimit));
         }
-        AtomicReference<Sequence<T>> fallbackSequence = new AtomicReference<>(null);
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
             queryResults,
             toolChest,
-            fallbackSequence,
             limitAccumulator,
             memoryLimitAccumulator,
             memoryLimit,
@@ -741,7 +738,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           subqueryStatsProvider.incrementSubqueriesFallingBackToRowLimit();
           dataSource = materializeResultsAsArray(
               query,
-              fallbackSequence.get(),
+              queryResults,
               toolChest,
               limitAccumulator,
               limit,
@@ -768,7 +765,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final QueryType query,
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
-      final AtomicReference<Sequence<T>> resultSequence,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final long memoryLimit,
@@ -846,7 +842,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                 + "from the query context and/or the server config."
                             );
       } else {
-        resultSequence.set(results);
         return Optional.empty();
       }
     }

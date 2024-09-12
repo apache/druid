@@ -19,11 +19,21 @@
 
 package org.apache.druid.query;
 
+/**
+ * Serialization medium of the query results on the broker. It is currently used to communicate the result's format between
+ * the main query processing walker and the individual toolchests while materializing subquery's rows
+ */
 public enum ResultSerializationMode
 {
+  /**
+   * Materialize the inner results as rows
+   */
   ROWS,
 
+  /**
+   * Materialize the inner results as frames
+   */
   FRAMES;
 
-  public static String CTX_SERIALIZATION_PARAMETER = "serialization";
+  public static final String CTX_SERIALIZATION_PARAMETER = "serialization";
 }
