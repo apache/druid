@@ -25,7 +25,6 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
@@ -34,8 +33,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
 import org.junit.After;
@@ -60,7 +57,6 @@ public class MSQControllerTaskLimitTest
   private SimpleTaskRunner taskRunner;
   private int numTasks = 3;
   private Closer closer;
-  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp()
@@ -73,12 +69,6 @@ public class MSQControllerTaskLimitTest
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(Period.hours(1)));
     taskRunner = new SimpleTaskRunner(3);
     closer.register(taskRunner::stop);
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    segmentSchemaManager = new SegmentSchemaManager(
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        jsonMapper,
-        derbyConnectorRule.getConnector()
-    );
   }
 
   @After
@@ -91,7 +81,7 @@ public class MSQControllerTaskLimitTest
   public void testMaxControllerTasksLimit() throws InterruptedException
   {
 
-    startTaskQueue(new TaskQueueConfig(null, Period.millis(1), null, null, null, null, null, 2));
+    startTaskQueue(new TaskQueueConfig(null, Period.millis(1), null, null, null, null, 2));
 
     Assert.assertEquals("no tasks should be running", 0, taskRunner.getKnownTasks().size());
     Assert.assertEquals("no tasks should be known", 0, taskQueue.getTasks().size());
@@ -117,7 +107,7 @@ public class MSQControllerTaskLimitTest
   public void testRatioControllerTasksLimit() throws InterruptedException
   {
 
-    startTaskQueue(new TaskQueueConfig(null, Period.millis(1), null, null, null, null, 0.8f, null));
+    startTaskQueue(new TaskQueueConfig(null, Period.millis(1), null, null, null, 0.8f, null));
 
     Assert.assertEquals("no tasks should be running", 0, taskRunner.getKnownTasks().size());
     Assert.assertEquals("no tasks should be known", 0, taskQueue.getTasks().size());
@@ -152,9 +142,7 @@ public class MSQControllerTaskLimitTest
     final IndexerSQLMetadataStorageCoordinator storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector(),
-        segmentSchemaManager,
-        CentralizedDatasourceSchemaConfig.create()
+        derbyConnectorRule.getConnector()
     );
 
     final TaskActionClientFactory unsupportedTaskActionFactory =
@@ -175,9 +163,7 @@ public class MSQControllerTaskLimitTest
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
         new TaskLockbox(taskStorage, storageCoordinator),
-        new NoopServiceEmitter(),
-        jsonMapper,
-        new NoopTaskContextEnricher()
+        new NoopServiceEmitter()
     );
 
     taskQueue.start();
