@@ -374,14 +374,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                                                .withNumRows(metadata.get().getNumRows())
                                                .build();
               } else {
-                // mark it for refresh, however, this case shouldn't arise by design
-                log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
-
-                if (availableSegmentMetadata.getSegment().isTombstone()) {
-                  log.debug("Skipping refresh for tombstone segment.");
-                } else {
-                  markSegmentAsNeedRefresh(segmentId);
-                }
+                markSegmentForRefreshIfNeeded(availableSegmentMetadata.getSegment());
                 return availableSegmentMetadata;
               }
             }
@@ -408,14 +401,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                                        .withNumRows(metadata.get().getNumRows())
                                        .build();
     } else {
-      // mark it for refresh, however, this case shouldn't arise by design
-      log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
-
-      if (availableSegmentMetadata.getSegment().isTombstone()) {
-        log.debug("Skipping refresh for tombstone segment.");
-      } else {
-        markSegmentAsNeedRefresh(segmentId);
-      }
+      markSegmentForRefreshIfNeeded(availableSegmentMetadata.getSegment());
     }
     return availableSegmentMetadata;
   }
@@ -703,21 +689,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
           mergeRowSignature(columnTypes, rowSignature);
         } else {
-          // mark it for refresh, however, this case shouldn't arise by design
-          log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
-
-          if (entry.getValue().getSegment().isTombstone()) {
-            log.debug("Skipping refresh for tombstone segment.");
-          } else {
-            ImmutableDruidDataSource druidDataSource =
-                sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(segmentId.getDataSource());
-
-            if (druidDataSource != null && druidDataSource.getSegment(segmentId) != null) {
-              // mark it for refresh only if it is used
-              // however, this case shouldn't arise by design
-              markSegmentAsNeedRefresh(segmentId);
-            }
-          }
+          markSegmentForRefreshIfNeeded(entry.getValue().getSegment());
         }
       }
     } else {
@@ -890,6 +862,34 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
                     segmentSchema, segmentId
       ).emit();
       return Optional.empty();
+    }
+  }
+
+  /**
+   * A segment schema can go missing. To ensure smooth functioning, segment is marked for refresh.
+   * It need not be refreshed in the following scenarios:
+   * - Tombstone segment, since they do not have any schema.
+   * - Unused segment which hasn't been yet removed from the cache.
+   * Any other scenario needs investigation.
+   */
+  private void markSegmentForRefreshIfNeeded(DataSegment segment)
+  {
+    SegmentId id = segment.getId();
+
+    log.debug("SchemaMetadata for segmentId [%s] is absent.", id);
+
+    if (segment.isTombstone()) {
+      log.debug("Skipping refresh for tombstone segment [%s].", id);
+      return;
+    }
+
+    ImmutableDruidDataSource druidDataSource =
+        sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(segment.getDataSource());
+
+    if (druidDataSource != null && druidDataSource.getSegment(id) != null) {
+      markSegmentAsNeedRefresh(id);
+    } else {
+      log.debug("Skipping refresh for unused segment [%s].", id);
     }
   }
 }

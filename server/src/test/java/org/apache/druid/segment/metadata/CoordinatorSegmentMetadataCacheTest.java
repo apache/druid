@@ -2420,6 +2420,27 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(segments.get(1).getId()));
     Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(2).getId()));
+
+    AvailableSegmentMetadata availableSegmentMetadata =
+        schema.getAvailableSegmentMetadata(dataSource, segments.get(0).getId());
+
+    Assert.assertNotNull(availableSegmentMetadata);
+    // fetching metadata for unused segment shouldn't mark it for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
+
+    Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
+    schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
+
+    Assert.assertEquals(
+        1,
+        metadatas.stream()
+                 .filter(
+                     metadata ->
+                         metadata.getSegment().getId().equals(segments.get(0).getId())).count()
+    );
+
+    // iterating over entire metadata doesn't cause unsed segment to be marked for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
