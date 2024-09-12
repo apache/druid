@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -64,6 +65,8 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.SegmentId;
+import org.hamcrest.CoreMatchers;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -2322,5 +2325,24 @@ public class MSQWindowTest extends MSQTestBase
                          0
                      )))
                      .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testFailurePartitionByMVD(String contextName, Map<String, Object> context)
+  {
+    testSelectQuery()
+        .setSql("select cityName, countryName, array_to_mv(array[1,length(cityName)]), "
+                + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName)\n"
+                + "from wikipedia\n"
+                + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
+                + "order by 1, 2, 3")
+        .setQueryContext(context)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(ISE.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Encountered a multi value column [v0]. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+        ))
+        .verifyExecutionError();
   }
 }
