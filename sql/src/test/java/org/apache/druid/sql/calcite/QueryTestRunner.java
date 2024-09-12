@@ -404,12 +404,17 @@ public class QueryTestRunner
     @Override
     public void verify()
     {
-      for (QueryResults queryResults : execStep.results()) {
-        verifyQuery(queryResults);
+      try {
+        for (QueryResults queryResults : execStep.results()) {
+          verifyQuery(queryResults);
+        }
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
       }
     }
 
-    private void verifyQuery(QueryResults queryResults)
+    private void verifyQuery(QueryResults queryResults) throws Exception
     {
       if (queryResults.exception != null) {
         return;
@@ -443,10 +448,11 @@ public class QueryTestRunner
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
+
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
-            expectedQueries.get(i),
-            recordedQueries.get(i)
+            x(queryJsonMapper, expectedQueries.get(i)),
+            x(queryJsonMapper,recordedQueries.get(i))
         );
 
         try {
@@ -463,6 +469,11 @@ public class QueryTestRunner
           Assert.fail(e.getMessage());
         }
       }
+    }
+
+    private String x(ObjectMapper jsonMapper, Query<?> query) throws JsonProcessingException
+    {
+      return jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
     }
   }
 
