@@ -64,7 +64,7 @@ public class BroadcastDatasourceLoadingSpecTest
   public void testLoadingOnlyRequiredLookupsWithNullList()
   {
     DruidException exception = Assert.assertThrows(DruidException.class, () -> BroadcastDatasourceLoadingSpec.loadOnly(null));
-    Assert.assertEquals("Expected non-null set of broadcastDatasources to load.", exception.getMessage());
+    Assert.assertEquals("Expected non-null set of broadcast datasources to load.", exception.getMessage());
   }
 
   @Test

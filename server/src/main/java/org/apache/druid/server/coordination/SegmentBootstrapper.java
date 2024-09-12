@@ -274,10 +274,11 @@ public class SegmentBootstrapper
   {
     final BroadcastDatasourceLoadingSpec.Mode mode = datasourceHolder.getBroadcastDatasourceLoadingSpec().getMode();
     if (mode == BroadcastDatasourceLoadingSpec.Mode.NONE) {
+      log.info("Skipping fetch of bootstrap segments.");
       return ImmutableList.of();
     }
 
-    log.info("Fetching bootstrap segments from the coordinator.");
+    log.info("Fetching bootstrap segments from the coordinator with BroadcastDatasourceLoadingSpec mode[%s].", mode);
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     List<DataSegment> bootstrapSegments = new ArrayList<>();

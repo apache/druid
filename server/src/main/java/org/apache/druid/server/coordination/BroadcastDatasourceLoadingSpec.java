@@ -73,7 +73,7 @@ public class BroadcastDatasourceLoadingSpec
   public static BroadcastDatasourceLoadingSpec loadOnly(Set<String> broadcastDatasourcesToLoad)
   {
     if (broadcastDatasourcesToLoad == null) {
-      throw InvalidInput.exception("Expected non-null set of broadcastDatasources to load.");
+      throw InvalidInput.exception("Expected non-null set of broadcast datasources to load.");
     }
     return new BroadcastDatasourceLoadingSpec(Mode.ONLY_REQUIRED, broadcastDatasourcesToLoad);
   }
@@ -132,7 +132,7 @@ public class BroadcastDatasourceLoadingSpec
       }
 
       if (broadcastDatasourcesToLoad == null || broadcastDatasourcesToLoad.isEmpty()) {
-        throw InvalidInput.exception("Set of broadcastDatasources to load cannot be %s for mode[ONLY_REQUIRED].", broadcastDatasourcesToLoad);
+        throw InvalidInput.exception("Set of broadcast datasources to load cannot be %s for mode[ONLY_REQUIRED].", broadcastDatasourcesToLoad);
       }
       return BroadcastDatasourceLoadingSpec.loadOnly(new HashSet<>(broadcastDatasourcesToLoad));
     } else {
@@ -143,7 +143,7 @@ public class BroadcastDatasourceLoadingSpec
   @Override
   public String toString()
   {
-    return "broadcastDatasourceLoadingSpec{" +
+    return "BroadcastDatasourceLoadingSpec{" +
            "mode=" + mode +
            ", broadcastDatasourcesToLoad=" + broadcastDatasourcesToLoad +
            '}';
