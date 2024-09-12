@@ -34,7 +34,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -78,7 +77,7 @@ public class ExtensionsLoaderTest
 
     Pair<File, Boolean> key = Pair.of(extensionDir, true);
     extnLoader.getLoadersMap()
-                  .put(key, new URLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader()));
+                  .put(key, new StandardURLClassLoader(new URL[]{}, ExtensionsLoader.class.getClassLoader(), ImmutableList.of()));
 
     Collection<DruidModule> modules = extnLoader.getFromExtensions(DruidModule.class);
 
@@ -101,7 +100,7 @@ public class ExtensionsLoaderTest
     a_jar.createNewFile();
     b_jar.createNewFile();
     c_jar.createNewFile();
-    final URLClassLoader loader = extnLoader.getClassLoaderForExtension(some_extension_dir, false);
+    final StandardURLClassLoader loader = extnLoader.getClassLoaderForExtension(some_extension_dir, false);
     final URL[] expectedURLs = new URL[]{a_jar.toURI().toURL(), b_jar.toURI().toURL(), c_jar.toURI().toURL()};
     final URL[] actualURLs = loader.getURLs();
     Arrays.sort(actualURLs, Comparator.comparing(URL::getPath));
@@ -329,7 +328,7 @@ public class ExtensionsLoaderTest
     final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1, false);
     final ClassLoader classLoader2 = extnLoader.getClassLoaderForExtension(extension2, false);
 
-    Assert.assertArrayEquals(new URL[]{jar1.toURI().toURL()}, ((URLClassLoader) classLoader1).getURLs());
-    Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((URLClassLoader) classLoader2).getURLs());
+    Assert.assertArrayEquals(new URL[]{jar1.toURI().toURL()}, ((StandardURLClassLoader) classLoader1).getURLs());
+    Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((StandardURLClassLoader) classLoader2).getURLs());
   }
 }

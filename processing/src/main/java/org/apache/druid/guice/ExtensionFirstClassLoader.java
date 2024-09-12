@@ -31,7 +31,7 @@ import java.util.List;
 /**
  * The ClassLoader that gets used when druid.extensions.useExtensionClassloaderFirst = true.
  */
-public class ExtensionFirstClassLoader extends StandardClassLoader
+public class ExtensionFirstClassLoader extends StandardURLClassLoader
 {
   private final ClassLoader druidLoader;
 

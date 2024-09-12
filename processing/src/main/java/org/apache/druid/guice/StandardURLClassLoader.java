@@ -33,11 +33,11 @@ import java.util.List;
 /**
  * The ClassLoader that gets used when druid.extensions.useExtensionClassloaderFirst = false.
  */
-public class StandardClassLoader extends URLClassLoader
+public class StandardURLClassLoader extends URLClassLoader
 {
   private final List<ClassLoader> extensionDependencyClassLoaders;
 
-  public StandardClassLoader(final URL[] urls, final ClassLoader druidLoader, final List<ClassLoader> extensionDependencyClassLoaders)
+  public StandardURLClassLoader(final URL[] urls, final ClassLoader druidLoader, final List<ClassLoader> extensionDependencyClassLoaders)
   {
     super(urls, druidLoader);
     this.extensionDependencyClassLoaders = Preconditions.checkNotNull(extensionDependencyClassLoaders, "extensionDependencyClassLoaders");
@@ -110,5 +110,10 @@ public class StandardClassLoader extends URLClassLoader
     for (ClassLoader classLoader : extensionDependencyClassLoaders) {
       Iterators.addAll(urls, Iterators.forEnumeration(classLoader.getResources(name)));
     }
+  }
+
+  public List<ClassLoader> getExtensionDependencyClassLoaders()
+  {
+    return extensionDependencyClassLoaders;
   }
 }
