@@ -83,7 +83,9 @@ public @interface DecoupledTestConfig
     /**
      * New scans / etc.
      */
-    DEFINETLY_WORSE_PLAN;
+    DEFINETLY_WORSE_PLAN,
+    EQUIV_PLAN_EXTRA_COLUMNS,
+    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER;
 
     public boolean isPresent()
     {
