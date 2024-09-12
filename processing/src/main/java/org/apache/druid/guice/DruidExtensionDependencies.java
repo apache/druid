@@ -26,18 +26,18 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ExtensionDependencies
+public class DruidExtensionDependencies
 {
 
   @JsonProperty("dependsOnDruidExtensions")
   private List<String> dependsOnDruidExtensions;
 
-  public ExtensionDependencies()
+  public DruidExtensionDependencies()
   {
     this.dependsOnDruidExtensions = new ArrayList<>();
   }
 
-  public ExtensionDependencies(@Nonnull final List<String> dependsOnDruidExtensions)
+  public DruidExtensionDependencies(@Nonnull final List<String> dependsOnDruidExtensions)
   {
     this.dependsOnDruidExtensions = dependsOnDruidExtensions;
   }

@@ -154,9 +154,8 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     }
 
     final List<URL> extensionURLs = new ArrayList<>();
-    final File[] extensionFiles = EXTENSIONS_LOADER.getExtensionFilesToLoad();
-    for (final File extension : extensionFiles) {
-      final URLClassLoader extensionLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(extension, false, extensionFiles);
+    for (final File extension : EXTENSIONS_LOADER.getExtensionFilesToLoad()) {
+      final URLClassLoader extensionLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(extension, false);
       extensionURLs.addAll(Arrays.asList(extensionLoader.getURLs()));
     }
 
@@ -170,7 +169,7 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
         EXTENSIONS_LOADER.config()
     );
     for (final File hadoopDependency : hadoopDependencyFiles) {
-      final URLClassLoader hadoopLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(hadoopDependency, false, hadoopDependencyFiles);
+      final URLClassLoader hadoopLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(hadoopDependency, false);
       localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }
 
