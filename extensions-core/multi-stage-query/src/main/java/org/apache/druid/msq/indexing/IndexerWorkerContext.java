@@ -312,6 +312,12 @@ public class IndexerWorkerContext implements WorkerContext
     return dataServerQueryHandlerFactory;
   }
 
+  @Override
+  public boolean includeAllCounters()
+  {
+    return includeAllCounters;
+  }
+
   private synchronized ServiceLocator makeControllerLocator(final String controllerId)
   {
     if (controllerLocator == null) {
