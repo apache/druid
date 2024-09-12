@@ -12983,7 +12983,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
+  @NotYetSupported(Modes.REQUIRE_TIME_CONDITION)
   @Test
   public void testRequireTimeConditionPositive3()
   {
