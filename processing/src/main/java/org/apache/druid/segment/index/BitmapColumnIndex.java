@@ -38,7 +38,8 @@ public interface BitmapColumnIndex
   /**
    * Returns an estimated cost for computing the bitmap result.
    */
-  default int estimatedComputeCost() {
+  default int estimatedComputeCost()
+  {
     return Integer.MAX_VALUE;
   }
 
@@ -52,7 +53,6 @@ public interface BitmapColumnIndex
    *                            to true, bitmaps returned by this method should include true bits for any rows where
    *                            the matching result is 'unknown', such as from the input being null valued.
    *                            See {@link NullHandling#useThreeValueLogic()}.
-   *
    * @return bitmap result representing rows matched by this index
    */
   <T> T computeBitmapResult(
@@ -76,7 +76,6 @@ public interface BitmapColumnIndex
    *                            set to true, bitmaps returned by this method should include true bits for any rows where
    *                            the matching result is 'unknown', such as from the input being null valued.
    *                            See {@link NullHandling#useThreeValueLogic()}.
-   *
    * @return bitmap result representing rows matched by this index
    */
   @Nullable

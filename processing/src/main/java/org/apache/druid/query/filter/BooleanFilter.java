@@ -20,7 +20,6 @@
 package org.apache.druid.query.filter;
 
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 public interface BooleanFilter extends Filter

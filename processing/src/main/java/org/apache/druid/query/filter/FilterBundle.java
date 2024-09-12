@@ -70,16 +70,12 @@ public class FilterBundle
     ), null);
   }
 
-  // The index that actually gets used in a filter.
-  // The index bundle is nullable, meaning in a query not a single index has been chosen. When it's non-null, all fields have values.
   @Nullable
   private final IndexBundle indexBundle;
   @Nullable
   private final MatcherBundle matcherBundle;
 
-  public FilterBundle(
-      @Nullable IndexBundle index, @Nullable MatcherBundle matcherBundle
-  )
+  public FilterBundle(@Nullable IndexBundle index, @Nullable MatcherBundle matcherBundle)
   {
     Preconditions.checkArgument(
         index != null || matcherBundle != null,
@@ -177,7 +173,10 @@ public class FilterBundle
     }
 
     public <T> FilterBundle build(
-        BitmapResultFactory<T> bitmapResultFactory, int applyRowCount, int totalRowCount, boolean includeUnknown
+        BitmapResultFactory<T> bitmapResultFactory,
+        int applyRowCount,
+        int totalRowCount,
+        boolean includeUnknown
     )
     {
       return this.filter.makeFilterBundle(this, bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
@@ -298,16 +297,15 @@ public class FilterBundle
     }
 
     @Override
-    public ValueMatcher valueMatcher(
-        ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending
-    )
+    public ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending)
     {
       return matcherFn.apply(selectorFactory);
     }
 
     @Override
     public VectorValueMatcher vectorMatcher(
-        VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset
+        VectorColumnSelectorFactory selectorFactory,
+        ReadableVectorOffset baseOffset
     )
     {
       return vectorMatcherFn.apply(selectorFactory);
@@ -381,7 +379,10 @@ public class FilterBundle
     private final long buildTimeNs;
 
     public IndexBundleInfo(
-        Supplier<String> filterString, int selectionSize, long buildTimeNs, @Nullable List<IndexBundleInfo> indexes
+        Supplier<String> filterString,
+        int selectionSize,
+        long buildTimeNs,
+        @Nullable List<IndexBundleInfo> indexes
     )
     {
       this.filter = filterString;
@@ -464,7 +465,9 @@ public class FilterBundle
     private final IndexBundleInfo partialIndex;
 
     public MatcherBundleInfo(
-        Supplier<String> filter, @Nullable IndexBundleInfo partialIndex, @Nullable List<MatcherBundleInfo> matchers
+        Supplier<String> filter,
+        @Nullable IndexBundleInfo partialIndex,
+        @Nullable List<MatcherBundleInfo> matchers
     )
     {
       this.filter = filter;

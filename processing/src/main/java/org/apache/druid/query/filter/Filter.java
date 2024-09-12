@@ -105,12 +105,7 @@ public interface Filter
       } else {
         final ImmutableBitmap bitmap = bitmapResultFactory.toImmutableBitmap(result);
         indexBundle = new FilterBundle.SimpleIndexBundle(
-            new FilterBundle.IndexBundleInfo(
-                this::getFilterString,
-                bitmap.size(),
-                totalConstructionTimeNs,
-                null
-            ),
+            new FilterBundle.IndexBundleInfo(this::toString, bitmap.size(), totalConstructionTimeNs, null),
             bitmap,
             columnIndex.getIndexCapabilities()
         );
@@ -123,11 +118,7 @@ public interface Filter
     final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
       matcherBundle = new FilterBundle.SimpleMatcherBundle(
-          new FilterBundle.MatcherBundleInfo(
-              this::getFilterString,
-              null,
-              null
-          ),
+          new FilterBundle.MatcherBundleInfo(this::getFilterString, null, null),
           this::makeMatcher,
           this::makeVectorMatcher,
           this.canVectorizeMatcher(filterBundleBuilder.getColumnIndexSelector())

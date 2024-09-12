@@ -289,7 +289,7 @@ public class OrFilter implements BooleanFilter
       @Override
       public int estimatedComputeCost()
       {
-        // There's no additional cost on OR filter, cost in child filters would be used.
+        // There's no additional cost on OR filter, cost in child filters would be summed.
         return 0;
       }
 
