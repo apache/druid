@@ -59,6 +59,10 @@ public class DruidQueryGenerator
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
 
+  static class DruidNodeStack extends Stack<DruidLogicalNode>{
+
+  }
+
   public DruidQuery buildQuery()
   {
     Stack<DruidLogicalNode> stack = new Stack<>();
@@ -84,7 +88,7 @@ public class DruidQueryGenerator
   {
     DruidLogicalNode node = stack.peek();
     if (node instanceof SourceDescProducer) {
-      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs, false);
+      return vertexFactory.createVertex(stack, PartialDruidQuery.create(node), newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -93,9 +97,9 @@ public class DruidQueryGenerator
         return newVertex.get();
       }
       inputVertex = vertexFactory.createVertex(
+          stack,
           PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery, vertexFactory.plannerContext),
-          ImmutableList.of(inputVertex),
-          false
+          ImmutableList.of(inputVertex)
       );
       newVertex = inputVertex.extendWith(stack);
       if (newVertex.isPresent()) {
@@ -135,6 +139,44 @@ public class DruidQueryGenerator
     SourceDesc unwrapSourceDesc();
   }
 
+  enum JoinSupportTweaks
+  {
+    NONE,
+    LEFT,
+    RIGHT;
+
+    static JoinSupportTweaks analyze(Stack<DruidLogicalNode> stack)
+    {
+      if (stack.size() < 2) {
+        return NONE;
+      }
+      DruidLogicalNode possibleJoin = stack.get(stack.size() - 2);
+      if (!(possibleJoin instanceof DruidJoin)) {
+        return NONE;
+      }
+      DruidJoin join = (DruidJoin) possibleJoin;
+      DruidLogicalNode joinOperand = stack.get(stack.size() - 1);
+      if (join.getInput(1) == joinOperand) {
+        return RIGHT;
+      } else {
+        return LEFT;
+      }
+    }
+
+    boolean finalizeSubQuery()
+    {
+      return this == NONE;
+    }
+
+    boolean forceSubQuery(SourceDesc sourceDesc)
+    {
+      if(sourceDesc.dataSource.isGlobal()) {
+        return false;
+      }
+      return this == RIGHT;
+    }
+  }
+
   /**
    * {@link PartialDruidQuery} based {@link Vertex} factory.
    */
@@ -149,32 +191,28 @@ public class DruidQueryGenerator
       this.rexBuilder = rexBuilder;
     }
 
-    Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, boolean forceFinalize)
+    Vertex createVertex(Stack<DruidLogicalNode> stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      return new PDQVertex(partialDruidQuery, inputs, forceFinalize);
+      boolean forceFinalize = (stack.size() > 2 && stack.get(stack.size() - 2) instanceof DruidJoin);
+
+    JoinSupportTweaks jst = JoinSupportTweaks.analyze(stack);
+    if(forceFinalize) {
+      System.out.println("asd");
+    }
+      return new PDQVertex(partialDruidQuery, inputs, jst);
     }
 
     public class PDQVertex implements Vertex
     {
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
-      /**
-       * Workaround flag mostly relating to that under DruidJoinQueryRel passes `false` to underlying
-       * queries - which may not be the desired behavior; but we can't change that without breaking.
-       */
-      private boolean forceFinalize;
-      /**
-       * Forces this vertex to be a subquery.
-       *
-       * Disables unwrapping.
-       */
-      private boolean forceSubQuery;
+      final JoinSupportTweaks jst;
 
-      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, boolean forceFinalize)
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, JoinSupportTweaks jst)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
-        this.forceFinalize = forceFinalize;
+        this.jst = jst;
       }
 
       @Override
@@ -186,7 +224,7 @@ public class DruidQueryGenerator
             source.rowSignature,
             plannerContext,
             rexBuilder,
-            !(topLevel) && !forceFinalize
+            !(topLevel) && jst.finalizeSubQuery()
         );
       }
 
@@ -226,9 +264,9 @@ public class DruidQueryGenerator
         Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(stack);
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
+
         }
-        boolean forceFinalize = (stack.size() > 2 && stack.get(stack.size() - 2) instanceof DruidJoin);
-        return Optional.of(createVertex(newPartialQuery.get(), inputs, forceFinalize));
+        return Optional.of(createVertex(stack, newPartialQuery.get(), inputs));
       }
 
       /**
@@ -310,7 +348,7 @@ public class DruidQueryGenerator
       @Override
       public boolean canUnwrapSourceDesc()
       {
-        if(forceSubQuery) {
+        if (jst.forceSubQuery(getSource())) {
           return false;
         }
         if (partialDruidQuery.stage() == Stage.SCAN) {
