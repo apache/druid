@@ -208,7 +208,6 @@ public class ServerManagerTest
         new LocalCacheProvider().get(),
         new CacheConfig(),
         segmentManager,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new ServerConfig()
     );
 
