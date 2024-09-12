@@ -1,4 +1,4 @@
-# testGroupByWithLiteralInSubqueryGrouping case-crc:a63c5a2f
+# testGroupByWithLiteralInSubqueryGrouping@NullHandling=default case-crc:a63c5a2f
 # quidem testcase reason: IMPROVED_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -30,8 +30,8 @@ SELECT
 +-------+----+
 | t1    | t2 |
 +-------+----+
-| dummy | b  |
 | dummy |    |
+| dummy | b  |
 +-------+----+
 (2 rows)
 
