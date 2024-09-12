@@ -619,7 +619,7 @@ the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 |Property| Possible values | Description                                                                                                                               |Default|
 |--------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------|
 |`druid.ingestion.http.allowedProtocols`| List of protocols | Allowed protocols for the HTTP input source.                                                                                              |`["http", "https"]`|
-|`druid.ingestion.http.allowedHeaders`| List of Headers | List of allowed request headers for the HTTP input source. Default is empty list which means allow all headers to pass in ingestion spec. |`[]`|
+|`druid.ingestion.http.allowedHeaders`| A list of permitted request headers for the HTTP input source. By default, the list is empty, which means all headers are allowed in the ingestion specification. |`[]`|
 
 ### External data access security configuration
 
