@@ -22,8 +22,6 @@ package org.apache.druid.guice;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 
-import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -37,7 +35,7 @@ import java.util.List;
  */
 public class StandardClassLoader extends URLClassLoader
 {
-  private List<ClassLoader> extensionDependencyClassLoaders;
+  private final List<ClassLoader> extensionDependencyClassLoaders;
 
   public StandardClassLoader(final URL[] urls, final ClassLoader druidLoader, final List<ClassLoader> extensionDependencyClassLoaders)
   {
@@ -112,10 +110,5 @@ public class StandardClassLoader extends URLClassLoader
     for (ClassLoader classLoader : extensionDependencyClassLoaders) {
       Iterators.addAll(urls, Iterators.forEnumeration(classLoader.getResources(name)));
     }
-  }
-
-  public void setExtensionDependencyClassLoaders(@Nonnull List<ClassLoader> extensionDependencyClassLoaders)
-  {
-    this.extensionDependencyClassLoaders = extensionDependencyClassLoaders;
   }
 }

@@ -68,7 +68,7 @@ import java.util.stream.Collectors;
 public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
-  public static final String EXTENSION_DEPENDENCIES_JSON = "druid-extension-dependencies.json";
+  public static final String DRUID_EXTENSION_DEPENDENCIES_JSON = "druid-extension-dependencies.json";
   private final ExtensionsConfig extensionsConfig;
   private final ObjectMapper objectMapper;
 
@@ -237,7 +237,6 @@ public class ExtensionsLoader
 
   private URLClassLoader makeClassLoaderWithDruidExtensionDependencies(File extension, boolean useExtensionClassloaderFirst, List<String> extensionDependencyStack)
   {
-    URLClassLoader classLoader = makeClassLoaderForExtension(extension, useExtensionClassloaderFirst);
     Optional<DruidExtensionDependencies> druidExtensionDependenciesOptional = getDruidExtensionDependencies(extension);
     List<String> druidExtensionDependenciesList = druidExtensionDependenciesOptional.isPresent()
         ? druidExtensionDependenciesOptional.get().getDependsOnDruidExtensions()
@@ -273,13 +272,14 @@ public class ExtensionsLoader
           getClassLoaderForExtension(extensionDependencyFile, useExtensionClassloaderFirst, extensionDependencyStack)
       );
     }
-    ((StandardClassLoader) classLoader).setExtensionDependencyClassLoaders(extensionDependencyClassLoaders);
-    return classLoader;
+
+    return makeClassLoaderForExtension(extension, useExtensionClassloaderFirst, extensionDependencyClassLoaders);
   }
 
   private static URLClassLoader makeClassLoaderForExtension(
       final File extension,
-      final boolean useExtensionClassloaderFirst
+      final boolean useExtensionClassloaderFirst,
+      final List<ClassLoader> extensionDependencyClassLoaders
   )
   {
     final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
@@ -298,9 +298,9 @@ public class ExtensionsLoader
     }
 
     if (useExtensionClassloaderFirst) {
-      return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
+      return new ExtensionFirstClassLoader(urls, ExtensionsLoader.class.getClassLoader(), extensionDependencyClassLoaders);
     } else {
-      return new StandardClassLoader(urls, ExtensionsLoader.class.getClassLoader(), ImmutableList.of());
+      return new StandardClassLoader(urls, ExtensionsLoader.class.getClassLoader(), extensionDependencyClassLoaders);
     }
   }
 
@@ -351,7 +351,7 @@ public class ExtensionsLoader
         while (entries.hasMoreElements()) {
           JarEntry entry = entries.nextElement();
           String entryName = entry.getName();
-          if (EXTENSION_DEPENDENCIES_JSON.equals(entryName)) {
+          if (DRUID_EXTENSION_DEPENDENCIES_JSON.equals(entryName)) {
             log.debug("Found extension dependency entry in druid jar %s", extensionFile.getPath());
             if (druidExtensionDependencies != null) {
               throw new RE(
