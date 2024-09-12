@@ -60,23 +60,44 @@ public class DruidQueryGenerator
   }
 
   static class DruidNodeStack extends Stack<DruidLogicalNode>{
+    private static final long serialVersionUID = 1L;
+
+    Stack<Integer> operandIndexStack = new Stack<Integer>();
+
+    @Override
+    public DruidLogicalNode push(DruidLogicalNode item)
+    {
+      return push(item,0);
+    }
+
+    public DruidLogicalNode push(DruidLogicalNode item, int operandIndex)
+    {
+      operandIndexStack.push(operandIndex);
+      return super.push(item);
+    }
+    @Override
+    public synchronized DruidLogicalNode pop()
+    {
+      operandIndexStack.pop();
+      return super.pop();
+    }
 
   }
 
   public DruidQuery buildQuery()
   {
-    Stack<DruidLogicalNode> stack = new Stack<>();
+    DruidNodeStack stack = new DruidNodeStack();
     stack.push(relRoot);
     Vertex vertex = buildVertexFor(stack);
     return vertex.buildQuery(true);
   }
 
-  private Vertex buildVertexFor(Stack<DruidLogicalNode> stack)
+  private Vertex buildVertexFor(DruidNodeStack stack)
   {
     List<Vertex> newInputs = new ArrayList<>();
 
     for (RelNode input : stack.peek().getInputs()) {
-      stack.push((DruidLogicalNode) input);
+      stack.push((DruidLogicalNode) input, newInputs.size());
       newInputs.add(buildVertexFor(stack));
       stack.pop();
     }
@@ -84,7 +105,7 @@ public class DruidQueryGenerator
     return vertex;
   }
 
-  private Vertex processNodeWithInputs(Stack<DruidLogicalNode> stack, List<Vertex> newInputs)
+  private Vertex processNodeWithInputs(DruidNodeStack stack, List<Vertex> newInputs)
   {
     DruidLogicalNode node = stack.peek();
     if (node instanceof SourceDescProducer) {
@@ -122,7 +143,7 @@ public class DruidQueryGenerator
     /**
      * Extends the current vertex to include the specified parent.
      */
-    Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack);
+    Optional<Vertex> extendWith(DruidNodeStack stack);
 
     /**
      * Decides wether this {@link Vertex} can be unwrapped into an {@link SourceDesc}.
@@ -145,7 +166,7 @@ public class DruidQueryGenerator
     LEFT,
     RIGHT;
 
-    static JoinSupportTweaks analyze(Stack<DruidLogicalNode> stack)
+    static JoinSupportTweaks analyze(DruidNodeStack stack)
     {
       if (stack.size() < 2) {
         return NONE;
@@ -155,8 +176,7 @@ public class DruidQueryGenerator
         return NONE;
       }
       DruidJoin join = (DruidJoin) possibleJoin;
-      DruidLogicalNode joinOperand = stack.get(stack.size() - 1);
-      if (join.getInput(1) == joinOperand) {
+      if (stack.operandIndexStack.get(stack.size() - 1) == 1) {
         return RIGHT;
       } else {
         return LEFT;
@@ -191,7 +211,7 @@ public class DruidQueryGenerator
       this.rexBuilder = rexBuilder;
     }
 
-    Vertex createVertex(Stack<DruidLogicalNode> stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+    Vertex createVertex(DruidNodeStack stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
       boolean forceFinalize = (stack.size() > 2 && stack.get(stack.size() - 2) instanceof DruidJoin);
 
@@ -259,7 +279,7 @@ public class DruidQueryGenerator
        * Extends the the current partial query with the new parent if possible.
        */
       @Override
-      public Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack)
+      public Optional<Vertex> extendWith(DruidNodeStack stack)
       {
         Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(stack);
         if (!newPartialQuery.isPresent()) {
