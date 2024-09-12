@@ -2221,7 +2221,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
-  public void testTombstoneSegmentIsNotRefreshed() throws IOException, InterruptedException
+  public void testTombstoneSegmentIsNotRefreshed() throws IOException
   {
     String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
 
