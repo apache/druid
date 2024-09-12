@@ -68,7 +68,7 @@ import java.util.stream.Collectors;
 public class ExtensionsLoader
 {
   private static final Logger log = new Logger(ExtensionsLoader.class);
-  public static final String EXTENSION_DEPENDENCIES_JSON = "extension-dependencies.json";
+  public static final String EXTENSION_DEPENDENCIES_JSON = "druid-extension-dependencies.json";
   private final ExtensionsConfig extensionsConfig;
   private final ObjectMapper objectMapper;
 
@@ -218,17 +218,22 @@ public class ExtensionsLoader
    */
   public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
+    return getClassLoaderForExtension(extension, useExtensionClassloaderFirst, new ArrayList<>());
+  }
+
+  public URLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst, List<String> extensionDependencyStack)
+  {
     Pair<File, Boolean> classLoaderKey = Pair.of(extension, useExtensionClassloaderFirst);
     URLClassLoader classLoader = loaders.get(classLoaderKey);
     if (classLoader == null) {
-      classLoader = makeClassLoaderWithDruidExtensionDependencies(extension, useExtensionClassloaderFirst);
+      classLoader = makeClassLoaderWithDruidExtensionDependencies(extension, useExtensionClassloaderFirst, extensionDependencyStack);
       loaders.put(classLoaderKey, classLoader);
     }
 
     return classLoader;
   }
 
-  private URLClassLoader makeClassLoaderWithDruidExtensionDependencies(File extension, boolean useExtensionClassloaderFirst) {
+  private URLClassLoader makeClassLoaderWithDruidExtensionDependencies(File extension, boolean useExtensionClassloaderFirst, List<String> extensionDependencyStack) {
     URLClassLoader classLoader = makeClassLoaderForExtension(extension, useExtensionClassloaderFirst);
     Optional<DruidExtensionDependencies> druidExtensionDependenciesOptional = getDruidExtensionDependencies(extension);
     List<String> druidExtensionDependenciesList = druidExtensionDependenciesOptional.isPresent()
@@ -237,10 +242,10 @@ public class ExtensionsLoader
 
     List<ClassLoader> extensionDependencyClassLoaders = new ArrayList<>();
     for (String druidExtensionDependencyName: druidExtensionDependenciesList) {
-      Optional<File> extensionDependencyFile = Arrays.stream(getExtensionFilesToLoad())
+      Optional<File> extensionDependencyFileOptional = Arrays.stream(getExtensionFilesToLoad())
           .filter(file -> file.getName().equals(druidExtensionDependencyName))
           .findFirst();
-      if (!extensionDependencyFile.isPresent()) {
+      if (!extensionDependencyFileOptional.isPresent()) {
         throw new RE(
             StringUtils.format(
                 "%s depends on %s which is not a valid extension or not loaded.",
@@ -249,8 +254,20 @@ public class ExtensionsLoader
             )
         );
       }
+      File extensionDependencyFile = extensionDependencyFileOptional.get();
+      if (extensionDependencyStack.contains(extensionDependencyFile.getName())) {
+        extensionDependencyStack.add(extensionDependencyFile.getName());
+        throw new RE(
+            StringUtils.format(
+                "%s has a circular druid extension dependency. Dependency stack [%s].",
+                extensionDependencyStack.get(0),
+                extensionDependencyStack
+            )
+        );
+      }
+      extensionDependencyStack.add(extensionDependencyFile.getName());
       extensionDependencyClassLoaders.add(
-          getClassLoaderForExtension(extensionDependencyFile.get(), useExtensionClassloaderFirst)
+          getClassLoaderForExtension(extensionDependencyFile, useExtensionClassloaderFirst, extensionDependencyStack)
       );
     }
     ((StandardClassLoader) classLoader).setExtensionDependencyClassLoaders(extensionDependencyClassLoaders);
