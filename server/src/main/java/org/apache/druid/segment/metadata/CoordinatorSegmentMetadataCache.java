@@ -692,9 +692,16 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           RowSignature rowSignature = optionalSchema.get().getSchemaPayload().getRowSignature();
           mergeRowSignature(columnTypes, rowSignature);
         } else {
-          // mark it for refresh, however, this case shouldn't arise by design
-          markSegmentAsNeedRefresh(segmentId);
           log.debug("SchemaMetadata for segmentId [%s] is absent.", segmentId);
+
+          ImmutableDruidDataSource druidDataSource =
+              sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(segmentId.getDataSource());
+
+          if (druidDataSource != null && druidDataSource.getSegment(segmentId) != null) {
+            // mark it for refresh only if it is used
+            // however, this case shouldn't arise by design
+            markSegmentAsNeedRefresh(segmentId);
+          }
         }
       }
     } else {
