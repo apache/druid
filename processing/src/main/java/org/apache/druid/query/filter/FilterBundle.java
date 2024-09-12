@@ -61,15 +61,6 @@ import java.util.regex.Pattern;
  */
 public class FilterBundle
 {
-  public static FilterBundle allFalse(long constructionTime, ImmutableBitmap emptyBitmap)
-  {
-    return new FilterBundle(new FilterBundle.SimpleIndexBundle(
-        new FilterBundle.IndexBundleInfo(() -> FalseFilter.instance().toString(), 0, constructionTime, null),
-        emptyBitmap,
-        SimpleColumnIndexCapabilities.getConstant()
-    ), null);
-  }
-
   @Nullable
   private final IndexBundle indexBundle;
   @Nullable
@@ -85,6 +76,17 @@ public class FilterBundle
     this.matcherBundle = matcherBundle;
   }
 
+  public static FilterBundle allFalse(long constructionTime, ImmutableBitmap emptyBitmap)
+  {
+    return new FilterBundle(
+        new FilterBundle.SimpleIndexBundle(
+            new FilterBundle.IndexBundleInfo(() -> FalseFilter.instance().toString(), 0, constructionTime, null),
+            emptyBitmap,
+            SimpleColumnIndexCapabilities.getConstant()
+        ),
+        null
+    );
+  }
 
   @Nullable
   public IndexBundle getIndex()
@@ -96,6 +98,57 @@ public class FilterBundle
   public MatcherBundle getMatcherBundle()
   {
     return matcherBundle;
+  }
+
+  public BundleInfo getInfo()
+  {
+    return new BundleInfo(
+        indexBundle == null ? null : indexBundle.getIndexInfo(),
+        matcherBundle == null ? null : matcherBundle.getMatcherInfo()
+    );
+  }
+
+  public boolean hasIndex()
+  {
+    return indexBundle != null;
+  }
+
+  public boolean hasMatcher()
+  {
+    return matcherBundle != null;
+  }
+
+  public boolean canVectorizeMatcher()
+  {
+    return matcherBundle == null || matcherBundle.canVectorize();
+  }
+
+  public interface IndexBundle
+  {
+    IndexBundleInfo getIndexInfo();
+
+    ImmutableBitmap getBitmap();
+
+    ColumnIndexCapabilities getIndexCapabilities();
+  }
+
+  /**
+   * Builder of {@link ValueMatcher} and {@link VectorValueMatcher}. The
+   * {@link #valueMatcher(ColumnSelectorFactory, Offset, boolean)} function also passes in the base offset and whether
+   * the offset is 'descending' or not, to allow filters more flexibility in value matcher creation.
+   * {@link org.apache.druid.segment.filter.OrFilter} uses these extra parameters to allow partial use of indexes to
+   * create a synthetic value matcher that checks if the row is set in the bitmap, instead of purely using value
+   * matchers, with {@link org.apache.druid.segment.filter.OrFilter#convertIndexToValueMatcher}.
+   */
+  public interface MatcherBundle
+  {
+    MatcherBundleInfo getMatcherInfo();
+
+    ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
+
+    VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset);
+
+    boolean canVectorize();
   }
 
   /**
@@ -181,60 +234,6 @@ public class FilterBundle
     {
       return this.filter.makeFilterBundle(this, bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
     }
-  }
-
-
-  public BundleInfo getInfo()
-  {
-    return new BundleInfo(
-        indexBundle == null ? null : indexBundle.getIndexInfo(),
-        matcherBundle == null ? null : matcherBundle.getMatcherInfo()
-    );
-  }
-
-  public boolean hasIndex()
-  {
-    return indexBundle != null;
-  }
-
-  public boolean hasMatcher()
-  {
-    return matcherBundle != null;
-  }
-
-  public boolean canVectorizeMatcher()
-  {
-    return matcherBundle == null || matcherBundle.canVectorize();
-  }
-
-  // This interface only has one implementation
-  public interface IndexBundle
-  {
-    IndexBundleInfo getIndexInfo();
-
-    // The computed bitmap from the index
-    ImmutableBitmap getBitmap();
-
-    ColumnIndexCapabilities getIndexCapabilities();
-  }
-
-  /**
-   * Builder of {@link ValueMatcher} and {@link VectorValueMatcher}. The
-   * {@link #valueMatcher(ColumnSelectorFactory, Offset, boolean)} function also passes in the base offset and whether
-   * the offset is 'descending' or not, to allow filters more flexibility in value matcher creation.
-   * {@link org.apache.druid.segment.filter.OrFilter} uses these extra parameters to allow partial use of indexes to
-   * create a synthetic value matcher that checks if the row is set in the bitmap, instead of purely using value
-   * matchers, with {@link org.apache.druid.segment.filter.OrFilter#convertIndexToValueMatcher}.
-   */
-  public interface MatcherBundle
-  {
-    MatcherBundleInfo getMatcherInfo();
-
-    ValueMatcher valueMatcher(ColumnSelectorFactory selectorFactory, Offset baseOffset, boolean descending);
-
-    VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset);
-
-    boolean canVectorize();
   }
 
   public static class SimpleIndexBundle implements IndexBundle
@@ -456,11 +455,9 @@ public class FilterBundle
   public static class MatcherBundleInfo
   {
     private static final Pattern PATTERN_LINE_START = Pattern.compile("(?m)^");
-
-    private final Supplier<String> filter;
     @Nullable
     final List<MatcherBundleInfo> matchers;
-
+    private final Supplier<String> filter;
     @Nullable
     private final IndexBundleInfo partialIndex;
 

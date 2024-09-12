@@ -163,22 +163,21 @@ public class AndFilter implements BooleanFilter
     // operation, this is valid (and even preferable).
     final long bitmapConstructionStartNs = System.nanoTime();
     for (FilterBundle.Builder subFilterBundleBuilder : filterBundleBuilder.getChildBuilders()) {
-      final FilterBundle subBundle = subFilterBundleBuilder.getFilter().makeFilterBundle(subFilterBundleBuilder,
-                                                                                         bitmapResultFactory,
-                                                                                         Math.min(
-                                                                                             applyRowCount,
-                                                                                             indexIntersectionSize
-                                                                                         ),
-                                                                                         totalRowCount,
-                                                                                         includeUnknown
+      final FilterBundle subBundle = subFilterBundleBuilder.getFilter().makeFilterBundle(
+          subFilterBundleBuilder,
+          bitmapResultFactory,
+          Math.min(applyRowCount, indexIntersectionSize),
+          totalRowCount,
+          includeUnknown
       );
       if (subBundle.hasIndex()) {
         if (subBundle.getIndex().getBitmap().isEmpty()) {
           // if nothing matches for any sub filter, short-circuit, because nothing can possibly match
-          return FilterBundle.allFalse(System.nanoTime() - bitmapConstructionStartNs,
-                                       subFilterBundleBuilder.getColumnIndexSelector()
-                                                             .getBitmapFactory()
-                                                             .makeEmptyImmutableBitmap()
+          return FilterBundle.allFalse(
+              System.nanoTime() - bitmapConstructionStartNs,
+              subFilterBundleBuilder.getColumnIndexSelector()
+                                    .getBitmapFactory()
+                                    .makeEmptyImmutableBitmap()
           );
         }
         merged = merged.merge(subBundle.getIndex().getIndexCapabilities());
@@ -202,10 +201,11 @@ public class AndFilter implements BooleanFilter
         indexBundle = new FilterBundle.SimpleIndexBundle(indexBundleInfos.get(0), index, merged);
       } else {
         indexBundle = new FilterBundle.SimpleIndexBundle(
-            new FilterBundle.IndexBundleInfo(() -> "AND",
-                                             indexIntersectionSize,
-                                             System.nanoTime() - bitmapConstructionStartNs,
-                                             indexBundleInfos
+            new FilterBundle.IndexBundleInfo(
+                () -> "AND",
+                indexIntersectionSize,
+                System.nanoTime() - bitmapConstructionStartNs,
+                indexBundleInfos
             ),
             index,
             merged
@@ -240,7 +240,8 @@ public class AndFilter implements BooleanFilter
 
         @Override
         public VectorValueMatcher vectorMatcher(
-            VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset
+            VectorColumnSelectorFactory selectorFactory,
+            ReadableVectorOffset baseOffset
         )
         {
           final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherBundles.size()];
@@ -322,15 +323,19 @@ public class AndFilter implements BooleanFilter
       @Nullable
       @Override
       public <T> T computeBitmapResult(
-          BitmapResultFactory<T> bitmapResultFactory, int applyRowCount, int totalRowCount, boolean includeUnknown
+          BitmapResultFactory<T> bitmapResultFactory,
+          int applyRowCount,
+          int totalRowCount,
+          boolean includeUnknown
       )
       {
         final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
         for (final BitmapColumnIndex index : bitmapColumnIndices) {
-          final T bitmapResult = index.computeBitmapResult(bitmapResultFactory,
-                                                           applyRowCount,
-                                                           totalRowCount,
-                                                           includeUnknown
+          final T bitmapResult = index.computeBitmapResult(
+              bitmapResultFactory,
+              applyRowCount,
+              totalRowCount,
+              includeUnknown
           );
           if (bitmapResult == null) {
             // all or nothing
