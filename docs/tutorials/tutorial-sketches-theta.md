@@ -119,7 +119,11 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-Notice how there is no `uid` in the `SELECT` statement. In this scenario you are not interested in individual user ID's, only the unique counts. Instead you use the `DS_THETA` aggregator function to create a Theta sketch on the values of `uid`. The [`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) function has an optional second parameter, `size`, which accepts a positive integer-power of 2 greater than 0. The `size` parameter refers to the maximum number of entries the Theta sketch object retains. Higher values of `size`  result in higher accuracy, but require more space. The default value of `size` is 16384, and is recommended in most use cases. The `GROUP BY` statement groups the entries for each episode of a show watched on the same day.
+Notice that there is no `uid` in the `SELECT` statement.
+In this scenario you are not interested in individual user IDs, only the unique counts.
+Instead you create Theta sketches on the values of `uid` using the `DS_THETA` function.
+[`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) has an optional second parameter that controls the accuracy and size of the sketches.
+The `GROUP BY` statement groups the entries for each episode of a show watched on the same day.
 
 ## Query the Theta sketch column
 
