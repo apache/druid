@@ -28,6 +28,7 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
@@ -82,6 +83,12 @@ public class DruidQueryGenerator
     {
       operandIndexStack.pop();
       return super.pop();
+    }
+
+    @Override
+    public synchronized Object clone()
+    {
+      throw new IAE("Not cloneable!");
     }
   }
 
@@ -176,7 +183,6 @@ public class DruidQueryGenerator
       if (!(possibleJoin instanceof DruidJoin)) {
         return NONE;
       }
-      DruidJoin join = (DruidJoin) possibleJoin;
       if (stack.operandIndexStack.get(stack.size() - 1) == 1) {
         return RIGHT;
       } else {
