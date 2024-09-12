@@ -59,7 +59,8 @@ public class DruidQueryGenerator
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
 
-  static class DruidNodeStack extends Stack<DruidLogicalNode>{
+  static class DruidNodeStack extends Stack<DruidLogicalNode>
+  {
     private static final long serialVersionUID = 1L;
 
     Stack<Integer> operandIndexStack = new Stack<Integer>();
@@ -67,7 +68,7 @@ public class DruidQueryGenerator
     @Override
     public DruidLogicalNode push(DruidLogicalNode item)
     {
-      return push(item,0);
+      return push(item, 0);
     }
 
     public DruidLogicalNode push(DruidLogicalNode item, int operandIndex)
@@ -75,13 +76,13 @@ public class DruidQueryGenerator
       operandIndexStack.push(operandIndex);
       return super.push(item);
     }
+
     @Override
     public synchronized DruidLogicalNode pop()
     {
       operandIndexStack.pop();
       return super.pop();
     }
-
   }
 
   public DruidQuery buildQuery()
@@ -190,7 +191,7 @@ public class DruidQueryGenerator
 
     boolean forceSubQuery(SourceDesc sourceDesc)
     {
-      if(sourceDesc.dataSource.isGlobal()) {
+      if (sourceDesc.dataSource.isGlobal()) {
         return false;
       }
       return this == RIGHT;
@@ -213,12 +214,7 @@ public class DruidQueryGenerator
 
     Vertex createVertex(DruidNodeStack stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      boolean forceFinalize = (stack.size() > 2 && stack.get(stack.size() - 2) instanceof DruidJoin);
-
-    JoinSupportTweaks jst = JoinSupportTweaks.analyze(stack);
-    if(forceFinalize) {
-      System.out.println("asd");
-    }
+      JoinSupportTweaks jst = JoinSupportTweaks.analyze(stack);
       return new PDQVertex(partialDruidQuery, inputs, jst);
     }
 
