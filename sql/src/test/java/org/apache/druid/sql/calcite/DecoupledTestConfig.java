@@ -84,8 +84,25 @@ public @interface DecoupledTestConfig
      * New scans / etc.
      */
     DEFINETLY_WORSE_PLAN,
+    /**
+     * some extra columns appeared.
+     */
     EQUIV_PLAN_EXTRA_COLUMNS,
-    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER;
+    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER,
+    /**
+     * Filter pushed down.
+     *
+     * Instead:
+     *  Filter -> Join -> Table
+     *  Join -> Filter -> Table
+     */
+    SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND,
+    /**
+     * Instead:
+     * Join (l=r && lCol='a') -> Gby
+     * Join (l=r) -> Gby[lCol='a]
+     */
+    FILTER_PUSHED_DOWN_FROM_JOIN_CAN_BE_MORE;
 
     public boolean isPresent()
     {

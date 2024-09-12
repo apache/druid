@@ -54,8 +54,6 @@ public class NotYetSupportedUsageTest
     assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
   }
 
-
-
   private Set<Method> getAnnotatedMethods()
   {
     return new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())

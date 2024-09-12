@@ -1,22 +1,17 @@
-# testLeftJoinSubqueryWithSelectorFilter@join-to-filter case-crc:04e8d03a
-# quidem testcase reason: EQUIV_PLAN
-!set computeInnerJoinCostAsFilter false
+# testInnerJoinSubqueryWithSelectorFilter@filter-rewrites case-crc:39eaeb27
+# quidem testcase reason: FILTER_PUSHED_DOWN_FROM_JOIN_CAN_BE_MORE
 !set debug true
 !set defaultTimeout 300000
-!set enableJoinFilterRewrite false
-!set enableJoinFilterRewriteValueColumnFilters false
-!set enableRewriteJoinToFilter true
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter false
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
 !set sqlCurrentTimestamp 2000-01-01T00:00:00Z
 !set sqlQueryId dummy
 !set outputformat mysql
 !use druidtest:///
-SELECT dim1, l1.k
-FROM foo
-LEFT JOIN (select k || '' as k from lookup.lookyloo group by 1) l1 ON foo.dim1 = l1.k
-WHERE l1.k = 'abc'
-;
+SELECT dim1, l1.k FROM foo INNER JOIN (select k || '' as k from lookup.lookyloo group by 1) l1 ON foo.dim1 = l1.k and l1.k = 'abc';
 +------+-----+
 | dim1 | k   |
 +------+-----+
