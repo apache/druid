@@ -709,7 +709,14 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
           if (entry.getValue().getSegment().isTombstone()) {
             log.debug("Skipping refresh for tombstone segment.");
           } else {
-            markSegmentAsNeedRefresh(segmentId);
+            ImmutableDruidDataSource druidDataSource =
+                sqlSegmentsMetadataManager.getImmutableDataSourceWithUsedSegments(segmentId.getDataSource());
+
+            if (druidDataSource != null && druidDataSource.getSegment(segmentId) != null) {
+              // mark it for refresh only if it is used
+              // however, this case shouldn't arise by design
+              markSegmentAsNeedRefresh(segmentId);
+            }
           }
         }
       }
