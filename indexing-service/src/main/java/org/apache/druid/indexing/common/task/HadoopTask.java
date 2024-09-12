@@ -164,11 +164,11 @@ public abstract class HadoopTask extends AbstractBatchIndexTask
     final List<URL> localClassLoaderURLs = new ArrayList<>(jobURLs);
 
     // hadoop dependencies come before druid classes because some extensions depend on them
-    final File[] hadoopDependencyFiles = Initialization.getHadoopDependencyFilesToLoad(
-        finalHadoopDependencyCoordinates,
-        EXTENSIONS_LOADER.config()
-    );
-    for (final File hadoopDependency : hadoopDependencyFiles) {
+    for (final File hadoopDependency :
+        Initialization.getHadoopDependencyFilesToLoad(
+            finalHadoopDependencyCoordinates,
+            EXTENSIONS_LOADER.config()
+        )) {
       final URLClassLoader hadoopLoader = EXTENSIONS_LOADER.getClassLoaderForExtension(hadoopDependency, false);
       localClassLoaderURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
     }

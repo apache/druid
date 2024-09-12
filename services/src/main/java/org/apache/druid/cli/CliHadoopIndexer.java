@@ -90,8 +90,7 @@ public class CliHadoopIndexer implements Runnable
 
       final List<URL> driverURLs = new ArrayList<>(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-      final File[] hadoopDependencyFiles = Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extnLoader.config());
-      for (File hadoopDependency : hadoopDependencyFiles) {
+      for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extnLoader.config())) {
         final URLClassLoader hadoopLoader = extnLoader.getClassLoaderForExtension(hadoopDependency, false);
         driverURLs.addAll(Arrays.asList(hadoopLoader.getURLs()));
       }
