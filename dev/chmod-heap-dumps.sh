@@ -15,5 +15,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-chmod 644 "${project.parent.basedir}/target/*.hprof"
+BASE_DIR=$(git rev-parse --show-toplevel)
+chmod 644 "${BASE_DIR}/target/*.hprof"
