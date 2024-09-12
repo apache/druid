@@ -21,14 +21,20 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.frame.write.FrameWriterTestData;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -41,6 +47,9 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
+
+import java.util.List;
+import java.util.Objects;
 
 public class FloatFieldReaderTest extends InitializedNullHandlingTest
 {
@@ -73,6 +82,27 @@ public class FloatFieldReaderTest extends InitializedNullHandlingTest
   {
     writeToMemory(NullHandling.defaultFloatValue());
     Assert.assertEquals(NullHandling.sqlCompatible(), FloatFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
+  }
+
+  @Test
+  public void testCompareRows()
+  {
+    final List<Float> rows = FrameWriterTestData.TEST_FLOATS.getData(KeyOrder.ASCENDING);
+
+    final ColumnAccessor accessor =
+        RowBasedFrameRowsAndColumnsTest.MAKER.apply(
+            MapOfColumnsRowsAndColumns.builder()
+                                      .add("dim1", rows.toArray(), ColumnType.FLOAT)
+                                      .build()
+        ).findColumn("dim1").toAccessor();
+
+    for (int i = 1; i < rows.size(); i++) {
+      if (Objects.equals(accessor.getObject(i - 1), accessor.getObject(i))) {
+        Assert.assertEquals(0, accessor.compareRows(i - 1, i));
+      } else {
+        Assert.assertTrue(accessor.compareRows(i - 1, i) < 0);
+      }
+    }
   }
 
   @Test

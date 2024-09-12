@@ -222,13 +222,6 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
           return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
         }
 
-        @Nullable
-        @Override
-        public Object getObject()
-        {
-          return defaultGetObject();
-        }
-
         @Override
         public Class classOfObject()
         {

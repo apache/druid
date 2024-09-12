@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
@@ -46,6 +47,7 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
       BufferAggregator aggregator,
       int aggregatorSize,
       Cursor cursor,
+      CursorGranularizer granularizer,
       int[] positions,
       ByteBuffer resultsBuffer
   )
@@ -69,7 +71,9 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
         }
       }
       processedRows++;
-      cursor.advanceUninterruptibly();
+      if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+        break;
+      }
     }
     return processedRows;
   }

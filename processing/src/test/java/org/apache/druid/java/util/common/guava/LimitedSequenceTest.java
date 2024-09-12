@@ -104,7 +104,7 @@ public class LimitedSequenceTest
               public OutType accumulate(OutType accumulated, Integer in)
               {
                 final OutType retVal = super.accumulate(accumulated, in);
-                yield();
+                this.yield();
                 return retVal;
               }
             }

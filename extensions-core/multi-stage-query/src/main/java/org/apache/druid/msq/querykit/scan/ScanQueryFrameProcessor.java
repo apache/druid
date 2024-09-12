@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit.scan;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -41,10 +40,8 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -62,24 +59,22 @@ import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
-import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -180,7 +175,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
    */
   private static ScanQuery prepareScanQueryForDataServer(@NotNull ScanQuery scanQuery)
   {
-    if (ScanQuery.Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
+    if (Order.NONE.equals(scanQuery.getTimeOrder()) && !scanQuery.getOrderBys().isEmpty()) {
       return Druids.ScanQueryBuilder.copy(scanQuery)
                                     .orderBy(ImmutableList.of())
                                     .limit(0)
@@ -252,21 +247,25 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     if (cursor == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
 
-      final Yielder<Cursor> cursorYielder = Yielders.each(
-          makeCursors(
-              query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mapSegment(segmentHolder.get()).asStorageAdapter()
-          )
-      );
+      final Segment mappedSegment = mapSegment(segmentHolder.get());
+      final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+      if (cursorFactory == null) {
+        throw new ISE(
+            "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+        );
+      }
 
-      if (cursorYielder.isDone()) {
+      final CursorHolder cursorHolder = closer.register(
+          cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
+      );
+      final Cursor nextCursor = cursorHolder.asCursor();
+
+      if (nextCursor == null) {
         // No cursors!
-        cursorYielder.close();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final long rowsFlushed = setNextCursor(cursorYielder.get(), segmentHolder.get());
+        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
-        closer.register(cursorYielder);
       }
     }
 
@@ -294,15 +293,24 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
 
-        final long rowsFlushed = setNextCursor(
-            Iterables.getOnlyElement(
-                makeCursors(
-                    query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                    mapSegment(frameSegment).asStorageAdapter()
-                ).toList()
-            ),
-            frameSegment
+        final Segment mappedSegment = mapSegment(frameSegment);
+        final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+        if (cursorFactory == null) {
+          throw new ISE(
+              "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+          );
+        }
+
+        final CursorHolder cursorHolder = closer.register(
+            cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
         );
+        final Cursor nextCursor = cursorHolder.asCursor();
+
+        if (nextCursor == null) {
+          // no cursor
+          return ReturnOrAwait.returnObject(Unit.instance());
+        }
+        final long rowsFlushed = setNextCursor(nextCursor, frameSegment);
 
         if (rowsFlushed > 0) {
           return ReturnOrAwait.runAgain();
@@ -429,28 +437,5 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       );
     }
     return baseColumnSelectorFactory;
-  }
-
-  private static Sequence<Cursor> makeCursors(final ScanQuery query, final StorageAdapter adapter)
-  {
-    if (adapter == null) {
-      throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-      );
-    }
-
-    final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
-    Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
-
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-
-    return adapter.makeCursors(
-        filter,
-        intervals.get(0),
-        query.getVirtualColumns(),
-        Granularities.ALL,
-        ScanQuery.Order.DESCENDING.equals(query.getTimeOrder()),
-        null
-    );
   }
 }

@@ -66,7 +66,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, context);
 
     this.dimFilter = dimFilter;
     this.bound = bound == null ? "" : bound;
@@ -198,6 +198,16 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   boolean isMaxTime()
   {
     return bound.equalsIgnoreCase(MAX_TIME);
+  }
+
+  boolean needsMinTime()
+  {
+    return !isMaxTime();
+  }
+
+  boolean needsMaxTime()
+  {
+    return !isMinTime();
   }
 
   @Override

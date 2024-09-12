@@ -43,6 +43,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
@@ -1186,6 +1187,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
         ImmutableMap.of(
@@ -1271,6 +1276,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNull(newDataSchemaMetadata());
 
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
+    Assert.assertNotNull(reportData.getErrorMsg());
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -2365,7 +2374,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         maxSavedParseExceptions,
         maxRecordsPerPoll,
         maxBytesPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        null
     );
     return createTask(taskId, dataSchema, ioConfig, tuningConfig, context);
   }

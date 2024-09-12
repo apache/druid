@@ -33,6 +33,7 @@ import {
   DEFAULT_SERVER_QUERY_CONTEXT,
   Execution,
   externalConfigToIngestQueryPattern,
+  getQueryContextKey,
   ingestQueryPatternToQuery,
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
@@ -147,6 +148,17 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <SchemaStep
           queryString={content.queryString}
           onQueryStringChange={queryString => setContent({ ...content, queryString })}
+          forceSegmentSortByTime={getQueryContextKey(
+            'forceSegmentSortByTime',
+            content.queryContext || {},
+            serverQueryContext,
+          )}
+          changeForceSegmentSortByTime={forceSegmentSortByTime =>
+            setContent({
+              ...content,
+              queryContext: { ...content?.queryContext, forceSegmentSortByTime },
+            })
+          }
           enableAnalyze={false}
           goToQuery={() => goToQuery(content)}
           onBack={() => setContent(undefined)}

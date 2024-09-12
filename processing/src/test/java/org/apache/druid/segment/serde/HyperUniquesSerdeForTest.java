@@ -24,11 +24,9 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -140,16 +138,5 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
         return comparator.compare(o1, o2);
       }
     };
-  }
-
-  @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String metric)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.createWithColumnSize(
-        segmentWriteOutMedium,
-        metric,
-        this.getObjectStrategy(),
-        Integer.MAX_VALUE
-    );
   }
 }

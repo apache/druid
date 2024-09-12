@@ -54,6 +54,8 @@ public class MSQSqlModule implements DruidModule
     // We want this module to bring InputSourceModule along for the ride.
     binder.install(new InputSourceModule());
 
+    binder.bind(MSQTerminalStageSpecFactory.class).to(SegmentGenerationTerminalStageSpecFactory.class).in(LazySingleton.class);
+
     binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);
 
     // Set up the EXTERN macro.

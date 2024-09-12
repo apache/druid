@@ -19,15 +19,16 @@
 
 package org.apache.druid.query.topn.types;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.dimension.ColumnSelectorStrategy;
 import org.apache.druid.query.topn.HeapBasedTopNAlgorithm;
+import org.apache.druid.query.topn.TopNCursorInspector;
 import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
 
 import javax.annotation.Nullable;
 
@@ -57,15 +58,15 @@ public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends Column
    *
    * A dimension type that does not have integer values should return null.
    *
-   * @param query          The TopN query being served
-   * @param params         Parameters for the TopN query being served
-   * @param storageAdapter Column storage adapter, to provide information about the column that can be used for
-   *                       query optimization, e.g. whether dimension values are sorted or not
+   * @param query           The TopN query being served
+   * @param params          Parameters for the TopN query being served
+   * @param cursorInspector provide information about the cursor that can be used for query optimization, e.g. whether
+   *                        dimension values are sorted or not
    *
    * @return an Aggregator[][] for integer-valued dimensions, null otherwise
    */
   @Nullable
-  Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter);
+  Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, TopNCursorInspector cursorInspector);
 
   /**
    * Used by {@link HeapBasedTopNAlgorithm}. The contract of this method requires calling {@link #initAggregateStore()}
@@ -96,6 +97,7 @@ public interface TopNColumnAggregatesProcessor<ValueSelectorType> extends Column
       TopNQuery query,
       ValueSelectorType selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   );
 

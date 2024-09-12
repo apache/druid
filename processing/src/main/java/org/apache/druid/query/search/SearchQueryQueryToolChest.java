@@ -97,7 +97,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public Comparator<Result<SearchResultValue>> createResultComparator(Query<Result<SearchResultValue>> query)
   {
-    return ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending());
+    return ResultGranularTimestampComparator.create(query.getGranularity(), false);
   }
 
   @Override

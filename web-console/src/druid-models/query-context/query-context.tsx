@@ -40,6 +40,8 @@ export interface QueryContext {
   sqlJoinAlgorithm?: SqlJoinAlgorithm;
   failOnEmptyInsert?: boolean;
   waitUntilSegmentsLoad?: boolean;
+  useConcurrentLocks?: boolean;
+  forceSegmentSortByTime?: boolean;
 
   [key: string]: any;
 }
@@ -61,6 +63,8 @@ export const DEFAULT_SERVER_QUERY_CONTEXT: QueryContext = {
   sqlJoinAlgorithm: 'broadcast',
   failOnEmptyInsert: false,
   waitUntilSegmentsLoad: false,
+  useConcurrentLocks: false,
+  forceSegmentSortByTime: true,
 };
 
 export interface QueryWithContext {

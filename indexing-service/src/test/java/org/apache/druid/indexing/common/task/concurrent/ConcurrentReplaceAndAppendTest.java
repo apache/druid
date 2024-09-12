@@ -53,6 +53,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -104,8 +105,6 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private static final Interval DEC_23 = Intervals.of("2023-12/2024-01");
   private static final Interval OCT_NOV_DEC_23 = Intervals.of("2023-10-01/2024-01-01");
   private static final Interval FIRST_OF_JAN_23 = Intervals.of("2023-01-01/2023-01-02");
-
-  private static final String WIKI = "wiki";
 
   private TaskQueue taskQueue;
   private TaskActionClientFactory taskActionClientFactory;
@@ -983,7 +982,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
-              WIKI,
+              TestDataSource.WIKI,
               ImmutableList.of(interval),
               visibility
           )
@@ -1001,7 +1000,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       final TaskActionClient taskActionClient = taskActionClientFactory.create(task);
       Collection<DataSegment> allUsedSegments = taskActionClient.submit(
           new RetrieveUsedSegmentsAction(
-              WIKI,
+              TestDataSource.WIKI,
               Collections.singletonList(interval)
           )
       );
@@ -1037,7 +1036,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
   private DataSegment createSegment(Interval interval, String version)
   {
     return DataSegment.builder()
-                      .dataSource(WIKI)
+                      .dataSource(TestDataSource.WIKI)
                       .interval(interval)
                       .version(version)
                       .size(100)
@@ -1046,7 +1045,7 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
   private ActionsTestTask createAndStartTask()
   {
-    ActionsTestTask task = new ActionsTestTask(WIKI, "test_" + groupId.incrementAndGet(), taskActionClientFactory);
+    ActionsTestTask task = new ActionsTestTask(TestDataSource.WIKI, "test_" + groupId.incrementAndGet(), taskActionClientFactory);
     taskQueue.add(task);
     runningTasks.add(task);
     return task;

@@ -92,7 +92,7 @@ public class CompressedVariableSizeBlobColumnTest
     ).get();
     for (int row = 0; row < numWritten; row++) {
       ByteBuffer value = column.get(row);
-      byte[] bytes = new byte[value.limit()];
+      byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
       Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
     }

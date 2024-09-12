@@ -20,16 +20,13 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
-import org.apache.druid.client.cache.BackgroundCachePopulator;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
@@ -43,25 +40,22 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.offheap.OffheapBufferGenerator;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.ExecutorServiceMonitor;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.utils.JvmUtils;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 
 /**
  * This module is used to fulfill dependency injection of query processing and caching resources: buffer pools and
  * thread pools on Broker. Broker does not need to be allocated an intermediate results pool.
  * This is separated from DruidProcessingModule to separate the needs of the broker from the historicals
+ *
+ * @see DruidProcessingModule
  */
-
 public class BrokerProcessingModule implements Module
 {
   private static final Logger log = new Logger(BrokerProcessingModule.class);
@@ -69,9 +63,8 @@ public class BrokerProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.processing.merge", BrokerParallelMergeConfig.class);
-    JsonConfigProvider.bind(binder, "druid.processing", DruidProcessingConfig.class);
-    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    JsonConfigProvider.bind(binder, DruidProcessingModule.PROCESSING_PROPERTY_PREFIX + ".merge", BrokerParallelMergeConfig.class);
+    DruidProcessingModule.registerConfigsAndMonitor(binder);
   }
 
   @Provides
@@ -82,20 +75,7 @@ public class BrokerProcessingModule implements Module
       CacheConfig cacheConfig
   )
   {
-    if (cacheConfig.getNumBackgroundThreads() > 0) {
-      final ExecutorService exec = Executors.newFixedThreadPool(
-          cacheConfig.getNumBackgroundThreads(),
-          new ThreadFactoryBuilder()
-              .setNameFormat("background-cacher-%d")
-              .setDaemon(true)
-              .setPriority(Thread.MIN_PRIORITY)
-              .build()
-      );
-
-      return new BackgroundCachePopulator(exec, smileMapper, cachePopulatorStats, cacheConfig.getMaxEntrySize());
-    } else {
-      return new ForegroundCachePopulator(smileMapper, cachePopulatorStats, cacheConfig.getMaxEntrySize());
-    }
+    return DruidProcessingModule.createCachePopulator(smileMapper, cachePopulatorStats, cacheConfig);
   }
 
   @Provides
@@ -113,7 +93,6 @@ public class BrokerProcessingModule implements Module
   public NonBlockingPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
     verifyDirectMemory(config);
-
     return new StupidPool<>(
         "intermediate processing pool",
         new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),

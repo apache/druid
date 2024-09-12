@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -127,7 +128,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
         smoosher.add(name, fileMapper.mapFile(name));
       }
     } else {
-      writeInternal(smoosher, dictionaryWriter, STRING_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
     }
   }
 }

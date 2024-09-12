@@ -295,6 +295,13 @@ export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discove
 
 export type ArrayMode = 'arrays' | 'multi-values';
 
+export const DEFAULT_FORCE_SEGMENT_SORT_BY_TIME = true;
+export function getForceSegmentSortByTime(spec: Partial<IngestionSpec>): boolean {
+  return (
+    deepGet(spec, 'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime') ??
+    DEFAULT_FORCE_SEGMENT_SORT_BY_TIME
+  );
+}
 export function getSchemaMode(spec: Partial<IngestionSpec>): SchemaMode {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec.useSchemaDiscovery') === true) {
     return 'type-aware-discovery';
@@ -1053,6 +1060,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.filter',
           label: 'Delta filter',
           type: 'json',
+          placeholder: '{"type": "=", "column": "name", "value": "foo"}',
           defaultValue: {},
           info: (
             <>
@@ -1062,6 +1070,19 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
                 filter
               </ExternalLink>
               <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.snapshotVersion',
+          label: 'Delta snapshot version',
+          type: 'number',
+          placeholder: '(latest)',
+          defaultValue: {},
+          info: (
+            <>
+              The snapshot version to read from the Delta table. By default, the latest snapshot is
+              read.
             </>
           ),
         },
@@ -2024,7 +2045,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxRowsInMemory',
     type: 'number',
-    defaultValue: 1000000,
+    defaultValue: (spec: IngestionSpec) => (isStreamingSpec(spec) ? 150000 : 1000000),
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {
@@ -2744,6 +2765,7 @@ function getColumnTypeHintsFromSpec(spec: Partial<IngestionSpec>): Record<string
 export function updateSchemaWithSample(
   spec: Partial<IngestionSpec>,
   sampleResponse: SampleResponse,
+  forceSegmentSortByTime: boolean,
   schemaMode: SchemaMode,
   arrayMode: ArrayMode,
   rollup: boolean,
@@ -2755,6 +2777,15 @@ export function updateSchemaWithSample(
   );
 
   let newSpec = spec;
+
+  newSpec = deepDelete(newSpec, 'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime');
+  if (forceSegmentSortByTime !== DEFAULT_FORCE_SEGMENT_SORT_BY_TIME) {
+    newSpec = deepSet(
+      newSpec,
+      'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
+      forceSegmentSortByTime,
+    );
+  }
 
   switch (schemaMode) {
     case 'type-aware-discovery':
@@ -2784,6 +2815,7 @@ export function updateSchemaWithSample(
           guessNumericStringsAsNumbers,
           arrayMode === 'multi-values',
           rollup,
+          forceSegmentSortByTime ?? DEFAULT_FORCE_SEGMENT_SORT_BY_TIME ? 'ignore' : 'preserve',
         ),
       );
       break;

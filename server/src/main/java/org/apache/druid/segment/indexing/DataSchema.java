@@ -31,15 +31,18 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.TreeMultiset;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -212,16 +215,51 @@ public class DataSchema
 
     fields.computeIfAbsent(ColumnHolder.TIME_COLUMN_NAME, k -> TreeMultiset.create()).add(
         StringUtils.format(
-            "primary timestamp (%s cannot appear as a dimension or metric)",
+            "primary timestamp (%s cannot appear elsewhere except as long-typed dimension)",
             ColumnHolder.TIME_COLUMN_NAME
         )
     );
 
     if (dimensionsSpec != null) {
+      boolean sawTimeDimension = false;
+
       for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
-        final String field = dimensionsSpec.getDimensions().get(i).getName();
+        final DimensionSchema dimSchema = dimensionsSpec.getDimensions().get(i);
+        final String field = dimSchema.getName();
         if (Strings.isNullOrEmpty(field)) {
-          throw new IAE("Encountered dimension with null or empty name at position %d", i);
+          throw DruidException
+              .forPersona(DruidException.Persona.USER)
+              .ofCategory(DruidException.Category.INVALID_INPUT)
+              .build("Encountered dimension with null or empty name at position[%d]", i);
+        }
+
+        if (ColumnHolder.TIME_COLUMN_NAME.equals(field)) {
+          if (i > 0 && dimensionsSpec.isForceSegmentSortByTime()) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build(
+                    "Encountered dimension[%s] at position[%d]. This is only supported when the dimensionsSpec "
+                    + "parameter[%s] is set to[false]. %s",
+                    field,
+                    i,
+                    DimensionsSpec.PARAMETER_FORCE_TIME_SORT,
+                    DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
+                );
+          } else if (!dimSchema.getColumnType().is(ValueType.LONG)) {
+            throw DruidException
+                .forPersona(DruidException.Persona.USER)
+                .ofCategory(DruidException.Category.INVALID_INPUT)
+                .build(
+                    "Encountered dimension[%s] with incorrect type[%s]. Type must be 'long'.",
+                    field,
+                    dimSchema.getColumnType()
+                );
+          } else if (!sawTimeDimension) {
+            // Skip adding __time to "fields" (once) if it's listed as a dimension, so it doesn't show up as an error.
+            sawTimeDimension = true;
+            continue;
+          }
         }
 
         fields.computeIfAbsent(field, k -> TreeMultiset.create()).add("dimensions list");
@@ -266,7 +304,9 @@ public class DataSchema
     if (errors.isEmpty()) {
       return fields.keySet();
     } else {
-      throw new IAE("Cannot specify a column more than once: %s", String.join("; ", errors));
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Cannot specify a column more than once: %s", String.join("; ", errors));
     }
   }
 
