@@ -616,9 +616,10 @@ the [HDFS input source](../ingestion/input-sources.md#hdfs-input-source).
 You can set the following property to specify permissible protocols for
 the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
-|Property|Possible values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source.|`["http", "https"]`|
+|Property| Possible values | Description                                                                                                                               |Default|
+|--------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.ingestion.http.allowedProtocols`| List of protocols | Allowed protocols for the HTTP input source.                                                                                              |`["http", "https"]`|
+|`druid.ingestion.http.allowedHeaders`| List of Headers | List of allowed request headers for the HTTP input source. Default is empty list which means allow all headers to pass in ingestion spec. |`[]`|
 
 ### External data access security configuration
 
