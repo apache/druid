@@ -327,7 +327,6 @@ export class ConsoleApplication extends React.PureComponent<
         baseQueryContext={baseQueryContext}
         serverQueryContext={serverQueryContext}
         queryEngines={queryEngines}
-        allowExplain
         goToTask={this.goToTasksWithTaskId}
         getClusterCapacity={maybeGetClusterCapacity}
       />,
