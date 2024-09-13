@@ -61,12 +61,11 @@ public class FingerprintGenerator
   @SuppressWarnings("UnstableApiUsage")
   public String generateFingerprint(final SchemaPayload schemaPayload, final String dataSource, final int version)
   {
-    final RowSignature rowSignature = schemaPayload.getRowSignature();
     // Sort the column names in lexicographic order
     // This ensures that all permutations of a given columns would result in the same fingerprint
     // thus avoiding schema explosion in the metadata database
     // Note that this signature is not persisted anywhere, it is only used for fingerprint computation
-    final RowSignature sortedSignature = getLexicographicallySortedSignature(rowSignature);
+    final RowSignature sortedSignature = getLexicographicallySortedSignature(schemaPayload.getRowSignature());
     final SchemaPayload updatedPayload = new SchemaPayload(sortedSignature, schemaPayload.getAggregatorFactories());
     try {
 

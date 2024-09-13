@@ -31,7 +31,10 @@ import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class FingerprintGeneratorTest
@@ -145,5 +148,30 @@ public class FingerprintGeneratorTest
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0),
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 1)
     );
+  }
+
+  @Test
+  public void testRowSignatureIsSorted()
+  {
+    RowSignature rowSignature =
+        RowSignature.builder()
+                    .add("c5", ColumnType.STRING)
+                    .add("c1", ColumnType.FLOAT)
+                    .add("b2", ColumnType.LONG)
+                    .add("d3", ColumnType.DOUBLE)
+                    .add("a1", ColumnType.STRING)
+                    .build();
+
+    RowSignature sortedSignature = fingerprintGenerator.getLexicographicallySortedSignature(rowSignature);
+
+    Assert.assertNotEquals(rowSignature, sortedSignature);
+
+    List<String> columnNames = sortedSignature.getColumnNames();
+    List<String> sortedOrder = Arrays.asList("a1", "b2", "c1", "c5", "d3");
+    Assert.assertEquals(sortedOrder, columnNames);
+
+    for (String column : sortedOrder) {
+      Assert.assertEquals(sortedSignature.getColumnType(column), rowSignature.getColumnType(column));
+    }
   }
 }
