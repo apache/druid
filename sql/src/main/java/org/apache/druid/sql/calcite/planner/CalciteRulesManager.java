@@ -37,8 +37,6 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
-import org.apache.calcite.rel.rules.FilterJoinRule.FilterIntoJoinRule.FilterIntoJoinRuleConfig;
-import org.apache.calcite.rel.rules.JoinExtractFilterRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
@@ -69,7 +67,6 @@ import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
-import org.apache.druid.sql.calcite.rule.logical.DruidJoinRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.hook.DruidHook;
@@ -280,18 +277,6 @@ public class CalciteRulesManager
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addGroupEnd();
-
-
-    builder.addGroupBegin();
-
-    builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
-    builder.addGroupEnd();
-    builder.addGroupBegin();
-    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
-    builder.addGroupEnd();
-
-
-
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
