@@ -19,20 +19,29 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 
-public class NoopOshiSysMonitor extends OshiSysMonitor
+import javax.validation.constraints.NotNull;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+public class OshiSysMonitorConfig
 {
-  public NoopOshiSysMonitor()
+  public static final String PREFIX = "druid.monitoring.sys";
+
+  @JsonProperty("categories")
+  @NotNull
+  private Set<String> categories;
+
+  public OshiSysMonitorConfig(@JsonProperty("categories") List<String> categories)
   {
-    super(ImmutableMap.of(), new OshiSysMonitorConfig(ImmutableList.of()));
+    this.categories = categories == null ? new HashSet<>() : ImmutableSet.copyOf(categories);
   }
 
-  @Override
-  public boolean doMonitor(ServiceEmitter emitter)
+  public boolean shouldEmitMetricCategory(String category)
   {
-    return false;
+    return categories.isEmpty() || categories.contains(category);
   }
 }

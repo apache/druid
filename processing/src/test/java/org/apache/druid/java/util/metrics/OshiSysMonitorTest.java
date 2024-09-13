@@ -72,7 +72,7 @@ public class OshiSysMonitorTest
   {
 
     ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
-    OshiSysMonitor sysMonitorOshi = new OshiSysMonitor();
+    OshiSysMonitor sysMonitorOshi = createMonitor(new SystemInfo());
     serviceEmitter.start();
     sysMonitorOshi.monitor(serviceEmitter);
 
@@ -84,7 +84,7 @@ public class OshiSysMonitorTest
   public void testDefaultFeedSysMonitorOshi()
   {
     StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
-    OshiSysMonitor m = new OshiSysMonitor();
+    OshiSysMonitor m = createMonitor(new SystemInfo());
     m.start();
     m.monitor(emitter);
     // Sleep for 2 sec to get all metrics which are difference of prev and now metrics
@@ -103,7 +103,7 @@ public class OshiSysMonitorTest
     Mockito.when(mem.getAvailable()).thenReturn(16L);
     Mockito.when(hal.getMemory()).thenReturn(mem);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorMemStats(emitter);
     m.stop();
@@ -114,6 +114,27 @@ public class OshiSysMonitorTest
     emitter.verifyValue("sys/mem/max", 64L);
     emitter.verifyValue("sys/mem/used", 48L);
     emitter.verifyValue("sys/mem/free", 16L);
+  }
+
+  @Test
+  public void testMemStatsSkipOthers()
+  {
+    StubServiceEmitter emitter = new StubServiceEmitter("dev/monitor-test", "localhost:0000");
+    GlobalMemory mem = Mockito.mock(GlobalMemory.class);
+    Mockito.when(mem.getTotal()).thenReturn(64L);
+    Mockito.when(mem.getAvailable()).thenReturn(16L);
+    Mockito.when(hal.getMemory()).thenReturn(mem);
+
+    OshiSysMonitor m = createMonitor(si, ImmutableList.of("mem"));
+    m.start();
+    m.doMonitor(emitter);
+    m.stop();
+    Assert.assertEquals(3, emitter.getEvents().size());
+    emitter.verifyEmitted("sys/mem/max", 1);
+    emitter.verifyEmitted("sys/mem/used", 1);
+    emitter.verifyEmitted("sys/mem/free", 1);
+    emitter.verifyEmitted("sys/swap/pageIn", 0);
+    emitter.verifyEmitted("sys/fs/max", 0);
   }
 
   @Test
@@ -129,7 +150,7 @@ public class OshiSysMonitorTest
     Mockito.when(mem.getVirtualMemory()).thenReturn(swap);
     Mockito.when(hal.getMemory()).thenReturn(mem);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorSwapStats(emitter);
     Assert.assertEquals(4, emitter.getEvents().size());
@@ -177,7 +198,7 @@ public class OshiSysMonitorTest
     Mockito.when(fileSystem.getFileStores(true)).thenReturn(osFileStores);
     Mockito.when(os.getFileSystem()).thenReturn(fileSystem);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorFsStats(emitter);
     Assert.assertEquals(8, emitter.getEvents().size());
@@ -248,7 +269,7 @@ public class OshiSysMonitorTest
     List<HWDiskStore> hwDiskStores = ImmutableList.of(disk1, disk2);
     Mockito.when(hal.getDiskStores()).thenReturn(hwDiskStores);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorDiskStats(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());
@@ -338,7 +359,7 @@ public class OshiSysMonitorTest
     List<NetworkIF> networkIFS = ImmutableList.of(net1);
     Mockito.when(hal.getNetworkIFs()).thenReturn(networkIFS);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorNetStats(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());
@@ -436,7 +457,7 @@ public class OshiSysMonitorTest
     Mockito.when(processor.getProcessorCpuLoadTicks()).thenReturn(procTicks);
     Mockito.when(hal.getProcessor()).thenReturn(processor);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorCpuStats(emitter);
     Assert.assertEquals(0, emitter.getEvents().size());
@@ -533,7 +554,7 @@ public class OshiSysMonitorTest
     Mockito.when(processor.getSystemLoadAverage(3)).thenReturn(la);
     Mockito.when(hal.getProcessor()).thenReturn(processor);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorSysStats(emitter);
     Assert.assertEquals(4, emitter.getEvents().size());
@@ -567,7 +588,7 @@ public class OshiSysMonitorTest
     Mockito.when(ipstats.getTCPv4Stats()).thenReturn(tcpv4);
     Mockito.when(os.getInternetProtocolStats()).thenReturn(ipstats);
 
-    OshiSysMonitor m = new OshiSysMonitor(si);
+    OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorTcpStats(emitter);
 
@@ -607,5 +628,13 @@ public class OshiSysMonitorTest
     }
   }
 
+  private OshiSysMonitor createMonitor(SystemInfo si)
+  {
+    return createMonitor(si, ImmutableList.of());
+  }
 
+  private OshiSysMonitor createMonitor(SystemInfo si, List<String> categories)
+  {
+    return new OshiSysMonitor(ImmutableMap.of(), new OshiSysMonitorConfig(categories), si);
+  }
 }
