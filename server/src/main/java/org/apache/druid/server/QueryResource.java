@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
@@ -376,7 +376,7 @@ public class QueryResource implements QueryCountStatsProvider
       return responseType;
     }
 
-    ObjectWriter newOutputWriter(
+    ObjectMapper newOutputWriter(
         @Nullable QueryToolChest<?, Query<?>> toolChest,
         @Nullable Query<?> query,
         boolean serializeDateTimeAsLong
@@ -389,7 +389,7 @@ public class QueryResource implements QueryCountStatsProvider
       } else {
         decoratedMapper = mapper;
       }
-      return isPretty ? decoratedMapper.writerWithDefaultPrettyPrinter() : decoratedMapper.writer();
+      return isPretty ? decoratedMapper.copy().enable(SerializationFeature.INDENT_OUTPUT) : decoratedMapper;
     }
 
     Response ok(Object object) throws IOException
@@ -533,7 +533,7 @@ public class QueryResource implements QueryCountStatsProvider
         @Override
         public Writer makeWriter(OutputStream out) throws IOException
         {
-          return new NativeQueryWriter(io.requestMapper, out);
+          return new NativeQueryWriter(queryLifecycle.newOutputWriter(io), out);
         }
 
         @Override
@@ -559,8 +559,8 @@ public class QueryResource implements QueryCountStatsProvider
     @Override
     public void writeException(Exception e, OutputStream out) throws IOException
     {
-      final ObjectWriter objectWriter = queryLifecycle.newOutputWriter(io);
-      out.write(objectWriter.writeValueAsBytes(e));
+      final ObjectMapper objectMapper = queryLifecycle.newOutputWriter(io);
+      out.write(objectMapper.writeValueAsBytes(e));
     }
   }
 
@@ -577,7 +577,7 @@ public class QueryResource implements QueryCountStatsProvider
       // occurs on a Historical (or other data server) after it started to push results to the Broker, the Broker
       // will experience that as "JsonEOFException: Unexpected end-of-input: expected close marker for Array".
       this.serializers = responseMapper.getSerializerProviderInstance();
-      this.jsonGenerator = responseMapper.getFactory().createGenerator(out);
+      this.jsonGenerator = responseMapper.createGenerator(out);
     }
 
     @Override
