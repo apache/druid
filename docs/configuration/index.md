@@ -616,10 +616,10 @@ the [HDFS input source](../ingestion/input-sources.md#hdfs-input-source).
 You can set the following property to specify permissible protocols for
 the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
-|Property| Possible values | Description                                                                                                                               |Default|
-|--------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------|
-|`druid.ingestion.http.allowedProtocols`| List of protocols | Allowed protocols for the HTTP input source.                                                                                              |`["http", "https"]`|
-|`druid.ingestion.http.allowedHeaders`| A list of permitted request headers for the HTTP input source. By default, the list is empty, which means all headers are allowed in the ingestion specification. |`[]`|
+|Property| Possible values                                                                                                                                                  | Description                                                                                                                               |Default|
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.ingestion.http.allowedProtocols`| List of protocols                                                                                                                                                | Allowed protocols for the HTTP input source.                                                                                              |`["http", "https"]`|
+|`druid.ingestion.http.allowedHeaders`| A list of permitted request headers for the HTTP input source. By default, the list is empty, which means no headers are allowed in the ingestion specification. |`[]`|
 
 ### External data access security configuration
 
