@@ -153,7 +153,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
       super(lines, content);
     }
 
-    protected void executeExplain(Context x) throws Exception
+    protected void executeExplain1(Context x) throws Exception
     {
             DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();
             ObjectMapper objectMapper = connectionExtras.getObjectMapper();
@@ -178,7 +178,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
 
     }
 
-    protected void executeExplain0(Context x) throws Exception
+    protected void executeExplain(Context x) throws Exception
     {
       DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();
       ObjectMapper objectMapper = connectionExtras.getObjectMapper();

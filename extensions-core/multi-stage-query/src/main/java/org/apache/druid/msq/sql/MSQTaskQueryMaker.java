@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
+import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
@@ -117,6 +118,8 @@ public class MSQTaskQueryMaker implements QueryMaker
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
+    plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
+
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
     // SQL query context: context provided by the user, and potentially modified by handlers during planning.
