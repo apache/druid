@@ -90,16 +90,6 @@ public class DruidQueryGenerator
     {
       throw new IAE("Not cloneable!");
     }
-
-    public Optional<DruidJoin> getIf(int i, Class<DruidJoin> class1)
-    {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
   }
 
   public DruidQuery buildQuery()
@@ -178,51 +168,6 @@ public class DruidQueryGenerator
     SourceDesc unwrapSourceDesc();
   }
 
-  static class VertexTweaks {
-    final boolean forceSubquery;
-    final boolean finalizeSubquery;
-
-    public VertexTweaks(boolean finalizeSubquery, boolean forceSubquery)
-    {
-      this.finalizeSubquery = finalizeSubquery;
-      this.forceSubquery = forceSubquery;
-    }
-
-    public static VertexTweaks analyze(DruidNodeStack stack) {
-      Optional<DruidJoin> join = stack.getIf(1, DruidJoin.class);
-      if(join.isPresent()) {
-
-      }
-
-      boolean finalizeSubquery1 = true;
-      boolean forceSubQuery1 = false;
-      if(join.isPresent() ) {
-        finalizeSubquery1 = false;
-
-        if(stack.operandIndexStack.get(stack.size() - 1) != 0) {
-          forceSubQuery1 == 1;
-        }
-      }
-
-      return new VertexTweaks(finalizeSubquery1, forceSubQuery1
-
-
-          );
-      if (stack.size() < 2) {
-        return NONE;
-      }
-      DruidLogicalNode possibleJoin = stack.get(stack.size() - 2);
-      if (!(possibleJoin instanceof DruidJoin)) {
-        return NONE;
-      }
-      if (stack.operandIndexStack.get(stack.size() - 1) == 1) {
-        return RIGHT;
-      } else {
-        return LEFT;
-      }
-
-    }
-  }
   enum JoinSupportTweaks
   {
     NONE,
