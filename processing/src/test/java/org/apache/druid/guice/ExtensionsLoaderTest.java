@@ -32,6 +32,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
@@ -41,6 +42,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 public class ExtensionsLoaderTest
 {
@@ -97,9 +100,11 @@ public class ExtensionsLoaderTest
     final File a_jar = new File(some_extension_dir, "a.jar");
     final File b_jar = new File(some_extension_dir, "b.jar");
     final File c_jar = new File(some_extension_dir, "c.jar");
-    a_jar.createNewFile();
-    b_jar.createNewFile();
-    c_jar.createNewFile();
+    createNewJar(a_jar);
+    createNewJar(b_jar);
+    createNewJar(c_jar);
+
+
     final StandardURLClassLoader loader = extnLoader.getClassLoaderForExtension(some_extension_dir, false);
     final URL[] expectedURLs = new URL[]{a_jar.toURI().toURL(), b_jar.toURI().toURL(), c_jar.toURI().toURL()};
     final URL[] actualURLs = loader.getURLs();
@@ -321,8 +326,8 @@ public class ExtensionsLoaderTest
     final File jar1 = new File(extension1, "jar1.jar");
     final File jar2 = new File(extension2, "jar2.jar");
 
-    Assert.assertTrue(jar1.createNewFile());
-    Assert.assertTrue(jar2.createNewFile());
+    createNewJar(jar1);
+    createNewJar(jar2);
 
     final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig(), objectMapper);
     final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1, false);
@@ -330,5 +335,17 @@ public class ExtensionsLoaderTest
 
     Assert.assertArrayEquals(new URL[]{jar1.toURI().toURL()}, ((StandardURLClassLoader) classLoader1).getURLs());
     Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((StandardURLClassLoader) classLoader2).getURLs());
+  }
+
+  private void createNewJar(File jarFileLocation) throws IOException {
+    Assert.assertTrue(jarFileLocation.createNewFile());
+    FileOutputStream fos = new FileOutputStream(jarFileLocation.getPath());
+    JarOutputStream jarOut = new JarOutputStream(fos);
+    JarEntry entry = new JarEntry("jar-resource.json");
+    jarOut.putNextEntry(entry);
+    jarOut.write("jar-resource".getBytes());
+    jarOut.closeEntry();
+    jarOut.close();
+    fos.close();
   }
 }
