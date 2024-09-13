@@ -47,7 +47,6 @@ import java.util.List;
 
 public class DruidQuidemCommandHandler implements CommandHandler
 {
-
   @Override
   public Command parseCommand(List<String> lines, List<String> content, String line)
   {
@@ -110,8 +109,15 @@ public class DruidQuidemCommandHandler implements CommandHandler
 
     protected final void executeExplainQuery(Context x)
     {
+      boolean isExplainSupported = DruidConnectionExtras.unwrapOrThrow(x.connection()).isExplainSupported();
+
       final SqlCommand sqlCommand = x.previousSqlCommand();
-      executeQuery(x, "explain plan for " + sqlCommand.sql);
+
+      if(isExplainSupported) {
+        executeQuery(x, "explain plan for " + sqlCommand.sql);
+      }else {
+        executeQuery(x, sqlCommand.sql);
+      }
     }
 
     protected final void executeQuery(Context x, String sql)

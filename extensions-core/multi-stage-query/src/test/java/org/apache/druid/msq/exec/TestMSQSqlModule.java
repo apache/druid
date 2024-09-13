@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
@@ -86,5 +87,11 @@ public class TestMSQSqlModule extends TestDruidModule
   public DruidMeta createMeta(MSQDruidMeta druidMeta)
   {
     return druidMeta;
+  }
+
+  @Provides
+  @Named("isExplainSupported")
+  public Boolean isExplainSupported() {
+    return false;
   }
 }
