@@ -20,9 +20,10 @@
 package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.OutputChannelMode;
+import org.apache.druid.msq.exec.ProcessingBuffers;
+import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
@@ -35,6 +36,7 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 
 /**
  * Provides services and objects for the functioning of the frame processors. Scoped to a specific stage of a
@@ -54,6 +56,9 @@ public interface FrameContext extends Closeable
 
   DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 
+  /**
+   * Temporary directory, fully owned by this particular stage.
+   */
   File tempDir();
 
   ObjectMapper jsonMapper();
@@ -66,7 +71,7 @@ public interface FrameContext extends Closeable
 
   IndexMergerV9 indexMerger();
 
-  Bouncer processorBouncer();
+  ProcessingBuffers processingBuffers();
 
   WorkerMemoryParameters memoryParameters();
 
@@ -76,4 +81,11 @@ public interface FrameContext extends Closeable
   {
     return new File(tempDir(), name);
   }
+
+  /**
+   * Releases resources used in processing. This is called when processing has completed, but before results are
+   * cleaned up. Specifically, it is called by {@link WorkerImpl.KernelHolder#processorCloser}.
+   */
+  @Override
+  void close() throws IOException;
 }

@@ -21,20 +21,21 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.collections.StupidPool;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
-import org.apache.druid.msq.exec.OutputChannelMode;
+import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.IndexIO;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
@@ -58,7 +60,6 @@ public class MSQTestWorkerContext implements WorkerContext
   private final Injector injector;
   private final Map<String, Worker> inMemoryWorkers;
   private final File file = FileUtils.createTempDir();
-  private final Bouncer bouncer = new Bouncer(1);
   private final WorkerMemoryParameters workerMemoryParameters;
   private final WorkerStorageParameters workerStorageParameters;
 
@@ -130,9 +131,9 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public FrameContext frameContext(QueryDefinition queryDef, int stageNumber, OutputChannelMode outputChannelMode)
+  public FrameContext frameContext(WorkOrder workOrder)
   {
-    return new FrameContextImpl(new File(tempDir(), queryDef.getStageDefinition(stageNumber).getId().toString()));
+    return new FrameContextImpl(new File(tempDir(), workOrder.getStageDefinition().getId().toString()));
   }
 
   @Override
@@ -240,9 +241,12 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
-    public Bouncer processorBouncer()
+    public ProcessingBuffers processingBuffers()
     {
-      return bouncer;
+      return new ProcessingBuffers(
+          new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000)),
+          new Bouncer(1)
+      );
     }
 
     @Override
