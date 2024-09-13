@@ -342,4 +342,10 @@ public class MSQTestControllerContext implements ControllerContext
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
   }
+
+  @Override
+  public int defaultTargetPartitionsPerWorker()
+  {
+    return 1;
+  }
 }

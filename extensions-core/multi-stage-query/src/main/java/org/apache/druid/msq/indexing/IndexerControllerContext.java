@@ -74,6 +74,7 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final ServiceMetricEvent.Builder metricBuilder;
+  private final MemoryIntrospector memoryIntrospector;
 
   public IndexerControllerContext(
       final MSQControllerTask task,
@@ -89,6 +90,7 @@ public class IndexerControllerContext implements ControllerContext
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.metricBuilder = new ServiceMetricEvent.Builder();
+    this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
   }
 
@@ -98,7 +100,6 @@ public class IndexerControllerContext implements ControllerContext
       final QueryDefinition queryDef
   )
   {
-    final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
             memoryIntrospector,
@@ -198,6 +199,14 @@ public class IndexerControllerContext implements ControllerContext
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L)
     );
+  }
+
+  @Override
+  public int defaultTargetPartitionsPerWorker()
+  {
+    // Assume tasks are symmetric: workers have the same number of processors available as a controller.
+    // Create one partition per processor per task, for maximum parallelism.
+    return memoryIntrospector.numProcessorsInJvm();
   }
 
   /**
