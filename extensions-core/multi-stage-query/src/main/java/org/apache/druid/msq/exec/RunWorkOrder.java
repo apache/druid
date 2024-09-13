@@ -271,7 +271,8 @@ public class RunWorkOrder
       try {
         // notifyListener will ignore this cancellation error if work has already succeeded.
         notifyListener(Either.error(new MSQException(CanceledFault.instance())));
-      } catch (Throwable e2) {
+      }
+      catch (Throwable e2) {
         if (e == null) {
           e = e2;
         } else {
