@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.filter;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -31,7 +32,6 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,12 +44,17 @@ public interface Filter
   }
 
   /**
-   * Returns a LinkedHashSet of all child filters for this filter with no duplicates.
-   * <p>The ordering of child filters is important in some cases, e.x.short-curcuiting.</p>
+   * Returns a sorted set of all child filters for this filter with no duplicates. The default return value is an empty
+   * set.
+   * <p>
+   * Only {@link org.apache.druid.segment.filter.AndFilter} and {@link org.apache.druid.segment.filter.OrFilter} have
+   * child filters. Other filters would return empty (including {@link org.apache.druid.segment.filter.NotFilter}).
+   * <p>
+   * The ordering of child filters is important in some cases, e.x.short-curcuiting.
    */
-  default LinkedHashSet<Filter> getFilters()
+  default ImmutableSet<Filter> getFilters()
   {
-    return new LinkedHashSet<>();
+    return ImmutableSet.of();
   }
 
   /**

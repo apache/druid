@@ -162,9 +162,9 @@ public class FilterBundle
     @Nullable
     private final BitmapColumnIndex bitmapColumnIndex;
     private final List<FilterBundle.Builder> childBuilders;
-    private final int estimatedComputeCost;
+    private final int estimatedIndexComputeCost;
 
-    public Builder(Filter filter, ColumnIndexSelector columnIndexSelector)
+    public Builder(Filter filter, ColumnIndexSelector columnIndexSelector, boolean cursorAutoArrangeFilters)
     {
       this.filter = filter;
       this.columnIndexSelector = columnIndexSelector;
@@ -172,14 +172,18 @@ public class FilterBundle
       // Construct Builder instances for all child filters recursively.
       this.childBuilders = new ArrayList<>(filter.getFilters().size());
       for (Filter childFilter : filter.getFilters()) {
-        childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector));
+        childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
       }
-      // Sort child builders by cost in ASCENDING order, should be stable by default.
-      this.childBuilders.sort(Comparator.comparingInt(FilterBundle.Builder::getEstimatedComputeCost));
-      this.estimatedComputeCost = calculateEstimatedComputeCost();
+      if (cursorAutoArrangeFilters) {
+        // Sort child builders by cost in ASCENDING order, should be stable by default.
+        this.childBuilders.sort(Comparator.comparingInt(FilterBundle.Builder::getEstimatedIndexComputeCost));
+        this.estimatedIndexComputeCost = calculateEstimatedIndexComputeCost();
+      } else {
+        this.estimatedIndexComputeCost = Integer.MAX_VALUE;
+      }
     }
 
-    private int calculateEstimatedComputeCost()
+    private int calculateEstimatedIndexComputeCost()
     {
       if (this.bitmapColumnIndex == null) {
         return Integer.MAX_VALUE;
@@ -189,8 +193,8 @@ public class FilterBundle
         return Integer.MAX_VALUE;
       }
 
-      for (FilterBundle.Builder childBuilder : this.childBuilders) {
-        int childCost = childBuilder.getEstimatedComputeCost();
+      for (FilterBundle.Builder childBuilder : childBuilders) {
+        int childCost = childBuilder.getEstimatedIndexComputeCost();
         if (childCost >= Integer.MAX_VALUE - cost) {
           return Integer.MAX_VALUE;
         }
@@ -201,28 +205,28 @@ public class FilterBundle
 
     public Filter getFilter()
     {
-      return this.filter;
+      return filter;
     }
 
     public ColumnIndexSelector getColumnIndexSelector()
     {
-      return this.columnIndexSelector;
+      return columnIndexSelector;
     }
 
     @Nullable
     public BitmapColumnIndex getBitmapColumnIndex()
     {
-      return this.bitmapColumnIndex;
+      return bitmapColumnIndex;
     }
 
     public List<FilterBundle.Builder> getChildBuilders()
     {
-      return this.childBuilders;
+      return childBuilders;
     }
 
-    public int getEstimatedComputeCost()
+    public int getEstimatedIndexComputeCost()
     {
-      return this.estimatedComputeCost;
+      return estimatedIndexComputeCost;
     }
 
     public <T> FilterBundle build(
@@ -232,7 +236,7 @@ public class FilterBundle
         boolean includeUnknown
     )
     {
-      return this.filter.makeFilterBundle(this, bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
+      return filter.makeFilterBundle(this, bitmapResultFactory, applyRowCount, totalRowCount, includeUnknown);
     }
   }
 

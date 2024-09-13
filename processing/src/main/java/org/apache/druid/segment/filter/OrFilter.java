@@ -21,6 +21,7 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
@@ -52,8 +53,8 @@ import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,17 +66,13 @@ public class OrFilter implements BooleanFilter
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
-  private final LinkedHashSet<Filter> filters;
+  private final ImmutableSet<Filter> filters;
 
-  public OrFilter(LinkedHashSet<Filter> filters)
+  public OrFilter(Collection<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty OrFilter (the universe does not exist)");
-    this.filters = filters;
-  }
-
-  public OrFilter(List<Filter> filters)
-  {
-    this(new LinkedHashSet<>(filters));
+    // The order of elements in filters param would be preserved.
+    this.filters = ImmutableSet.copyOf(filters);
   }
 
   private static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
@@ -701,7 +698,7 @@ public class OrFilter implements BooleanFilter
   }
 
   @Override
-  public LinkedHashSet<Filter> getFilters()
+  public ImmutableSet<Filter> getFilters()
   {
     return filters;
   }

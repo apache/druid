@@ -34,6 +34,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
@@ -112,6 +113,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
             Cursors.getTimeOrdering(ordering),
             interval,
             filter,
+            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, false),
             metrics
         )
     );
@@ -664,6 +666,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
         Order timeOrder,
         Interval interval,
         @Nullable Filter filter,
+        boolean cursorAutoArrangeFilters,
         @Nullable QueryMetrics<? extends Query<?>> metrics
     )
     {
@@ -687,6 +690,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
                 interval,
                 filter
             ),
+            cursorAutoArrangeFilters,
             bitmapIndexSelector,
             numRows,
             metrics
@@ -714,6 +718,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Nullable
   private static FilterBundle makeFilterBundle(
       @Nullable final Filter filter,
+      boolean cursorAutoArrangeFilters,
       final ColumnSelectorColumnIndexSelector bitmapIndexSelector,
       final int numRows,
       @Nullable final QueryMetrics<?> metrics
@@ -731,7 +736,11 @@ public class QueryableIndexCursorHolder implements CursorHolder
       return null;
     }
     final long bitmapConstructionStartNs = System.nanoTime();
-    final FilterBundle filterBundle = new FilterBundle.Builder(filter, bitmapIndexSelector).build(
+    final FilterBundle filterBundle = new FilterBundle.Builder(
+        filter,
+        bitmapIndexSelector,
+        cursorAutoArrangeFilters
+    ).build(
         bitmapResultFactory,
         numRows,
         numRows,
