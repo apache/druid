@@ -67,17 +67,19 @@ public class DruidQueryGenerator
    */
   static class DruidNodeStack
   {
-    static class Entry {
+    static class Entry
+    {
       public final DruidLogicalNode node;
       public final int operandIndex;
+
       public Entry(DruidLogicalNode node, int operandIndex)
       {
         this.node = node;
         this.operandIndex = operandIndex;
-
       }
     }
-    Stack<Entry> nodes1 = new Stack<>();
+
+    Stack<Entry> stack = new Stack<>();
 
     public void push(DruidLogicalNode item)
     {
@@ -86,22 +88,22 @@ public class DruidQueryGenerator
 
     public void push(DruidLogicalNode item, int operandIndex)
     {
-      nodes1.push(new Entry(item, operandIndex));
+      stack.push(new Entry(item, operandIndex));
     }
 
     public void pop()
     {
-      nodes1.pop();
+      stack.pop();
     }
 
     public int size()
     {
-      return nodes1.size();
+      return stack.size();
     }
 
     public DruidLogicalNode peekNode()
     {
-      return nodes1.peek().node;
+      return stack.peek().node;
     }
 
     public DruidLogicalNode parentNode()
@@ -111,17 +113,12 @@ public class DruidQueryGenerator
 
     public Entry getNode(int i)
     {
-      return nodes1.get(nodes1.size() - 1 - i);
+      return stack.get(stack.size() - 1 - i);
     }
 
     public int peekOperandIndex()
     {
-      return nodes1.peek().operandIndex;
-    }
-
-    public DruidLogicalNode peek()
-    {
-      return peekNode();
+      return stack.peek().operandIndex;
     }
   }
 
@@ -329,7 +326,7 @@ public class DruidQueryGenerator
        */
       private Optional<PartialDruidQuery> extendPartialDruidQuery(DruidNodeStack stack)
       {
-        DruidLogicalNode parentNode = stack.peek();
+        DruidLogicalNode parentNode = stack.peekNode();
         if (accepts(stack, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
@@ -371,7 +368,7 @@ public class DruidQueryGenerator
 
       private boolean accepts(DruidNodeStack stack, Stage stage, Class<? extends RelNode> clazz)
       {
-        DruidLogicalNode currentNode = stack.peek();
+        DruidLogicalNode currentNode = stack.peekNode();
         if (Project.class == clazz && stack.size() >= 2) {
           // peek at parent and postpone project for next query stage
           DruidLogicalNode parentNode = stack.parentNode();
