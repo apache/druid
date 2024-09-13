@@ -78,8 +78,6 @@ public class DruidQueryGenerator
       }
     }
     Stack<Entry> nodes1 = new Stack<>();
-    Stack<DruidLogicalNode> nodes = new Stack<>();
-    Stack<Integer> operandIndexStack = new Stack<>();
 
     public void push(DruidLogicalNode item)
     {
@@ -88,34 +86,37 @@ public class DruidQueryGenerator
 
     public void push(DruidLogicalNode item, int operandIndex)
     {
-      operandIndexStack.push(operandIndex);
-      nodes.push(item);
+      nodes1.push(new Entry(item, operandIndex));
     }
 
     public void pop()
     {
-      operandIndexStack.pop();
-      nodes.pop();
+      nodes1.pop();
     }
 
     public int size()
     {
-      return nodes.size();
+      return nodes1.size();
     }
 
     public DruidLogicalNode peekNode()
     {
-      return nodes.peek();
+      return nodes1.peek().node;
     }
 
-    public DruidLogicalNode getNode(int i)
+    public DruidLogicalNode parentNode()
     {
-      return nodes.get(nodes.size() - 1 - i);
+      return getNode(1).node;
+    }
+
+    public Entry getNode(int i)
+    {
+      return nodes1.get(nodes1.size() - 1 - i);
     }
 
     public int peekOperandIndex()
     {
-      return operandIndexStack.peek();
+      return nodes1.peek().operandIndex;
     }
 
     public DruidLogicalNode peek()
@@ -211,7 +212,7 @@ public class DruidQueryGenerator
       if (stack.size() < 2) {
         return NONE;
       }
-      DruidLogicalNode possibleJoin = stack.getNode(1);
+      DruidLogicalNode possibleJoin = stack.parentNode();
       if (!(possibleJoin instanceof DruidJoin)) {
         return NONE;
       }
@@ -373,7 +374,7 @@ public class DruidQueryGenerator
         DruidLogicalNode currentNode = stack.peek();
         if (Project.class == clazz && stack.size() >= 2) {
           // peek at parent and postpone project for next query stage
-          DruidLogicalNode parentNode = stack.getNode(1);
+          DruidLogicalNode parentNode = stack.parentNode();
           if (stage.ordinal() > Stage.AGGREGATE.ordinal()
               && parentNode instanceof DruidAggregate
               && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
