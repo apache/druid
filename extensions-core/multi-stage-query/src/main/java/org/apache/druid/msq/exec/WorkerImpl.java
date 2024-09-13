@@ -407,7 +407,7 @@ public class WorkerImpl implements Worker
     kernel.startReading();
 
     final QueryContext queryContext = task != null ? QueryContext.of(task.getContext()) : QueryContext.empty();
-    final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    final boolean includeAllCounters = context.includeAllCounters();
     final RunWorkOrder runWorkOrder = new RunWorkOrder(
         task.getControllerTaskId(),
         workOrder,
