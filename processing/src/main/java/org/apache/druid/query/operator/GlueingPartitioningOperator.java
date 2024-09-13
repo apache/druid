@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -129,15 +130,7 @@ public class GlueingPartitioningOperator implements Operator
               throw DruidException.defensive("Should never get a null rac here.");
             }
 
-            ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
-            if (groupPartitioner == null) {
-              groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
-            }
-
-            int[] computedBoundaries = groupPartitioner.computeBoundaries(partitionColumns);
-
-            final ArrayList<RowsAndColumns> gluedRACs = getGluedRACs(rac, computedBoundaries);
-            Iterator<RowsAndColumns> partitionsIter = gluedRACs.iterator();
+            Iterator<RowsAndColumns> partitionsIter = new GluedRACsIterator(rac);
 
             Signal keepItGoing = Signal.GO;
             while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
@@ -202,60 +195,87 @@ public class GlueingPartitioningOperator implements Operator
     }
   }
 
-  private boolean isGlueingNeeded(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
+  private class GluedRACsIterator implements Iterator<RowsAndColumns>
   {
-    if (previousRac == null) {
-      return false;
+    private final RowsAndColumns rac;
+    private final int[] boundaries;
+    private int currentIndex = 0;
+    private boolean firstPartitionHandled = false;
+
+    public GluedRACsIterator(RowsAndColumns rac)
+    {
+      this.rac = rac;
+      ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
+      if (groupPartitioner == null) {
+        groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
+      }
+      this.boundaries = groupPartitioner.computeBoundaries(partitionColumns);
     }
 
-    final ConcatRowsAndColumns concatRac = getConcatRacForFirstPartition(previousRac, firstPartitionOfCurrentRac);
-    for (String column : partitionColumns) {
-      final Column theCol = concatRac.findColumn(column);
-      if (theCol == null) {
-        // The column doesn't exist.  In this case, we assume it's always the same value: null.  If it's always
-        // the same, then it doesn't impact grouping at all and can be entirely skipped.
-        continue;
+    @Override
+    public boolean hasNext()
+    {
+      return currentIndex < boundaries.length - 1;
+    }
+
+    @Override
+    public RowsAndColumns next()
+    {
+      if (!hasNext()) {
+        throw new NoSuchElementException();
       }
-      final ColumnAccessor accessor = theCol.toAccessor();
-      int comparison = accessor.compareRows(0, previousRac.numRows()); // Compare 1st row of previousRac and currentRac in [previousRac, currentRac] form.
-      if (comparison != 0) {
+
+      if (!firstPartitionHandled) {
+        firstPartitionHandled = true;
+        int start = boundaries[currentIndex];
+        int end = boundaries[currentIndex + 1];
+        LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
+
+        if (isGlueingNeeded(previousRac, limitedRAC)) {
+          RowsAndColumns gluedRAC = getConcatRacForFirstPartition(previousRac, limitedRAC);
+          previousRac = null;
+          currentIndex++;
+          return gluedRAC;
+        } else {
+          if (previousRac != null) {
+            RowsAndColumns temp = previousRac;
+            previousRac = null;
+            return temp;
+          }
+        }
+      }
+
+      int start = boundaries[currentIndex];
+      int end = boundaries[currentIndex + 1];
+      currentIndex++;
+      return new LimitedRowsAndColumns(rac, start, end);
+    }
+
+    private boolean isGlueingNeeded(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
+    {
+      if (previousRac == null) {
         return false;
       }
-    }
-    return true;
-  }
 
-  private ArrayList<RowsAndColumns> getGluedRACs(RowsAndColumns rac, int[] boundaries)
-  {
-    final ArrayList<RowsAndColumns> gluedRACs = new ArrayList<>();
-    for (int i = 1; i < boundaries.length; ++i) {
-      int start = boundaries[i - 1];
-      int end = boundaries[i];
-      final LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
-      if (i == 1) {
-        handleFirstPartition(gluedRACs, limitedRAC);
-      } else {
-        gluedRACs.add(limitedRAC);
+      final ConcatRowsAndColumns concatRac = getConcatRacForFirstPartition(previousRac, firstPartitionOfCurrentRac);
+      for (String column : partitionColumns) {
+        final Column theCol = concatRac.findColumn(column);
+        if (theCol == null) {
+          continue;
+        }
+        final ColumnAccessor accessor = theCol.toAccessor();
+        // Compare 1st row of previousRac and firstPartitionOfCurrentRac in [previousRac, firstPartitionOfCurrentRac] form.
+        int comparison = accessor.compareRows(0, previousRac.numRows());
+        if (comparison != 0) {
+          return false;
+        }
       }
+      return true;
     }
-    return gluedRACs;
-  }
 
-  private void handleFirstPartition(ArrayList<RowsAndColumns> gluedRACs, LimitedRowsAndColumns firstPartitionOfCurrentRac)
-  {
-    if (isGlueingNeeded(previousRac, firstPartitionOfCurrentRac)) {
-      gluedRACs.add(getConcatRacForFirstPartition(previousRac, firstPartitionOfCurrentRac));
-    } else {
-      if (previousRac != null) {
-        gluedRACs.add(previousRac);
-      }
-      gluedRACs.add(firstPartitionOfCurrentRac);
+    private ConcatRowsAndColumns getConcatRacForFirstPartition(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
+    {
+      return new ConcatRowsAndColumns(new ArrayList<>(Arrays.asList(previousRac, firstPartitionOfCurrentRac)));
     }
-    previousRac = null;
-  }
-
-  private ConcatRowsAndColumns getConcatRacForFirstPartition(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
-  {
-    return new ConcatRowsAndColumns(new ArrayList<>(Arrays.asList(previousRac, firstPartitionOfCurrentRac)));
   }
 }
