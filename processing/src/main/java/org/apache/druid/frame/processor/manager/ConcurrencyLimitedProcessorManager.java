@@ -30,12 +30,12 @@ import java.util.Optional;
  */
 public class ConcurrencyLimitedProcessorManager<T, R> implements ProcessorManager<T, R>
 {
-  private final ProcessorManager<T, R> delgate;
+  private final ProcessorManager<T, R> delegate;
   private final Bouncer bouncer;
 
-  public ConcurrencyLimitedProcessorManager(ProcessorManager<T, R> delgate, int limit)
+  public ConcurrencyLimitedProcessorManager(ProcessorManager<T, R> delegate, int limit)
   {
-    this.delgate = delgate;
+    this.delegate = delegate;
     this.bouncer = new Bouncer(limit);
   }
 
@@ -46,7 +46,7 @@ public class ConcurrencyLimitedProcessorManager<T, R> implements ProcessorManage
     return FutureUtils.transformAsync(
         ticket,
         t -> FutureUtils.transform(
-            delgate.next(),
+            delegate.next(),
             nextProcessor -> nextProcessor.map(
                 retVal -> new ProcessorAndCallback<>(
                     retVal.processor(),
@@ -63,12 +63,12 @@ public class ConcurrencyLimitedProcessorManager<T, R> implements ProcessorManage
   @Override
   public R result()
   {
-    return delgate.result();
+    return delegate.result();
   }
 
   @Override
   public void close()
   {
-    delgate.close();
+    delegate.close();
   }
 }
