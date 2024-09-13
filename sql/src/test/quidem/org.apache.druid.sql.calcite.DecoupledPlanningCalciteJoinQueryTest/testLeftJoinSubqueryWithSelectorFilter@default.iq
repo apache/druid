@@ -22,22 +22,20 @@ WHERE l1.k = 'abc'
 (1 row)
 
 !ok
-LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+LogicalJoin(condition=[AND(=($0, $1), =($1, 'abc'))], joinType=[inner])
   LogicalProject(dim1=[$1])
     LogicalTableScan(table=[[druid, foo]])
-  LogicalFilter(condition=[=($0, 'abc')])
-    LogicalAggregate(group=[{0}])
-      LogicalProject(k=[||($0, '')])
-        LogicalTableScan(table=[[lookup, lookyloo]])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(k=[||($0, '')])
+      LogicalTableScan(table=[[lookup, lookyloo]])
 
 !logicalPlan
-DruidJoin(condition=[=($0, $1)], joinType=[inner])
+DruidJoin(condition=[AND(=($0, $1), =('abc', $1))], joinType=[inner])
   DruidProject(dim1=[$1], druid=[logical])
     DruidTableScan(table=[[druid, foo]], druid=[logical])
-  DruidFilter(condition=[=($0, 'abc')])
-    DruidAggregate(group=[{0}], druid=[logical])
-      DruidProject(k=[||($0, '')], druid=[logical])
-        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+  DruidAggregate(group=[{0}], druid=[logical])
+    DruidProject(k=[||($0, '')], druid=[logical])
+      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
 
 !druidPlan
 {
@@ -75,23 +73,13 @@ DruidJoin(condition=[=($0, $1)], joinType=[inner])
           "outputName" : "d0",
           "outputType" : "STRING"
         } ],
-        "having" : {
-          "type" : "filter",
-          "filter" : {
-            "type" : "equals",
-            "column" : "d0",
-            "matchValueType" : "STRING",
-            "matchValue" : "abc"
-          },
-          "finalize" : true
-        },
         "limitSpec" : {
           "type" : "NoopLimitSpec"
         }
       }
     },
     "rightPrefix" : "j0.",
-    "condition" : "(\"dim1\" == \"j0.d0\")",
+    "condition" : "((\"dim1\" == \"j0.d0\") && ('abc' == \"j0.d0\"))",
     "joinType" : "INNER"
   },
   "intervals" : {
