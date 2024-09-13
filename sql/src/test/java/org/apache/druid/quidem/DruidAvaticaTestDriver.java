@@ -286,6 +286,12 @@ public class DruidAvaticaTestDriver implements Driver
     {
       return delegate.getPlannerComponentSupplier();
     }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return delegate.isExplainSupported();
+    }
   }
 
   protected File createTempFolder(String prefix)

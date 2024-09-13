@@ -197,6 +197,8 @@ public class SqlTestFramework
     {
       configureGuice(injectorBuilder);
     }
+
+    Boolean isExplainSupported();
   }
 
   public interface PlannerComponentSupplier
@@ -334,6 +336,12 @@ public class SqlTestFramework
     public void close() throws IOException
     {
       tempDirProducer.close();
+    }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return true;
     }
   }
 
@@ -667,6 +675,12 @@ public class SqlTestFramework
     public URI getDruidTestURI()
     {
       return getTestConfig().getDruidTestURI();
+    }
+
+    @Provides
+    @Named("isExplainSupported")
+    public Boolean isExplainSupported() {
+      return builder.componentSupplier.isExplainSupported();
     }
   }
 
