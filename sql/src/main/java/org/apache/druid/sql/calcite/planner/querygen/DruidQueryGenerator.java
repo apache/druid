@@ -67,6 +67,17 @@ public class DruidQueryGenerator
    */
   static class DruidNodeStack
   {
+    static class Entry {
+      public final DruidLogicalNode node;
+      public final int operandIndex;
+      public Entry(DruidLogicalNode node, int operandIndex)
+      {
+        this.node = node;
+        this.operandIndex = operandIndex;
+
+      }
+    }
+    Stack<Entry> nodes1 = new Stack<>();
     Stack<DruidLogicalNode> nodes = new Stack<>();
     Stack<Integer> operandIndexStack = new Stack<>();
 
