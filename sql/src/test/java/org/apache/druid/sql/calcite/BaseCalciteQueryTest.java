@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -982,13 +983,40 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              ASSERTION_EPSILON);
+              ASSERTION_EPSILON
+          );
         } else if (expectedCell instanceof Double) {
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              ASSERTION_EPSILON);
+              ASSERTION_EPSILON
+          );
+        } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
+          final Object[] expectedCellCasted;
+          if (expectedCell instanceof Object[]) {
+            expectedCellCasted = (Object[]) expectedCell;
+          } else {
+            expectedCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
+          }
+          final Object[] resultCellCasted;
+          if (resultCell instanceof List) {
+            resultCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
+          } else {
+            resultCellCasted = (Object[]) resultCell;
+          }
+          if (expectedCellCasted.length != resultCellCasted.length) {
+            throw new RE(
+                "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
+                expectedCellCasted,
+                expectedCellCasted.length,
+                resultCellCasted,
+                resultCellCasted.length
+            );
+          }
+          for (int i = 0; i < expectedCellCasted.length; ++i) {
+            validate(row, column, type, expectedCellCasted[i], resultCellCasted[i]);
+          }
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
@@ -1019,6 +1047,31 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               (Double) resultCell,
               eps
           );
+        } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
+          final Object[] expectedCellCasted;
+          if (expectedCell instanceof Object[]) {
+            expectedCellCasted = (Object[]) expectedCell;
+          } else {
+            expectedCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
+          }
+          final Object[] resultCellCasted;
+          if (resultCell instanceof List) {
+            resultCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
+          } else {
+            resultCellCasted = (Object[]) resultCell;
+          }
+          if (expectedCellCasted.length != resultCellCasted.length) {
+            throw new RE(
+                "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
+                expectedCellCasted,
+                expectedCellCasted.length,
+                resultCellCasted,
+                resultCellCasted.length
+            );
+          }
+          for (int i = 0; i < expectedCellCasted.length; ++i) {
+            validate(row, column, type, expectedCellCasted[i], resultCellCasted[i]);
+          }
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
@@ -1031,7 +1084,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     {
       return StringUtils.format("column content mismatch at %d,%d", row, column);
     }
-
   }
 
   /**
