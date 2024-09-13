@@ -35,6 +35,7 @@ public interface DruidHook<T>
   HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
   HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
   HookKey<String> SQL = new HookKey<>("sql", String.class);
+  HookKey<String> MSQ_PLAN = new HookKey<>("msqPlan", String.class);
 
   @Immutable
   class HookKey<T>

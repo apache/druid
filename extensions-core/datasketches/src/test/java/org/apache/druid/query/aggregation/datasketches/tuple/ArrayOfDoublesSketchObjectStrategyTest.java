@@ -33,6 +33,7 @@ public class ArrayOfDoublesSketchObjectStrategyTest
   public void testSafeRead()
   {
     ArrayOfDoublesSketchObjectStrategy objectStrategy = new ArrayOfDoublesSketchObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
     ArrayOfDoublesUpdatableSketch sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(1024)
                                                                                      .setNumberOfValues(4)
                                                                                      .build();

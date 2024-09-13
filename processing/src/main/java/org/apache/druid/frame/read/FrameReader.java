@@ -29,7 +29,8 @@ import org.apache.druid.frame.key.FrameComparisonWidgetImpl;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.frame.segment.row.FrameCursorFactory;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.CursorFactory;
@@ -142,9 +143,9 @@ public class FrameReader
   {
     switch (frame.type()) {
       case COLUMNAR:
-        return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
+        return new ColumnarFrameCursorFactory(frame, signature, columnReaders);
       case ROW_BASED:
-        return new FrameCursorFactory(frame, this, fieldReaders);
+        return new RowFrameCursorFactory(frame, this, fieldReaders);
       default:
         throw DruidException.defensive("Unrecognized frame type [%s]", frame.type());
     }

@@ -184,7 +184,7 @@ PARTITIONED BY MONTH
 
 Druid ingests the data with no null values as follows:
 
-| `__time` | `string_examle` | `number_example`|
+| `__time` | `string_example` | `number_example`|
 | -- | -- | -- |
 | `2024-01-01T00:00:00.000Z`| `my_string`| 99 |
 | `2024-01-02T00:00:00.000Z`| `empty`| 0 |
@@ -376,7 +376,7 @@ Druid returns the following:
 | -- |
 | 100 |
 | 1 |
-| null |
+| 1 |
 
 ## Learn more
 

@@ -19,8 +19,10 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionIndexer;
@@ -40,24 +42,32 @@ import javax.annotation.Nullable;
  */
 class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
-  private final IncrementalIndexStorageAdapter adapter;
+  private final ColumnInspector snapshotColumnInspector;
   private final IncrementalIndex index;
   private final VirtualColumns virtualColumns;
-  private final boolean descending;
+  private final Order timeOrder;
   private final IncrementalIndexRowHolder rowHolder;
 
   IncrementalIndexColumnSelectorFactory(
-      IncrementalIndexStorageAdapter adapter,
+      IncrementalIndex index,
       VirtualColumns virtualColumns,
-      boolean descending,
+      Order timeOrder,
       IncrementalIndexRowHolder rowHolder
   )
   {
-    this.adapter = adapter;
-    this.index = adapter.index;
+    this.index = index;
     this.virtualColumns = virtualColumns;
-    this.descending = descending;
+    this.timeOrder = timeOrder;
     this.rowHolder = rowHolder;
+    this.snapshotColumnInspector = new ColumnInspector()
+    {
+      @Nullable
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String column)
+      {
+        return IncrementalIndexCursorFactory.snapshotColumnCapabilities(index, column);
+      }
+    };
   }
 
   @Override
@@ -75,8 +85,12 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrder != Order.NONE) {
+      return new SingleScanTimeDimensionSelector(
+          makeColumnValueSelector(dimension),
+          extractionFn,
+          timeOrder
+      );
     }
 
     final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
@@ -127,8 +141,8 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    // Use adapter.getColumnCapabilities instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
-    return virtualColumns.getColumnCapabilitiesWithFallback(adapter, columnName);
+    // Use snapshotColumnInspector instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
+    return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, columnName);
   }
 
   @Nullable

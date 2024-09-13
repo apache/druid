@@ -47,11 +47,13 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
@@ -63,19 +65,23 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.epinephelinae.BufferArrayGrouper;
 import org.apache.druid.query.groupby.epinephelinae.GroupByMergingQueryRunner;
 import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.groupby.epinephelinae.GroupByResultMergeFn;
 import org.apache.druid.query.groupby.epinephelinae.GroupByRowProcessor;
+import org.apache.druid.query.groupby.epinephelinae.GroupingSelector;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.LimitSpec;
 import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -420,7 +426,7 @@ public class GroupingEngine
   /**
    * Merges a variety of single-segment query runners into a combined runner. Used by
    * {@link GroupByQueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)}. In
-   * that sense, it is intended to go along with {@link #process(GroupByQuery, StorageAdapter, GroupByQueryMetrics)} (the runners created
+   * that sense, it is intended to go along with {@link #process} (the runners created
    * by that method will be fed into this method).
    *
    * This is primarily called on the data servers, to merge the results from processing on the segments. This method can
@@ -454,28 +460,30 @@ public class GroupingEngine
   }
 
   /**
-   * Process a groupBy query on a single {@link StorageAdapter}. This is used by
+   * Process a groupBy query on a single {@link CursorFactory}. This is used by
    * {@link GroupByQueryRunnerFactory#createRunner} to create per-segment
    * QueryRunners.
    *
    * This method is only called on data servers, like Historicals (not the Broker).
    *
-   * @param query          the groupBy query
-   * @param storageAdapter storage adatper for the segment in question
+   * @param query                 the groupBy query
+   * @param cursorFactory         cursor factory for the segment in question
+   * @param timeBoundaryInspector time boundary inspector for the segment in question
    *
-   * @return result sequence for the storage adapter
+   * @return result sequence for the cursor factory
    */
   public Sequence<ResultRow> process(
       GroupByQuery query,
-      StorageAdapter storageAdapter,
+      CursorFactory cursorFactory,
+      @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable GroupByQueryMetrics groupByQueryMetrics
   )
   {
     final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
 
-    if (storageAdapter == null) {
+    if (cursorFactory == null) {
       throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 
@@ -486,6 +494,8 @@ public class GroupingEngine
 
     final ResourceHolder<ByteBuffer> bufferHolder = bufferPool.take();
 
+    Closer closer = Closer.create();
+    closer.register(bufferHolder);
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
           query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP)
@@ -495,45 +505,44 @@ public class GroupingEngine
                                       ? null
                                       : DateTimes.utc(Long.parseLong(fudgeTimestampString));
 
-      final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
-      final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
+      final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
-      final boolean doVectorize = query.context().getVectorize().shouldVectorize(
-          VectorGroupByEngine.canVectorize(query, storageAdapter, filter)
-      );
+      final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(cursorFactory);
 
+      // group by specific vectorization check
+      final boolean canVectorize = cursorHolder.canVectorize() &&
+                                   VectorGroupByEngine.canVectorizeDimensions(inspector, query.getDimensions());
+      final boolean shouldVectorize = query.context().getVectorize().shouldVectorize(canVectorize);
       final Sequence<ResultRow> result;
-
-      if (doVectorize) {
+      if (shouldVectorize) {
         result = VectorGroupByEngine.process(
             query,
-            storageAdapter,
+            timeBoundaryInspector,
+            cursorHolder,
             bufferHolder.get(),
             fudgeTimestamp,
-            filter,
-            interval,
+            buildSpec.getInterval(),
             querySpecificConfig,
-            processingConfig,
-            groupByQueryMetrics
+            processingConfig
         );
       } else {
         result = GroupByQueryEngine.process(
             query,
-            storageAdapter,
+            timeBoundaryInspector,
+            cursorHolder,
+            buildSpec,
             bufferHolder.get(),
             fudgeTimestamp,
             querySpecificConfig,
-            processingConfig,
-            filter,
-            interval,
-            groupByQueryMetrics
+            processingConfig
         );
       }
 
-      return result.withBaggage(bufferHolder);
+      return result.withBaggage(closer);
     }
     catch (Throwable e) {
-      bufferHolder.close();
+      CloseableUtils.closeAndWrapExceptions(closer);
       throw e;
     }
   }
@@ -840,6 +849,22 @@ public class GroupingEngine
     return aggsAndPostAggs;
   }
 
+  public static CursorBuildSpec makeCursorBuildSpec(GroupByQuery query, @Nullable QueryMetrics<?> queryMetrics)
+  {
+    return Granularities.decorateCursorBuildSpec(
+        query,
+        CursorBuildSpec.builder()
+                       .setInterval(query.getSingleInterval())
+                       .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
+                       .setVirtualColumns(query.getVirtualColumns())
+                       .setGroupingColumns(query.getGroupingColumns())
+                       .setAggregators(query.getAggregatorSpecs())
+                       .setQueryContext(query.context())
+                       .setQueryMetrics(queryMetrics)
+                       .build()
+    );
+  }
+
 
   /**
    * Returns the cardinality of array needed to do array-based aggregation, or -1 if array-based aggregation
@@ -848,7 +873,8 @@ public class GroupingEngine
   public static int getCardinalityForArrayAggregation(
       GroupByQueryConfig querySpecificConfig,
       GroupByQuery query,
-      StorageAdapter storageAdapter,
+      ColumnInspector columnInspector,
+      List<? extends GroupingSelector> groupingSelectors,
       ByteBuffer buffer
   )
   {
@@ -867,7 +893,7 @@ public class GroupingEngine
     } else if (dimensions.size() == 1) {
       // Only real columns can use array-based aggregation, since virtual columns cannot currently report their
       // cardinality. We need to check if a virtual column exists with the same name, since virtual columns can shadow
-      // real columns, and we might miss that since we're going directly to the StorageAdapter (which only knows about
+      // real columns, and we might miss that since we're going directly to the CursorFactory (which only knows about
       // real columns).
       if (query.getVirtualColumns().exists(Iterables.getOnlyElement(dimensions).getDimension())) {
         return -1;
@@ -879,8 +905,8 @@ public class GroupingEngine
       }
 
       final String columnName = Iterables.getOnlyElement(dimensions).getDimension();
-      columnCapabilities = storageAdapter.getColumnCapabilities(columnName);
-      cardinality = storageAdapter.getDimensionCardinality(columnName);
+      columnCapabilities = columnInspector.getColumnCapabilities(columnName);
+      cardinality = groupingSelectors.get(0).getValueCardinality();
     } else {
       // Cannot use array-based aggregation with more than one dimension.
       return -1;

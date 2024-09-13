@@ -19,25 +19,14 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import com.google.inject.Module;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.test.CalciteSelectQueryMSQTest.SelectMSQComponentSupplier;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.Assert;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -48,43 +37,9 @@ import java.util.concurrent.TimeUnit;
 /**
  * Runs {@link CalciteQueryTest} but with MSQ engine
  */
-@SqlTestFrameworkConfig.ComponentSupplier(SelectMSQComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(StandardMSQComponentSupplier.class)
 public class CalciteSelectQueryMSQTest extends CalciteQueryTest
 {
-  public static class SelectMSQComponentSupplier extends StandardComponentSupplier
-  {
-    public SelectMSQComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
-    }
-
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      final WorkerMemoryParameters workerMemoryParameters = MSQTestBase.makeTestWorkerMemoryParameters();
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-          queryJsonMapper,
-          injector,
-          new MSQTestTaskActionClient(queryJsonMapper, injector),
-          workerMemoryParameters,
-          ImmutableList.of()
-      );
-      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
-    }
-  }
-
   @Override
   protected QueryTestBuilder testBuilder()
   {

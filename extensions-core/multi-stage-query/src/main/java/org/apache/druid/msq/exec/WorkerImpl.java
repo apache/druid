@@ -407,12 +407,14 @@ public class WorkerImpl implements Worker
     kernel.startReading();
 
     final QueryContext queryContext = task != null ? QueryContext.of(task.getContext()) : QueryContext.empty();
+    final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     final RunWorkOrder runWorkOrder = new RunWorkOrder(
+        task.getControllerTaskId(),
         workOrder,
         inputChannelFactory,
         stageCounters.computeIfAbsent(
             IntObjectPair.of(workOrder.getWorkerNumber(), stageDefinition.getId()),
-            ignored -> new CounterTracker()
+            ignored -> new CounterTracker(includeAllCounters)
         ),
         workerExec,
         cancellationId,
@@ -1100,7 +1102,7 @@ public class WorkerImpl implements Worker
      */
     public void addKernel(final WorkerStageKernel kernel)
     {
-      final StageId stageId = verifyQueryId(kernel.getWorkOrder().getStageDefinition().getId());
+      final StageId stageId = kernel.getWorkOrder().getStageDefinition().getId();
 
       if (holderMap.putIfAbsent(stageId.getStageNumber(), new KernelHolder(kernel)) != null) {
         // Already added. Do nothing.
@@ -1116,7 +1118,7 @@ public class WorkerImpl implements Worker
      */
     public void finishProcessing(final StageId stageId)
     {
-      final KernelHolder kernel = holderMap.get(verifyQueryId(stageId).getStageNumber());
+      final KernelHolder kernel = holderMap.get(stageId.getStageNumber());
 
       if (kernel != null) {
         try {
@@ -1137,7 +1139,7 @@ public class WorkerImpl implements Worker
      */
     public void removeKernel(final StageId stageId)
     {
-      final KernelHolder removed = holderMap.remove(verifyQueryId(stageId).getStageNumber());
+      final KernelHolder removed = holderMap.remove(stageId.getStageNumber());
 
       if (removed == null) {
         throw new ISE("No kernel for stage[%s]", stageId);
@@ -1191,7 +1193,7 @@ public class WorkerImpl implements Worker
     @Nullable
     public WorkerStageKernel getKernelFor(final StageId stageId)
     {
-      final KernelHolder holder = holderMap.get(verifyQueryId(stageId).getStageNumber());
+      final KernelHolder holder = holderMap.get(stageId.getStageNumber());
       if (holder != null) {
         return holder.kernel;
       } else {
@@ -1239,15 +1241,6 @@ public class WorkerImpl implements Worker
     public void setDone()
     {
       this.done = true;
-    }
-
-    private StageId verifyQueryId(final StageId stageId)
-    {
-      if (!stageId.getQueryId().equals(workerContext.queryId())) {
-        throw new ISE("Unexpected queryId[%s], expected queryId[%s]", stageId.getQueryId(), workerContext.queryId());
-      }
-
-      return stageId;
     }
   }
 

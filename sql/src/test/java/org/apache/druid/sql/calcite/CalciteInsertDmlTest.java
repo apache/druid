@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -727,9 +728,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .orderBy(
             ImmutableList.of(
-                new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                OrderBy.ascending("v0"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("v1")
             )
         )
         .context(
@@ -859,7 +860,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 
 
     // Test correctness of the query when only the CLUSTERED BY clause is present
-    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"]},\"inputFormat\":{\"type\":\"json\"},\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]},\"right\":{\"type\":\"query\",\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"]},\"inputFormat\":{\"type\":\"tsv\",\"delimiter\":\"\\t\",\"findColumnsFromHeader\":true},\"signature\":[{\"name\":\"Country\",\"type\":\"STRING\"},{\"name\":\"Capital\",\"type\":\"STRING\"},{\"name\":\"ISO3\",\"type\":\"STRING\"},{\"name\":\"ISO2\",\"type\":\"STRING\"}]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"Capital\",\"ISO2\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false}},\"rightPrefix\":\"j0.\",\"condition\":\"(\\\"countryIsoCode\\\" == \\\"j0.ISO2\\\")\",\"joinType\":\"LEFT\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"timestamp_parse(\\\"timestamp\\\",null,'UTC')\",\"outputType\":\"LONG\"}],\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"isRobot\",\"order\":\"ascending\"},{\"columnName\":\"j0.Capital\",\"order\":\"ascending\"},{\"columnName\":\"regionName\",\"order\":\"ascending\"}],\"columns\":[\"isRobot\",\"j0.Capital\",\"regionName\",\"v0\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"j0.Capital\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"isRobot\",\"outputColumn\":\"isRobotAlias\"},{\"queryColumn\":\"j0.Capital\",\"outputColumn\":\"countryCapital\"},{\"queryColumn\":\"regionName\",\"outputColumn\":\"regionName\"}]}]";
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"join\",\"left\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://boo.gz\"],\"requestHeaders\":{}},\"inputFormat\":{\"type\":\"json\"},\"signature\":[{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"timestamp\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]},\"right\":{\"type\":\"query\",\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"https://foo.tsv\"],\"requestHeaders\":{}},\"inputFormat\":{\"type\":\"tsv\",\"delimiter\":\"\\t\",\"findColumnsFromHeader\":true},\"signature\":[{\"name\":\"Country\",\"type\":\"STRING\"},{\"name\":\"Capital\",\"type\":\"STRING\"},{\"name\":\"ISO3\",\"type\":\"STRING\"},{\"name\":\"ISO2\",\"type\":\"STRING\"}]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"Capital\",\"ISO2\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false}},\"rightPrefix\":\"j0.\",\"condition\":\"(\\\"countryIsoCode\\\" == \\\"j0.ISO2\\\")\",\"joinType\":\"LEFT\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"virtualColumns\":[{\"type\":\"expression\",\"name\":\"v0\",\"expression\":\"timestamp_parse(\\\"timestamp\\\",null,'UTC')\",\"outputType\":\"LONG\"}],\"resultFormat\":\"compactedList\",\"orderBy\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},{\"columnName\":\"isRobot\",\"order\":\"ascending\"},{\"columnName\":\"j0.Capital\",\"order\":\"ascending\"},{\"columnName\":\"regionName\",\"order\":\"ascending\"}],\"columns\":[\"isRobot\",\"j0.Capital\",\"regionName\",\"v0\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"\\\"HOUR\\\"\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"v0\",\"type\":\"LONG\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"j0.Capital\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}],\"columnMappings\":[{\"queryColumn\":\"v0\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"isRobot\",\"outputColumn\":\"isRobotAlias\"},{\"queryColumn\":\"j0.Capital\",\"outputColumn\":\"countryCapital\"},{\"queryColumn\":\"regionName\",\"outputColumn\":\"regionName\"}]}]";
 
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
@@ -930,9 +931,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1"),
+                        OrderBy.ascending("v1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -971,9 +972,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1"),
+                        OrderBy.ascending("v1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -1021,8 +1022,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("dim1")
                     )
                 )
                 .context(queryContextWithGranularity(Granularities.DAY))
@@ -1210,9 +1211,9 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         )
         .orderBy(
             ImmutableList.of(
-                new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING),
-                new ScanQuery.OrderBy("v1", ScanQuery.Order.ASCENDING)
+                OrderBy.ascending("v0"),
+                OrderBy.ascending("dim1"),
+                OrderBy.ascending("v1")
             )
         )
         .context(
@@ -1325,8 +1326,8 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
                 .columns("v0", "z")
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("v0", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("z", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("v0"),
+                        OrderBy.ascending("z")
                     )
                 )
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)

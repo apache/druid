@@ -40,6 +40,12 @@ public class SingleValueStringGroupByVectorColumnSelector implements GroupByVect
   }
 
   @Override
+  public int getValueCardinality()
+  {
+    return selector.getValueCardinality();
+  }
+
+  @Override
   public int writeKeys(
       final WritableMemory keySpace,
       final int keySize,

@@ -45,7 +45,7 @@ You can use each endpoint with the ports for each type of service. The following
 | Router|8888|
 | Broker|8082|
 | Historical|8083|
-| MiddleManager|8091|
+| Middle Manager|8091|
 
 ### Get service information
 
@@ -791,11 +791,11 @@ Host: http://OVERLORD_IP:OVERLORD_PORT
 </details>
 
 
-## MiddleManager
+## Middle Manager
 
-### Get MiddleManager state status
+### Get Middle Manager state status
 
-Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by the combined `druid.host` and `druid.port` with a boolean `true` or `false` state as the value.
+Retrieves the enabled state of the Middle Manager process. Returns JSON object keyed by the combined `druid.host` and `druid.port` with a boolean `true` or `false` state as the value.
 
 #### URL
 
@@ -810,7 +810,7 @@ Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by t
 
 <br/>
 
-*Successfully retrieved MiddleManager state*
+*Successfully retrieved Middle Manager state*
 
 </TabItem>
 </Tabs>
@@ -855,7 +855,7 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 ### Get active tasks
 
-Retrieves a list of active tasks being run on MiddleManager. Returns JSON list of task ID strings. Note that for normal usage, you should use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) endpoint or one of the task state specific variants instead.
+Retrieves a list of active tasks being run on the Middle Manager. Returns JSON list of task ID strings. Note that for normal usage, you should use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) endpoint or one of the task state specific variants instead.
 
 #### URL
 
@@ -984,9 +984,9 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 </details>
 
-### Disable MiddleManager
+### Disable Middle Manager
 
-Disables a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns a JSON  object
+Disables a Middle Manager, causing it to stop accepting new tasks but complete all existing tasks. Returns a JSON  object
 keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
@@ -1002,7 +1002,7 @@ keyed by the combined `druid.host` and `druid.port`.
 
 <br/>
 
-*Successfully disabled MiddleManager*
+*Successfully disabled Middle Manager*
 
 </TabItem>
 </Tabs>
@@ -1043,9 +1043,9 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 </details>
 
-### Enable MiddleManager
+### Enable Middle Manager
 
-Enables a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON object keyed by the combined `druid.host` and `druid.port`.
+Enables a Middle Manager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON object keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
@@ -1060,7 +1060,7 @@ Enables a MiddleManager, allowing it to accept new tasks again if it was previou
 
 <br/>
 
-*Successfully enabled MiddleManager*
+*Successfully enabled Middle Manager*
 
 </TabItem>
 </Tabs>

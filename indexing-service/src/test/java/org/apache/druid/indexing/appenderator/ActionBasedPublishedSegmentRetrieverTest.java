@@ -28,6 +28,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -59,7 +60,7 @@ public class ActionBasedPublishedSegmentRetrieverTest
   public void testRetrieveSegmentsById() throws IOException
   {
     final List<DataSegment> segments =
-        CreateDataSegments.ofDatasource("wiki")
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(3, Granularities.DAY)
                           .startingAt("2013-01-01")
                           .eachOfSizeInMb(400);
@@ -67,7 +68,7 @@ public class ActionBasedPublishedSegmentRetrieverTest
     EasyMock.expect(
         taskActionClient.submit(
             new RetrieveSegmentsByIdAction(
-                "wiki",
+                TestDataSource.WIKI,
                 segments.stream().map(segment -> segment.getId().toString()).collect(Collectors.toSet())
             )
         )
@@ -89,20 +90,20 @@ public class ActionBasedPublishedSegmentRetrieverTest
   public void testRetrieveUsedSegmentsIfNotFoundById() throws IOException
   {
     final List<DataSegment> segments =
-        CreateDataSegments.ofDatasource("wiki")
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(3, Granularities.DAY)
                           .startingAt("2013-01-01")
                           .eachOfSizeInMb(400);
 
     EasyMock.expect(
         taskActionClient.submit(
-            new RetrieveSegmentsByIdAction("wiki", EasyMock.anyObject())
+            new RetrieveSegmentsByIdAction(TestDataSource.WIKI, EasyMock.anyObject())
         )
     ).andThrow(InvalidInput.exception("task action not supported yet")).once();
     EasyMock.expect(
         taskActionClient.submit(
             new RetrieveUsedSegmentsAction(
-                "wiki",
+                TestDataSource.WIKI,
                 Collections.singletonList(Intervals.of("2013-01-01/P3D")),
                 Segments.INCLUDING_OVERSHADOWED
             )
@@ -128,8 +129,8 @@ public class ActionBasedPublishedSegmentRetrieverTest
         DruidException.class,
         () -> segmentRetriever.findPublishedSegments(
             ImmutableSet.of(
-                SegmentId.of("wiki", Intervals.ETERNITY, "v1", 0),
-                SegmentId.of("koala", Intervals.ETERNITY, "v1", 0)
+                SegmentId.of(TestDataSource.WIKI, Intervals.ETERNITY, "v1", 0),
+                SegmentId.of(TestDataSource.KOALA, Intervals.ETERNITY, "v1", 0)
             )
         )
     );

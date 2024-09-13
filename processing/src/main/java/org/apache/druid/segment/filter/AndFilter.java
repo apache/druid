@@ -188,6 +188,17 @@ public class AndFilter implements BooleanFilter
           }
           return makeVectorMatcher(vectorMatchers);
         }
+
+        @Override
+        public boolean canVectorize()
+        {
+          for (FilterBundle.MatcherBundle bundle : matcherBundles) {
+            if (!bundle.canVectorize()) {
+              return false;
+            }
+          }
+          return true;
+        }
       };
     } else {
       matcherBundle = null;

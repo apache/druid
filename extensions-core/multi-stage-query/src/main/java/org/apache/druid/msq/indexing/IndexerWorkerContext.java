@@ -80,6 +80,7 @@ public class IndexerWorkerContext implements WorkerContext
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
   private final int maxConcurrentStages;
+  private final boolean includeAllCounters;
 
   @GuardedBy("this")
   private ServiceLocator controllerLocator;
@@ -105,7 +106,10 @@ public class IndexerWorkerContext implements WorkerContext
     this.clientFactory = clientFactory;
     this.memoryIntrospector = memoryIntrospector;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
-    this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStages(QueryContext.of(task.getContext()));
+
+    final QueryContext queryContext = QueryContext.of(task.getContext());
+    this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStages(queryContext);
+    this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
   }
 
   public static IndexerWorkerContext createProductionInstance(

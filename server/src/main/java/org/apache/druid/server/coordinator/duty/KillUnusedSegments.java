@@ -306,7 +306,7 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     final int availableKillTaskSlots = Math.max(
         0,
-        killTaskCapacity - CoordinatorDutyUtils.getNumActiveTaskSlots(overlordClient, IS_AUTO_KILL_TASK).size()
+        killTaskCapacity - CoordinatorDutyUtils.getStatusOfActiveTasks(overlordClient, IS_AUTO_KILL_TASK).size()
     );
 
     stats.add(Stats.Kill.AVAILABLE_SLOTS, availableKillTaskSlots);

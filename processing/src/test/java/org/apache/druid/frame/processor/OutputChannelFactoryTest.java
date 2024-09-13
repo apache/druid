@@ -27,15 +27,13 @@ import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,15 +47,15 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
 {
   private final OutputChannelFactory outputChannelFactory;
   private final long frameSize;
-  protected final StorageAdapter sourceAdapter;
+  protected final CursorFactory sourceCursorFactory;
   protected final Frame frame;
 
   public OutputChannelFactoryTest(OutputChannelFactory outputChannelFactory, long frameSize)
   {
     this.outputChannelFactory = outputChannelFactory;
     this.frameSize = frameSize;
-    this.sourceAdapter = new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
-    this.frame = Iterables.getOnlyElement(FrameSequenceBuilder.fromAdapter(sourceAdapter)
+    this.sourceCursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
+    this.frame = Iterables.getOnlyElement(FrameSequenceBuilder.fromCursorFactory(sourceCursorFactory)
                                                                .frameType(FrameType.COLUMNAR)
                                                                .frames()
                                                                .toList());
@@ -79,7 +77,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     // read back data from the channel
     verifySingleFrameReadableChannel(
         channel.getReadableChannel(),
-        sourceAdapter
+        sourceCursorFactory
     );
     Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
   }
@@ -103,7 +101,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     for (int partition : partitions) {
       verifySingleFrameReadableChannel(
           partitionedReadableFrameChannelSupplier.get().getReadableFrameChannel(partition),
-          sourceAdapter
+          sourceCursorFactory
       );
       Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
     }
@@ -111,7 +109,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
 
   protected void verifySingleFrameReadableChannel(
       ReadableFrameChannel readableFrameChannel,
-      StorageAdapter adapter
+      CursorFactory cursorFactory
   ) throws ExecutionException, InterruptedException
   {
     readableFrameChannel.readabilityFuture().get();
@@ -128,32 +126,27 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     Assert.assertTrue(readableFrameChannel.isFinished());
     readableFrameChannel.close();
 
+    CursorFactory frameCursorFactory = FrameReader.create(cursorFactory.getRowSignature()).makeCursorFactory(readbackFrame);
     // build list of rows from written and read data to verify
-    List<List<Object>> writtenData = adapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, adapter.getRowSignature())).toList();
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+         final CursorHolder frameHolder = frameCursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)
+    ) {
+      List<List<Object>> writtenData = FrameTestUtil.readRowsFromCursor(
+          cursorHolder.asCursor(),
+          cursorFactory.getRowSignature()
+      ).toList();
+      List<List<Object>> readData = FrameTestUtil.readRowsFromCursor(
+          frameHolder.asCursor(),
+          frameCursorFactory.getRowSignature()
+      ).toList();
 
-    FrameStorageAdapter frameStorageAdapter = new FrameStorageAdapter(
-        readbackFrame,
-        FrameReader.create(adapter.getRowSignature()),
-        Intervals.ETERNITY
-    );
-    List<List<Object>> readData = frameStorageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    ).flatMap(cursor -> FrameTestUtil.readRowsFromCursor(cursor, adapter.getRowSignature())).toList();
-
-    Assert.assertEquals("Read rows count is different from written rows count", writtenData.size(), readData.size());
-    Assert.assertEquals("Read data is different from written data", writtenData, readData);
+      Assert.assertEquals(
+          "Read rows count is different from written rows count",
+          writtenData.size(),
+          readData.size()
+      );
+      Assert.assertEquals("Read data is different from written data", writtenData, readData);
+    }
   }
 
   @Test

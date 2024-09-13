@@ -247,12 +247,6 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public String toString()
-  {
-    return String.valueOf(value);
-  }
-
-  @Override
   protected ExprEval realEval()
   {
     return ExprEval.ofLong(value);
@@ -327,12 +321,6 @@ class DoubleExpr extends ConstantExpr<Double>
   DoubleExpr(Double value)
   {
     super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(value);
   }
 
   @Override

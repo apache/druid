@@ -768,7 +768,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
           }
         }
-        ingestionState = IngestionState.COMPLETED;
       }
       catch (Exception e) {
         // (1) catch all exceptions while reading from kafka
@@ -835,6 +834,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
       // See publishAndRegisterHandoff() for details.
       List<SegmentsAndCommitMetadata> handedOffList = Collections.emptyList();
+      ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
@@ -928,6 +928,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
+    ingestionState = IngestionState.COMPLETED;
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
   }

@@ -887,6 +887,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       this.isRunningMSQ = isRunningMSQ;
     }
 
+    public CalciteTestConfig(Map<String, Object> baseQueryContext, boolean isRunningMSQ)
+    {
+      this(baseQueryContext);
+      this.isRunningMSQ = isRunningMSQ;
+    }
+
     public CalciteTestConfig(Map<String, Object> baseQueryContext)
     {
       Preconditions.checkNotNull(baseQueryContext, "baseQueryContext is null");

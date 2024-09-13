@@ -51,7 +51,6 @@ public class DoubleArrayFrameColumnWriter extends NumericArrayFrameColumnWriter
   @Override
   void putArrayElement(WritableMemory memory, long offset, Number element)
   {
-    // The element is of type Double, and non-null, therefore it can be cast safely
-    memory.putDouble(offset, (double) element);
+    memory.putDouble(offset, element.doubleValue());
   }
 }

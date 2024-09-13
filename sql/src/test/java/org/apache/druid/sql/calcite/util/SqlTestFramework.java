@@ -20,12 +20,14 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
@@ -42,6 +44,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
@@ -77,6 +80,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -547,6 +551,7 @@ public class SqlTestFramework
   private class TestSetupModule implements DruidModule
   {
     private final Builder builder;
+    private final List<DruidModule> subModules = Arrays.asList(new BuiltInTypesModule(), new TestSqlModule());
 
     public TestSetupModule(Builder builder)
     {
@@ -554,8 +559,21 @@ public class SqlTestFramework
     }
 
     @Override
+    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+    {
+      ImmutableList.Builder<com.fasterxml.jackson.databind.Module> builder = ImmutableList.builder();
+      for (DruidModule druidModule : subModules) {
+        builder.addAll(druidModule.getJacksonModules());
+      }
+      return builder.build();
+    }
+
+    @Override
     public void configure(Binder binder)
     {
+      for (DruidModule module : subModules) {
+        binder.install(module);
+      }
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));

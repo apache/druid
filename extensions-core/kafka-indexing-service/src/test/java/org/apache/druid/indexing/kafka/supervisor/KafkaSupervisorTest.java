@@ -346,7 +346,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            null
+            null,
+          null
     );
 
     EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(kafkaSupervisorIOConfig).anyTimes();
@@ -408,13 +409,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     autoscaler.start();
     supervisor.runInternal();
     Thread.sleep(1000);
-    supervisor.runInternal();
     verifyAll();
 
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
-
 
     KafkaIndexTask task = captured.getValue();
     Assert.assertEquals(KafkaSupervisorTest.dataSchema, task.getDataSchema());
@@ -481,6 +479,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null
         ),
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -4224,6 +4223,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
+            null,
             null
         )
     );
@@ -4258,6 +4258,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
+        null,
         null,
         null,
         null,
@@ -4411,6 +4412,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             TEST_CHAT_RETRIES,
             TEST_HTTP_TIMEOUT,
             TEST_SHUTDOWN_TIMEOUT,
+            null,
             null,
             null,
             null,
@@ -4891,6 +4893,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         null,
         10,
+        null,
         null
     );
 
@@ -5000,6 +5003,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
+        null,
         null,
         null,
         null,

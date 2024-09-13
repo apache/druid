@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
@@ -418,17 +417,9 @@ public class OverlordResource
   {
     if (CollectionUtils.isNullOrEmpty(taskIds)) {
       return Response.status(Response.Status.BAD_REQUEST).entity("No Task IDs provided.").build();
+    } else {
+      return Response.ok().entity(taskQueryTool.getMultipleTaskStatuses(taskIds)).build();
     }
-
-    final Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
-    for (String taskId : taskIds) {
-      final Optional<TaskStatus> optional = taskQueryTool.getTaskStatus(taskId);
-      if (optional.isPresent()) {
-        result.put(taskId, optional.get());
-      }
-    }
-
-    return Response.ok().entity(result).build();
   }
 
   @GET

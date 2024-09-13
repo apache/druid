@@ -29,10 +29,10 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.TestSegmentUtils;
@@ -1251,11 +1251,11 @@ public class SegmentLocalCacheManagerTest
     Assert.assertEquals(tombstone.getId(), segment.getId());
     Assert.assertEquals(interval, segment.getDataInterval());
 
-    final StorageAdapter storageAdapter = segment.asStorageAdapter();
-    Assert.assertNotNull(storageAdapter);
-    Assert.assertTrue(storageAdapter.isFromTombstone());
+    final CursorFactory cursorFactory = segment.asCursorFactory();
+    Assert.assertNotNull(cursorFactory);
+    Assert.assertTrue(segment.isTombstone());
 
-    final QueryableIndex queryableIndex = segment.asQueryableIndex();
+    final QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
     Assert.assertNotNull(queryableIndex);
     Assert.assertEquals(interval, queryableIndex.getDataInterval());
     Assert.assertThrows(UnsupportedOperationException.class, queryableIndex::getMetadata);
