@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedMap;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
@@ -49,20 +51,25 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartitionLagType;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -84,6 +91,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
       };
 
   public static final String OFFSET_NOT_SET = "-1";
+
   private final KinesisSupervisorSpec spec;
   private final AWSCredentialsConfig awsCredentialsConfig;
   private volatile Map<String, Long> currentPartitionTimeLag;
@@ -262,7 +270,11 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   )
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<String, Long> partitionLag = getTimeLagPerPartition(getHighestCurrentOffsets());
+
+    ImmutableSortedMap<DateTime, Map<String, Long>> currentPartitionLagMap = ImmutableSortedMap.copyOf(historicalPartitionLagMap);
+    Map<String, Long> latestPartitionLag = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getValue() : Collections.emptyMap();
+
     return new KinesisSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
@@ -274,23 +286,16 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         stateManager.getSupervisorState().getBasicState(),
         stateManager.getSupervisorState(),
         stateManager.getExceptionEvents(),
-        includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
+        includeOffsets ? latestPartitionLag : null,
+        includeOffsets ? latestPartitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null
     );
   }
 
-  // not yet supported, will be implemented in the future maybe? need a way to get record count between current
-  // sequence and latest sequence
   @Override
-  protected Map<String, Long> getRecordLagPerPartition(Map<String, String> currentOffsets)
+  protected Pair<StreamPartitionLagType, Map<String, Long>> getLagPerPartition(Map<String, String> currentOffsets)
   {
-    return ImmutableMap.of();
-  }
-
-  @Override
-  protected Map<String, Long> getTimeLagPerPartition(Map<String, String> currentOffsets)
-  {
-    return currentOffsets
+    return Pair.of(StreamPartitionLagType.TIME_LAG,
+        currentOffsets
         .entrySet()
         .stream()
         .filter(e -> e.getValue() != null &&
@@ -302,7 +307,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
                 Map.Entry::getKey,
                 e -> currentPartitionTimeLag.get(e.getKey())
             )
-        );
+        )
+    );
   }
 
   @Override
@@ -329,15 +335,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected Map<String, Long> getPartitionRecordLag()
+  protected Pair<StreamPartitionLagType, Map<String, Long>> getPartitionLag()
   {
-    return null;
-  }
-
-  @Override
-  protected Map<String, Long> getPartitionTimeLag()
-  {
-    return currentPartitionTimeLag;
+    return Pair.of(StreamPartitionLagType.TIME_LAG, currentPartitionTimeLag);
   }
 
   @Override
@@ -382,13 +382,12 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   @Override
   public LagStats computeLagStats()
   {
-    Map<String, Long> partitionTimeLags = getPartitionTimeLag();
-
-    if (partitionTimeLags == null) {
+    Pair<StreamPartitionLagType, Map<String, Long>> partitionTimeLags = getPartitionLag();
+    if (Objects.isNull(partitionTimeLags) || Objects.isNull(partitionTimeLags.rhs)) {
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionTimeLags);
+    return computeLags(partitionTimeLags.rhs);
   }
 
   @Override

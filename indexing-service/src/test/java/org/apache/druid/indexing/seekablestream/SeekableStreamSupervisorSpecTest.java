@@ -41,6 +41,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamPartitionLagType;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -53,6 +54,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAu
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.NoopTaskAutoScaler;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -166,14 +168,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
 
     @Nullable
     @Override
-    protected Map<String, Long> getPartitionRecordLag()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    protected Map<String, Long> getPartitionTimeLag()
+    protected Pair<StreamPartitionLagType, Map<String, Long>> getPartitionLag()
     {
       return null;
     }
@@ -259,13 +254,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     }
 
     @Override
-    protected Map<String, Long> getRecordLagPerPartition(Map<String, String> currentOffsets)
-    {
-      return null;
-    }
-
-    @Override
-    protected Map<String, Long> getTimeLagPerPartition(Map<String, String> currentOffsets)
+    protected Pair<StreamPartitionLagType, Map<String, Long>> getLagPerPartition(Map<String, String> currentOffsets)
     {
       return null;
     }

@@ -69,12 +69,14 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.common.StreamPartitionLagType;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamExceptionEvent;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateManager.SeekableStreamState;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -2776,14 +2778,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     @Nullable
     @Override
-    protected Map<String, Long> getPartitionRecordLag()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
-    protected Map<String, Long> getPartitionTimeLag()
+    protected Pair<StreamPartitionLagType, Map<String, Long>> getPartitionLag()
     {
       return null;
     }
@@ -2882,13 +2877,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    protected Map<String, Long> getRecordLagPerPartition(Map<String, String> currentOffsets)
-    {
-      return null;
-    }
-
-    @Override
-    protected Map<String, Long> getTimeLagPerPartition(Map<String, String> currentOffsets)
+    protected Pair<StreamPartitionLagType, Map<String, Long>> getLagPerPartition(Map<String, String> currentOffsets)
     {
       return null;
     }
@@ -3013,16 +3002,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     @Nullable
     @Override
-    protected Map<String, Long> getPartitionRecordLag()
+    protected Pair<StreamPartitionLagType, Map<String, Long>> getPartitionLag()
     {
-      return partitionsRecordLag;
-    }
-
-    @Nullable
-    @Override
-    protected Map<String, Long> getPartitionTimeLag()
-    {
-      return partitionsTimeLag;
+      return Pair.of(StreamPartitionLagType.RECORD_LAG, partitionsRecordLag);
     }
 
     @Override

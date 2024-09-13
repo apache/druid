@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSortedMap;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -50,9 +52,11 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.common.StreamPartitionLagType;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -68,8 +72,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -97,7 +103,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final Pattern pattern;
   private volatile Map<KafkaTopicPartition, Long> latestSequenceFromStream;
-
 
   private final KafkaSupervisorSpec spec;
 
@@ -171,7 +176,13 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   )
   {
     KafkaSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<KafkaTopicPartition, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
+
+    ImmutableSortedMap<DateTime, Map<KafkaTopicPartition, Long>> currentPartitionLagMap = ImmutableSortedMap.copyOf(historicalPartitionLagMap);
+    DateTime latestSequenceLastUpdated = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getKey() : null;
+    Map<KafkaTopicPartition, Long> latestPartitionLag = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getValue() : Collections.emptyMap();
+
     return new KafkaSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
@@ -179,9 +190,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
-        includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-        includeOffsets ? sequenceLastUpdated : null,
+        includeOffsets ? latestPartitionLag : null,
+        includeOffsets ? latestPartitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? latestSequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
         stateManager.getSupervisorState().getBasicState(),
@@ -258,7 +269,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  protected Map<KafkaTopicPartition, Long> getPartitionRecordLag()
+  protected Pair<StreamPartitionLagType, Map<KafkaTopicPartition, Long>> getPartitionLag()
   {
     Map<KafkaTopicPartition, Long> highestCurrentOffsets = getHighestCurrentOffsets();
 
@@ -274,15 +285,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       );
     }
 
-    return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
-  }
-
-  @Nullable
-  @Override
-  protected Map<KafkaTopicPartition, Long> getPartitionTimeLag()
-  {
-    // time lag not currently support with kafka
-    return null;
+    return Pair.of(StreamPartitionLagType.RECORD_LAG, getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets));
   }
 
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
@@ -311,13 +314,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
   @SuppressWarnings("SSBasedInspection")
   // Used while generating Supervisor lag reports per task
-  protected Map<KafkaTopicPartition, Long> getRecordLagPerPartition(Map<KafkaTopicPartition, Long> currentOffsets)
+  protected Pair<StreamPartitionLagType, Map<KafkaTopicPartition, Long>> getLagPerPartition(Map<KafkaTopicPartition, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null || currentOffsets == null) {
-      return Collections.emptyMap();
+      return Pair.of(StreamPartitionLagType.RECORD_LAG, Collections.emptyMap());
     }
 
-    return currentOffsets
+    return Pair.of(StreamPartitionLagType.RECORD_LAG,
+        currentOffsets
         .entrySet()
         .stream()
         .filter(e -> latestSequenceFromStream.get(e.getKey()) != null)
@@ -328,13 +332,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
                      ? latestSequenceFromStream.get(e.getKey()) - e.getValue()
                      : 0
             )
-        );
-  }
-
-  @Override
-  protected Map<KafkaTopicPartition, Long> getTimeLagPerPartition(Map<KafkaTopicPartition, Long> currentOffsets)
-  {
-    return null;
+        )
+    );
   }
 
   @Override
@@ -382,12 +381,12 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   public LagStats computeLagStats()
   {
-    Map<KafkaTopicPartition, Long> partitionRecordLag = getPartitionRecordLag();
-    if (partitionRecordLag == null) {
+    Pair<StreamPartitionLagType, Map<KafkaTopicPartition, Long>> partitionRecordLag = getPartitionLag();
+    if (Objects.isNull(partitionRecordLag) || Objects.isNull(partitionRecordLag.rhs)) {
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionRecordLag);
+    return computeLags(partitionRecordLag.rhs);
   }
 
   @Override
