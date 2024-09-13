@@ -64,7 +64,7 @@ Before proceeding, download Druid as described in the [single-machine quickstart
 
 It's helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
 
-## Sample Data
+## Sample data
 
 This tutorial works with the following data:
 - **date**: a timestamp. In this case it's just dates but as mentioned earlier, a finer granularity makes sense in real life.
@@ -120,9 +120,13 @@ PARTITIONED BY DAY
 ```
 
 Notice that there is no `uid` in the `SELECT` statement.
+
 In this scenario you are not interested in individual user IDs, only the unique counts.
+
 Instead you create Theta sketches on the values of `uid` using the `DS_THETA` function.
+
 [`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) has an optional second parameter that controls the accuracy and size of the sketches.
+
 The `GROUP BY` statement groups the entries for each episode of a show watched on the same day.
 
 ## Query the Theta sketch column
@@ -154,7 +158,6 @@ SELECT
   "episode",
   THETA_SKETCH_ESTIMATE(theta_uid) AS users
 FROM ts_tutorial
-GROUP BY 1, 2, 3, 4
 ```
 
 ![Count distinct with Theta sketches](../assets/tutorial-theta-04.png)
@@ -188,7 +191,9 @@ FROM ts_tutorial
 The `APPROX_COUNT_DISTINCT_DS_THETA` function applies the following:
 
 * `DS_THETA`: Creates a new Theta sketch from the column of Theta sketches.
-* `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA` where the show is _Bridgerton_.
+* `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`.
+
+Note that the FILTER clause limits an aggregation query to only the rows that match the filter.
 
 ### Set operations
 
