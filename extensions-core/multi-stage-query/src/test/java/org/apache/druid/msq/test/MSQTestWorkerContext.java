@@ -160,6 +160,12 @@ public class MSQTestWorkerContext implements WorkerContext
     return injector.getInstance(DataServerQueryHandlerFactory.class);
   }
 
+  @Override
+  public boolean includeAllCounters()
+  {
+    return true;
+  }
+
   class FrameContextImpl implements FrameContext
   {
     private final File tempDir;
