@@ -57,7 +57,6 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -188,7 +187,7 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
 
       }
