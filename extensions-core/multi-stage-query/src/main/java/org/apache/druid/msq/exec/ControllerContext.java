@@ -32,6 +32,8 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
+import java.io.File;
+
 /**
  * Context used by multi-stage query controllers. Useful because it allows test fixtures to provide their own
  * implementations.
@@ -95,6 +97,11 @@ public interface ControllerContext
       ControllerQueryKernelConfig queryKernelConfig,
       WorkerFailureListener workerFailureListener
   );
+
+  /**
+   * Fetch a directory for temporary outputs
+   */
+  File taskTempDir();
 
   /**
    * Client for communicating with workers.

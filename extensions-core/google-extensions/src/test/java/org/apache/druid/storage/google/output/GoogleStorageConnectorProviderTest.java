@@ -26,9 +26,8 @@ import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import com.google.inject.name.Names;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
@@ -44,6 +43,7 @@ import java.util.Properties;
 public class GoogleStorageConnectorProviderTest
 {
   private static final String CUSTOM_NAMESPACE = "custom";
+  private final File tempDir = FileUtils.createTempDir();
 
   @Test
   public void createGoogleStorageFactoryWithRequiredProperties()
@@ -57,7 +57,7 @@ public class GoogleStorageConnectorProviderTest
     StorageConnectorProvider googleStorageConnectorProvider = getStorageConnectorProvider(properties);
 
     Assert.assertTrue(googleStorageConnectorProvider instanceof GoogleStorageConnectorProvider);
-    Assert.assertTrue(googleStorageConnectorProvider.get() instanceof GoogleStorageConnector);
+    Assert.assertTrue(googleStorageConnectorProvider.createStorageConnector(tempDir) instanceof GoogleStorageConnector);
     Assert.assertEquals("bucket", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getBucket());
     Assert.assertEquals("prefix", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getPrefix());
     Assert.assertEquals(new File("/tmp"), ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getTempDir());
@@ -124,10 +124,6 @@ public class GoogleStorageConnectorProviderTest
               StorageConnectorProvider.class,
               Names.named(CUSTOM_NAMESPACE)
           );
-
-          binder.bind(Key.get(StorageConnector.class, Names.named(CUSTOM_NAMESPACE)))
-                .toProvider(Key.get(StorageConnectorProvider.class, Names.named(CUSTOM_NAMESPACE)))
-                .in(LazySingleton.class);
         }
     ).withProperties(properties);
 
