@@ -3674,7 +3674,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.IMPROVED_PLAN)
   public void testLeftJoinSubqueryWithSelectorFilter(Map<String, Object> queryContext)
   {
     // Cannot vectorize due to 'concat' expression.
