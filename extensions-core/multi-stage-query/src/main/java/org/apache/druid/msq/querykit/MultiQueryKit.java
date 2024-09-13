@@ -46,6 +46,7 @@ public class MultiQueryKit implements QueryKit<Query<?>>
       QueryKit<Query<?>> toolKitForSubQueries,
       ShuffleSpecFactory resultShuffleSpecFactory,
       int maxWorkerCount,
+      int targetPartitionsPerWorker,
       int minStageNumber
   )
   {
@@ -59,6 +60,7 @@ public class MultiQueryKit implements QueryKit<Query<?>>
           this,
           resultShuffleSpecFactory,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           minStageNumber
       );
     } else {

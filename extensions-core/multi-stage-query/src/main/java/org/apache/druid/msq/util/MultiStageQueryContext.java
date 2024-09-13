@@ -194,6 +194,12 @@ public class MultiStageQueryContext
 
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
+  /**
+   * Number of partitions to target per worker when creating shuffle specs that involve specific numbers of
+   * partitions. This helps us utilize more parallelism when workers are multi-threaded.
+   */
+  public static final String CTX_TARGET_PARTITIONS_PER_WORKER = "targetPartitionsPerWorker";
+
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
   public static String getMSQMode(final QueryContext queryContext)
@@ -391,6 +397,14 @@ public class MultiStageQueryContext
   public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
   {
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
+  }
+
+  public static int getTargetPartitionsPerWorkerWithDefault(
+      final QueryContext queryContext,
+      final int defaultValue
+  )
+  {
+    return queryContext.getInt(CTX_TARGET_PARTITIONS_PER_WORKER, defaultValue);
   }
 
   /**

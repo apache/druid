@@ -135,6 +135,7 @@ public class DataSourcePlan
    * @param maxWorkerCount   maximum number of workers for subqueries
    * @param minStageNumber   starting stage number for subqueries
    * @param broadcast        whether the plan should broadcast data for this datasource
+   * @param targetPartitionsPerWorker preferred number of partitions per worker for subqueries
    */
   @SuppressWarnings("rawtypes")
   public static DataSourcePlan forDataSource(
@@ -146,6 +147,7 @@ public class DataSourcePlan
       @Nullable DimFilter filter,
       @Nullable Set<String> filterFields,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -186,6 +188,7 @@ public class DataSourcePlan
           (FilteredDataSource) dataSource,
           querySegmentSpec,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           minStageNumber,
           broadcast
       );
@@ -197,6 +200,7 @@ public class DataSourcePlan
           (UnnestDataSource) dataSource,
           querySegmentSpec,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           minStageNumber,
           broadcast
       );
@@ -207,6 +211,7 @@ public class DataSourcePlan
           queryId,
           (QueryDataSource) dataSource,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           minStageNumber,
           broadcast,
           queryContext
@@ -221,6 +226,7 @@ public class DataSourcePlan
           filter,
           filterFields,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           minStageNumber,
           broadcast
       );
@@ -242,6 +248,7 @@ public class DataSourcePlan
               filter,
               filterFields,
               maxWorkerCount,
+              targetPartitionsPerWorker,
               minStageNumber,
               broadcast
           );
@@ -253,6 +260,7 @@ public class DataSourcePlan
               (JoinDataSource) dataSource,
               querySegmentSpec,
               maxWorkerCount,
+              targetPartitionsPerWorker,
               minStageNumber,
               broadcast
           );
@@ -418,6 +426,7 @@ public class DataSourcePlan
       final String queryId,
       final QueryDataSource dataSource,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast,
       @Nullable final QueryContext parentContext
@@ -429,8 +438,9 @@ public class DataSourcePlan
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
         dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
         queryKit,
-        ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount),
+        ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount * targetPartitionsPerWorker),
         maxWorkerCount,
+        targetPartitionsPerWorker,
         minStageNumber
     );
 
@@ -451,6 +461,7 @@ public class DataSourcePlan
       final FilteredDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -464,6 +475,7 @@ public class DataSourcePlan
         null,
         null,
         maxWorkerCount,
+        targetPartitionsPerWorker,
         minStageNumber,
         broadcast
     );
@@ -491,6 +503,7 @@ public class DataSourcePlan
       final UnnestDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -505,6 +518,7 @@ public class DataSourcePlan
         null,
         null,
         maxWorkerCount,
+        targetPartitionsPerWorker,
         minStageNumber,
         broadcast
     );
@@ -537,6 +551,7 @@ public class DataSourcePlan
       @Nullable DimFilter filter,
       @Nullable Set<String> filterFields,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -559,6 +574,7 @@ public class DataSourcePlan
           filter,
           filterFields,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           Math.max(minStageNumber, subqueryDefBuilder.getNextStageNumber()),
           broadcast
       );
@@ -590,6 +606,7 @@ public class DataSourcePlan
       @Nullable final DimFilter filter,
       @Nullable final Set<String> filterFields,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -606,6 +623,7 @@ public class DataSourcePlan
         filter,
         filter == null ? null : DimFilterUtils.onlyBaseFields(filterFields, analysis),
         maxWorkerCount,
+        targetPartitionsPerWorker,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         broadcast
     );
@@ -626,6 +644,7 @@ public class DataSourcePlan
           null, // Don't push down query filters for right-hand side: needs some work to ensure it works properly.
           null,
           maxWorkerCount,
+          targetPartitionsPerWorker,
           Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
           true // Always broadcast right-hand side of the join.
       );
@@ -660,6 +679,7 @@ public class DataSourcePlan
       final JoinDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber,
       final boolean broadcast
   )
@@ -682,6 +702,7 @@ public class DataSourcePlan
         queryId,
         (QueryDataSource) dataSource.getLeft(),
         maxWorkerCount,
+        targetPartitionsPerWorker,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         false,
         null
@@ -696,6 +717,7 @@ public class DataSourcePlan
         queryId,
         (QueryDataSource) dataSource.getRight(),
         maxWorkerCount,
+        targetPartitionsPerWorker,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         false,
         null
@@ -707,8 +729,9 @@ public class DataSourcePlan
         ((StageInputSpec) Iterables.getOnlyElement(leftPlan.getInputSpecs())).getStageNumber()
     );
 
+    final int hashPartitionCount = maxWorkerCount * targetPartitionsPerWorker;
     final List<KeyColumn> leftPartitionKey = partitionKeys.get(0);
-    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), maxWorkerCount));
+    leftBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(leftPartitionKey, 0), hashPartitionCount));
     leftBuilder.signature(QueryKitUtils.sortableSignature(leftBuilder.getSignature(), leftPartitionKey));
 
     // Build up the right stage.
@@ -717,7 +740,7 @@ public class DataSourcePlan
     );
 
     final List<KeyColumn> rightPartitionKey = partitionKeys.get(1);
-    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), maxWorkerCount));
+    rightBuilder.shuffleSpec(new HashShuffleSpec(new ClusterBy(rightPartitionKey, 0), hashPartitionCount));
     rightBuilder.signature(QueryKitUtils.sortableSignature(rightBuilder.getSignature(), rightPartitionKey));
 
     // Compute join signature.
