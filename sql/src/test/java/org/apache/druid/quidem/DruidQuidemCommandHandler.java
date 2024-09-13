@@ -20,6 +20,7 @@
 package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import net.hydromatic.quidem.AbstractCommand;
 import net.hydromatic.quidem.Command;
@@ -154,10 +155,11 @@ public class DruidQuidemCommandHandler implements CommandHandler
       try (Closeable unhook = dhp.withHook(DruidHook.NATIVE_PLAN, (key, relNode) -> {
         logged.add(relNode);
       })) {
-        executeExplainQuery(x);
+        executeQuery(x);
       }
 
       for (Query<?> query: logged) {
+        ObjectNode n = objectMapper.convertValue(query, ObjectNode.class);
         String str = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
         x.echo(ImmutableList.of(str));
       }
