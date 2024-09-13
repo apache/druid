@@ -97,7 +97,7 @@
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
       <version>${project.parent.version}</version>
-      <!--<classifier>tests</classifier>-->
+      <classifier>tests</classifier>
       <scope>provided</scope>
     </dependency>
     <dependency>
