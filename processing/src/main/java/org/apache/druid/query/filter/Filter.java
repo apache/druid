@@ -44,8 +44,8 @@ public interface Filter
   }
 
   /**
-   * Returns a sorted set of all child filters for this filter with no duplicates. The default return value is an empty
-   * set.
+   * Returns an ordered set of all child filters for this filter with no duplicates. The default return value is an
+   * empty set.
    * <p>
    * Only {@link org.apache.druid.segment.filter.AndFilter} and {@link org.apache.druid.segment.filter.OrFilter} have
    * child filters. Other filters would return empty (including {@link org.apache.druid.segment.filter.NotFilter}).
