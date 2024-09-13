@@ -33,8 +33,8 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexAddResult;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.nested.StructuredData;
@@ -147,8 +147,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, STRING_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, STRING_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_COL, STRING_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -184,7 +184,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
       Assert.assertNull(dimensionSelector.getObject());
 
-      Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(STRING_COL).toColumnType());
+      Assert.assertEquals(ColumnType.STRING, cursorFactory.getColumnCapabilities(STRING_COL).toColumnType());
     }
   }
 
@@ -200,8 +200,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, LONG_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, LONG_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(LONG_COL, LONG_COL, ColumnType.LONG);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -267,7 +267,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         );
         Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
       }
-      Assert.assertEquals(ColumnType.LONG, storageAdapter.getColumnCapabilities(LONG_COL).toColumnType());
+      Assert.assertEquals(ColumnType.LONG, cursorFactory.getColumnCapabilities(LONG_COL).toColumnType());
     }
   }
 
@@ -283,8 +283,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, DOUBLE_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, DOUBLE_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(DOUBLE_COL, DOUBLE_COL, ColumnType.DOUBLE);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -350,7 +350,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
         );
         Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
       }
-      Assert.assertEquals(ColumnType.DOUBLE, storageAdapter.getColumnCapabilities(DOUBLE_COL).toColumnType());
+      Assert.assertEquals(ColumnType.DOUBLE, cursorFactory.getColumnCapabilities(DOUBLE_COL).toColumnType());
     }
   }
 
@@ -366,8 +366,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, STRING_ARRAY_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, STRING_ARRAY_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(
           STRING_ARRAY_COL,
@@ -397,7 +397,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       Assert.assertNull(valueSelector.getObject());
       Assert.assertEquals(
           ColumnType.STRING_ARRAY,
-          storageAdapter.getColumnCapabilities(STRING_ARRAY_COL).toColumnType()
+          cursorFactory.getColumnCapabilities(STRING_ARRAY_COL).toColumnType()
       );
     }
   }
@@ -414,8 +414,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, VARIANT_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, VARIANT_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(VARIANT_COL, VARIANT_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -442,7 +442,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       cursor.advance();
       Assert.assertNull(valueSelector.getObject());
       Assert.assertNull(dimensionSelector.getObject());
-      Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(VARIANT_COL).toColumnType());
+      Assert.assertEquals(ColumnType.STRING, cursorFactory.getColumnCapabilities(VARIANT_COL).toColumnType());
     }
   }
 
@@ -458,8 +458,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, NESTED_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -482,7 +482,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
 
       cursor.advance();
       Assert.assertNull(valueSelector.getObject());
-      Assert.assertEquals(ColumnType.NESTED_DATA, storageAdapter.getColumnCapabilities(NESTED_COL).toColumnType());
+      Assert.assertEquals(ColumnType.NESTED_DATA, cursorFactory.getColumnCapabilities(NESTED_COL).toColumnType());
     }
   }
 
@@ -517,8 +517,8 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, NESTED_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
       ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
@@ -545,7 +545,7 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
       Assert.assertNull(valueSelector.getObject());
       Assert.assertNull(dimensionSelector.getObject());
 
-      Assert.assertEquals(ColumnType.STRING, storageAdapter.getColumnCapabilities(NESTED_COL).toColumnType());
+      Assert.assertEquals(ColumnType.STRING, cursorFactory.getColumnCapabilities(NESTED_COL).toColumnType());
     }
   }
 

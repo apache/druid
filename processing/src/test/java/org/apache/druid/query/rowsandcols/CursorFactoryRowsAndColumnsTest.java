@@ -21,24 +21,24 @@ package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 
 import java.util.function.Function;
 
-public class StorageAdapterRowsAndColumnsTest extends RowsAndColumnsTestBase
+public class CursorFactoryRowsAndColumnsTest extends RowsAndColumnsTestBase
 {
-  public StorageAdapterRowsAndColumnsTest()
+  public CursorFactoryRowsAndColumnsTest()
   {
-    super(StorageAdapterRowsAndColumns.class);
+    super(CursorFactoryRowsAndColumns.class);
   }
 
-  public static Function<MapOfColumnsRowsAndColumns, StorageAdapterRowsAndColumns> MAKER =
-      StorageAdapterRowsAndColumnsTest::buildFrame;
+  public static Function<MapOfColumnsRowsAndColumns, CursorFactoryRowsAndColumns> MAKER =
+      CursorFactoryRowsAndColumnsTest::buildFrame;
 
-  private static StorageAdapterRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
+  private static CursorFactoryRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
     try (ColumnBasedFrameRowsAndColumns fRAC = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input)) {
-      return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
+      return new CursorFactoryRowsAndColumns(fRAC.as(CursorFactory.class));
     }
   }
 }

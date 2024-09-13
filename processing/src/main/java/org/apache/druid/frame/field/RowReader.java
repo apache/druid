@@ -57,7 +57,7 @@ public class RowReader
   /**
    * Read a particular field value as an object.
    *
-   * For performance reasons, prefer {@link org.apache.druid.frame.read.FrameReader#makeCursorHolderFactory}
+   * For performance reasons, prefer {@link org.apache.druid.frame.read.FrameReader#makeCursorFactory}
    * for reading many rows out of a frame.
    */
   public Object readField(final Memory memory, final long rowPosition, final long rowLength, final int fieldNumber)
@@ -77,7 +77,7 @@ public class RowReader
   /**
    * Read an entire row as a list of objects.
    *
-   * For performance reasons, prefer {@link org.apache.druid.frame.read.FrameReader#makeCursorHolderFactory}
+   * For performance reasons, prefer {@link org.apache.druid.frame.read.FrameReader#makeCursorFactory}
    * for reading many rows out of a frame.
    */
   public List<Object> readRow(final Memory memory, final long rowPosition, final long rowLength)

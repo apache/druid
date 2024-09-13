@@ -28,22 +28,18 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.Indexed;
-import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.filter.JoinFilterAnalyzer;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinFilterSplit;
 import org.apache.druid.utils.CloseableUtils;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -51,169 +47,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 
-public class HashJoinSegmentStorageAdapter implements StorageAdapter
+public class HashJoinSegmentCursorFactory implements CursorFactory
 {
-  private final StorageAdapter baseAdapter;
-
+  private final CursorFactory baseCursorFactory;
   @Nullable
   private final Filter baseFilter;
   private final List<JoinableClause> clauses;
   private final JoinFilterPreAnalysis joinFilterPreAnalysis;
 
-  /**
-   * @param baseAdapter           A StorageAdapter for the left-hand side base segment
-   * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                              duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this storage adapter
-   */
-  HashJoinSegmentStorageAdapter(
-      final StorageAdapter baseAdapter,
-      final List<JoinableClause> clauses,
-      final JoinFilterPreAnalysis joinFilterPreAnalysis
+  public HashJoinSegmentCursorFactory(
+      CursorFactory baseCursorFactory,
+      @Nullable Filter baseFilter,
+      List<JoinableClause> clauses,
+      JoinFilterPreAnalysis joinFilterPreAnalysis
   )
   {
-    this(baseAdapter, null, clauses, joinFilterPreAnalysis);
-  }
-
-  /**
-   * @param baseAdapter           A StorageAdapter for the left-hand side base segment
-   * @param baseFilter            A filter for the left-hand side base segment
-   * @param clauses               The right-hand side clauses. The caller is responsible for ensuring that there are no
-   *                              duplicate prefixes or prefixes that shadow each other across the clauses
-   * @param joinFilterPreAnalysis Pre-analysis for the query we expect to run on this storage adapter
-   */
-  HashJoinSegmentStorageAdapter(
-      final StorageAdapter baseAdapter,
-      @Nullable final Filter baseFilter,
-      final List<JoinableClause> clauses,
-      final JoinFilterPreAnalysis joinFilterPreAnalysis
-  )
-  {
-    this.baseAdapter = baseAdapter;
+    this.baseCursorFactory = baseCursorFactory;
     this.baseFilter = baseFilter;
     this.clauses = clauses;
     this.joinFilterPreAnalysis = joinFilterPreAnalysis;
-  }
-
-  @Override
-  public Interval getInterval()
-  {
-    return baseAdapter.getInterval();
-  }
-
-  @Override
-  public RowSignature getRowSignature()
-  {
-    // Use a Set since we may encounter duplicates, if a field from a Joinable shadows one of the base fields.
-    final LinkedHashSet<String> columns = new LinkedHashSet<>(baseAdapter.getRowSignature().getColumnNames());
-
-    for (final JoinableClause clause : clauses) {
-      columns.addAll(clause.getAvailableColumnsPrefixed());
-    }
-
-    final RowSignature.Builder builder = RowSignature.builder();
-    for (final String column : columns) {
-      builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
-    }
-
-    return builder.build();
-  }
-
-  @Override
-  public Indexed<String> getAvailableDimensions()
-  {
-    // Use a Set since we may encounter duplicates, if a field from a Joinable shadows one of the base fields.
-    final LinkedHashSet<String> availableDimensions = new LinkedHashSet<>();
-
-    baseAdapter.getAvailableDimensions().forEach(availableDimensions::add);
-
-    for (JoinableClause clause : clauses) {
-      availableDimensions.addAll(clause.getAvailableColumnsPrefixed());
-    }
-
-    return new ListIndexed<>(Lists.newArrayList(availableDimensions));
-  }
-
-  @Override
-  public Iterable<String> getAvailableMetrics()
-  {
-    return baseAdapter.getAvailableMetrics();
-  }
-
-  @Override
-  public int getDimensionCardinality(String column)
-  {
-    final Optional<JoinableClause> maybeClause = getClauseForColumn(column);
-
-    if (maybeClause.isPresent()) {
-      final JoinableClause clause = maybeClause.get();
-      return clause.getJoinable().getCardinality(clause.unprefix(column));
-    } else {
-      return baseAdapter.getDimensionCardinality(column);
-    }
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMinValue(String column)
-  {
-    if (isBaseColumn(column)) {
-      return baseAdapter.getMinValue(column);
-    } else {
-      return null;
-    }
-  }
-
-  @Nullable
-  @Override
-  public Comparable getMaxValue(String column)
-  {
-    if (isBaseColumn(column)) {
-      return baseAdapter.getMaxValue(column);
-    } else {
-      return null;
-    }
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    final Optional<JoinableClause> maybeClause = getClauseForColumn(column);
-
-    if (maybeClause.isPresent()) {
-      final JoinableClause clause = maybeClause.get();
-      return clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
-    } else {
-      return baseAdapter.getColumnCapabilities(column);
-    }
-  }
-
-  @Override
-  public int getNumRows()
-  {
-    // Cannot determine the number of rows ahead of time for a join segment (rows may be added or removed based
-    // on the join condition). At the time of this writing, this method is only used by the 'segmentMetadata' query,
-    // which isn't meant to support join segments anyway.
-    throw new UnsupportedOperationException("Cannot retrieve number of rows from join segment");
-  }
-
-  @Override
-  public Metadata getMetadata()
-  {
-    // Cannot get meaningful Metadata for this segment, since it isn't real. At the time of this writing, this method
-    // is only used by the 'segmentMetadata' query, which isn't meant to support join segments anyway.
-    throw new UnsupportedOperationException("Cannot retrieve metadata from join segment");
-  }
-
-  @Override
-  public boolean hasBuiltInFilters()
-  {
-    // if the baseFilter is not null, then rows from underlying storage adapter can be potentially filtered.
-    // otherwise, a filtering inner join can also filter rows.
-    return baseFilter != null || clauses.stream().anyMatch(
-        clause -> clause.getJoinType() == JoinType.INNER && !clause.getCondition().isAlwaysTrue()
-    );
   }
 
   @Override
@@ -229,7 +81,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
       final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
                                                             .build();
-      return baseAdapter.makeCursorHolder(newSpec);
+      return baseCursorFactory.makeCursorHolder(newSpec);
     }
 
     return new CursorHolder()
@@ -237,19 +89,19 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
       final Closer joinablesCloser = Closer.create();
 
       /**
-       * Typically the same as {@link HashJoinSegmentStorageAdapter#joinFilterPreAnalysis}, but may differ when
+       * Typically the same as {@link HashJoinSegmentCursorFactory#joinFilterPreAnalysis}, but may differ when
        * an unnest datasource is layered on top of a join datasource.
        */
       final JoinFilterPreAnalysis actualPreAnalysis;
 
       /**
        * Result of {@link JoinFilterAnalyzer#splitFilter} on {@link #actualPreAnalysis} and
-       * {@link HashJoinSegmentStorageAdapter#baseFilter}.
+       * {@link HashJoinSegmentCursorFactory#baseFilter}.
        */
       final JoinFilterSplit joinFilterSplit;
 
       /**
-       * Cursor holder for {@link HashJoinSegmentStorageAdapter#baseAdapter}.
+       * Cursor holder for {@link HashJoinSegmentCursorFactory#baseCursorFactory}.
        */
       final CursorHolder baseCursorHolder;
 
@@ -297,8 +149,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
         );
         cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
 
-        baseCursorHolder =
-            joinablesCloser.register(baseAdapter.makeCursorHolder(cursorBuildSpecBuilder.build()));
+        baseCursorHolder = joinablesCloser.register(baseCursorFactory.makeCursorHolder(cursorBuildSpecBuilder.build()));
       }
 
       @Override
@@ -338,35 +189,53 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public boolean isFromTombstone()
+  public RowSignature getRowSignature()
   {
-    return baseAdapter.isFromTombstone();
-  }
+    // Use a Set since we may encounter duplicates, if a field from a Joinable shadows one of the base fields.
+    final RowSignature baseSignature = baseCursorFactory.getRowSignature();
 
-  /**
-   * Returns whether "column" will be selected from "baseAdapter". This is true if it is not shadowed by any joinables
-   * (i.e. if it does not start with any of their prefixes).
-   */
-  public boolean isBaseColumn(final String column)
-  {
-    return !getClauseForColumn(column).isPresent();
-  }
+    final LinkedHashSet<String> columns = new LinkedHashSet<>(baseSignature.getColumnNames());
+    for (final JoinableClause clause : clauses) {
+      columns.addAll(clause.getAvailableColumnsPrefixed());
+    }
 
-  /**
-   * Returns the JoinableClause corresponding to a particular column, based on the clauses' prefixes.
-   *
-   * @param column column name
-   *
-   * @return the clause, or absent if the column does not correspond to any clause
-   */
-  private Optional<JoinableClause> getClauseForColumn(final String column)
-  {
+    final RowSignature.Builder builder = RowSignature.builder();
     // Check clauses in reverse, since "makeCursorHolder" creates the cursor in such a way that the last clause
     // gets first dibs to claim a column.
-    return Lists.reverse(clauses)
-                .stream()
-                .filter(clause -> clause.includesColumn(column))
-                .findFirst();
+    LinkedHashSet<JoinableClause> reverseClauses = new LinkedHashSet<>(Lists.reverse(clauses));
+    for (final String column : columns) {
+      final Optional<JoinableClause> maybeClause = reverseClauses.stream()
+                                                                 .filter(c -> c.includesColumn(column))
+                                                                 .findFirst();
+      if (maybeClause.isPresent()) {
+        final JoinableClause clause = maybeClause.get();
+        builder.add(
+            column,
+            ColumnType.fromCapabilities(clause.getJoinable().getColumnCapabilities(clause.unprefix(column)))
+        );
+      } else {
+        builder.add(column, baseSignature.getColumnType(column).get());
+      }
+    }
+
+    return builder.build();
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    final Optional<JoinableClause> maybeClause = Lists.reverse(clauses)
+                                                      .stream()
+                                                      .filter(x -> x.includesColumn(column))
+                                                      .findFirst();
+
+    if (maybeClause.isPresent()) {
+      final JoinableClause clause = maybeClause.get();
+      return clause.getJoinable().getColumnCapabilities(clause.unprefix(column));
+    } else {
+      return baseCursorFactory.getColumnCapabilities(column);
+    }
   }
 
   @Nullable
@@ -383,7 +252,7 @@ public class HashJoinSegmentStorageAdapter implements StorageAdapter
     // Sorted the same way as the base segment, unless a joined-in column shadows one of the base columns.
     int limit = 0;
     for (; limit < baseOrdering.size(); limit++) {
-      if (!isBaseColumn(baseOrdering.get(limit).getColumnName())) {
+      if (!baseCursorFactory.getRowSignature().contains(baseOrdering.get(limit).getColumnName())) {
         break;
       }
     }
