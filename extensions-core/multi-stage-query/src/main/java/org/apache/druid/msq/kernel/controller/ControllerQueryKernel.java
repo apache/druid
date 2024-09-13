@@ -692,11 +692,10 @@ public class ControllerQueryKernel
   {
     if (stageOutputChannelModes.get(stageId) == OutputChannelMode.MEMORY) {
       if (getStageDefinition(stageId).doesSortDuringShuffle()) {
-        // Stages that sort during shuffle go through a READING_INPUT phase followed by a POST_READING phase
-        // (once all input is read). These stages start producing output once POST_READING starts.
-        return newPhase == ControllerStagePhase.POST_READING;
+        // Sorting stages start producing output when they finish reading their input.
+        return newPhase.isDoneReadingInput();
       } else {
-        // Can read results immediately.
+        // Non-sorting stages start producing output immediately.
         return newPhase == ControllerStagePhase.NEW;
       }
     } else {
