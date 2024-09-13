@@ -1778,7 +1778,7 @@
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             -Ddruid.test.stupidPool.poison=true
-                            -XX:OnOutOfMemoryError='chmod 644 ${project.parent.basedir}/target/*.hprof'
+                            -XX:OnOutOfMemoryError=${project.parent.basedir}/dev/chmod-heap-dumps.sh
                             -XX:HeapDumpPath=${project.parent.basedir}/target
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
