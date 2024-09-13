@@ -16,4 +16,4 @@
 # limitations under the License.
 
 BASE_DIR=$(git rev-parse --show-toplevel)
-chmod 644 "${BASE_DIR}/target/*.hprof"
+chmod 644 ${BASE_DIR}/target/*.hprof
