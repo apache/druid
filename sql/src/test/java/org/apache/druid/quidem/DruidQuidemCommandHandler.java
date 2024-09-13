@@ -34,7 +34,6 @@ import org.apache.calcite.util.Util;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -45,7 +44,6 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class DruidQuidemCommandHandler implements CommandHandler
 {
@@ -156,7 +154,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
       try (Closeable unhook = dhp.withHook(DruidHook.NATIVE_PLAN, (key, relNode) -> {
         logged.add(relNode);
       })) {
-        executeQuery(x);
+        executeExplainQuery(x);
       }
 
       for (Query<?> query: logged) {
@@ -164,31 +162,6 @@ public class DruidQuidemCommandHandler implements CommandHandler
         String str = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
         x.echo(ImmutableList.of(str));
       }
-    }
-
-    protected void executeExplain0(Context x) throws Exception
-    {
-            DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();
-            ObjectMapper objectMapper = connectionExtras.getObjectMapper();
-            QueryLogHook qlh = new QueryLogHook(objectMapper);
-            qlh.logQueriesForGlobal(
-                () -> {
-                  executeQuery(x);
-                }
-            );
-
-            List<Query<?>> queries = qlh.getRecordedQueries();
-
-            queries = queries
-                .stream()
-                .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, objectMapper))
-                .collect(Collectors.toList());
-
-            for (Query<?> query : queries) {
-              String str = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
-              x.echo(ImmutableList.of(str));
-            }
-
     }
   }
 

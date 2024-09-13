@@ -585,9 +585,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       DruidQuery finalBaseQuery = baseQuery;
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);
 
-      plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, finalBaseQuery.getQuery());
-
       if (explain != null) {
+        plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, finalBaseQuery.getQuery());
         return planExplanation(possiblyLimitedRoot, newRoot, true);
       }
 
