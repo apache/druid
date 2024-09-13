@@ -28,9 +28,9 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -45,7 +45,7 @@ import java.util.Set;
 @PublicApi
 public class ImmutableWorkerInfo
 {
-  private static final Logger logger = LoggerFactory.getLogger(ImmutableWorkerInfo.class);
+  private static final Logger logger = new Logger(ImmutableWorkerInfo.class);
   private final Worker worker;
   private final int currCapacityUsed;
   private final Map<String, Integer> typeSpecificCapacityMap;
@@ -219,7 +219,7 @@ public class ImmutableWorkerInfo
     boolean hasCapacity = capacityRemaining >= requiredCapacity;
 
     if (!hasCapacity) {
-      logger.info("Insufficient worker capacity for task '{}'. Required: {}, Available: {}",
+      logger.info("Insufficient worker capacity for task '%s'. Required: %s, Available: %s",
                   task.getId(), requiredCapacity, capacityRemaining
       );
     }
@@ -232,7 +232,7 @@ public class ImmutableWorkerInfo
     boolean isAvailable = !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup());
 
     if (!isAvailable) {
-      logger.info("Availability group '{}' is not available for task '{}'.",
+      logger.info("Availability group %s is not available for task '%s'.",
                   task.getTaskResource().getAvailabilityGroup(), task.getId()
       );
     }
@@ -255,14 +255,14 @@ public class ImmutableWorkerInfo
     if (limit instanceof Double) {
       canRun = hasCapacityBasedOnRatio(limit.doubleValue(), currentCapacityUsed, requiredCapacity);
       if (!canRun) {
-        logger.info("Task '{}' of type '{}' cannot run due to ratio limit. Current: {}, Required: {}, Limit: {}",
+        logger.info("Task '%s' of type '%s' cannot run due to ratio limit. Current: %s, Required: %s, Limit: %s",
                     task.getId(), task.getType(), currentCapacityUsed, requiredCapacity, limit.doubleValue()
         );
       }
     } else {
       canRun = hasCapacityBasedOnLimit(limit.intValue(), currentCapacityUsed, requiredCapacity);
       if (!canRun) {
-        logger.info("Task '{}' of type '{}' cannot run due to limit. Current: {}, Required: {}, Limit: {}",
+        logger.info("Task '%s' of type '%s' cannot run due to limit. Current: %s, Required: %s, Limit: %s",
                     task.getId(), task.getType(), currentCapacityUsed, requiredCapacity, limit.intValue()
         );
       }

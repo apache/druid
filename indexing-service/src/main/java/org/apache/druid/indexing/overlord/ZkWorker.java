@@ -150,21 +150,27 @@ public class ZkWorker implements Closeable
     return currCapacity;
   }
 
-  @JsonProperty("currParallelIndexCapacityUsed")
-  public int getCurrParallelIndexCapacityUsed()
+  @JsonProperty("currTypeSpecificCapacityUsed")
+  public Map<String, Integer> getCurrTypeSpecificCapacityUsed()
   {
-    return getCurrParallelIndexCapacityUsed(getRunningTasks());
+    return getCurrTypeSpecificCapacityUsed(getRunningTasks());
   }
 
-  private int getCurrParallelIndexCapacityUsed(Map<String, TaskAnnouncement> tasks)
+  private Map<String, Integer> getCurrTypeSpecificCapacityUsed(Map<String, TaskAnnouncement> tasks)
   {
-    int currParallelIndexCapacityUsed = 0;
-    for (TaskAnnouncement taskAnnouncement : tasks.values()) {
-      if (taskAnnouncement.getTaskType().equals(ParallelIndexSupervisorTask.TYPE)) {
-        currParallelIndexCapacityUsed += taskAnnouncement.getTaskResource().getRequiredCapacity();
-      }
+    Map<String, Integer> typeSpecificCapacityMap = new HashMap<>();
+    tasks.values()
+         .forEach(taskAnnouncement -> incrementTypeSpecificCapacity(taskAnnouncement.getTaskType(), taskAnnouncement.getTaskResource().getRequiredCapacity(), typeSpecificCapacityMap));
+    return typeSpecificCapacityMap;
+  }
+
+  public void incrementTypeSpecificCapacity(String type, int capacityToAdd, Map<String, Integer> typeSpecificCapacityMap)
+  {
+    if (typeSpecificCapacityMap.containsKey(type)) {
+      typeSpecificCapacityMap.put(type, typeSpecificCapacityMap.get(type) + capacityToAdd);
+    } else {
+      typeSpecificCapacityMap.put(type, capacityToAdd);
     }
-    return currParallelIndexCapacityUsed;
   }
 
   @JsonProperty("availabilityGroups")
