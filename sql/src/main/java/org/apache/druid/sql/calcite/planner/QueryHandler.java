@@ -47,7 +47,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.sql.SqlExplain;
@@ -407,7 +406,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
           DruidRel<?> druidRel = (DruidRel<?>) rel;
           try {
-            explanation = explainSqlPlanAsNativeQueries(relRoot, druidRel);
+            explanation = explainSqlPlanAsNativeQueries(plannerContext, relRoot, druidRel);
           }
           catch (Exception ex) {
             log.warn(ex, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan.");
@@ -454,7 +453,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
    * @throws JsonProcessingException
    */
-  private String explainSqlPlanAsNativeQueries(final RelRoot relRoot, DruidRel<?> rel) throws JsonProcessingException
+  private String explainSqlPlanAsNativeQueries(PlannerContext plannerContext, final RelRoot relRoot, DruidRel<?> rel) throws JsonProcessingException
   {
     ObjectMapper jsonMapper = handlerContext.jsonMapper();
     List<DruidQuery> druidQueryList;
@@ -471,6 +470,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
     for (DruidQuery druidQuery : druidQueryList) {
       Query<?> nativeQuery = druidQuery.getQuery();
+
+      plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, nativeQuery);
+
       ObjectNode objectNode = jsonMapper.createObjectNode();
       objectNode.set("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
       objectNode.set("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
@@ -583,6 +585,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       DruidQuery finalBaseQuery = baseQuery;
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);
 
+      plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, finalBaseQuery.getQuery());
+
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, newRoot, true);
       }
@@ -600,7 +604,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       handlerContext.hook().captureDruidRel(druidRel);
 
       plannerContext.dispatchHook(DruidHook.DRUID_PLAN, druidRel);
-      Hook.QUERY_PLAN.run(druidRel);
 
       if (explain != null) {
         return planExplanation(possiblyLimitedRoot, druidRel, true);
