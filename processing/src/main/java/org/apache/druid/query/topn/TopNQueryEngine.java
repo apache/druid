@@ -30,6 +30,7 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
@@ -73,7 +74,7 @@ public class TopNQueryEngine
    * update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
-      final TopNQuery query,
+      TopNQuery query,
       final Segment segment,
       @Nullable final TopNQueryMetrics queryMetrics
   )
@@ -87,6 +88,9 @@ public class TopNQueryEngine
 
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
+    if (cursorHolder.isPreAggregated()) {
+      query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+    }
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
@@ -126,7 +130,6 @@ public class TopNQueryEngine
     if (granularizer == null || selectorPlus.getSelector() == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
-
 
     if (queryMetrics != null) {
       queryMetrics.cursor(cursor);
