@@ -22,6 +22,7 @@ package org.apache.druid.data.input.google;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.google.GoogleByteSource;
 import org.apache.druid.storage.google.GoogleStorage;
@@ -37,6 +38,8 @@ public class GoogleCloudStorageEntity extends RetryingInputEntity
 {
   private final CloudObjectLocation location;
   private final GoogleByteSource byteSource;
+
+  private long size = -1;
 
   GoogleCloudStorageEntity(GoogleStorage storage, CloudObjectLocation location)
   {
@@ -68,6 +71,26 @@ public class GoogleCloudStorageEntity extends RetryingInputEntity
   public Predicate<Throwable> getRetryCondition()
   {
     return GoogleUtils.GOOGLE_RETRY;
+  }
+
+  @Override
+  public boolean isSeekable()
+  {
+    return true;
+  }
+
+  @Override
+  public long getSize() throws IOE
+  {
+    if (size < 0) {
+      try {
+        size = GoogleUtils.retryGoogleCloudStorageOperation(byteSource::size);
+      }
+      catch (Exception e) {
+        throw new IOE(e, "Failed to get size of object[%s] in bucket[%s]", location.getPath(), location.getBucket());
+      }
+    }
+    return size;
   }
 
   CloudObjectLocation getLocation()
