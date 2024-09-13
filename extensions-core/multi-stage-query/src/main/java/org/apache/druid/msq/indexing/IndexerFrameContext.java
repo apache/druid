@@ -39,7 +39,6 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 
 public class IndexerFrameContext implements FrameContext
 {
@@ -165,7 +164,7 @@ public class IndexerFrameContext implements FrameContext
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     if (processingBuffers != null) {
       processingBuffers.close();

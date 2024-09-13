@@ -181,14 +181,10 @@ public class WorkerMemoryParameters
    *
    * @param memoryIntrospector           memory introspector
    * @param frameSize                    frame size
-   * @param hasBroadcastInputs           whether this stage has broadcast inputs. If so, we allocate some memory
-   *                                     for {@link #getBroadcastBufferMemory()}.
-   * @param needsStatistics              whether this stage needs to collect key statistics, i.e.,
-   *                                     {@link StageDefinition#mustGatherResultKeyStatistics()}
-   * @param inputWorkers                 figure from {@link #computeNumInputWorkers}
-   * @param maxInputChannelsPerProcessor figure from {@link #computeMaxSimultaneousInputChannelsPerProcessor}
+   * @param inputSlices                  from {@link WorkOrder#getInputs()}
+   * @param broadcastInputNumbers        from {@link StageDefinition#getBroadcastInputNumbers()}
+   * @param shuffleSpec                  from {@link StageDefinition#getShuffleSpec()}
    * @param maxConcurrentStages          figure from {@link WorkerContext#maxConcurrentStages()}
-   * @param maxOutputPartitions          figure from {@link #computeMaxOutputPartitions(ShuffleSpec)}
    * @param numFramesPerOutputChannel    figure from {@link #computeFramesPerOutputChannel(OutputChannelMode)}
    *
    * @throws MSQException with {@link TooManyWorkersFault} or {@link NotEnoughMemoryFault} if not enough memory
@@ -515,6 +511,7 @@ public class WorkerMemoryParameters
 
     return Ints.checkedCast(Math.max(totalBroadcastInputChannels, totalNonBroadcastInputChannels));
   }
+
 
   /**
    * Distinct number of input workers.
