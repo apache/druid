@@ -59,6 +59,12 @@ public class DruidQueryGenerator
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
 
+  /**
+   * Tracks the upstream nodes during traversal.
+   *
+   * Its main purpose is to provide access to parent nodes;
+   * so that context sensitive logics can be formalized with it.
+   */
   static class DruidNodeStack
   {
     Stack<DruidLogicalNode> nodes = new Stack<>();
@@ -84,7 +90,6 @@ public class DruidQueryGenerator
     public int size()
     {
       return nodes.size();
-
     }
 
     public DruidLogicalNode peekNode()
@@ -105,7 +110,6 @@ public class DruidQueryGenerator
     public DruidLogicalNode peek()
     {
       return peekNode();
-
     }
   }
 
