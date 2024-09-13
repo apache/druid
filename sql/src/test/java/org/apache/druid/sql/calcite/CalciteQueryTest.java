@@ -15550,6 +15550,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
   @Test
   public void testGroupByDateTrunc()
   {
@@ -16085,11 +16086,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.CANNOT_RETRIEVE_ROWS)
   @Test
   public void testWindowingOverJoin()
   {
-    msqIncompatible();
     testBuilder()
         .sql("with "
             + "main as "

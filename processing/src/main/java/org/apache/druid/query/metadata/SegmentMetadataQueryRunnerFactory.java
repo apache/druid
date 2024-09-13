@@ -47,9 +47,11 @@ import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.Segment;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -117,7 +119,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Map<String, AggregatorFactory> aggregators;
         Metadata metadata = null;
         if (updatedQuery.hasAggregators()) {
-          metadata = segment.asStorageAdapter().getMetadata();
+          metadata = getMetadata(segment);
           if (metadata != null && metadata.getAggregators() != null) {
             aggregators = new HashMap<>();
             for (AggregatorFactory aggregator : metadata.getAggregators()) {
@@ -133,7 +135,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final TimestampSpec timestampSpec;
         if (updatedQuery.hasTimestampSpec()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = getMetadata(segment);
           }
           timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
         } else {
@@ -143,7 +145,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Granularity queryGranularity;
         if (updatedQuery.hasQueryGranularity()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = getMetadata(segment);
           }
           queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
         } else {
@@ -153,7 +155,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         Boolean rollup = null;
         if (updatedQuery.hasRollup()) {
           if (metadata == null) {
-            metadata = segment.asStorageAdapter().getMetadata();
+            metadata = getMetadata(segment);
           }
           rollup = metadata != null ? metadata.isRollup() : null;
           if (rollup == null) {
@@ -254,5 +256,15 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
   public QueryToolChest<SegmentAnalysis, SegmentMetadataQuery> getToolchest()
   {
     return toolChest;
+  }
+
+  @Nullable
+  private Metadata getMetadata(Segment segment)
+  {
+    PhysicalSegmentInspector inspector = segment.as(PhysicalSegmentInspector.class);
+    if (inspector != null) {
+      return inspector.getMetadata();
+    }
+    return null;
   }
 }

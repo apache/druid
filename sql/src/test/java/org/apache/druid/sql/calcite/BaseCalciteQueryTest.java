@@ -1217,11 +1217,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     skipVectorize = true;
   }
 
-  protected void sqlNativeIncompatible()
-  {
-    assumeTrue(testBuilder().config.isRunningMSQ(), "test case is not SQL native compatible");
-  }
-
   protected void msqIncompatible()
   {
     assumeFalse(testBuilder().config.isRunningMSQ(), "test case is not MSQ compatible");

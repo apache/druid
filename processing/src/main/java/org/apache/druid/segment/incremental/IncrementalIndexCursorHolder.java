@@ -41,18 +41,15 @@ import java.util.List;
 
 public class IncrementalIndexCursorHolder implements CursorHolder
 {
-  private final IncrementalIndexStorageAdapter storageAdapter;
   private final IncrementalIndex index;
   private final CursorBuildSpec spec;
   private final List<OrderBy> ordering;
 
   public IncrementalIndexCursorHolder(
-      IncrementalIndexStorageAdapter storageAdapter,
       IncrementalIndex index,
       CursorBuildSpec spec
   )
   {
-    this.storageAdapter = storageAdapter;
     this.index = index;
     this.spec = spec;
     if (index.timePosition == 0) {
@@ -81,7 +78,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
 
 
     return new IncrementalIndexCursor(
-        storageAdapter,
         index,
         spec.getVirtualColumns(),
         Cursors.getTimeOrdering(ordering),
@@ -110,7 +106,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     private boolean done;
 
     IncrementalIndexCursor(
-        IncrementalIndexStorageAdapter storageAdapter,
         IncrementalIndex index,
         VirtualColumns virtualColumns,
         Order timeOrder,
@@ -120,7 +115,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     {
       currEntry = new IncrementalIndexRowHolder();
       columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
-          storageAdapter,
+          index,
           virtualColumns,
           timeOrder,
           currEntry

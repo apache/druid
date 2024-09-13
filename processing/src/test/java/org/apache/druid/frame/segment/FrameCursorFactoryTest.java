@@ -37,11 +37,10 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
-import org.apache.druid.segment.DimensionDictionarySelector;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -70,7 +69,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
-public class FrameStorageAdapterTest
+public class FrameCursorFactoryTest
 {
   /**
    * Basic tests: everything except makeCursor, makeVectorCursor.
@@ -80,9 +79,9 @@ public class FrameStorageAdapterTest
   {
     private final FrameType frameType;
 
-    private StorageAdapter queryableAdapter;
+    private CursorFactory queryableCursorFactory;
     private FrameSegment frameSegment;
-    private StorageAdapter frameAdapter;
+    private CursorFactory frameCursorFactory;
 
     public BasicTests(final FrameType frameType)
     {
@@ -105,9 +104,9 @@ public class FrameStorageAdapterTest
     public void setUp()
     {
 
-      queryableAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
-      frameSegment = FrameTestUtil.adapterToFrameSegment(queryableAdapter, frameType);
-      frameAdapter = frameSegment.asStorageAdapter();
+      queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
+      frameSegment = FrameTestUtil.cursorFactoryToFrameSegment(queryableCursorFactory, frameType);
+      frameCursorFactory = frameSegment.asCursorFactory();
     }
 
     @After
@@ -119,61 +118,17 @@ public class FrameStorageAdapterTest
     }
 
     @Test
-    public void test_getInterval()
-    {
-      Assert.assertEquals(queryableAdapter.getInterval(), frameAdapter.getInterval());
-    }
-
-    @Test
     public void test_getRowSignature()
     {
-      Assert.assertEquals(queryableAdapter.getRowSignature(), frameAdapter.getRowSignature());
-    }
-
-    @Test
-    public void test_getAvailableDimensions()
-    {
-      // All columns are dimensions to the frameAdapter.
-      Assert.assertEquals(
-          queryableAdapter.getRowSignature().getColumnNames(),
-          ImmutableList.copyOf(frameAdapter.getAvailableDimensions())
-      );
-    }
-
-    @Test
-    public void test_getAvailableMetrics()
-    {
-      // All columns are dimensions to the frameAdapter.
-      Assert.assertEquals(Collections.emptyList(), frameAdapter.getAvailableMetrics());
-    }
-
-    @Test
-    public void test_getDimensionCardinality_knownColumns()
-    {
-      for (final String columnName : frameAdapter.getRowSignature().getColumnNames()) {
-        Assert.assertEquals(
-            columnName,
-            DimensionDictionarySelector.CARDINALITY_UNKNOWN,
-            frameAdapter.getDimensionCardinality(columnName)
-        );
-      }
-    }
-
-    @Test
-    public void test_getDimensionCardinality_unknownColumn()
-    {
-      Assert.assertEquals(
-          DimensionDictionarySelector.CARDINALITY_UNKNOWN,
-          frameAdapter.getDimensionCardinality("nonexistent")
-      );
+      Assert.assertEquals(queryableCursorFactory.getRowSignature(), frameCursorFactory.getRowSignature());
     }
 
     @Test
     public void test_getColumnCapabilities_typeOfKnownColumns()
     {
-      for (final String columnName : frameAdapter.getRowSignature().getColumnNames()) {
-        final ColumnCapabilities expectedCapabilities = queryableAdapter.getColumnCapabilities(columnName);
-        final ColumnCapabilities actualCapabilities = frameAdapter.getColumnCapabilities(columnName);
+      for (final String columnName : frameCursorFactory.getRowSignature().getColumnNames()) {
+        final ColumnCapabilities expectedCapabilities = queryableCursorFactory.getColumnCapabilities(columnName);
+        final ColumnCapabilities actualCapabilities = frameCursorFactory.getColumnCapabilities(columnName);
 
         Assert.assertEquals(
             StringUtils.format("column [%s] type", columnName),
@@ -204,19 +159,7 @@ public class FrameStorageAdapterTest
     @Test
     public void test_getColumnCapabilities_unknownColumn()
     {
-      Assert.assertNull(frameAdapter.getColumnCapabilities("nonexistent"));
-    }
-
-    @Test
-    public void test_getNumRows()
-    {
-      Assert.assertEquals(queryableAdapter.getNumRows(), frameAdapter.getNumRows());
-    }
-
-    @Test
-    public void test_getMetadata()
-    {
-      Assert.assertNull(frameAdapter.getMetadata());
+      Assert.assertNull(frameCursorFactory.getColumnCapabilities("nonexistent"));
     }
   }
 
@@ -235,9 +178,9 @@ public class FrameStorageAdapterTest
     private final VirtualColumns virtualColumns;
     private final boolean descending;
 
-    private StorageAdapter queryableAdapter;
+    private CursorFactory queryableCursorFactory;
     private FrameSegment frameSegment;
-    private StorageAdapter frameAdapter;
+    private CursorFactory frameCursorFactory;
     private final QueryContext queryContext = QueryContext.of(
         ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, VECTOR_SIZE)
     );
@@ -338,9 +281,9 @@ public class FrameStorageAdapterTest
     @Before
     public void setUp()
     {
-      queryableAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
-      frameSegment = FrameTestUtil.adapterToFrameSegment(queryableAdapter, frameType);
-      frameAdapter = frameSegment.asStorageAdapter();
+      queryableCursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
+      frameSegment = FrameTestUtil.cursorFactoryToFrameSegment(queryableCursorFactory, frameType);
+      frameCursorFactory = frameSegment.asCursorFactory();
     }
 
     @After
@@ -354,7 +297,7 @@ public class FrameStorageAdapterTest
     @Test
     public void test_makeCursor()
     {
-      final RowSignature signature = frameAdapter.getRowSignature();
+      final RowSignature signature = frameCursorFactory.getRowSignature();
 
       // Frame adapters don't know the order of the underlying frames, so they should ignore the "preferred ordering"
       // of the cursor build spec. We test this by passing the frameAdapter a build spec with a preferred ordering,
@@ -362,8 +305,8 @@ public class FrameStorageAdapterTest
       final CursorBuildSpec queryableBuildSpec =
           CursorBuildSpec.builder(buildSpec).setPreferredOrdering(Collections.emptyList()).build();
 
-      try (final CursorHolder queryableCursorHolder = queryableAdapter.makeCursorHolder(queryableBuildSpec);
-           final CursorHolder frameCursorHolder = frameAdapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder queryableCursorHolder = queryableCursorFactory.makeCursorHolder(queryableBuildSpec);
+           final CursorHolder frameCursorHolder = frameCursorFactory.makeCursorHolder(buildSpec)) {
         final Sequence<List<Object>> queryableRows =
             FrameTestUtil.readRowsFromCursor(advanceAndReset(queryableCursorHolder.asCursor()), signature);
         final Sequence<List<Object>> frameRows =
@@ -378,18 +321,18 @@ public class FrameStorageAdapterTest
       // Conditions for frames to be vectorizable.
       Assume.assumeThat(frameType, CoreMatchers.equalTo(FrameType.COLUMNAR));
       Assume.assumeFalse(descending);
-      assertVectorCursorsMatch(adapter -> adapter.makeCursorHolder(buildSpec));
+      assertVectorCursorsMatch(cursorFactory -> cursorFactory.makeCursorHolder(buildSpec));
     }
 
-    private void assertVectorCursorsMatch(final Function<StorageAdapter, CursorHolder> call)
+    private void assertVectorCursorsMatch(final Function<CursorFactory, CursorHolder> call)
     {
-      final CursorHolder cursorHolder = call.apply(queryableAdapter);
-      final CursorHolder frameCursorHolder = call.apply(frameAdapter);
+      final CursorHolder cursorHolder = call.apply(queryableCursorFactory);
+      final CursorHolder frameCursorHolder = call.apply(frameCursorFactory);
 
       Assert.assertTrue("queryable cursor is vectorizable", cursorHolder.canVectorize());
       Assert.assertTrue("frame cursor is vectorizable", frameCursorHolder.canVectorize());
 
-      final RowSignature signature = frameAdapter.getRowSignature();
+      final RowSignature signature = frameCursorFactory.getRowSignature();
       final Sequence<List<Object>> queryableRows =
           FrameTestUtil.readRowsFromVectorCursor(advanceAndReset(cursorHolder.asVectorCursor()), signature)
                        .withBaggage(cursorHolder);

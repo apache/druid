@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>32.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -1765,9 +1765,7 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            <!-- Bump up memory from 1.5 GB to 2 GB. This is particularly needed for JDK 17 where
-                            we have jfr profiler enabled which adds additional memory pressure. -->
-                            -Xmx2048m
+                            -Xmx2500m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
                             -XX:+HeapDumpOnOutOfMemoryError
@@ -1778,6 +1776,8 @@
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             -Ddruid.test.stupidPool.poison=true
+                            -XX:OnOutOfMemoryError=${project.parent.basedir}/dev/chmod-heap-dumps.sh
+                            -XX:HeapDumpPath=${project.parent.basedir}/target
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                             ${jfrProfilerArgLine}
