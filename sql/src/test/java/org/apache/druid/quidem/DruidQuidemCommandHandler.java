@@ -157,7 +157,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
         executeExplainQuery(x);
       }
 
-      for (Query<?> query: logged) {
+      for (Query<?> query : logged) {
         query = BaseCalciteQueryTest.recursivelyClearContext(query, objectMapper);
         String str = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
         x.echo(ImmutableList.of(str));

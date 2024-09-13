@@ -1213,7 +1213,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-//  @NotYetSupported(Modes.JOIN_CONDITION_UNSUPORTED_OPERAND)
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
