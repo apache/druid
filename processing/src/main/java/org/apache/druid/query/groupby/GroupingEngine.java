@@ -61,6 +61,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -508,6 +509,9 @@ public class GroupingEngine
       final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
       final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
+      if (cursorHolder.isPreAggregated()) {
+        query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+      }
       final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(cursorFactory);
 
       // group by specific vectorization check
