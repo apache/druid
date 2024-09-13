@@ -355,7 +355,7 @@ public class ExtensionsLoader
             if (druidExtensionDependencies != null) {
               throw new RE(
                   StringUtils.format(
-                      "The extension [%s] has multiple druid jars with dependencies in it. Each jar should be in a separate extension directory",
+                      "The extension [%s] has multiple druid jars with dependencies in it. Each jar should be in a separate extension directory.",
                       extension.getName()
                   )
               );

@@ -21,11 +21,14 @@ package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.inject.Injector;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -35,12 +38,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -51,6 +56,10 @@ public class ExtensionsLoaderTest
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private final ObjectMapper objectMapper = new ObjectMapper();
+  private final Map<String, byte[]> jarFileContents = ImmutableMap.of(
+      "jar-resource",
+      "jar-resource-contents".getBytes(Charset.defaultCharset())
+  );
 
   private Injector startupInjector()
   {
@@ -100,9 +109,9 @@ public class ExtensionsLoaderTest
     final File a_jar = new File(some_extension_dir, "a.jar");
     final File b_jar = new File(some_extension_dir, "b.jar");
     final File c_jar = new File(some_extension_dir, "c.jar");
-    createNewJar(a_jar);
-    createNewJar(b_jar);
-    createNewJar(c_jar);
+    createNewJar(a_jar, jarFileContents);
+    createNewJar(b_jar, jarFileContents);
+    createNewJar(c_jar, jarFileContents);
 
 
     final StandardURLClassLoader loader = extnLoader.getClassLoaderForExtension(some_extension_dir, false);
@@ -326,8 +335,8 @@ public class ExtensionsLoaderTest
     final File jar1 = new File(extension1, "jar1.jar");
     final File jar2 = new File(extension2, "jar2.jar");
 
-    createNewJar(jar1);
-    createNewJar(jar2);
+    createNewJar(jar1, jarFileContents);
+    createNewJar(jar2, jarFileContents);
 
     final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig(), objectMapper);
     final ClassLoader classLoader1 = extnLoader.getClassLoaderForExtension(extension1, false);
@@ -337,15 +346,129 @@ public class ExtensionsLoaderTest
     Assert.assertArrayEquals(new URL[]{jar2.toURI().toURL()}, ((StandardURLClassLoader) classLoader2).getURLs());
   }
 
-  private void createNewJar(File jarFileLocation) throws IOException {
+  @Test
+  public void testGetClassLoaderForExtension_withMissingDependency() throws IOException
+  {
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(new ExtensionsConfig(), objectMapper);
+    final String druidExtensionDependency = "other-druid-extension";
+    final DruidExtensionDependencies druidExtensionDependencies = new DruidExtensionDependencies(ImmutableList.of(druidExtensionDependency));
+
+    final File extensionDir = temporaryFolder.newFolder();
+    final File extensionJar = new File(extensionDir, "a.jar");
+    createNewJar(extensionJar, ImmutableMap.of("druid-extension-dependencies.json", objectMapper.writeValueAsBytes(druidExtensionDependencies)));
+
+    RE exception = Assert.assertThrows(RE.class, () -> {
+      extnLoader.getClassLoaderForExtension(extensionDir, false);
+    });
+
+    Assert.assertEquals(
+        StringUtils.format("[%s] depends on [%s] which is not a valid extension or not loaded.", extensionDir.getName(), druidExtensionDependency),
+        exception.getMessage()
+    );
+  }
+
+  @Test
+  public void testGetClassLoaderForExtension_dependencyLoaded() throws IOException
+  {
+    ExtensionsConfig extensionsConfig = new TestExtensionsConfig(temporaryFolder.getRoot().getPath());
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(extensionsConfig, objectMapper);
+
+    final File extensionDir = temporaryFolder.newFolder();
+    final File extensionJar = new File(extensionDir, "a.jar");
+    createNewJar(extensionJar, jarFileContents);
+
+    final File dependentExtensionDir = temporaryFolder.newFolder();
+    final File dependentExtensionJar = new File(dependentExtensionDir, "a.jar");
+    final DruidExtensionDependencies druidExtensionDependencies = new DruidExtensionDependencies(ImmutableList.of(extensionDir.getName()));
+    createNewJar(dependentExtensionJar, ImmutableMap.of("druid-extension-dependencies.json", objectMapper.writeValueAsBytes(druidExtensionDependencies)));
+
+    StandardURLClassLoader classLoader = extnLoader.getClassLoaderForExtension(extensionDir, false);
+    StandardURLClassLoader dependendentClassLoader = extnLoader.getClassLoaderForExtension(dependentExtensionDir, false);
+    Assert.assertTrue(dependendentClassLoader.getExtensionDependencyClassLoaders().contains(classLoader));
+    Assert.assertEquals(0, classLoader.getExtensionDependencyClassLoaders().size());
+
+  }
+
+  @Test
+  public void testGetClassLoaderForExtension_circularDependency() throws IOException
+  {
+    ExtensionsConfig extensionsConfig = new TestExtensionsConfig(temporaryFolder.getRoot().getPath());
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(extensionsConfig, objectMapper);
+
+    final File extensionDir = temporaryFolder.newFolder();
+    final File dependentExtensionDir = temporaryFolder.newFolder();
+
+    final File extensionJar = new File(extensionDir, "a.jar");
+    final DruidExtensionDependencies druidExtensionDependencies = new DruidExtensionDependencies(ImmutableList.of(dependentExtensionDir.getName()));
+    createNewJar(extensionJar, ImmutableMap.of("druid-extension-dependencies.json", objectMapper.writeValueAsBytes(druidExtensionDependencies)));
+
+    final File dependentExtensionJar = new File(dependentExtensionDir, "a.jar");
+    final DruidExtensionDependencies druidExtensionDependenciesCircular = new DruidExtensionDependencies(ImmutableList.of(extensionDir.getName()));
+    createNewJar(dependentExtensionJar, ImmutableMap.of("druid-extension-dependencies.json", objectMapper.writeValueAsBytes(druidExtensionDependenciesCircular)));
+
+    RE exception = Assert.assertThrows(RE.class, () -> {
+      extnLoader.getClassLoaderForExtension(extensionDir, false);
+    });
+
+    Assert.assertTrue(exception.getMessage().contains("has a circular druid extension dependency."));
+  }
+
+  @Test
+  public void testGetClassLoaderForExtension_multipleDruidJars() throws IOException
+  {
+    ExtensionsConfig extensionsConfig = new TestExtensionsConfig(temporaryFolder.getRoot().getPath());
+    final ExtensionsLoader extnLoader = new ExtensionsLoader(extensionsConfig, objectMapper);
+
+    final File extensionDir = temporaryFolder.newFolder();
+
+    final File extensionJar = new File(extensionDir, "a.jar");
+    final DruidExtensionDependencies druidExtensionDependencies = new DruidExtensionDependencies(ImmutableList.of());
+    createNewJar(extensionJar, ImmutableMap.of("druid-extension-dependencies.json", objectMapper.writeValueAsBytes(druidExtensionDependencies)));
+
+    final File extensionJar2 = new File(extensionDir, "b.jar");
+    createNewJar(extensionJar2, ImmutableMap.of("druid-extension-dependencies.json", objectMapper.writeValueAsBytes(druidExtensionDependencies)));
+
+
+    RE exception = Assert.assertThrows(RE.class, () -> {
+      extnLoader.getClassLoaderForExtension(extensionDir, false);
+    });
+
+    Assert.assertEquals(
+        exception.getMessage(),
+        StringUtils.format("The extension [%s] has multiple druid jars with dependencies in it. Each jar should be in a separate extension directory.", extensionDir.getName())
+    );
+  }
+
+
+
+  private void createNewJar(File jarFileLocation, Map<String, byte[]> jarFileContents) throws IOException
+  {
     Assert.assertTrue(jarFileLocation.createNewFile());
     FileOutputStream fos = new FileOutputStream(jarFileLocation.getPath());
     JarOutputStream jarOut = new JarOutputStream(fos);
-    JarEntry entry = new JarEntry("jar-resource.json");
-    jarOut.putNextEntry(entry);
-    jarOut.write("jar-resource".getBytes());
-    jarOut.closeEntry();
+    for (Map.Entry<String, byte[]> fileNameToContents : jarFileContents.entrySet()) {
+      JarEntry entry = new JarEntry(fileNameToContents.getKey());
+      jarOut.putNextEntry(entry);
+      jarOut.write(fileNameToContents.getValue());
+      jarOut.closeEntry();
+    }
     jarOut.close();
     fos.close();
+  }
+
+  private static class TestExtensionsConfig extends ExtensionsConfig
+  {
+    final String directory;
+
+    public TestExtensionsConfig(String directory)
+    {
+      this.directory = directory;
+    }
+
+    @Override
+    public String getDirectory()
+    {
+      return directory;
+    }
   }
 }
