@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
 import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidSort;
+import org.apache.druid.sql.calcite.rel.logical.DruidWindow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -221,7 +222,9 @@ public class DruidQueryGenerator
     Vertex createVertex(DruidNodeStack stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
       JoinSupportTweaks jst = JoinSupportTweaks.analyze(stack);
-      return new PDQVertex(partialDruidQuery, inputs, jst);
+      boolean forceSubQ = (stack.size()>1 && stack.get(0) instanceof DruidWindow);
+      forceSubQ=false;
+      return new PDQVertex(partialDruidQuery, inputs, jst,forceSubQ);
     }
 
     public class PDQVertex implements Vertex
@@ -229,12 +232,14 @@ public class DruidQueryGenerator
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
       final JoinSupportTweaks jst;
+      private boolean forceSubQ;
 
-      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, JoinSupportTweaks jst)
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, JoinSupportTweaks jst, boolean forceSubQ)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
         this.jst = jst;
+        this.forceSubQ = forceSubQ;
       }
 
       @Override
@@ -370,7 +375,7 @@ public class DruidQueryGenerator
       @Override
       public boolean canUnwrapSourceDesc()
       {
-        if (jst.forceSubQuery(getSource())) {
+        if (jst.forceSubQuery(getSource()) || forceSubQ) {
           return false;
         }
         if (partialDruidQuery.stage() == Stage.SCAN) {

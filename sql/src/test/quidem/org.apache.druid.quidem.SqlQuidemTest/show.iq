@@ -62,7 +62,7 @@ LogicalWindow(window#0=[window(order by [0] aggs [SUM($1)])])
             "context" : {
               "debug" : "true",
               "enableWindowing" : "true",
-              "sqlQueryId" : "f2dea824-b9b1-423e-8f01-2ed8bdc6c46d",
+              "sqlQueryId" : "c05f2253-9328-4618-92bc-b17b8ae72606",
               "sqlStringifyArrays" : false
             }
           }
@@ -100,7 +100,7 @@ LogicalWindow(window#0=[window(order by [0] aggs [SUM($1)])])
             "context" : {
               "debug" : "true",
               "enableWindowing" : "true",
-              "sqlQueryId" : "f2dea824-b9b1-423e-8f01-2ed8bdc6c46d",
+              "sqlQueryId" : "c05f2253-9328-4618-92bc-b17b8ae72606",
               "sqlStringifyArrays" : false
             }
           }
@@ -118,7 +118,7 @@ LogicalWindow(window#0=[window(order by [0] aggs [SUM($1)])])
       "context" : {
         "debug" : "true",
         "enableWindowing" : "true",
-        "sqlQueryId" : "f2dea824-b9b1-423e-8f01-2ed8bdc6c46d",
+        "sqlQueryId" : "c05f2253-9328-4618-92bc-b17b8ae72606",
         "sqlStringifyArrays" : false
       },
       "columnTypes" : [ "LONG", "STRING", "LONG" ],
@@ -135,7 +135,7 @@ LogicalWindow(window#0=[window(order by [0] aggs [SUM($1)])])
   "context" : {
     "debug" : "true",
     "enableWindowing" : "true",
-    "sqlQueryId" : "f2dea824-b9b1-423e-8f01-2ed8bdc6c46d",
+    "sqlQueryId" : "c05f2253-9328-4618-92bc-b17b8ae72606",
     "sqlStringifyArrays" : false
   },
   "outputSignature" : [ {
@@ -218,90 +218,115 @@ DruidWindow(window#0=[window(order by [0] aggs [SUM($1)])])
 {
   "queryType" : "windowOperator",
   "dataSource" : {
-    "type" : "join",
-    "left" : {
-      "type" : "query",
-      "query" : {
-        "queryType" : "topN",
-        "dataSource" : {
-          "type" : "table",
-          "name" : "foo"
+    "type" : "query",
+    "query" : {
+      "queryType" : "scan",
+      "dataSource" : {
+        "type" : "join",
+        "left" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "topN",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "dimension" : {
+              "type" : "default",
+              "dimension" : "dim1",
+              "outputName" : "d0",
+              "outputType" : "STRING"
+            },
+            "metric" : {
+              "type" : "numeric",
+              "metric" : "a0"
+            },
+            "threshold" : 200,
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "aggregations" : [ {
+              "type" : "count",
+              "name" : "a0"
+            } ],
+            "context" : {
+              "debug" : "true",
+              "enableWindowing" : "true",
+              "outputformat" : "MYSQL",
+              "plannerStrategy" : "DECOUPLED",
+              "sqlQueryId" : "069597bd-a92d-4df3-845b-d6d38c9bf8a7",
+              "sqlStringifyArrays" : false
+            }
+          }
         },
-        "dimension" : {
-          "type" : "default",
-          "dimension" : "dim1",
-          "outputName" : "d0",
-          "outputType" : "STRING"
+        "right" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "topN",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "numfoo"
+            },
+            "dimension" : {
+              "type" : "default",
+              "dimension" : "dim1",
+              "outputName" : "_d0",
+              "outputType" : "STRING"
+            },
+            "metric" : {
+              "type" : "numeric",
+              "metric" : "a0"
+            },
+            "threshold" : 200,
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "aggregations" : [ {
+              "type" : "count",
+              "name" : "a0"
+            } ],
+            "context" : {
+              "debug" : "true",
+              "enableWindowing" : "true",
+              "outputformat" : "MYSQL",
+              "plannerStrategy" : "DECOUPLED",
+              "sqlQueryId" : "069597bd-a92d-4df3-845b-d6d38c9bf8a7",
+              "sqlStringifyArrays" : false
+            }
+          }
         },
-        "metric" : {
-          "type" : "numeric",
-          "metric" : "a0"
-        },
-        "threshold" : 200,
-        "intervals" : {
-          "type" : "intervals",
-          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-        },
-        "granularity" : {
-          "type" : "all"
-        },
-        "aggregations" : [ {
-          "type" : "count",
-          "name" : "a0"
-        } ],
-        "context" : {
-          "debug" : "true",
-          "enableWindowing" : "true",
-          "outputformat" : "MYSQL",
-          "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "82ec0abd-1c78-40c3-8510-96850b00a5a7",
-          "sqlStringifyArrays" : false
-        }
-      }
-    },
-    "right" : {
-      "type" : "query",
-      "query" : {
-        "queryType" : "topN",
-        "dataSource" : {
-          "type" : "table",
-          "name" : "numfoo"
-        },
-        "dimension" : {
-          "type" : "default",
-          "dimension" : "dim1",
-          "outputName" : "_d0",
-          "outputType" : "STRING"
-        },
-        "metric" : {
-          "type" : "numeric",
-          "metric" : "a0"
-        },
-        "threshold" : 200,
-        "intervals" : {
-          "type" : "intervals",
-          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-        },
-        "granularity" : {
-          "type" : "all"
-        },
-        "aggregations" : [ {
-          "type" : "count",
-          "name" : "a0"
-        } ],
-        "context" : {
-          "debug" : "true",
-          "enableWindowing" : "true",
-          "outputformat" : "MYSQL",
-          "plannerStrategy" : "DECOUPLED",
-          "sqlQueryId" : "82ec0abd-1c78-40c3-8510-96850b00a5a7",
-          "sqlStringifyArrays" : false
-        }
-      }
-    },
-    "rightPrefix" : "j0.",
-    "condition" : "notdistinctfrom(\"d0\",\"j0._d0\")",
-    "joinType" : "LEFT"
+        "rightPrefix" : "j0.",
+        "condition" : "notdistinctfrom(\"d0\",\"j0._d0\")",
+        "joinType" : "LEFT"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "resultFormat" : "compactedList",
+      "columns" : [ "a0", "d0", "j0.a0" ],
+      "context" : {
+        "debug" : "true",
+        "enableWindowing" : "true",
+        "outputformat" : "MYSQL",
+        "plannerStrategy" : "DECOUPLED",
+        "sqlQueryId" : "069597bd-a92d-4df3-845b-d6d38c9bf8a7",
+        "sqlStringifyArrays" : false
+      },
+      "columnTypes" : [ "LONG", "STRING", "LONG" ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "legacy" : false
+    }
   },
   "intervals" : {
     "type" : "LegacySegmentSpec",
@@ -312,7 +337,7 @@ DruidWindow(window#0=[window(order by [0] aggs [SUM($1)])])
     "enableWindowing" : "true",
     "outputformat" : "MYSQL",
     "plannerStrategy" : "DECOUPLED",
-    "sqlQueryId" : "82ec0abd-1c78-40c3-8510-96850b00a5a7",
+    "sqlQueryId" : "069597bd-a92d-4df3-845b-d6d38c9bf8a7",
     "sqlStringifyArrays" : false
   },
   "outputSignature" : [ {
@@ -360,4 +385,16 @@ DruidWindow(window#0=[window(order by [0] aggs [SUM($1)])])
   }
 }
 !nativePlan
-# !ok
++--------+-----+-----+--------+
+| pickup | cnt | cnt | EXPR$2 |
++--------+-----+-----+--------+
+|        |   1 |   1 |      1 |
+| 1      |   1 |   1 |      2 |
+| 10.1   |   1 |   1 |      3 |
+| 2      |   1 |   1 |      4 |
+| abc    |   1 |   1 |      5 |
+| def    |   1 |   1 |      6 |
++--------+-----+-----+--------+
+(6 rows)
+
+!ok
