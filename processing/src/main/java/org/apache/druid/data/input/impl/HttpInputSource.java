@@ -106,7 +106,7 @@ public class HttpInputSource
     }
     for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
       if (!config.getAllowedHeaders().contains(StringUtils.toLowerCase(entry.getKey()))) {
-        throw InvalidInput.exception("Got forbidden header %s, allowed headers are only %s. %s",
+        throw InvalidInput.exception("Got forbidden header [%s], allowed headers are only [%s]. You can control the allowed headers by updating druid.ingestion.http.allowedHeaders",
                                      entry.getKey(), config.getAllowedHeaders(), message
         );
       }
