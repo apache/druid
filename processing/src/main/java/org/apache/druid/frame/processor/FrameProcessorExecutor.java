@@ -155,7 +155,7 @@ public class FrameProcessorExecutor
             final IntSet await = result.awaitSet();
 
             if (await.isEmpty()) {
-              exec.submit(ExecutorRunnable.this);
+              exec.execute(ExecutorRunnable.this);
             } else if (result.isAwaitAll() || await.size() == 1) {
               final List<ListenableFuture<?>> readabilityFutures = new ArrayList<>();
 
@@ -167,7 +167,7 @@ public class FrameProcessorExecutor
               }
 
               if (readabilityFutures.isEmpty()) {
-                exec.submit(ExecutorRunnable.this);
+                exec.execute(ExecutorRunnable.this);
               } else {
                 runProcessorAfterFutureResolves(Futures.allAsList(readabilityFutures));
               }
@@ -275,7 +275,7 @@ public class FrameProcessorExecutor
               public void onSuccess(final V ignored)
               {
                 try {
-                  exec.submit(ExecutorRunnable.this);
+                  exec.execute(ExecutorRunnable.this);
                 }
                 catch (Throwable e) {
                   fail(e);
