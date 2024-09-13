@@ -88,7 +88,7 @@ public class IndexerWorkerContext implements WorkerContext
   @GuardedBy("this")
   private ServiceLocator controllerLocator;
 
-  @GuardedBy("this")
+  // Written under synchronized(this) using double-checked locking.
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
 
   public IndexerWorkerContext(
