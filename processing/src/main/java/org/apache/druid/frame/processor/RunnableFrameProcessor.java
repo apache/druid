@@ -23,7 +23,6 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -52,14 +51,14 @@ public class RunnableFrameProcessor implements FrameProcessor<Void>
   }
 
   @Override
-  public ReturnOrAwait<Void> runIncrementally(IntSet readableInputs) throws InterruptedException, IOException
+  public ReturnOrAwait<Void> runIncrementally(IntSet readableInputs)
   {
     runnable.run();
     return ReturnOrAwait.returnObject(null);
   }
 
   @Override
-  public void cleanup() throws IOException
+  public void cleanup()
   {
     // Nothing to do.
   }

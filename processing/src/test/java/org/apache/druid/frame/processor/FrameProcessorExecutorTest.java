@@ -400,7 +400,7 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
-    public void test_runFully_nonexistentCancellationId() throws InterruptedException
+    public void test_runFully_nonexistentCancellationId()
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
       final String cancellationId = "xyzzy";

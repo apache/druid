@@ -393,7 +393,7 @@ public class FrameProcessorExecutor
 
     logProcessorStatusString(processor, finished, null);
     registerCancelableProcessor(processor, cancellationId);
-    exec.submit(runnable);
+    exec.execute(runnable);
     return finished;
   }
 
