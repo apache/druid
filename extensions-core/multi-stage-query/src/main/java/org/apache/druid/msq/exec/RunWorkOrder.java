@@ -57,18 +57,20 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -105,6 +107,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -115,13 +118,26 @@ public class RunWorkOrder
 {
   enum State
   {
+    /**
+     * Initial state. Must be in this state to call {@link #startAsync()}.
+     */
     INIT,
+
+    /**
+     * State entered upon calling {@link #startAsync()}.
+     */
     STARTED,
+
+    /**
+     * State entered upon calling {@link #stop()}.
+     */
     STOPPING,
+
+    /**
+     * State entered when a call to {@link #stop()} concludes.
+     */
     STOPPED
   }
-
-  private static final Logger log = new Logger(RunWorkOrder.class);
 
   private final WorkOrder workOrder;
   private final InputChannelFactory inputChannelFactory;
@@ -136,7 +152,8 @@ public class RunWorkOrder
   private final boolean removeNullBytes;
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
   private final AtomicReference<State> state = new AtomicReference<>(State.INIT);
-  private final SettableFuture<Object> finishedFuture = SettableFuture.create();
+  private final CountDownLatch stopLatch = new CountDownLatch(1);
+  private final AtomicReference<Either<Throwable, Object>> resultForListener = new AtomicReference<>();
 
   @MonotonicNonNull
   private InputSliceReader inputSliceReader;
@@ -220,9 +237,11 @@ public class RunWorkOrder
   }
 
   /**
-   * Stops an execution that was previously initiated through {@link #startAsync()}.
+   * Stops an execution that was previously initiated through {@link #startAsync()} and closes the {@link FrameContext}.
+   * May be called to cancel execution. Must also be called after successful execution in order to ensure that resources
+   * are all properly cleaned up.
+   *
    * Blocks until execution is fully stopped.
-   * Closes the {@link FrameContext}.
    */
   public void stop() throws InterruptedException
   {
@@ -249,12 +268,27 @@ public class RunWorkOrder
         }
       }
 
+      try {
+        // notifyListener will ignore this cancellation error if work has already succeeded.
+        notifyListener(Either.error(new MSQException(CanceledFault.instance())));
+      } catch (Throwable e2) {
+        if (e == null) {
+          e = e2;
+        } else {
+          e.addSuppressed(e2);
+        }
+      }
+
+      stopLatch.countDown();
+
       if (e != null) {
         Throwables.throwIfInstanceOf(e, InterruptedException.class);
         Throwables.throwIfUnchecked(e);
         throw new RuntimeException(e);
       }
     }
+
+    stopLatch.await();
   }
 
   /**
@@ -523,17 +557,31 @@ public class RunWorkOrder
               writeDurableStorageSuccessFile();
             }
 
-            listener.onSuccess(resultObject);
+            notifyListener(Either.value(resultObject));
           }
 
           @Override
           public void onFailure(final Throwable t)
           {
-            listener.onFailure(t);
+            notifyListener(Either.error(t));
           }
         },
         Execs.directExecutor()
     );
+  }
+
+  /**
+   * Notify {@link RunWorkOrderListener} that the job is done, if not already notified.
+   */
+  private void notifyListener(final Either<Throwable, Object> result)
+  {
+    if (resultForListener.compareAndSet(null, result)) {
+      if (result.isError()) {
+        listener.onFailure(result.error());
+      } else {
+        listener.onSuccess(result.valueOrThrow());
+      }
+    }
   }
 
   /**

@@ -367,11 +367,12 @@ public class WorkerImpl implements Worker
     final WorkerStageKernel kernel = kernelHolder.kernel;
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
-    final String cancellationId = cancellationIdFor(stageDefinition.getId());
+    final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(
-        "Processing work order for stage[%s]%s",
+        "Starting work order for stage[%s], workerNumber[%d]%s",
         stageDefinition.getId(),
+        workOrder.getWorkerNumber(),
         (log.isDebugEnabled()
          ? StringUtils.format(", payload[%s]", context.jsonMapper().writeValueAsString(workOrder)) : "")
     );
@@ -983,9 +984,9 @@ public class WorkerImpl implements Worker
   /**
    * Returns cancellation ID for a particular stage, to be used in {@link FrameProcessorExecutor#cancel(String)}.
    */
-  private static String cancellationIdFor(final StageId stageId)
+  private static String cancellationIdFor(final StageId stageId, final int workerNumber)
   {
-    return stageId.toString();
+    return StringUtils.format("%s_%s", stageId, workerNumber);
   }
 
   /**
