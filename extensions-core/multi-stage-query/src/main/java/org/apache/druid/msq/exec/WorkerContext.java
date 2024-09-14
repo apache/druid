@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.server.DruidNode;
@@ -79,14 +78,15 @@ public interface WorkerContext
   WorkerClient makeWorkerClient();
 
   /**
-   * Directory for temporary outputs.
+   * Directory for temporary outputs, used as a base for {@link FrameContext#tempDir()}. This directory is not
+   * necessarily fully owned by the worker.
    */
   File tempDir();
 
   /**
    * Create a context with useful objects required by {@link FrameProcessorFactory#makeProcessors}.
    */
-  FrameContext frameContext(QueryDefinition queryDef, int stageNumber, OutputChannelMode outputChannelMode);
+  FrameContext frameContext(WorkOrder workOrder);
 
   /**
    * Number of available processing threads.
