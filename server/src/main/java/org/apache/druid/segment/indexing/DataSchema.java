@@ -434,14 +434,14 @@ public class DataSchema
 
     public Builder(DataSchema schema)
     {
-      this.dataSource = schema.getDataSource();
-      this.aggregators = schema.getAggregators();
-      this.granularitySpec = schema.getGranularitySpec();
-      this.transformSpec = schema.getTransformSpec();
-      this.parserMap = schema.getParserMap();
+      this.dataSource = schema.dataSource;
+      this.aggregators = schema.aggregators;
+      this.granularitySpec = schema.granularitySpec;
+      this.transformSpec = schema.transformSpec;
+      this.parserMap = schema.parserMap;
       this.objectMapper = schema.objectMapper;
-      this.timestampSpec = schema.getTimestampSpec();
-      this.dimensionsSpec = schema.getDimensionsSpec();
+      this.timestampSpec = schema.timestampSpec;
+      this.dimensionsSpec = schema.dimensionsSpec;
     }
 
     public Builder withDataSource(String dataSource)
