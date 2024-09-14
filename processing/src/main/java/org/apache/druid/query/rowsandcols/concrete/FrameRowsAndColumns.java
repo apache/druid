@@ -19,87 +19,22 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
-import com.google.common.base.Objects;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.segment.CloseableShapeshifter;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.LinkedHashMap;
 
-public abstract class FrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
+public interface FrameRowsAndColumns extends RowsAndColumns
 {
-  final Frame frame;
-  final RowSignature signature;
-  final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
+  Frame getFrame();
 
-  public FrameRowsAndColumns(Frame frame, RowSignature signature)
-  {
-    this.frame = frame;
-    this.signature = signature;
-  }
+  RowSignature getSignature();
 
-  public Frame getFrame()
-  {
-    return frame;
-  }
-
-  public RowSignature getSignature()
-  {
-    return signature;
-  }
-
-  @Override
-  public Collection<String> getColumnNames()
-  {
-    return signature.getColumnNames();
-  }
-
-  @Override
-  public int numRows()
-  {
-    return frame.numRows();
-  }
-
-  @SuppressWarnings("unchecked")
   @Nullable
   @Override
-  public <T> T as(Class<T> clazz)
+  default <T> T as(Class<T> clazz)
   {
-    if (CursorFactory.class.equals(clazz)) {
-      return (T) FrameReader.create(signature).makeCursorFactory(frame);
-    }
     return RowsAndColumns.super.as(clazz);
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hashCode(frame, signature);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (!(o instanceof FrameRowsAndColumns)) {
-      return false;
-    }
-    FrameRowsAndColumns otherFrame = (FrameRowsAndColumns) o;
-
-    return frame.writableMemory().equals(otherFrame.frame.writableMemory()) && signature.equals(otherFrame.signature);
   }
 }

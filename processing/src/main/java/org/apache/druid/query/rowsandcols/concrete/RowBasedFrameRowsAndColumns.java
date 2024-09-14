@@ -30,7 +30,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 
-public class RowBasedFrameRowsAndColumns extends FrameRowsAndColumns
+public class RowBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
   public RowBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
