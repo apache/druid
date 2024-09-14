@@ -17,37 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input;
+package org.apache.druid.collections;
 
-import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.msq.input.stage.StageInputSpec;
-
-import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.BlockingQueue;
 
 /**
- * Utility functions for working with {@link InputSpec}.
+ * Implementation of {@link NonBlockingPool} based on a pre-created {@link BlockingQueue} that never actually blocks.
+ * If the pool is empty when {@link #take()} is called, it throws {@link NoSuchElementException}.
  */
-public class InputSpecs
+public class QueueNonBlockingPool<T> implements NonBlockingPool<T>
 {
-  private InputSpecs()
+  private final BlockingQueue<T> queue;
+
+  public QueueNonBlockingPool(final BlockingQueue<T> queue)
   {
-    // No instantiation.
+    this.queue = queue;
   }
 
-  /**
-   * Returns the set of input stages, from {@link StageInputSpec}, for a given list of {@link InputSpec}.
-   */
-  public static IntSet getStageNumbers(final List<InputSpec> specs)
+  @Override
+  public ResourceHolder<T> take()
   {
-    final IntSet retVal = new IntRBTreeSet();
-
-    for (final InputSpec spec : specs) {
-      if (spec instanceof StageInputSpec) {
-        retVal.add(((StageInputSpec) spec).getStageNumber());
-      }
+    final T item = queue.poll();
+    if (item == null) {
+      throw new NoSuchElementException("No items available");
     }
 
-    return retVal;
+    return new ReferenceCountingResourceHolder<>(item, () -> queue.add(item));
   }
 }
