@@ -822,13 +822,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return isEmpty() ? null : DateTimes.utc(getMaxTimeMillis());
   }
 
-  @Nullable
-  public Integer getDimensionIndex(String dimension)
-  {
-    DimensionDesc dimSpec = getDimension(dimension);
-    return dimSpec == null ? null : dimSpec.getIndex();
-  }
-
   /**
    * Returns names of time and dimension columns, in persist sort order. Includes {@link ColumnHolder#TIME_COLUMN_NAME}.
    */
