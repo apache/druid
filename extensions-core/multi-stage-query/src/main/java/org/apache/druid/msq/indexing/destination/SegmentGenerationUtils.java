@@ -96,14 +96,14 @@ public final class SegmentGenerationUtils
             destination.getDimensionSchemas()
         );
 
-    return new DataSchema(
-        destination.getDataSource(),
-        new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
-        dimensionsAndAggregators.lhs,
-        dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]),
-        makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper),
-        new TransformSpec(null, Collections.emptyList())
-    );
+    return DataSchema.builder()
+                     .withDataSource(destination.getDataSource())
+                     .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
+                     .withDimensions(dimensionsAndAggregators.lhs)
+                     .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
+                     .withGranularity(makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withTransform(new TransformSpec(null, Collections.emptyList()))
+                     .build();
   }
 
   private static GranularitySpec makeGranularitySpecForIngestion(

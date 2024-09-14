@@ -152,18 +152,17 @@ public class GranularityPathSpecTest
   {
     UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                ImmutableList.of(Intervals.of("2015-11-06T00:00Z/2015-11-07T00:00Z"))
-            ),
-            null,
-            jsonMapper
-        ),
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.MINUTE,
+                          ImmutableList.of(Intervals.of("2015-11-06T00:00Z/2015-11-07T00:00Z"))
+                      )
+                  )
+                  .withObjectMapper(jsonMapper)
+                  .build(),
         new HadoopIOConfig(null, null, null),
         DEFAULT_TUNING_CONFIG
     );
@@ -204,18 +203,17 @@ public class GranularityPathSpecTest
   {
     UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
-        new DataSchema(
-            "foo",
-            null,
-            new AggregatorFactory[0],
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.ALL,
-                ImmutableList.of(Intervals.of("2015-01-01T11Z/2015-01-02T05Z"))
-            ),
-            null,
-            jsonMapper
-        ),
+        DataSchema.builder()
+                  .withDataSource("foo")
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.ALL,
+                          ImmutableList.of(Intervals.of("2015-01-01T11Z/2015-01-02T05Z"))
+                      )
+                  )
+                  .withObjectMapper(jsonMapper)
+                  .build(),
         new HadoopIOConfig(null, null, null),
         DEFAULT_TUNING_CONFIG
     );

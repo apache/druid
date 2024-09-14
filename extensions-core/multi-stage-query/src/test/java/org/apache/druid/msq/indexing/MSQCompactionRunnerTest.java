@@ -259,19 +259,20 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    DataSchema dataSchema = new DataSchema(
-        DATA_SOURCE,
-        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
-        new DimensionsSpec(DIMENSIONS),
-        new AggregatorFactory[]{},
-        new UniformGranularitySpec(
-            SEGMENT_GRANULARITY.getDefaultGranularity(),
-            null,
-            false,
-            Collections.singletonList(COMPACTION_INTERVAL)
-        ),
-        new TransformSpec(dimFilter, Collections.emptyList())
-    );
+    DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource(DATA_SOURCE)
+                  .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+                  .withDimensions(DIMENSIONS)
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          SEGMENT_GRANULARITY.getDefaultGranularity(),
+                          null,
+                          false,
+                          Collections.singletonList(COMPACTION_INTERVAL)
+                      )
+                  )
+                  .build();
 
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(

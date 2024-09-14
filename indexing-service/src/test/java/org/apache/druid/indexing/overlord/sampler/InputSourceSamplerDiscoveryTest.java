@@ -66,14 +66,11 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
       final SamplerResponse response = inputSourceSampler.sample(
           inputSource,
           new JsonInputFormat(null, null, null, null, null),
-          new DataSchema(
-              "test",
-              new TimestampSpec("t", null, null),
-              DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-              null,
-              null,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource("test")
+                    .withTimestamp(new TimestampSpec("t", null, null))
+                    .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                    .build(),
           null
       );
 
@@ -131,14 +128,11 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         new JsonInputFormat(null, null, null, null, null),
-        new DataSchema(
-            "test",
-            new TimestampSpec("t", null, null),
-            DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-            null,
-            null,
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec("t", null, null))
+                  .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                  .build(),
         null
     );
 
@@ -189,14 +183,12 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
   public void testTypesClassicDiscovery()
   {
     final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-    final DataSchema dataSchema = new DataSchema(
-        "test",
-        new TimestampSpec("t", null, null),
-        DimensionsSpec.builder().build(),
-        null,
-        null,
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec("t", null, null))
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .build();
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         new JsonInputFormat(null, null, null, null, null),
@@ -248,23 +240,20 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
   public void testTypesNoDiscoveryExplicitSchema()
   {
     final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-    final DataSchema dataSchema = new DataSchema(
-        "test",
-        new TimestampSpec("t", null, null),
-        DimensionsSpec.builder().setDimensions(
-            ImmutableList.of(new StringDimensionSchema("string"),
-                             new LongDimensionSchema("long"),
-                             new DoubleDimensionSchema("double"),
-                             new StringDimensionSchema("bool"),
-                             new AutoTypeColumnSchema("variant", null),
-                             new AutoTypeColumnSchema("array", null),
-                             new AutoTypeColumnSchema("nested", null)
-            )
-        ).build(),
-        null,
-        null,
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec("t", null, null))
+                  .withDimensions(
+                      new StringDimensionSchema("string"),
+                      new LongDimensionSchema("long"),
+                      new DoubleDimensionSchema("double"),
+                      new StringDimensionSchema("bool"),
+                      new AutoTypeColumnSchema("variant", null),
+                      new AutoTypeColumnSchema("array", null),
+                      new AutoTypeColumnSchema("nested", null)
+                  )
+                  .build();
     final SamplerResponse response = inputSourceSampler.sample(
         inputSource,
         new JsonInputFormat(null, null, null, null, null),

@@ -53,7 +53,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -237,14 +236,10 @@ public class MaterializedViewSupervisorTest
     Map<Interval, HadoopIndexTask> runningTasks = runningTasksPair.lhs;
     Map<Interval, String> runningVersion = runningTasksPair.rhs;
 
-    DataSchema dataSchema = new DataSchema(
-        "test_datasource",
-        null,
-        null,
-        null,
-        TransformSpec.NONE,
-        objectMapper
-    );
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test_datasource")
+                                      .withObjectMapper(objectMapper)
+                                      .build();
     HadoopIOConfig hadoopIOConfig = new HadoopIOConfig(new HashMap<>(), null, null);
     HadoopIngestionSpec spec = new HadoopIngestionSpec(dataSchema, hadoopIOConfig, null);
     HadoopIndexTask task1 = new HadoopIndexTask(

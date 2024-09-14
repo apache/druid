@@ -151,19 +151,18 @@ public class BatchAppenderatorTester implements AutoCloseable
         Map.class
     );
 
-    schema = new DataSchema(
-        DATASOURCE,
-        null,
-        null,
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count"),
-            new LongSumAggregatorFactory("met", "met")
-        },
-        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
-        null,
-        parserMap,
-        objectMapper
-    );
+    schema = DataSchema.builder()
+                       .withDataSource(DATASOURCE)
+                       .withAggregators(
+                           new CountAggregatorFactory("count"),
+                           new LongSumAggregatorFactory("met", "met")
+                       )
+                       .withGranularity(
+                           new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
+                       )
+                       .withParserMap(parserMap)
+                       .withObjectMapper(objectMapper)
+                       .build();
 
     tuningConfig = new TestAppenderatorConfig(
         TuningConfig.DEFAULT_APPENDABLE_INDEX,

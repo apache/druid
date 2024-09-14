@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
@@ -64,6 +63,17 @@ import java.util.stream.Collectors;
 public class DataSchema
 {
   private static final Logger log = new Logger(DataSchema.class);
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static Builder builder(DataSchema schema)
+  {
+    return new Builder(schema);
+  }
+
   private final String dataSource;
   private final AggregatorFactory[] aggregators;
   private final GranularitySpec granularitySpec;
@@ -124,33 +134,6 @@ public class DataSchema
           dataSource
       );
     }
-  }
-
-  @VisibleForTesting
-  public DataSchema(
-      String dataSource,
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      AggregatorFactory[] aggregators,
-      GranularitySpec granularitySpec,
-      TransformSpec transformSpec
-  )
-  {
-    this(dataSource, timestampSpec, dimensionsSpec, aggregators, granularitySpec, transformSpec, null, null);
-  }
-
-  // old constructor for backward compatibility
-  @Deprecated
-  public DataSchema(
-      String dataSource,
-      Map<String, Object> parserMap,
-      AggregatorFactory[] aggregators,
-      GranularitySpec granularitySpec,
-      TransformSpec transformSpec,
-      ObjectMapper objectMapper
-  )
-  {
-    this(dataSource, null, null, aggregators, granularitySpec, transformSpec, parserMap, objectMapper);
   }
 
   private static void validateDatasourceName(String dataSource)
@@ -403,44 +386,17 @@ public class DataSchema
 
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
-    return new DataSchema(
-        dataSource,
-        timestampSpec,
-        dimensionsSpec,
-        aggregators,
-        granularitySpec,
-        transformSpec,
-        parserMap,
-        objectMapper
-    );
+    return builder(this).withGranularity(granularitySpec).build();
   }
 
   public DataSchema withTransformSpec(TransformSpec transformSpec)
   {
-    return new DataSchema(
-        dataSource,
-        timestampSpec,
-        dimensionsSpec,
-        aggregators,
-        granularitySpec,
-        transformSpec,
-        parserMap,
-        objectMapper
-    );
+    return builder(this).withTransform(transformSpec).build();
   }
 
   public DataSchema withDimensionsSpec(DimensionsSpec dimensionsSpec)
   {
-    return new DataSchema(
-        dataSource,
-        timestampSpec,
-        dimensionsSpec,
-        aggregators,
-        granularitySpec,
-        transformSpec,
-        parserMap,
-        objectMapper
-    );
+    return builder(this).withDimensions(dimensionsSpec).build();
   }
 
   @Override
@@ -456,5 +412,109 @@ public class DataSchema
            ", dimensionsSpec=" + dimensionsSpec +
            ", inputRowParser=" + inputRowParser +
            '}';
+  }
+
+  public static class Builder
+  {
+    private String dataSource;
+    private AggregatorFactory[] aggregators;
+    private GranularitySpec granularitySpec;
+    private TransformSpec transformSpec;
+    private Map<String, Object> parserMap;
+    private ObjectMapper objectMapper;
+
+    // The below fields can be initialized lazily from parser for backward compatibility.
+    private TimestampSpec timestampSpec;
+    private DimensionsSpec dimensionsSpec;
+
+    public Builder()
+    {
+
+    }
+
+    public Builder(DataSchema schema)
+    {
+      this.dataSource = schema.getDataSource();
+      this.aggregators = schema.getAggregators();
+      this.granularitySpec = schema.getGranularitySpec();
+      this.transformSpec = schema.getTransformSpec();
+      this.parserMap = schema.getParserMap();
+      this.objectMapper = schema.objectMapper;
+      this.timestampSpec = schema.getTimestampSpec();
+      this.dimensionsSpec = schema.getDimensionsSpec();
+    }
+
+    public Builder withDataSource(String dataSource)
+    {
+      this.dataSource = dataSource;
+      return this;
+    }
+
+    public Builder withTimestamp(TimestampSpec timestampSpec)
+    {
+      this.timestampSpec = timestampSpec;
+      return this;
+    }
+
+    public Builder withDimensions(DimensionsSpec dimensionsSpec)
+    {
+      this.dimensionsSpec = dimensionsSpec;
+      return this;
+    }
+
+    public Builder withDimensions(List<DimensionSchema> dimensions)
+    {
+      this.dimensionsSpec = DimensionsSpec.builder().setDimensions(dimensions).build();
+      return this;
+    }
+
+    public Builder withDimensions(DimensionSchema... dimensions)
+    {
+      return withDimensions(Arrays.asList(dimensions));
+    }
+
+    public Builder withAggregators(AggregatorFactory... aggregators)
+    {
+      this.aggregators = aggregators;
+      return this;
+    }
+
+    public Builder withGranularity(GranularitySpec granularitySpec)
+    {
+      this.granularitySpec = granularitySpec;
+      return this;
+    }
+
+    public Builder withTransform(TransformSpec transformSpec)
+    {
+      this.transformSpec = transformSpec;
+      return this;
+    }
+
+    public Builder withObjectMapper(ObjectMapper objectMapper)
+    {
+      this.objectMapper = objectMapper;
+      return this;
+    }
+
+    public Builder withParserMap(Map<String, Object> parserMap)
+    {
+      this.parserMap = parserMap;
+      return this;
+    }
+
+    public DataSchema build()
+    {
+      return new DataSchema(
+          dataSource,
+          timestampSpec,
+          dimensionsSpec,
+          aggregators,
+          granularitySpec,
+          transformSpec,
+          parserMap,
+          objectMapper
+      );
+    }
   }
 }
