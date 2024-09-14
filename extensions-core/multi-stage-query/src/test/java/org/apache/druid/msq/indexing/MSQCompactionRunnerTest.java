@@ -272,6 +272,7 @@ public class MSQCompactionRunnerTest
                           Collections.singletonList(COMPACTION_INTERVAL)
                       )
                   )
+                  .withTransform(new TransformSpec(dimFilter, Collections.emptyList()))
                   .build();
 
 

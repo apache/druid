@@ -508,21 +508,20 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DruidExceptionMatcher
-        .invalidInput()
-        .expectMessageIs("Invalid value for field [dataSource]: must not be null")
-        .assertThrowsAndMatches(
-            () -> DataSchema.builder()
-                            .withDataSource("")
-                            .withParserMap(parser)
-                            .withAggregators(
-                                new DoubleSumAggregatorFactory("metric1", "col1"),
-                                new DoubleSumAggregatorFactory("metric2", "col2")
-                            )
-                            .withGranularity(ARBITRARY_GRANULARITY)
-                            .withObjectMapper(jsonMapper)
-                            .build()
-        );
+    DruidExceptionMatcher.invalidInput()
+                         .expectMessageIs("Invalid value for field [dataSource]: must not be null")
+                         .assertThrowsAndMatches(
+                             () -> DataSchema.builder()
+                                             .withDataSource("")
+                                             .withParserMap(parser)
+                                             .withAggregators(
+                                                 new DoubleSumAggregatorFactory("metric1", "col1"),
+                                                 new DoubleSumAggregatorFactory("metric2", "col2")
+                                             )
+                                             .withGranularity(ARBITRARY_GRANULARITY)
+                                             .withObjectMapper(jsonMapper)
+                                             .build()
+                         );
   }
 
 
