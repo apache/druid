@@ -62,6 +62,7 @@ import java.util.List;
 
 public class CursorHolderPreaggTest extends InitializedNullHandlingTest
 {
+  private CloseableStupidPool<ByteBuffer> bufferPool;
   private GroupingEngine groupingEngine;
   private TopNQueryEngine topNQueryEngine;
   private TimeseriesQueryEngine timeseriesQueryEngine;
@@ -75,18 +76,17 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
-    final CloseableStupidPool<ByteBuffer> pool = closer.closeLater(
+    bufferPool = closer.closeLater(
         new CloseableStupidPool<>(
             "CursorHolderPreaggTest-bufferPool",
             () -> ByteBuffer.allocate(50000)
         )
     );
-    topNQueryEngine = new TopNQueryEngine(pool);
-    timeseriesQueryEngine = new TimeseriesQueryEngine(pool);
+    topNQueryEngine = new TopNQueryEngine(bufferPool);
+    timeseriesQueryEngine = new TimeseriesQueryEngine(bufferPool);
     groupingEngine = new GroupingEngine(
         new DruidProcessingConfig(),
         GroupByQueryConfig::new,
-        pool,
         new GroupByResourcesReservationPool(
             closer.closeLater(
                 new CloseableDefaultBlockingPool<>(
@@ -235,6 +235,7 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
         query,
         cursorFactory,
         null,
+        bufferPool,
         null
     );
     List<ResultRow> rows = results.toList();

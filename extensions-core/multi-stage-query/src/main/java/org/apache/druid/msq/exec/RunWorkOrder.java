@@ -242,7 +242,7 @@ public class RunWorkOrder
             workOrder.getQueryDefinition(),
             InputSlices.allReadablePartitions(workOrder.getInputs()),
             inputChannelFactory,
-            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getStandardFrameSize()),
+            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getFrameSize()),
             exec,
             cancellationId,
             counterTracker,
@@ -270,18 +270,8 @@ public class RunWorkOrder
     final OutputChannelFactory baseOutputChannelFactory;
 
     if (workOrder.getStageDefinition().doesShuffle()) {
-      // Writing to a consumer in the same JVM (which will be set up later on in this method). Use the large frame
-      // size if we're writing to a SuperSorter, since we'll generate fewer temp files if we use larger frames.
-      // Otherwise, use the standard frame size.
-      final int frameSize;
-
-      if (workOrder.getStageDefinition().getShuffleSpec().kind().isSort()) {
-        frameSize = frameContext.memoryParameters().getLargeFrameSize();
-      } else {
-        frameSize = frameContext.memoryParameters().getStandardFrameSize();
-      }
-
-      baseOutputChannelFactory = new BlockingQueueOutputChannelFactory(frameSize);
+      // Writing to a consumer in the same JVM (which will be set up later on in this method).
+      baseOutputChannelFactory = new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
     } else {
       // Writing stage output.
       baseOutputChannelFactory = makeStageOutputChannelFactory();
@@ -353,7 +343,7 @@ public class RunWorkOrder
     final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
         counterTracker.trackCpu(processorManager, CpuCounters.LABEL_MAIN),
         maxOutstandingProcessors,
-        frameContext.processorBouncer(),
+        processorFactory.usesProcessingBuffers() ? frameContext.processingBuffers().getBouncer() : Bouncer.unlimited(),
         cancellationId
     );
 
@@ -394,13 +384,13 @@ public class RunWorkOrder
         if (shuffleSpec.partitionCount() == 1) {
           // Single partition; no need to write temporary files.
           hashOutputChannelFactory =
-              new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getStandardFrameSize());
+              new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
         } else {
           // Multi-partition; write temporary files and then sort each one file-by-file.
           hashOutputChannelFactory =
               new FileOutputChannelFactory(
                   frameContext.tempDir("hash-parts"),
-                  frameContext.memoryParameters().getStandardFrameSize(),
+                  frameContext.memoryParameters().getFrameSize(),
                   null
               );
         }
@@ -490,7 +480,7 @@ public class RunWorkOrder
     final DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
         makeDurableStorageOutputChannelFactory(
             frameContext.tempDir("durable"),
-            frameContext.memoryParameters().getStandardFrameSize(),
+            frameContext.memoryParameters().getFrameSize(),
             workOrder.getOutputChannelMode() == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
         );
 
@@ -510,7 +500,7 @@ public class RunWorkOrder
   {
     // Use the standard frame size, since we assume this size when computing how much is needed to merge output
     // files from different workers.
-    final int frameSize = frameContext.memoryParameters().getStandardFrameSize();
+    final int frameSize = frameContext.memoryParameters().getFrameSize();
     final OutputChannelMode outputChannelMode = workOrder.getOutputChannelMode();
 
     switch (outputChannelMode) {
@@ -542,7 +532,7 @@ public class RunWorkOrder
 
   private OutputChannelFactory makeSuperSorterIntermediateOutputChannelFactory(final File tmpDir)
   {
-    final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
+    final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", workOrder.getStageNumber()));
     final FileOutputChannelFactory fileOutputChannelFactory =
@@ -736,8 +726,8 @@ public class RunWorkOrder
                 },
                 outputChannelFactory,
                 makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
-                memoryParameters.getSuperSorterMaxActiveProcessors(),
-                memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
+                memoryParameters.getSuperSorterConcurrentProcessors(),
+                memoryParameters.getSuperSorterMaxChannelsPerMerger(),
                 stageDefinition.getShuffleSpec().limitHint(),
                 cancellationId,
                 counterTracker.sortProgress(),
@@ -774,7 +764,7 @@ public class RunWorkOrder
                 workOrder.getStageDefinition().getFrameReader(),
                 workOrder.getStageDefinition().getClusterBy().getColumns().size(),
                 FrameWriters.makeRowBasedFrameWriterFactory(
-                    new ArenaMemoryAllocatorFactory(frameContext.memoryParameters().getStandardFrameSize()),
+                    new ArenaMemoryAllocatorFactory(frameContext.memoryParameters().getFrameSize()),
                     workOrder.getStageDefinition().getSignature(),
                     workOrder.getStageDefinition().getSortKey(),
                     removeNullBytes

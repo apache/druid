@@ -85,4 +85,10 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         frameWriterFactoryHolder
     );
   }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 }
