@@ -772,9 +772,9 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   }
 
   @Override
-  public int getTimePosition()
+  public List<OrderBy> getOrdering()
   {
-    return timePosition;
+    return metadata.getOrdering();
   }
 
   public static ColumnValueSelector<?> makeMetricColumnValueSelector(

@@ -19,9 +19,11 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.ColumnInspector;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 /**
  * Interface that abstracts selecting data from a {@link FactsHolder}
@@ -44,9 +46,9 @@ public interface IncrementalIndexRowSelector extends ColumnInspector
   IncrementalIndex.MetricDesc getMetric(String s);
 
   /**
-   * Position of {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} in the dimensions list
+   * Ordering for the data in the facts table
    */
-  int getTimePosition();
+  List<OrderBy> getOrdering();
 
   /**
    * Are there any {@link IncrementalIndexRow} stored in the {@link FactsHolder}?

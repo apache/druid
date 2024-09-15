@@ -31,7 +31,6 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.filter.ValueMatchers;
 
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -48,16 +47,15 @@ public class IncrementalIndexCursorHolder implements CursorHolder
   {
     this.rowSelector = rowSelector;
     this.spec = spec;
-    if (rowSelector.getTimePosition() == 0) {
+    List<OrderBy> ordering = rowSelector.getOrdering();
+    if (Cursors.getTimeOrdering(ordering) != Order.NONE) {
       if (Cursors.preferDescendingTimeOrdering(spec)) {
         this.ordering = Cursors.descendingTimeOrder();
       } else {
         this.ordering = Cursors.ascendingTimeOrder();
       }
     } else {
-      // In principle, we could report a sort order here for certain types of fact holders; for example the
-      // RollupFactsHolder would be sorted by dimensions. However, this is left for future work.
-      this.ordering = Collections.emptyList();
+      this.ordering = ordering;
     }
   }
 
