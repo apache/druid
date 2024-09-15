@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSortedMap;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -162,7 +164,13 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       boolean includeOffsets)
   {
     RabbitStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<String, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
+
+    ImmutableSortedMap<DateTime, Map<String, Long>> currentPartitionLagMap = ImmutableSortedMap.copyOf(historicalPartitionLagMap);
+    DateTime latestSequenceLastUpdated = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getKey() : null;
+    Map<String, Long> latestPartitionLag = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getValue() : Collections.emptyMap();
+
     return new RabbitStreamSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
@@ -170,9 +178,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
-        includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-        includeOffsets ? sequenceLastUpdated : null,
+        includeOffsets ? latestPartitionLag : null,
+        includeOffsets ? latestPartitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? latestSequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
         stateManager.getSupervisorState().getBasicState(),
