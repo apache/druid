@@ -19,10 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
-/**
- * @author hpan
- */
-public enum StreamPartitionLagType {
+public enum StreamPartitionLagType
+{
     RECORD_LAG,
     TIME_LAG
 }

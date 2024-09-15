@@ -1338,8 +1338,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   startTime,
                   remainingSeconds,
                   TaskReportData.TaskType.ACTIVE,
-                  includeOffsets ? (Objects.nonNull(pair) && pair.lhs == StreamPartitionLagType.RECORD_LAG ? pair.rhs : null ) : null,
-                  includeOffsets ? (Objects.nonNull(pair) && pair.lhs == StreamPartitionLagType.TIME_LAG ? pair.rhs : null ) : null
+                  includeOffsets ? (Objects.nonNull(pair) && pair.lhs == StreamPartitionLagType.RECORD_LAG ? pair.rhs : null) : null,
+                  includeOffsets ? (Objects.nonNull(pair) && pair.lhs == StreamPartitionLagType.TIME_LAG ? pair.rhs : null) : null
               )
           );
         }
@@ -4093,7 +4093,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     coalesceAndAwait(futures);
   }
 
-  private void appendHistoricalPartitionLag() {
+  private void appendHistoricalPartitionLag()
+  {
     if (Objects.nonNull(sequenceLastUpdated)) {
       Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> partitionLag = getPartitionLag();
       if (Objects.nonNull(partitionLag) && MapUtils.isNotEmpty(partitionLag.rhs)) {
