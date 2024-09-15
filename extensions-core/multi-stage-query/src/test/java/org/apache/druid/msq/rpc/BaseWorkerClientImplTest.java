@@ -138,21 +138,19 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   @Test
   public void test_fetchChannelData_empty() throws Exception
   {
-    workerServiceClient
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            fetchChannelDataResponseHeaders(false),
-            NIL_FILE_BYTES
-        )
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=" + NIL_FILE_BYTES.length)
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            fetchChannelDataResponseHeaders(true),
-            ByteArrays.EMPTY_ARRAY
-        );
+    workerServiceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        fetchChannelDataResponseHeaders(false),
+        NIL_FILE_BYTES
+    ).expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=" + NIL_FILE_BYTES.length)
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        fetchChannelDataResponseHeaders(true),
+        ByteArrays.EMPTY_ARRAY
+    );
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
@@ -172,14 +170,13 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   @Test
   public void test_fetchChannelData_empty_intoClosedChannel()
   {
-    workerServiceClient
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            fetchChannelDataResponseHeaders(false),
-            NIL_FILE_BYTES
-        );
+    workerServiceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        fetchChannelDataResponseHeaders(false),
+        NIL_FILE_BYTES
+    );
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
@@ -200,28 +197,25 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   @Test
   public void test_fetchChannelData_empty_retry500() throws Exception
   {
-    workerServiceClient
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.INTERNAL_SERVER_ERROR,
-            ImmutableMap.of(),
-            ByteArrays.EMPTY_ARRAY
-        )
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            fetchChannelDataResponseHeaders(false),
-            NIL_FILE_BYTES
-        )
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=" + NIL_FILE_BYTES.length)
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            fetchChannelDataResponseHeaders(true),
-            ByteArrays.EMPTY_ARRAY
-        );
+    workerServiceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.INTERNAL_SERVER_ERROR,
+        ImmutableMap.of(),
+        ByteArrays.EMPTY_ARRAY
+    ).expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        fetchChannelDataResponseHeaders(false),
+        NIL_FILE_BYTES
+    ).expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=" + NIL_FILE_BYTES.length)
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        fetchChannelDataResponseHeaders(true),
+        ByteArrays.EMPTY_ARRAY
+    );
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
@@ -242,12 +236,11 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   @Test
   public void test_fetchChannelData_empty_serviceClientError()
   {
-    workerServiceClient
-        .expectAndThrow(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            new IOException("Some error")
-        );
+    workerServiceClient.expectAndThrow(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        new IOException("Some error")
+    );
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
@@ -272,21 +265,19 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   @Test
   public void test_fetchChannelData_nonEmpty() throws Exception
   {
-    workerServiceClient
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM),
-            FILE_BYTES
-        )
-        .expectAndRespond(
-            new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=" + FILE_BYTES.length)
-                .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
-            HttpResponseStatus.OK,
-            fetchChannelDataResponseHeaders(true),
-            ByteArrays.EMPTY_ARRAY
-        );
+    workerServiceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=0")
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM),
+        FILE_BYTES
+    ).expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/channels/xyz/1/2?offset=" + FILE_BYTES.length)
+            .header(HttpHeaders.ACCEPT_ENCODING, "identity"),
+        HttpResponseStatus.OK,
+        fetchChannelDataResponseHeaders(true),
+        ByteArrays.EMPTY_ARRAY
+    );
 
     // Perform the test.
     final StageId stageId = new StageId("xyz", 1);
@@ -376,7 +367,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     @Override
     protected ServiceClient getClient(String workerId)
     {
-      if (workerId.equals(WORKER_ID)) {
+      if (WORKER_ID.equals(workerId)) {
         return workerServiceClient;
       } else {
         throw new ISE("Expected workerId[%s], got[%s]", WORKER_ID, workerId);
