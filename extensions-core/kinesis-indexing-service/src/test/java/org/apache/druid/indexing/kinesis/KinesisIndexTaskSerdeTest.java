@@ -50,7 +50,8 @@ import java.util.Collections;
 
 public class KinesisIndexTaskSerdeTest
 {
-  private static final DataSchema DATA_SCHEMA = new DataSchema("dataSource", null, null, null, null, null, null, null);
+  private static final DataSchema DATA_SCHEMA =
+      DataSchema.builder().withDataSource("dataSource").build();
   private static final KinesisIndexTaskTuningConfig TUNING_CONFIG = new KinesisIndexTaskTuningConfig(
       null,
       null,
