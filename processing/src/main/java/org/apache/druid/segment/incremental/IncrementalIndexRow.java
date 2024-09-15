@@ -144,6 +144,8 @@ public final class IncrementalIndexRow
           {
             if (input == null || (input.getClass().isArray() && Array.getLength(input) == 0)) {
               return Collections.singletonList("null");
+            } else if (input instanceof int[]) {
+              return Arrays.toString((int[]) input);
             }
             return Collections.singletonList(input);
           }
