@@ -91,6 +91,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
       final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber
   )
   {
@@ -104,6 +105,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         originalQuery.getFilter(),
         null,
         maxWorkerCount,
+        targetPartitionsPerWorker,
         minStageNumber,
         false
     );

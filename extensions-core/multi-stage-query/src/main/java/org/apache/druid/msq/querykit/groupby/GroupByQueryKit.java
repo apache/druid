@@ -71,6 +71,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
       final int maxWorkerCount,
+      final int targetPartitionsPerWorker,
       final int minStageNumber
   )
   {
@@ -86,6 +87,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.getFilter(),
         null,
         maxWorkerCount,
+        targetPartitionsPerWorker,
         minStageNumber,
         false
     );
@@ -139,9 +141,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
       // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
       // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
-      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
+      shuffleSpecFactoryPreAggregation =
+          intermediateClusterBy.isEmpty()
+          ? ShuffleSpecFactories.singlePartition()
+          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount * targetPartitionsPerWorker);
 
       if (doLimitOrOffset) {
         shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);

@@ -376,13 +376,7 @@ public class WorkerImpl implements Worker
          ? StringUtils.format(", payload[%s]", context.jsonMapper().writeValueAsString(workOrder)) : "")
     );
 
-    final FrameContext frameContext = kernelHolder.processorCloser.register(
-        context.frameContext(
-            workOrder.getQueryDefinition(),
-            stageDefinition.getStageNumber(),
-            workOrder.getOutputChannelMode()
-        )
-    );
+    final FrameContext frameContext = kernelHolder.processorCloser.register(context.frameContext(workOrder));
     kernelHolder.processorCloser.register(() -> {
       try {
         workerExec.cancel(cancellationId);
@@ -407,7 +401,7 @@ public class WorkerImpl implements Worker
     kernel.startReading();
 
     final QueryContext queryContext = task != null ? QueryContext.of(task.getContext()) : QueryContext.empty();
-    final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    final boolean includeAllCounters = context.includeAllCounters();
     final RunWorkOrder runWorkOrder = new RunWorkOrder(
         task.getControllerTaskId(),
         workOrder,

@@ -17,37 +17,35 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input;
+package org.apache.druid.msq.guice;
 
-import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.msq.input.stage.StageInputSpec;
-
-import java.util.List;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.inject.Binder;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.java.util.common.StringUtils;
 
 /**
- * Utility functions for working with {@link InputSpec}.
+ * Server configuration for {@link PeonMemoryManagementModule} and {@link IndexerMemoryManagementModule}.
  */
-public class InputSpecs
+public class TaskMemoryManagementConfig
 {
-  private InputSpecs()
+  public static final String BASE_PROPERTY = StringUtils.format("%s.task.memory", MSQIndexingModule.BASE_MSQ_KEY);
+  public static final int UNLIMITED = -1;
+
+  @JsonProperty("maxThreads")
+  private int maxThreads = 1;
+
+  public static void bind(final Binder binder)
   {
-    // No instantiation.
+    JsonConfigProvider.bind(
+        binder,
+        BASE_PROPERTY,
+        TaskMemoryManagementConfig.class
+    );
   }
 
-  /**
-   * Returns the set of input stages, from {@link StageInputSpec}, for a given list of {@link InputSpec}.
-   */
-  public static IntSet getStageNumbers(final List<InputSpec> specs)
+  public int getMaxThreads()
   {
-    final IntSet retVal = new IntRBTreeSet();
-
-    for (final InputSpec spec : specs) {
-      if (spec instanceof StageInputSpec) {
-        retVal.add(((StageInputSpec) spec).getStageNumber());
-      }
-    }
-
-    return retVal;
+    return maxThreads;
   }
 }
