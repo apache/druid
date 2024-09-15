@@ -227,6 +227,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
               } else {
                 // Exception while reading channel. Recoverable.
                 log.noStackTrace().warn(
+                    partialFetch.getExceptionCaught(),
                     "Attempting recovery after exception while reading channel[%s]",
                     channel.getId()
                 );
