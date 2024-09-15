@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -56,6 +57,7 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -67,6 +69,8 @@ import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -94,7 +98,6 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
@@ -104,7 +107,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -112,7 +116,29 @@ import java.util.stream.Collectors;
  */
 public class RunWorkOrder
 {
-  private final String controllerTaskId;
+  enum State
+  {
+    /**
+     * Initial state. Must be in this state to call {@link #startAsync()}.
+     */
+    INIT,
+
+    /**
+     * State entered upon calling {@link #startAsync()}.
+     */
+    STARTED,
+
+    /**
+     * State entered upon calling {@link #stop()}.
+     */
+    STOPPING,
+
+    /**
+     * State entered when a call to {@link #stop()} concludes.
+     */
+    STOPPED
+  }
+
   private final WorkOrder workOrder;
   private final InputChannelFactory inputChannelFactory;
   private final CounterTracker counterTracker;
@@ -125,7 +151,9 @@ public class RunWorkOrder
   private final boolean reindex;
   private final boolean removeNullBytes;
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
-  private final AtomicBoolean started = new AtomicBoolean();
+  private final AtomicReference<State> state = new AtomicReference<>(State.INIT);
+  private final CountDownLatch stopLatch = new CountDownLatch(1);
+  private final AtomicReference<Either<Throwable, Object>> resultForListener = new AtomicReference<>();
 
   @MonotonicNonNull
   private InputSliceReader inputSliceReader;
@@ -141,7 +169,6 @@ public class RunWorkOrder
   private ListenableFuture<OutputChannels> stageOutputChannelsFuture;
 
   public RunWorkOrder(
-      final String controllerTaskId,
       final WorkOrder workOrder,
       final InputChannelFactory inputChannelFactory,
       final CounterTracker counterTracker,
@@ -154,7 +181,6 @@ public class RunWorkOrder
       final boolean removeNullBytes
   )
   {
-    this.controllerTaskId = controllerTaskId;
     this.workOrder = workOrder;
     this.inputChannelFactory = inputChannelFactory;
     this.counterTracker = counterTracker;
@@ -180,15 +206,16 @@ public class RunWorkOrder
    * Execution proceeds asynchronously after this method returns. The {@link RunWorkOrderListener} passed to the
    * constructor of this instance can be used to track progress.
    */
-  public void start() throws IOException
+  public void startAsync()
   {
-    if (started.getAndSet(true)) {
-      throw new ISE("Already started");
+    if (!state.compareAndSet(State.INIT, State.STARTED)) {
+      throw new ISE("Cannot start from state[%s]", state);
     }
 
     final StageDefinition stageDef = workOrder.getStageDefinition();
 
     try {
+      exec.registerCancellationId(cancellationId);
       makeInputSliceReader();
       makeWorkOutputChannelFactory();
       makeShuffleOutputChannelFactory();
@@ -205,16 +232,78 @@ public class RunWorkOrder
       setUpCompletionCallbacks();
     }
     catch (Throwable t) {
-      // If start() has problems, cancel anything that was already kicked off, and close the FrameContext.
+      stopUnchecked();
+    }
+  }
+
+  /**
+   * Stops an execution that was previously initiated through {@link #startAsync()} and closes the {@link FrameContext}.
+   * May be called to cancel execution. Must also be called after successful execution in order to ensure that resources
+   * are all properly cleaned up.
+   *
+   * Blocks until execution is fully stopped.
+   */
+  public void stop() throws InterruptedException
+  {
+    if (state.compareAndSet(State.INIT, State.STOPPING)
+        || state.compareAndSet(State.STARTED, State.STOPPING)) {
+      // Initiate stopping.
+      Throwable e = null;
+
       try {
         exec.cancel(cancellationId);
       }
-      catch (Throwable t2) {
-        t.addSuppressed(t2);
+      catch (Throwable e2) {
+        e = e2;
       }
 
-      CloseableUtils.closeAndSuppressExceptions(frameContext, t::addSuppressed);
-      throw t;
+      try {
+        frameContext.close();
+      }
+      catch (Throwable e2) {
+        if (e == null) {
+          e = e2;
+        } else {
+          e.addSuppressed(e2);
+        }
+      }
+
+      try {
+        // notifyListener will ignore this cancellation error if work has already succeeded.
+        notifyListener(Either.error(new MSQException(CanceledFault.instance())));
+      }
+      catch (Throwable e2) {
+        if (e == null) {
+          e = e2;
+        } else {
+          e.addSuppressed(e2);
+        }
+      }
+
+      stopLatch.countDown();
+
+      if (e != null) {
+        Throwables.throwIfInstanceOf(e, InterruptedException.class);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+
+    stopLatch.await();
+  }
+
+  /**
+   * Calls {@link #stop()}. If the call to {@link #stop()} throws {@link InterruptedException}, this method sets
+   * the interrupt flag and throws an unchecked exception.
+   */
+  public void stopUnchecked()
+  {
+    try {
+      stop();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
     }
   }
 
@@ -459,17 +548,31 @@ public class RunWorkOrder
               writeDurableStorageSuccessFile();
             }
 
-            listener.onSuccess(resultObject);
+            notifyListener(Either.value(resultObject));
           }
 
           @Override
           public void onFailure(final Throwable t)
           {
-            listener.onFailure(t);
+            notifyListener(Either.error(t));
           }
         },
         Execs.directExecutor()
     );
+  }
+
+  /**
+   * Notify {@link RunWorkOrderListener} that the job is done, if not already notified.
+   */
+  private void notifyListener(final Either<Throwable, Object> result)
+  {
+    if (resultForListener.compareAndSet(null, result)) {
+      if (result.isError()) {
+        listener.onFailure(result.error());
+      } else {
+        listener.onSuccess(result.valueOrThrow());
+      }
+    }
   }
 
   /**
@@ -561,7 +664,7 @@ public class RunWorkOrder
   )
   {
     return DurableStorageOutputChannelFactory.createStandardImplementation(
-        controllerTaskId,
+        workerContext.queryId(),
         workOrder.getWorkerNumber(),
         workOrder.getStageNumber(),
         workerContext.workerId(),

@@ -224,6 +224,7 @@ import java.util.stream.StreamSupport;
 public class ControllerImpl implements Controller
 {
   private static final Logger log = new Logger(ControllerImpl.class);
+  private static final String RESULT_READER_CANCELLATION_ID = "result-reader";
 
   private final String queryId;
   private final MSQSpec querySpec;
@@ -2190,6 +2191,34 @@ public class ControllerImpl implements Controller
     }
   }
 
+  /**
+   * Create a result-reader executor for {@link RunQueryUntilDone#readQueryResults()}.
+   */
+  private static FrameProcessorExecutor createResultReaderExec(final String queryId)
+  {
+    return new FrameProcessorExecutor(
+        MoreExecutors.listeningDecorator(
+            Execs.singleThreaded(StringUtils.encodeForFormat("msq-result-reader[" + queryId + "]")))
+    );
+  }
+
+  /**
+   * Cancel any currently-running work and shut down a result-reader executor, like one created by
+   * {@link #createResultReaderExec(String)}.
+   */
+  private static void closeResultReaderExec(final FrameProcessorExecutor exec)
+  {
+    try {
+      exec.cancel(RESULT_READER_CANCELLATION_ID);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      exec.shutdownNow();
+    }
+  }
+
   private void stopExternalFetchers()
   {
     if (workerSketchFetcher != null) {
@@ -2699,12 +2728,9 @@ public class ControllerImpl implements Controller
         inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);
       }
 
-      final FrameProcessorExecutor resultReaderExec = new FrameProcessorExecutor(
-          MoreExecutors.listeningDecorator(
-              Execs.singleThreaded(StringUtils.encodeForFormat("msq-result-reader[" + queryId() + "]")))
-      );
+      final FrameProcessorExecutor resultReaderExec = createResultReaderExec(queryId());
+      resultReaderExec.registerCancellationId(RESULT_READER_CANCELLATION_ID);
 
-      final String cancellationId = "results-reader";
       ReadableConcatFrameChannel resultsChannel = null;
 
       try {
@@ -2714,7 +2740,7 @@ public class ControllerImpl implements Controller
             inputChannelFactory,
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
-            cancellationId,
+            RESULT_READER_CANCELLATION_ID,
             null,
             MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context())
         );
@@ -2748,7 +2774,7 @@ public class ControllerImpl implements Controller
             queryListener
         );
 
-        queryResultsReaderFuture = resultReaderExec.runFully(resultsReader, cancellationId);
+        queryResultsReaderFuture = resultReaderExec.runFully(resultsReader, RESULT_READER_CANCELLATION_ID);
 
         // When results are done being read, kick the main thread.
         // Important: don't use FutureUtils.futureWithBaggage, because we need queryResultsReaderFuture to resolve
@@ -2765,23 +2791,13 @@ public class ControllerImpl implements Controller
             e,
             () -> CloseableUtils.closeAll(
                 finalResultsChannel,
-                () -> resultReaderExec.getExecutorService().shutdownNow()
+                () -> closeResultReaderExec(resultReaderExec)
             )
         );
       }
 
       // Result reader is set up. Register with the query-wide closer.
-      closer.register(() -> {
-        try {
-          resultReaderExec.cancel(cancellationId);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-        finally {
-          resultReaderExec.getExecutorService().shutdownNow();
-        }
-      });
+      closer.register(() -> closeResultReaderExec(resultReaderExec));
     }
 
     /**
