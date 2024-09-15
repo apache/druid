@@ -207,7 +207,7 @@ public class IndexerControllerContext implements ControllerContext
   {
     // Assume tasks are symmetric: workers have the same number of processors available as a controller.
     // Create one partition per processor per task, for maximum parallelism.
-    return memoryIntrospector.numProcessorsInJvm();
+    return memoryIntrospector.numProcessingThreads();
   }
 
   /**
