@@ -56,9 +56,10 @@ import org.junit.Assert;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -79,12 +80,14 @@ public class FrameTestUtil
 
   public static File writeFrameFile(final Sequence<Frame> frames, final File file) throws IOException
   {
-    try (
-        final FileOutputStream fos = new FileOutputStream(file);
-        final FrameFileWriter writer = FrameFileWriter.open(
-            Channels.newChannel(fos), null, ByteTracker.unboundedTracker()
-        )
-    ) {
+    writeFrameFile(frames, Files.newOutputStream(file.toPath()));
+    return file;
+  }
+
+  public static void writeFrameFile(final Sequence<Frame> frames, final OutputStream out) throws IOException
+  {
+    try (final FrameFileWriter writer =
+             FrameFileWriter.open(Channels.newChannel(out), null, ByteTracker.unboundedTracker())) {
       frames.forEach(
           frame -> {
             try {
@@ -96,17 +99,15 @@ public class FrameTestUtil
           }
       );
     }
-
-    return file;
   }
 
-  public static File writeFrameFileWithPartitions(
+  public static void writeFrameFileWithPartitions(
       final Sequence<IntObjectPair<Frame>> framesWithPartitions,
-      final File file
+      final OutputStream out
   ) throws IOException
   {
     try (final FrameFileWriter writer = FrameFileWriter.open(
-        Channels.newChannel(new FileOutputStream(file)),
+        Channels.newChannel(out),
         null,
         ByteTracker.unboundedTracker()
     )) {
@@ -121,8 +122,6 @@ public class FrameTestUtil
           }
       );
     }
-
-    return file;
   }
 
   public static void assertRowsEqual(final Sequence<List<Object>> expected, final Sequence<List<Object>> actual)
