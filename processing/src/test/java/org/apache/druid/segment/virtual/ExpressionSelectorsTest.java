@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -50,7 +49,6 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestObjectColumnSelector;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -620,15 +618,10 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     // underlying dimension selector.
     // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
     // conditions are replicated by this test. See https://github.com/apache/druid/pull/10248 for details
-    IncrementalIndexSchema schema = new IncrementalIndexSchema(
-        0,
-        new TimestampSpec("time", "millis", DateTimes.nowUtc()),
-        Granularities.NONE,
-        VirtualColumns.EMPTY,
-        DimensionsSpec.EMPTY,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        true
-    );
+    IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+                                                          .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
+                                                          .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+                                                          .build();
 
     IncrementalIndex index = new OnheapIncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).build();
     index.add(
