@@ -181,7 +181,11 @@ public class DataSchemaTest extends InitializedNullHandlingTest
                                       new TransformSpec(
                                           new SelectorDimFilter("dimA", "foo", null),
                                           ImmutableList.of(
-                                              new ExpressionTransform("expr", "concat(dimA,dimA)", TestExprMacroTable.INSTANCE)
+                                              new ExpressionTransform(
+                                                  "expr",
+                                                  "concat(dimA,dimA)",
+                                                  TestExprMacroTable.INSTANCE
+                                              )
                                           )
                                       )
                                   )
@@ -508,20 +512,20 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
+    DruidExceptionMatcher.ThrowingSupplier thrower =
+        () -> DataSchema.builder()
+                        .withDataSource("")
+                        .withParserMap(parser)
+                        .withAggregators(
+                            new DoubleSumAggregatorFactory("metric1", "col1"),
+                            new DoubleSumAggregatorFactory("metric2", "col2")
+                        )
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build();
     DruidExceptionMatcher.invalidInput()
                          .expectMessageIs("Invalid value for field [dataSource]: must not be null")
-                         .assertThrowsAndMatches(
-                             () -> DataSchema.builder()
-                                             .withDataSource("")
-                                             .withParserMap(parser)
-                                             .withAggregators(
-                                                 new DoubleSumAggregatorFactory("metric1", "col1"),
-                                                 new DoubleSumAggregatorFactory("metric2", "col2")
-                                             )
-                                             .withGranularity(ARBITRARY_GRANULARITY)
-                                             .withObjectMapper(jsonMapper)
-                                             .build()
-                         );
+                         .assertThrowsAndMatches(thrower);
   }
 
 
@@ -678,15 +682,15 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     );
 
     DataSchema originalSchema = DataSchema.builder()
-                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
-                                  .withParserMap(parser)
-                                  .withAggregators(
-                                      new DoubleSumAggregatorFactory("metric1", "col1"),
-                                      new DoubleSumAggregatorFactory("metric2", "col2")
-                                  )
-                                  .withGranularity(ARBITRARY_GRANULARITY)
-                                  .withObjectMapper(jsonMapper)
-                                  .build();
+                                          .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                          .withParserMap(parser)
+                                          .withAggregators(
+                                              new DoubleSumAggregatorFactory("metric1", "col1"),
+                                              new DoubleSumAggregatorFactory("metric2", "col2")
+                                          )
+                                          .withGranularity(ARBITRARY_GRANULARITY)
+                                          .withObjectMapper(jsonMapper)
+                                          .build();
 
     String serialized = jsonMapper.writeValueAsString(originalSchema);
     TestModifiedDataSchema deserialized = jsonMapper.readValue(serialized, TestModifiedDataSchema.class);
