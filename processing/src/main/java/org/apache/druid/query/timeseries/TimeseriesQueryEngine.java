@@ -38,6 +38,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -86,7 +87,7 @@ public class TimeseriesQueryEngine
    * scoped down to a single interval before calling this method.
    */
   public Sequence<Result<TimeseriesResultValue>> process(
-      final TimeseriesQuery query,
+      TimeseriesQuery query,
       final CursorFactory cursorFactory,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
@@ -102,6 +103,9 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
 
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
+    if (cursorHolder.isPreAggregated()) {
+      query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+    }
     try {
       final Sequence<Result<TimeseriesResultValue>> result;
 
