@@ -2412,16 +2412,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static DataSchema cloneDataSchema(final DataSchema dataSchema)
   {
-    return new DataSchema(
-        dataSchema.getDataSource(),
-        dataSchema.getTimestampSpec(),
-        dataSchema.getDimensionsSpec(),
-        dataSchema.getAggregators(),
-        dataSchema.getGranularitySpec(),
-        dataSchema.getTransformSpec(),
-        dataSchema.getParserMap(),
-        OBJECT_MAPPER
-    );
+    return DataSchema.builder(dataSchema).withObjectMapper(OBJECT_MAPPER).build();
   }
 
   @Override

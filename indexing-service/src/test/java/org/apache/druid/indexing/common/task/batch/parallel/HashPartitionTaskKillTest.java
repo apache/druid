@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -250,14 +249,13 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
           null
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              timestampSpec,
-              dimensionsSpec,
-              new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(timestampSpec)
+                    .withDimensions(dimensionsSpec)
+                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
@@ -271,16 +269,13 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
       );
       //noinspection unchecked
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              "dataSource",
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource("dataSource")
+                    .withTimestamp(parseSpec.getTimestampSpec())
+                    .withDimensions(parseSpec.getDimensionsSpec())
+                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
