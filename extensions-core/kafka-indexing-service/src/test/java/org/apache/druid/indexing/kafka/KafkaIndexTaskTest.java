@@ -92,7 +92,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -1262,28 +1261,27 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         null,
-        new DataSchema(
-            "test_ds",
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim1"),
-                    new StringDimensionSchema("dim1t"),
-                    new StringDimensionSchema("dim2"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat"),
-                    new StringDimensionSchema("kafka.topic"),
-                    new LongDimensionSchema("kafka.offset"),
-                    new StringDimensionSchema("kafka.header.encoding")
-                )
-            ),
-            new AggregatorFactory[]{
-                new DoubleSumAggregatorFactory("met1sum", "met1"),
-                new CountAggregatorFactory("rows")
-            },
-            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("test_ds")
+                  .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                  .withDimensions(
+                      new StringDimensionSchema("dim1"),
+                      new StringDimensionSchema("dim1t"),
+                      new StringDimensionSchema("dim2"),
+                      new LongDimensionSchema("dimLong"),
+                      new FloatDimensionSchema("dimFloat"),
+                      new StringDimensionSchema("kafka.topic"),
+                      new LongDimensionSchema("kafka.offset"),
+                      new StringDimensionSchema("kafka.header.encoding")
+                  )
+                  .withAggregators(
+                      new DoubleSumAggregatorFactory("met1sum", "met1"),
+                      new CountAggregatorFactory("rows")
+                  )
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)
+                  )
+                  .build(),
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
@@ -1337,26 +1335,25 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         null,
-        new DataSchema(
-            "test_ds",
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim1"),
-                    new StringDimensionSchema("dim1t"),
-                    new StringDimensionSchema("dim2"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat"),
-                    new StringDimensionSchema("kafka.testheader.encoding")
-                )
-            ),
-            new AggregatorFactory[]{
-                new DoubleSumAggregatorFactory("met1sum", "met1"),
-                new CountAggregatorFactory("rows")
-            },
-            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("test_ds")
+                  .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                  .withDimensions(
+                      new StringDimensionSchema("dim1"),
+                      new StringDimensionSchema("dim1t"),
+                      new StringDimensionSchema("dim2"),
+                      new LongDimensionSchema("dimLong"),
+                      new FloatDimensionSchema("dimFloat"),
+                      new StringDimensionSchema("kafka.testheader.encoding")
+                  )
+                  .withAggregators(
+                      new DoubleSumAggregatorFactory("met1sum", "met1"),
+                      new CountAggregatorFactory("rows")
+                  )
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)
+                  )
+                  .build(),
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
@@ -2887,16 +2884,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static DataSchema cloneDataSchema(final DataSchema dataSchema)
   {
-    return new DataSchema(
-        dataSchema.getDataSource(),
-        dataSchema.getTimestampSpec(),
-        dataSchema.getDimensionsSpec(),
-        dataSchema.getAggregators(),
-        dataSchema.getGranularitySpec(),
-        dataSchema.getTransformSpec(),
-        dataSchema.getParserMap(),
-        OBJECT_MAPPER
-    );
+    return DataSchema.builder(dataSchema).withObjectMapper(OBJECT_MAPPER).build();
   }
 
   @Override
