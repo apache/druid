@@ -297,7 +297,7 @@ public class SuperSorter
               setAllDoneIfPossible();
             }
           },
-          exec.getExecutorService()
+          exec.asExecutor(cancellationId)
       );
 
       return FutureUtils.futureWithBaggage(
@@ -813,7 +813,7 @@ public class SuperSorter
         },
         // Must run in exec, instead of in the same thread, to avoid running callback immediately if the
         // worker happens to finish super-quickly.
-        exec.getExecutorService()
+        exec.asExecutor(cancellationId)
     );
   }
 
