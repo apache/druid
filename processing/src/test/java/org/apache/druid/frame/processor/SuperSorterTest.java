@@ -347,7 +347,7 @@ public class SuperSorterTest
     }
 
     @BeforeClass
-    public static void setUpClass() throws Exception
+    public static void setUpClass()
     {
       CURSOR_FACTORY = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
       CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER =
@@ -355,7 +355,7 @@ public class SuperSorterTest
     }
 
     @AfterClass
-    public static void tearDownClass() throws Exception
+    public static void tearDownClass()
     {
       CURSOR_FACTORY = null;
       CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER = null;
