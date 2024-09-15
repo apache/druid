@@ -53,14 +53,12 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -102,7 +100,6 @@ public final class SegmentGenerationUtils
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
                      .withGranularity(makeGranularitySpecForIngestion(querySpec.getQuery(), querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
-                     .withTransform(new TransformSpec(null, Collections.emptyList()))
                      .build();
   }
 

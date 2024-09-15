@@ -491,12 +491,14 @@ public class DataSchema
       return this;
     }
 
+    @Deprecated
     public Builder withObjectMapper(ObjectMapper objectMapper)
     {
       this.objectMapper = objectMapper;
       return this;
     }
 
+    @Deprecated
     public Builder withParserMap(Map<String, Object> parserMap)
     {
       this.parserMap = parserMap;
