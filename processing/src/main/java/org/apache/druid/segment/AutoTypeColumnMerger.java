@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -93,7 +94,6 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       Closer closer
   )
   {
-
     this.name = name;
     this.castToType = castToType;
     this.indexSpec = indexSpec;
@@ -159,17 +159,28 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         explicitType = null;
       }
 
-      // for backwards compat; remove this constant handling in druid 28 along with
-      // indexSpec.optimizeJsonConstantColumns in favor of always writing constant columns
-      // we also handle the numMergeIndex == 0 here, which also indicates that the column is a null constant
+      // null constant case. we also handle the numMergeIndex == 0 here, which also indicates that the column is a null
+      // constant
       if (explicitType == null && !forceNested && ((isConstant && constantValue == null) || numMergeIndex == 0)) {
-        logicalType = ColumnType.STRING;
-        serializer = new ScalarStringColumnSerializer(
-            name,
-            indexSpec,
-            segmentWriteOutMedium,
-            closer
-        );
+        // if sql compatible mode, use LONG since it is the most restrictive type. Default value mode however must
+        // write out a STRING since null values do not exist for numeric types
+        if (NullHandling.sqlCompatible()) {
+          logicalType = ColumnType.LONG;
+          serializer = new ScalarLongColumnSerializer(
+              name,
+              indexSpec,
+              segmentWriteOutMedium,
+              closer
+          );
+        } else {
+          logicalType = ColumnType.STRING;
+          serializer = new ScalarStringColumnSerializer(
+              name,
+              indexSpec,
+              segmentWriteOutMedium,
+              closer
+          );
+        }
       } else if (explicitType != null || (!forceNested && rootOnly && rootTypes.getSingleType() != null)) {
         logicalType = explicitType != null ? explicitType : rootTypes.getSingleType();
         // empty arrays can be missed since they don't have a type, so handle them here
