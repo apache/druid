@@ -80,7 +80,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
-    final InputFormat inputFormat = new CsvInputFormat(colNames, null, null, false, 0);
+    final InputFormat inputFormat = new CsvInputFormat(colNames, null, null, false, 0, null);
     final InputSourceReader reader = inputSource.reader(
         new InputRowSchema(
             new TimestampSpec("col_0", "auto", null),
@@ -114,7 +114,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     final List<String> colNames = IntStream.range(0, NUM_COLS)
                                            .mapToObj(i -> StringUtils.format("col_%d", i))
                                            .collect(Collectors.toList());
-    final InputFormat inputFormat = new CsvInputFormat(colNames, null, null, false, 0);
+    final InputFormat inputFormat = new CsvInputFormat(colNames, null, null, false, 0, null);
     final InputSourceReader reader = inputSource.reader(
         new InputRowSchema(
             new TimestampSpec("col_0", "auto", null),

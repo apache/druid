@@ -149,7 +149,8 @@ public class IndexGeneratorJobTest
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
-                    0
+                    0,
+                    null
                 ),
                 null
             ),
@@ -198,7 +199,8 @@ public class IndexGeneratorJobTest
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
-                    0
+                    0,
+                    null
                 )
             ),
             null,
@@ -246,7 +248,8 @@ public class IndexGeneratorJobTest
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
-                    0
+                    0,
+                    null
                 ),
                 null
             ),
@@ -305,7 +308,8 @@ public class IndexGeneratorJobTest
                     null,
                     ImmutableList.of("timestamp", "host", "visited_num"),
                     false,
-                    0
+                    0,
+                    null
                 )
             ),
             null,

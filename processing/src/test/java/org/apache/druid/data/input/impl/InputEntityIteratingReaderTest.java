@@ -84,8 +84,8 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             null,
             null,
             false,
-            0
-        ),
+            0,
+            null),
         CloseableIterators.withEmptyBaggage(
             files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
         ),
@@ -152,8 +152,8 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             null,
             null,
             false,
-            0
-        ),
+            0,
+            null),
         CloseableIterators.withEmptyBaggage(
             files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
         ),
@@ -200,8 +200,8 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             null,
             null,
             false,
-            0
-        ),
+            0,
+            null),
         CloseableIterators.withEmptyBaggage(
             ImmutableList.of(
                 new HttpEntity(new URI("testscheme://some/path"), null, null, null)

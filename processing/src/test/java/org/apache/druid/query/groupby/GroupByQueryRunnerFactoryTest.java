@@ -153,7 +153,8 @@ public class GroupByQueryRunnerFactoryTest
             "\t",
             ImmutableList.of("timestamp", "product", "tags"),
             false,
-            0
+            0,
+            null
         ),
         "UTF-8"
     );

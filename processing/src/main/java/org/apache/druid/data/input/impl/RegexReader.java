@@ -60,7 +60,7 @@ public class RegexReader extends TextReader.Strings
     this.pattern = pattern;
     this.compiledPattern = compiledPattern;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
-    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
+    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter), false);
     this.columns = columns;
   }
 

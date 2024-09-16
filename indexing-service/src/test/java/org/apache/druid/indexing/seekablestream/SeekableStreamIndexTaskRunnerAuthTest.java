@@ -385,7 +385,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
           false,
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),
-          new CsvInputFormat(null, null, true, null, 0)
+          new CsvInputFormat(null, null, true, null, 0, null)
       );
     }
   }

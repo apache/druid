@@ -147,8 +147,8 @@ public class NestedDataTestUtils
       null,
       false,
       false,
-      0
-  );
+      0,
+      null);
 
   public static final TransformSpec SIMPLE_DATA_TSV_TRANSFORM = new TransformSpec(
       null,

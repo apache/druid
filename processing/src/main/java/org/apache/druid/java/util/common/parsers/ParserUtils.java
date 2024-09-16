@@ -22,6 +22,7 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.joda.time.DateTimeZone;
 
@@ -54,18 +55,43 @@ public class ParserUtils
 
   public static Function<String, Object> getMultiValueFunction(
       final String listDelimiter,
-      final Splitter listSplitter
+      final Splitter listSplitter,
+      final boolean shouldParseNumbers
   )
   {
     return (input) -> {
-      if (input != null && input.contains(listDelimiter)) {
-        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-                            .map(NullHandling::emptyToNullIfNeeded)
-                            .collect(Collectors.toList());
+      if (input != null) {
+        if (input.contains(listDelimiter)) {
+          return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+              .map(NullHandling::emptyToNullIfNeeded)
+              .map(value -> shouldParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
+              .collect(Collectors.toList());
+        } else {
+          return tryParseStringAsNumber(input);
+        }
       } else {
         return NullHandling.emptyToNullIfNeeded(input);
       }
     };
+  }
+
+  @Nullable
+  public static Object tryParseStringAsNumber(@Nullable final String input)
+  {
+    if (!NumberUtils.isNumber(input)) {
+      return input;
+    }
+
+    try {
+      // see if it's a long, if not try parsing as a double.
+      return Long.parseLong(input);
+    } catch (NumberFormatException e1) {
+      try {
+        return Double.parseDouble(input);
+      } catch (NumberFormatException e2) {
+          return input;
+      }
+    }
   }
 
   public static ArrayList<String> generateFieldNames(int length)

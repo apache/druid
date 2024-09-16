@@ -156,15 +156,16 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       null,
       Arrays.asList("ts", "dim", "val"),
       false,
-      0
+      0,
+      null
   );
   static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
       null,
       false,
       false,
-      0
-  );
+      0,
+      null);
   public static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING =
       TuningConfigBuilder.forParallelIndexTask()
                          .withMaxNumConcurrentSubTasks(2)

@@ -90,8 +90,8 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       null,
       false,
       null,
-      0
-  );
+      0,
+      null);
 
   public static class ConstructorTest
   {

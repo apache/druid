@@ -64,7 +64,7 @@ public class CsvInputSourceSamplerTest extends InitializedNullHandlingTest
         "Michael,Jackson,,Male"
     );
     final InputSource inputSource = new InlineInputSource(String.join("\n", strCsvRows));
-    final InputFormat inputFormat = new CsvInputFormat(null, null, null, true, 0);
+    final InputFormat inputFormat = new CsvInputFormat(null, null, null, true, 0, null);
     final InputSourceSampler inputSourceSampler = new InputSourceSampler(new DefaultObjectMapper());
 
     final SamplerResponse response = inputSourceSampler.sample(

@@ -66,7 +66,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 0, null);
     assertResult(source, format);
   }
 
@@ -81,7 +81,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 0, null);
     assertResult(source, format);
   }
 
@@ -96,7 +96,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 1);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 1, null);
     assertResult(source, format);
   }
 
@@ -112,7 +112,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 1);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), null, null, true, 1, null);
     assertResult(source, format);
   }
 
@@ -127,7 +127,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:30Z,name_3,15|3"
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", null, true, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of(), "|", null, true, 0, null);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -227,8 +227,8 @@ public class CsvReaderTest
         null,
         null,
         false,
-        0
-    );
+        0,
+        null);
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("Timestamp", "auto", null),
@@ -256,7 +256,7 @@ public class CsvReaderTest
             "2019-01-01T00:00:10Z,name_1,\"Как говорится: \\\"\"всё течет, всё изменяется\\\"\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева\""
         )
     );
-    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, null, false, 0);
+    final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "Comment"), null, null, false, 0, null);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());

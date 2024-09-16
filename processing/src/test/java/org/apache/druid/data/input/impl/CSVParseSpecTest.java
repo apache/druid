@@ -40,7 +40,8 @@ public class CSVParseSpecTest
         ",",
         Collections.singletonList("a,"),
         false,
-        0
+        0,
+        null
     );
   }
 }

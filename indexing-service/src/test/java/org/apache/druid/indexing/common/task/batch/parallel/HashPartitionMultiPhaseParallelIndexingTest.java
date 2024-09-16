@@ -77,15 +77,16 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       null,
       Arrays.asList("ts", "dim1", "dim2", "val"),
       false,
-      0
+      0,
+      null
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),
       null,
       false,
       false,
-      0
-  );
+      0,
+      null);
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
   private static final String INPUT_FILTER = "test_*";
 

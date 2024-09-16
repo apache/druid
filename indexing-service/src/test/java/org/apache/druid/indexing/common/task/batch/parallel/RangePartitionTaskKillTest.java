@@ -85,8 +85,8 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
       LIST_DELIMITER,
       false,
       false,
-      0
-  );
+      0,
+      null);
 
   private File inputDir;
 

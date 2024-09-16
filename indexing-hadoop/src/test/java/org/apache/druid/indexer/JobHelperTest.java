@@ -133,7 +133,8 @@ public class JobHelperTest
                             null,
                             ImmutableList.of("timestamp", "host", "visited_num"),
                             false,
-                            0
+                            0,
+                            null
                         ),
                         null
                     ),

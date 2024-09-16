@@ -81,8 +81,8 @@ public class CatalogTests
         null,  // listDelimiter
         false, // hasHeaderRow
         false, // findColumnsFromHeader
-        0      // skipHeaderRows
-    );
+        0,      // skipHeaderRows
+        null);
   }
 
   public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();

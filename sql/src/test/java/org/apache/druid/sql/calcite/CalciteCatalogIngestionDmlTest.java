@@ -479,7 +479,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -541,7 +541,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -603,7 +603,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -665,7 +665,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -834,7 +834,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -953,7 +953,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -1012,7 +1012,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -1077,7 +1077,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)

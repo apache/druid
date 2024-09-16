@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class CSVParseSpec extends ParseSpec
@@ -35,6 +37,7 @@ public class CSVParseSpec extends ParseSpec
   private final List<String> columns;
   private final boolean hasHeaderRow;
   private final int skipHeaderRows;
+  private final boolean shouldParseNumbers;
 
   @JsonCreator
   public CSVParseSpec(
@@ -43,7 +46,8 @@ public class CSVParseSpec extends ParseSpec
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows,
+      @JsonProperty("shouldParseNumbers") @Nullable Boolean shouldParseNumbers
   )
   {
     super(timestampSpec, dimensionsSpec);
@@ -52,6 +56,7 @@ public class CSVParseSpec extends ParseSpec
     this.columns = columns;
     this.hasHeaderRow = hasHeaderRow;
     this.skipHeaderRows = skipHeaderRows;
+    this.shouldParseNumbers = shouldParseNumbers == null ? false : shouldParseNumbers;
 
     if (columns != null) {
       for (String column : columns) {
@@ -90,21 +95,28 @@ public class CSVParseSpec extends ParseSpec
     return skipHeaderRows;
   }
 
+  @JsonProperty("shouldParseNumbers")
+  public boolean shouldParseNumbers()
+  {
+    return shouldParseNumbers;
+  }
+
+
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows, shouldParseNumbers);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParseSpec(spec, getDimensionsSpec(), listDelimiter, columns, hasHeaderRow, skipHeaderRows, shouldParseNumbers);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParseSpec(getTimestampSpec(), spec, listDelimiter, columns, hasHeaderRow, skipHeaderRows, shouldParseNumbers);
   }
 }

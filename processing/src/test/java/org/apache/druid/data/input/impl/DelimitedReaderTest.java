@@ -69,9 +69,32 @@ public class DelimitedReaderTest
         null,
         null,
         false,
-        0
-    );
+        0,
+        null);
     assertResult(source, format);
+    // use this test!
+  }
+
+  @Test
+  public void testWithoutHeadersNumberizeStrings() throws IOException
+  {
+    final ByteEntity source = writeData(
+        ImmutableList.of(
+            "2019-01-01T00:00:10Z\tname_1\t5",
+            "2019-01-01T00:00:20Z\tname_2\t10",
+            "2019-01-01T00:00:30Z\tname_3\t15"
+        )
+    );
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        ImmutableList.of("ts", "name", "score"),
+        null,
+        null,
+        null,
+        false,
+        0,
+        false);
+    assertResult(source, format);
+    // use this test!
   }
 
   @Test
@@ -85,7 +108,7 @@ public class DelimitedReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), null, null, null, true, 0);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), null, null, null, true, 0, null);
     assertResult(source, format);
   }
 
@@ -106,8 +129,8 @@ public class DelimitedReaderTest
         null,
         null,
         false,
-        1
-    );
+        1,
+        null);
     assertResult(source, format);
   }
 
@@ -123,7 +146,7 @@ public class DelimitedReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15"
         )
     );
-    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), null, null, null, true, 1);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), null, null, null, true, 1, null);
     assertResult(source, format);
   }
 
@@ -138,7 +161,7 @@ public class DelimitedReaderTest
             "2019-01-01T00:00:30Z\tname_3\t15|3"
         )
     );
-    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "|", null, null, true, 0);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "|", null, null, true, 0, null);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -173,7 +196,7 @@ public class DelimitedReaderTest
             "2019-01-01T00:00:30Z|name_3|15\t3"
         )
     );
-    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "\t", "|", null, true, 0);
+    final DelimitedInputFormat format = new DelimitedInputFormat(ImmutableList.of(), "\t", "|", null, true, 0, null);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     int numResults = 0;
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -211,8 +234,8 @@ public class DelimitedReaderTest
         null,
         null,
         false,
-        0
-    );
+        0,
+        null);
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
@@ -256,6 +279,9 @@ public class DelimitedReaderTest
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
+        System.out.println("Score" + row.getRaw("score"));
+        System.out.println("Score instanceof String" + (row.getRaw("score") instanceof String));
+        System.out.println("Score instanceof Long" + (row.getRaw("score") instanceof Long));
         Assert.assertEquals(
             Integer.toString((numResults + 1) * 5),
             Iterables.getOnlyElement(row.getDimension("score"))

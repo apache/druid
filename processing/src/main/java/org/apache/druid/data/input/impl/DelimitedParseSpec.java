@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.parsers.Parser;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 /**
  */
 public class DelimitedParseSpec extends ParseSpec
@@ -36,6 +38,7 @@ public class DelimitedParseSpec extends ParseSpec
   private final List<String> columns;
   private final boolean hasHeaderRow;
   private final int skipHeaderRows;
+  private final boolean shouldParseNumbers;
 
   @JsonCreator
   public DelimitedParseSpec(
@@ -45,8 +48,9 @@ public class DelimitedParseSpec extends ParseSpec
       @JsonProperty("listDelimiter") String listDelimiter,
       @JsonProperty("columns") List<String> columns,
       @JsonProperty("hasHeaderRow") boolean hasHeaderRow,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
-  )
+      @JsonProperty("skipHeaderRows") int skipHeaderRows,
+      @JsonProperty("skipHeaderRows") @Nullable Boolean shouldParseNumbers
+      )
   {
     super(timestampSpec, dimensionsSpec);
 
@@ -55,6 +59,7 @@ public class DelimitedParseSpec extends ParseSpec
     this.columns = columns;
     this.hasHeaderRow = hasHeaderRow;
     this.skipHeaderRows = skipHeaderRows;
+    this.shouldParseNumbers = shouldParseNumbers == null ? false : shouldParseNumbers;
 
     if (columns != null) {
       for (String column : this.columns) {
@@ -67,18 +72,6 @@ public class DelimitedParseSpec extends ParseSpec
           + " and hasHeaderRow must be set to true."
       );
     }
-  }
-
-  @Deprecated
-  public DelimitedParseSpec(
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      String delimiter,
-      String listDelimiter,
-      List<String> columns
-  )
-  {
-    this(timestampSpec, dimensionsSpec, delimiter, listDelimiter, columns, false, 0);
   }
 
   @JsonProperty("delimiter")
@@ -111,6 +104,12 @@ public class DelimitedParseSpec extends ParseSpec
     return skipHeaderRows;
   }
 
+  @JsonProperty("shouldParseNumbers")
+  public boolean shouldParseNumbers()
+  {
+    return shouldParseNumbers;
+  }
+
   @Override
   public Parser<String, Object> makeParser()
   {
@@ -119,7 +118,8 @@ public class DelimitedParseSpec extends ParseSpec
         listDelimiter,
         columns,
         hasHeaderRow,
-        skipHeaderRows
+        skipHeaderRows,
+        shouldParseNumbers
     );
   }
 
@@ -133,7 +133,8 @@ public class DelimitedParseSpec extends ParseSpec
         listDelimiter,
         columns,
         hasHeaderRow,
-        skipHeaderRows
+        skipHeaderRows,
+        shouldParseNumbers
     );
   }
 
@@ -147,7 +148,8 @@ public class DelimitedParseSpec extends ParseSpec
         listDelimiter,
         columns,
         hasHeaderRow,
-        skipHeaderRows
+        skipHeaderRows,
+        shouldParseNumbers
     );
   }
 

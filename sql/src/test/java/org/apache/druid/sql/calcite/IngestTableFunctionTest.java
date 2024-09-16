@@ -90,7 +90,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           null,
           new HttpInputSourceConfig(null, null)
       ),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
       RowSignature.builder()
                   .add("x", ColumnType.STRING)
                   .add("y", ColumnType.STRING)
@@ -264,7 +264,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             ImmutableMap.of("Accept", "application/ndjson", "a", "b"),
             new HttpInputSourceConfig(null, null)
         ),
-        new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0, null),
         RowSignature.builder()
                     .add("timestamp", ColumnType.STRING)
                     .add("isRobot", ColumnType.STRING)
@@ -556,7 +556,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           Arrays.asList(new File("/tmp/foo.csv"), new File("/tmp/bar.csv")),
           SystemFields.none()
       ),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
       RowSignature.builder()
                   .add("x", ColumnType.STRING)
                   .add("y", ColumnType.STRING)

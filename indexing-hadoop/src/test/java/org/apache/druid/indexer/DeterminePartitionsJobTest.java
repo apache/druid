@@ -292,7 +292,8 @@ public class DeterminePartitionsJobTest
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
                             false,
-                            0
+                            0,
+                            false
                         ),
                         null
                     ),

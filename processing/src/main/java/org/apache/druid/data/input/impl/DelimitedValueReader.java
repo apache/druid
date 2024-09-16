@@ -68,6 +68,7 @@ public class DelimitedValueReader extends TextReader.Bytes
   @Nullable
   private List<String> inputRowDimensions;
   private final boolean useListBasedInputRows;
+  private final boolean shouldParseNumbers;
 
   interface DelimitedValueParser
   {
@@ -82,14 +83,16 @@ public class DelimitedValueReader extends TextReader.Bytes
       boolean findColumnsFromHeader,
       int skipHeaderRows,
       DelimitedValueParser parser,
-      boolean useListBasedInputRows
+      boolean useListBasedInputRows,
+      boolean shouldParseNumbers
   )
   {
     super(inputRowSchema, source);
     this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
-    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
+    this.shouldParseNumbers = shouldParseNumbers;
+    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter), shouldParseNumbers);
 
     if (!findColumnsFromHeader && columns != null) {
       // If findColumnsFromHeader, inputRowSignature will be set later.

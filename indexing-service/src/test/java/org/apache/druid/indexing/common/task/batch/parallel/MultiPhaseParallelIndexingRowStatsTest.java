@@ -61,7 +61,8 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
       null,
       Arrays.asList("ts", "dim1", "dim2", "val"),
       false,
-      0
+      0,
+      null
   );
 
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");

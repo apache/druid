@@ -73,7 +73,8 @@ public class ParseSpecTest
         " ",
         Arrays.asList("a", "b"),
         false,
-        0
+        0,
+        null
     );
   }
 
@@ -95,7 +96,8 @@ public class ParseSpecTest
         null,
         Arrays.asList("a", "B"),
         false,
-        0
+        0,
+        null
     );
   }
 
@@ -117,7 +119,8 @@ public class ParseSpecTest
         null,
         Arrays.asList("a", "B"),
         false,
-        0
+        0,
+        null
     );
   }
 
@@ -137,7 +140,8 @@ public class ParseSpecTest
         null,
         Arrays.asList("a", "B"),
         false,
-        0
+        0,
+        null
     );
   }
 
@@ -158,7 +162,8 @@ public class ParseSpecTest
         null,
         Arrays.asList("a", "B"),
         false,
-        0
+        0,
+        null
     );
   }
 

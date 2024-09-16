@@ -473,7 +473,8 @@ public class TestIndex
             "\u0001",
             Arrays.asList(COLUMNS),
             false,
-            0
+            0,
+            null
         ),
         "utf8"
     );

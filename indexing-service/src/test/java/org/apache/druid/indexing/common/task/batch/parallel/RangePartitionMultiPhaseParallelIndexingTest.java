@@ -103,15 +103,16 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       LIST_DELIMITER,
       Arrays.asList(TIME, DIM1, DIM2, "val"),
       false,
-      0
+      0,
+      null
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList(TIME, DIM1, DIM2, "val"),
       LIST_DELIMITER,
       false,
       false,
-      0
-  );
+      0,
+      null);
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, useMultiValueDim={3}, intervalToIndex={4}")
   public static Iterable<Object[]> constructorFeeder()

@@ -183,7 +183,8 @@ public class DetermineHashedPartitionsJobTest
                             "index"
                         ),
                         false,
-                        0
+                        0,
+                        null
                     ),
                     null
                 ),

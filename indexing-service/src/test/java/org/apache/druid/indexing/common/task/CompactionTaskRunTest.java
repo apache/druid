@@ -155,7 +155,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
       "|",
       Arrays.asList("ts", "dim", "val"),
       false,
-      0
+      0,
+      null
   );
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
@@ -1638,7 +1639,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         "|",
         Arrays.asList("ts", "dim", "x", "y", "val"),
         false,
-        0
+        0,
+        null
     );
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spatialSpec, spatialrows, false);
     verifySchema(indexTaskResult.rhs);
@@ -1763,7 +1765,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         "|",
         Arrays.asList("ts", "dim", "x", "y", "val"),
         false,
-        0
+        0,
+        null
     );
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
     verifySchema(indexTaskResult.rhs);
@@ -1896,7 +1899,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
         "|",
         Arrays.asList("ts", "dim", "x", "y", "val"),
         false,
-        0
+        0,
+        null
     );
     Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
     verifySchema(indexTaskResult.rhs);
