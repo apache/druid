@@ -269,7 +269,7 @@ public class MSQTestControllerContext implements ControllerContext
   };
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec, QueryDefinition queryDef)
+  public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
   {
     return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
   }

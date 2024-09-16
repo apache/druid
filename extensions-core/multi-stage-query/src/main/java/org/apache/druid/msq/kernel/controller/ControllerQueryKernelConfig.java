@@ -21,9 +21,12 @@ package org.apache.druid.msq.kernel.controller;
 
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.msq.kernel.WorkOrder;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -37,12 +40,11 @@ public class ControllerQueryKernelConfig
   private final boolean durableStorage;
   private final boolean faultTolerance;
   private final MSQDestination destination;
-
   @Nullable
-  private final String controllerId;
-
+  private final String controllerHost;
   @Nullable
   private final List<String> workerIds;
+  private final Map<String, Object> workerContextMap;
 
   private ControllerQueryKernelConfig(
       int maxRetainedPartitionSketchBytes,
@@ -51,8 +53,9 @@ public class ControllerQueryKernelConfig
       boolean durableStorage,
       boolean faultTolerance,
       MSQDestination destination,
-      @Nullable String controllerId,
-      @Nullable List<String> workerIds
+      @Nullable String controllerHost,
+      @Nullable List<String> workerIds,
+      Map<String, Object> workerContextMap
   )
   {
     if (maxRetainedPartitionSketchBytes <= 0) {
@@ -85,8 +88,9 @@ public class ControllerQueryKernelConfig
     this.durableStorage = durableStorage;
     this.faultTolerance = faultTolerance;
     this.destination = destination;
-    this.controllerId = controllerId;
+    this.controllerHost = controllerHost;
     this.workerIds = workerIds;
+    this.workerContextMap = workerContextMap;
   }
 
   public static Builder builder()
@@ -130,6 +134,14 @@ public class ControllerQueryKernelConfig
     return workerIds;
   }
 
+  /**
+   * Map to include in {@link WorkOrder}, as {@link WorkOrder#getWorkerContext()}.
+   */
+  public Map<String, Object> getWorkerContextMap()
+  {
+    return workerContextMap;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -145,8 +157,10 @@ public class ControllerQueryKernelConfig
            && pipeline == that.pipeline
            && durableStorage == that.durableStorage
            && faultTolerance == that.faultTolerance
-           && Objects.equals(controllerId, that.controllerId)
-           && Objects.equals(workerIds, that.workerIds);
+           && Objects.equals(destination, that.destination)
+           && Objects.equals(controllerHost, that.controllerHost)
+           && Objects.equals(workerIds, that.workerIds)
+           && Objects.equals(workerContextMap, that.workerContextMap);
   }
 
   @Override
@@ -158,8 +172,10 @@ public class ControllerQueryKernelConfig
         pipeline,
         durableStorage,
         faultTolerance,
-        controllerId,
-        workerIds
+        destination,
+        controllerHost,
+        workerIds,
+        workerContextMap
     );
   }
 
@@ -171,9 +187,11 @@ public class ControllerQueryKernelConfig
            ", maxConcurrentStages=" + maxConcurrentStages +
            ", pipeline=" + pipeline +
            ", durableStorage=" + durableStorage +
-           ", faultTolerant=" + faultTolerance +
-           ", controllerId='" + controllerId + '\'' +
+           ", faultTolerance=" + faultTolerance +
+           ", destination=" + destination +
+           ", controllerHost='" + controllerHost + '\'' +
            ", workerIds=" + workerIds +
+           ", workerContextMap=" + workerContextMap +
            '}';
   }
 
@@ -185,8 +203,9 @@ public class ControllerQueryKernelConfig
     private boolean durableStorage;
     private boolean faultTolerant;
     private MSQDestination destination;
-    private String controllerId;
+    private String controllerHost;
     private List<String> workerIds;
+    private Map<String, Object> workerContextMap = Collections.emptyMap();
 
     /**
      * Use {@link #builder()}.
@@ -231,15 +250,21 @@ public class ControllerQueryKernelConfig
       return this;
     }
 
-    public Builder controllerId(final String controllerId)
+    public Builder controllerHost(final String controllerHost)
     {
-      this.controllerId = controllerId;
+      this.controllerHost = controllerHost;
       return this;
     }
 
     public Builder workerIds(final List<String> workerIds)
     {
       this.workerIds = workerIds;
+      return this;
+    }
+
+    public Builder workerContextMap(final Map<String, Object> workerContextMap)
+    {
+      this.workerContextMap = workerContextMap;
       return this;
     }
 
@@ -252,8 +277,9 @@ public class ControllerQueryKernelConfig
           durableStorage,
           faultTolerant,
           destination,
-          controllerId,
-          workerIds
+          controllerHost,
+          workerIds,
+          workerContextMap
       );
     }
   }

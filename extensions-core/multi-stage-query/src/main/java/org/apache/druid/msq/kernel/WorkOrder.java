@@ -26,9 +26,11 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.query.QueryContext;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -51,8 +53,17 @@ public class WorkOrder
   @Nullable
   private final List<String> workerIds;
 
+  /**
+   * Always non-null for newer controllers. This is marked nullable for backwards-compatibility reasons.
+   */
   @Nullable
   private final OutputChannelMode outputChannelMode;
+
+  /**
+   * Always non-null for newer controllers. This is marked nullable for backwards-compatibility reasons.
+   */
+  @Nullable
+  private final QueryContext workerContext;
 
   @JsonCreator
   @SuppressWarnings("rawtypes")
@@ -63,7 +74,8 @@ public class WorkOrder
       @JsonProperty("input") final List<InputSlice> workerInputs,
       @JsonProperty("extra") @Nullable final ExtraInfoHolder extraInfoHolder,
       @JsonProperty("workers") @Nullable final List<String> workerIds,
-      @JsonProperty("output") @Nullable final OutputChannelMode outputChannelMode
+      @JsonProperty("output") @Nullable final OutputChannelMode outputChannelMode,
+      @JsonProperty("context") @Nullable final Map<String, Object> workerContext
   )
   {
     this.queryDefinition = Preconditions.checkNotNull(queryDefinition, "queryDefinition");
@@ -73,6 +85,7 @@ public class WorkOrder
     this.extraInfoHolder = extraInfoHolder;
     this.workerIds = workerIds;
     this.outputChannelMode = outputChannelMode;
+    this.workerContext = workerContext != null ? QueryContext.of(workerContext) : null;
   }
 
   @JsonProperty("query")
@@ -124,12 +137,39 @@ public class WorkOrder
     return outputChannelMode != null;
   }
 
+  /**
+   * Retrieves the output channel mode set by the controller. Null means the controller didn't set it, which means
+   * we're dealing with an older controller.
+   */
   @Nullable
   @JsonProperty("output")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   public OutputChannelMode getOutputChannelMode()
   {
     return outputChannelMode;
+  }
+
+  public boolean hasQueryContext()
+  {
+    return workerContext != null;
+  }
+
+  /**
+   * Retrieves the query context set by the controller. Null means the controller didn't set it, which means
+   * we're dealing with an older controller.
+   */
+  @Nullable
+  public QueryContext getWorkerContext()
+  {
+    return workerContext;
+  }
+
+  @Nullable
+  @JsonProperty("context")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, Object> getContextForSerialization()
+  {
+    return workerContext != null ? workerContext.asMap() : null;
   }
 
   @Nullable
@@ -155,7 +195,26 @@ public class WorkOrder
           workerInputs,
           extraInfoHolder,
           workerIds,
-          newOutputChannelMode
+          newOutputChannelMode,
+          workerContext != null ? workerContext.asMap() : null
+      );
+    }
+  }
+
+  public WorkOrder withQueryContext(final QueryContext newContext)
+  {
+    if (Objects.equals(newContext, this.workerContext)) {
+      return this;
+    } else {
+      return new WorkOrder(
+          queryDefinition,
+          stageNumber,
+          workerNumber,
+          workerInputs,
+          extraInfoHolder,
+          workerIds,
+          outputChannelMode,
+          newContext.asMap()
       );
     }
   }
@@ -176,7 +235,8 @@ public class WorkOrder
            && Objects.equals(workerInputs, workOrder.workerInputs)
            && Objects.equals(extraInfoHolder, workOrder.extraInfoHolder)
            && Objects.equals(workerIds, workOrder.workerIds)
-           && Objects.equals(outputChannelMode, workOrder.outputChannelMode);
+           && Objects.equals(outputChannelMode, workOrder.outputChannelMode)
+           && Objects.equals(workerContext, workOrder.workerContext);
   }
 
   @Override
@@ -189,7 +249,8 @@ public class WorkOrder
         workerInputs,
         extraInfoHolder,
         workerIds,
-        outputChannelMode
+        outputChannelMode,
+        workerContext
     );
   }
 
@@ -204,6 +265,7 @@ public class WorkOrder
            ", extraInfoHolder=" + extraInfoHolder +
            ", workerIds=" + workerIds +
            ", outputChannelMode=" + outputChannelMode +
+           ", context=" + workerContext +
            '}';
   }
 }

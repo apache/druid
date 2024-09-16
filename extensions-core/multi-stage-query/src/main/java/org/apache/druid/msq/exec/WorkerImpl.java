@@ -48,7 +48,6 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
-import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -388,7 +387,6 @@ public class WorkerImpl implements Worker
     final InputChannelFactory inputChannelFactory =
         makeBaseInputChannelFactory(workOrder, controllerClient, kernelHolder.processorCloser);
 
-    final QueryContext queryContext = task != null ? QueryContext.of(task.getContext()) : QueryContext.empty();
     final boolean includeAllCounters = context.includeAllCounters();
     final RunWorkOrder runWorkOrder = new RunWorkOrder(
         workOrder,
@@ -402,8 +400,8 @@ public class WorkerImpl implements Worker
         context,
         frameContext,
         makeRunWorkOrderListener(workOrder, controllerClient, criticalWarningCodes, maxVerboseParseExceptions),
-        MultiStageQueryContext.isReindex(queryContext),
-        MultiStageQueryContext.removeNullBytes(queryContext)
+        MultiStageQueryContext.isReindex(workOrder.getWorkerContext()),
+        MultiStageQueryContext.removeNullBytes(workOrder.getWorkerContext())
     );
 
     // Set up processorCloser (called when processing is done).
@@ -560,6 +558,13 @@ public class WorkerImpl implements Worker
     return getOrCreateStageOutputHolder(stageId, partitionNumber).readRemotelyFrom(offset);
   }
 
+  /**
+   * Accept a new {@link WorkOrder} for execution.
+   *
+   * For backwards-compatibility purposes, this method populates {@link WorkOrder#getOutputChannelMode()}
+   * and {@link WorkOrder#getWorkerContext()} if the controller did not set them. (They are there for newer controllers,
+   * but not older ones.)
+   */
   @Override
   public void postWorkOrder(final WorkOrder workOrder)
   {
@@ -577,28 +582,34 @@ public class WorkerImpl implements Worker
       );
     }
 
-    final OutputChannelMode outputChannelMode;
+    // This condition can be removed once we can rely on QueryContext always being in the WorkOrder.
+    // (It will be there for newer controllers; this is a backwards-compatibility thing.)
+    final QueryContext queryContext;
+    if (workOrder.hasQueryContext()) {
+      queryContext = workOrder.getWorkerContext();
+    } else if (task != null && task.getContext() != null) {
+      queryContext = QueryContext.of(task.getContext());
+    } else {
+      queryContext = QueryContext.empty();
+    }
 
     // This stack of conditions can be removed once we can rely on OutputChannelMode always being in the WorkOrder.
     // (It will be there for newer controllers; this is a backwards-compatibility thing.)
+    final OutputChannelMode outputChannelMode;
     if (workOrder.hasOutputChannelMode()) {
       outputChannelMode = workOrder.getOutputChannelMode();
     } else {
-      final MSQSelectDestination selectDestination =
-          task != null
-          ? MultiStageQueryContext.getSelectDestination(QueryContext.of(task.getContext()))
-          : MSQSelectDestination.TASKREPORT;
-
       outputChannelMode = ControllerQueryKernelUtils.getOutputChannelMode(
           workOrder.getQueryDefinition(),
           workOrder.getStageNumber(),
-          selectDestination,
+          MultiStageQueryContext.getSelectDestination(queryContext),
           task != null && MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext())),
           false
       );
     }
 
-    final WorkOrder workOrderToUse = workOrder.withOutputChannelMode(outputChannelMode);
+    final WorkOrder workOrderToUse =
+        workOrder.withQueryContext(queryContext).withOutputChannelMode(outputChannelMode);
     kernelManipulationQueue.add(
         kernelHolders ->
             kernelHolders.addKernel(WorkerStageKernel.create(workOrderToUse))

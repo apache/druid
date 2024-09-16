@@ -108,6 +108,7 @@ public class QueryValidatorTest
         Collections.singletonList(() -> inputFiles), // Slice with a large number of inputFiles
         null,
         null,
+        null,
         null
     );
 
