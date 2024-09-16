@@ -58,13 +58,13 @@ public class DelimitedReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "2019-01-01T00:00:10Z\tname_1\t5",
-            "2019-01-01T00:00:20Z\tname_2\t10",
-            "2019-01-01T00:00:30Z\tname_3\t15"
+            "2019-01-01T00:00:10Z\tname_1\t5\t0.0",
+            "2019-01-01T00:00:20Z\tname_2\t10\t1.0",
+            "2019-01-01T00:00:30Z\tname_3\t15\t2.0"
         )
     );
     final DelimitedInputFormat format = new DelimitedInputFormat(
-        ImmutableList.of("ts", "name", "score"),
+        ImmutableList.of("ts", "name", "score", "rating_dbl"),
         null,
         null,
         null,
@@ -73,30 +73,28 @@ public class DelimitedReaderTest
         null
     );
     assertResult(source, format);
-    // use this test!
   }
 
   @Test
-  public void testWithoutHeadersNumberizeStrings() throws IOException
+  public void testParseNumbers() throws IOException
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "2019-01-01T00:00:10Z\tname_1\t5",
-            "2019-01-01T00:00:20Z\tname_2\t10",
-            "2019-01-01T00:00:30Z\tname_3\t15"
+            "2019-01-01T00:00:10Z\tname_1\t5\t0.0",
+            "2019-01-01T00:00:20Z\tname_2\t10\t1.0",
+            "2019-01-01T00:00:30Z\tname_3\t15\t2.0"
         )
     );
     final DelimitedInputFormat format = new DelimitedInputFormat(
-        ImmutableList.of("ts", "name", "score"),
+        ImmutableList.of("ts", "name", "score", "rating_dbl"),
         null,
         null,
         null,
         false,
         0,
-        false
+        true
     );
     assertResult(source, format);
-    // use this test!
   }
 
   @Test
@@ -283,10 +281,19 @@ public class DelimitedReaderTest
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
-        // fixme
-        System.out.println("Score" + row.getRaw("score"));
-        System.out.println("Score instanceof String" + (row.getRaw("score") instanceof String));
-        System.out.println("Score instanceof Long" + (row.getRaw("score") instanceof Long));
+        if (format.shouldParseNumbers()) {
+          Assert.assertEquals(((numResults + 1) * 5L), row.getRaw("score"));
+          Assert.assertTrue((row.getRaw("score") instanceof Long));
+          if (format.getColumns().contains("rating_dbl")) {
+            Assert.assertEquals(numResults * 1.0, row.getRaw("rating_dbl"));
+          }
+        } else {
+          Assert.assertEquals(Integer.toString((numResults + 1) * 5), row.getRaw("score"));
+          Assert.assertTrue((row.getRaw("score") instanceof String));
+          if (format.getColumns().contains("rating_dbl")) {
+            Assert.assertEquals(Double.toString(numResults * 1.0), row.getRaw("rating_dbl"));
+          }
+        }
         Assert.assertEquals(
             Integer.toString((numResults + 1) * 5),
             Iterables.getOnlyElement(row.getDimension("score"))

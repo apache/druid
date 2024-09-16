@@ -66,8 +66,10 @@ public class ParserUtils
               .map(NullHandling::emptyToNullIfNeeded)
               .map(value -> shouldParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
               .collect(Collectors.toList());
-        } else {
+        } else if (shouldParseNumbers) {
           return tryParseStringAsNumber(input);
+        } else {
+          return input;
         }
       } else {
         return NullHandling.emptyToNullIfNeeded(input);
