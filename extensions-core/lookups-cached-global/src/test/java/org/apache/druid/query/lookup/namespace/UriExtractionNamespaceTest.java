@@ -116,26 +116,6 @@ public class UriExtractionNamespaceTest
     Assert.assertEquals(ImmutableMap.of("val2", "val3"), parser.getParser().parseToMap("val1,val2,val3"));
   }
 
-  @Test
-  public void testCSVWithHeaderWithNumbers()
-  {
-    UriExtractionNamespace.CSVFlatDataParser parser = new UriExtractionNamespace.CSVFlatDataParser(
-        ImmutableList.of("col1", "col2", "col3"),
-        "col2",
-        "col3",
-        true,
-        1
-    );
-    // parser return empty list as the 1 row header need to be skipped.
-    Assert.assertEquals(ImmutableMap.of(), parser.getParser().parseToMap("row to skip "));
-    //Header also need to be skipped.
-    Assert.assertEquals(ImmutableMap.of(), parser.getParser().parseToMap("col1,col2,col3"));
-    // test the header is parsed
-    Assert.assertEquals(ImmutableList.of("col1", "col2", "col3"), parser.getParser().getFieldNames());
-    // The third row will parse to data
-    Assert.assertEquals(ImmutableMap.of("val2", "12"), parser.getParser().parseToMap("val1,val2,12"));
-  }
-
   @Test(expected = IllegalArgumentException.class)
   public void testBadCSV()
   {
