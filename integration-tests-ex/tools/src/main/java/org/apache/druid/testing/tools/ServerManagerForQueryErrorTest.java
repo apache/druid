@@ -47,7 +47,6 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -98,7 +97,6 @@ public class ServerManagerForQueryErrorTest extends ServerManager
       Cache cache,
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       ServerConfig serverConfig
   )
   {
@@ -111,7 +109,6 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         cache,
         cacheConfig,
         segmentManager,
-        joinableFactoryWrapper,
         serverConfig
     );
   }

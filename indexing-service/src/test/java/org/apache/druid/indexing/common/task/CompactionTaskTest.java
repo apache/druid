@@ -116,6 +116,7 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.BatchIOConfig;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -749,7 +750,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -810,7 +812,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -872,7 +875,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -935,7 +939,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1005,7 +1010,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1055,7 +1061,8 @@ public class CompactionTaskTest
         null,
         customMetricsSpec,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1098,7 +1105,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1148,7 +1156,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1178,7 +1187,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1219,7 +1229,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1263,7 +1274,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
@@ -1308,7 +1320,8 @@ public class CompactionTaskTest
             new PeriodGranularity(Period.months(3), null, null),
             null
         ),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1355,7 +1368,8 @@ public class CompactionTaskTest
         null,
         null,
         null,
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1400,7 +1414,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1445,7 +1460,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1475,7 +1491,8 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
-        METRIC_BUILDER
+        METRIC_BUILDER,
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1492,6 +1509,27 @@ public class CompactionTaskTest
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
       //Expect false since rollup value in metadata of existing segments are null
       Assert.assertFalse(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
+    }
+  }
+
+  @Test
+  public void testMultiValuedDimensionsProcessing()
+      throws IOException
+  {
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, null, null),
+        METRIC_BUILDER,
+        true
+    );
+    for (DataSchema dataSchema : dataSchemasForIntervals.values()) {
+      Assert.assertTrue(dataSchema instanceof CombinedDataSchema);
+      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedDimensions().isEmpty());
     }
   }
 
@@ -1872,6 +1910,7 @@ public class CompactionTaskTest
                 return new Metadata(
                     null,
                     aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
                     null,
                     null,
                     null

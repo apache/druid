@@ -3508,7 +3508,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLeftJoinRightTableCanBeEmpty()
   {
-    // HashJoinSegmentStorageAdapter is not vectorizable
+    // HashJoinSegmentCursorFactory is not vectorizable
     cannotVectorize();
 
     final DataSource rightTable;
@@ -3989,10 +3989,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
   {
-    // Fully removing the join allows this query to vectorize.
-    if (!isRewriteJoinToFilter(queryContext)) {
-      cannotVectorize();
-    }
+    // Cannot vectorize timeBoundary with maxTime (the engine will request descending order, which cannot vectorize).
+    cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);

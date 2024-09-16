@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -34,7 +35,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.MemoryIntrospector;
-import org.apache.druid.msq.exec.OutputChannelMode;
+import org.apache.druid.msq.exec.ProcessingBuffersProvider;
+import org.apache.druid.msq.exec.ProcessingBuffersSet;
 import org.apache.druid.msq.exec.TaskDataSegmentProvider;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -45,7 +47,7 @@ import org.apache.druid.msq.indexing.client.IndexerControllerClient;
 import org.apache.druid.msq.indexing.client.IndexerWorkerClient;
 import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -79,10 +81,15 @@ public class IndexerWorkerContext implements WorkerContext
   private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceClientFactory clientFactory;
   private final MemoryIntrospector memoryIntrospector;
+  private final ProcessingBuffersProvider processingBuffersProvider;
   private final int maxConcurrentStages;
+  private final boolean includeAllCounters;
 
   @GuardedBy("this")
   private ServiceLocator controllerLocator;
+
+  // Written under synchronized(this) using double-checked locking.
+  private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
 
   public IndexerWorkerContext(
       final MSQWorkerTask task,
@@ -93,6 +100,7 @@ public class IndexerWorkerContext implements WorkerContext
       final TaskDataSegmentProvider dataSegmentProvider,
       final ServiceClientFactory clientFactory,
       final MemoryIntrospector memoryIntrospector,
+      final ProcessingBuffersProvider processingBuffersProvider,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory
   )
   {
@@ -104,8 +112,12 @@ public class IndexerWorkerContext implements WorkerContext
     this.dataSegmentProvider = dataSegmentProvider;
     this.clientFactory = clientFactory;
     this.memoryIntrospector = memoryIntrospector;
+    this.processingBuffersProvider = processingBuffersProvider;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
-    this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStages(QueryContext.of(task.getContext()));
+
+    final QueryContext queryContext = QueryContext.of(task.getContext());
+    this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStages(queryContext);
+    this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
   }
 
   public static IndexerWorkerContext createProductionInstance(
@@ -123,6 +135,7 @@ public class IndexerWorkerContext implements WorkerContext
     final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final OverlordClient overlordClient =
         injector.getInstance(OverlordClient.class).withRetryPolicy(StandardRetryPolicy.unlimited());
+    final ProcessingBuffersProvider processingBuffersProvider = injector.getInstance(ProcessingBuffersProvider.class);
     final ObjectMapper smileMapper = injector.getInstance(Key.get(ObjectMapper.class, Smile.class));
     final QueryToolChestWarehouse warehouse = injector.getInstance(QueryToolChestWarehouse.class);
 
@@ -135,6 +148,7 @@ public class IndexerWorkerContext implements WorkerContext
         new TaskDataSegmentProvider(toolbox.getCoordinatorClient(), segmentCacheManager, indexIO),
         serviceClientFactory,
         memoryIntrospector,
+        processingBuffersProvider,
         new DataServerQueryHandlerFactory(
             toolbox.getCoordinatorClient(),
             serviceClientFactory,
@@ -184,6 +198,14 @@ public class IndexerWorkerContext implements WorkerContext
       synchronized (this) {
         if (controllerLocator != null) {
           controllerLocator.close();
+        }
+      }
+    });
+    closer.register(() -> {
+      synchronized (this) {
+        if (processingBuffersSet != null) {
+          processingBuffersSet.close();
+          processingBuffersSet = null;
         }
       }
     });
@@ -277,23 +299,39 @@ public class IndexerWorkerContext implements WorkerContext
   }
 
   @Override
-  public FrameContext frameContext(QueryDefinition queryDef, int stageNumber, OutputChannelMode outputChannelMode)
+  public FrameContext frameContext(WorkOrder workOrder)
   {
+    if (processingBuffersSet == null) {
+      synchronized (this) {
+        if (processingBuffersSet == null) {
+          processingBuffersSet = processingBuffersProvider.acquire(
+              workOrder.getQueryDefinition(),
+              maxConcurrentStages()
+          );
+        }
+      }
+    }
+
+    final WorkerMemoryParameters memoryParameters =
+        WorkerMemoryParameters.createProductionInstance(workOrder, memoryIntrospector, maxConcurrentStages);
+    log.info("Memory parameters for stage[%s]: %s", workOrder.getStageDefinition().getId(), memoryParameters);
+
     return new IndexerFrameContext(
-        queryDef.getStageDefinition(stageNumber).getId(),
+        workOrder.getStageDefinition().getId(),
         this,
         indexIO,
         dataSegmentProvider,
+        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
         dataServerQueryHandlerFactory,
-        WorkerMemoryParameters.createProductionInstanceForWorker(injector, queryDef, stageNumber, maxConcurrentStages),
-        WorkerStorageParameters.createProductionInstance(injector, outputChannelMode)
+        memoryParameters,
+        WorkerStorageParameters.createProductionInstance(injector, workOrder.getOutputChannelMode())
     );
   }
 
   @Override
   public int threadCount()
   {
-    return memoryIntrospector.numProcessorsInJvm();
+    return memoryIntrospector.numProcessingThreads();
   }
 
   @Override
@@ -306,6 +344,12 @@ public class IndexerWorkerContext implements WorkerContext
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
     return dataServerQueryHandlerFactory;
+  }
+
+  @Override
+  public boolean includeAllCounters()
+  {
+    return includeAllCounters;
   }
 
   private synchronized ServiceLocator makeControllerLocator(final String controllerId)

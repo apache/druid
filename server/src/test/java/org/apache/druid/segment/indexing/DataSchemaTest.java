@@ -30,8 +30,11 @@ import org.apache.druid.common.utils.IdUtilsTest;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JSONParseSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -68,6 +71,11 @@ import java.util.Set;
 
 public class DataSchemaTest extends InitializedNullHandlingTest
 {
+  private static ArbitraryGranularitySpec ARBITRARY_GRANULARITY = new ArbitraryGranularitySpec(
+      Granularities.DAY,
+      ImmutableList.of(Intervals.of("2014/2015"))
+  );
+
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
@@ -89,17 +97,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withParserMap(parser)
+                                  .withAggregators(
+                                      new DoubleSumAggregatorFactory("metric1", "col1"),
+                                      new DoubleSumAggregatorFactory("metric2", "col2")
+                                  )
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
 
     Assert.assertEquals(
         ImmutableSet.of("__time", "time", "col1", "col2", "metric1", "metric2"),
@@ -127,18 +134,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
             null
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withParserMap(parser)
+                                  .withAggregators(
+                                      new DoubleSumAggregatorFactory("metric1", "col1"),
+                                      new DoubleSumAggregatorFactory("metric2", "col2")
+                                  )
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
 
     Assert.assertEquals(
         ImmutableSet.of("__time", "dimC", "col1", "metric1", "metric2"),
@@ -164,22 +169,28 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parserMap,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        new TransformSpec(
-            new SelectorDimFilter("dimA", "foo", null),
-            ImmutableList.of(
-                new ExpressionTransform("expr", "concat(dimA,dimA)", TestExprMacroTable.INSTANCE)
-            )
-        ),
-        jsonMapper
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withParserMap(parserMap)
+                                  .withAggregators(
+                                      new DoubleSumAggregatorFactory("metric1", "col1"),
+                                      new DoubleSumAggregatorFactory("metric2", "col2")
+                                  )
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withTransform(
+                                      new TransformSpec(
+                                          new SelectorDimFilter("dimA", "foo", null),
+                                          ImmutableList.of(
+                                              new ExpressionTransform(
+                                                  "expr",
+                                                  "concat(dimA,dimA)",
+                                                  TestExprMacroTable.INSTANCE
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
 
     // Test hack that produces a StringInputRowParser.
     final StringInputRowParser parser = (StringInputRowParser) schema.getParser();
@@ -230,19 +241,18 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withParserMap(parser)
+                                  .withAggregators(
+                                      new DoubleSumAggregatorFactory("metric1", "col1"),
+                                      new DoubleSumAggregatorFactory("metric2", "col2")
+                                  )
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage(
         "Cannot specify a column more than once: [metric1] seen in dimensions list, metricsSpec list"
     );
@@ -251,29 +261,121 @@ public class DataSchemaTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOverlapTimeAndDim()
+  public void testOverlapTimeAndDimPositionZero()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "Cannot specify a column more than once: [__time] seen in dimensions list, "
-        + "primary timestamp (__time cannot appear as a dimension or metric)"
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withTimestamp(new TimestampSpec("time", "auto", null))
+                                  .withDimensions(
+                                      DimensionsSpec.builder()
+                                                    .setDimensions(
+                                                        ImmutableList.of(
+                                                            new LongDimensionSchema("__time"),
+                                                            new StringDimensionSchema("dimA"),
+                                                            new StringDimensionSchema("dimB")
+                                                        )
+                                                    )
+                                                    .setDimensionExclusions(ImmutableList.of("dimC"))
+                                                    .build()
+                                  )
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
+
+    Assert.assertEquals(
+        ImmutableList.of("__time", "dimA", "dimB"),
+        schema.getDimensionsSpec().getDimensionNames()
     );
 
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        new TimestampSpec("time", "auto", null),
-        DimensionsSpec.builder()
-                      .setDimensions(
-                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("__time", "dimA", "dimB", "metric1"))
-                      )
-                      .setDimensionExclusions(ImmutableList.of("dimC"))
-                      .build(),
-        null,
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        null,
-        jsonMapper
+    Assert.assertTrue(schema.getDimensionsSpec().isForceSegmentSortByTime());
+  }
+
+  @Test
+  public void testOverlapTimeAndDimPositionZeroWrongType()
+  {
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage("Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.");
+
+    DataSchema.builder()
+              .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+              .withTimestamp(new TimestampSpec("time", "auto", null))
+              .withDimensions(
+                  DimensionsSpec.builder()
+                                .setDimensions(
+                                    ImmutableList.of(
+                                        new StringDimensionSchema("__time"),
+                                        new StringDimensionSchema("dimA"),
+                                        new StringDimensionSchema("dimB")
+                                    )
+                                )
+                                .setDimensionExclusions(ImmutableList.of("dimC"))
+                                .build()
+              )
+              .withGranularity(ARBITRARY_GRANULARITY)
+              .withObjectMapper(jsonMapper)
+              .build();
+  }
+
+  @Test
+  public void testOverlapTimeAndDimPositionOne()
+  {
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage(
+        "Encountered dimension[__time] at position[1]. This is only supported when the dimensionsSpec "
+        + "parameter[forceSegmentSortByTime] is set to[false]. "
+        + DimensionsSpec.WARNING_NON_TIME_SORT_ORDER
     );
+
+    DataSchema.builder()
+              .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+              .withTimestamp(new TimestampSpec("time", "auto", null))
+              .withDimensions(
+                  DimensionsSpec.builder()
+                                .setDimensions(
+                                    ImmutableList.of(
+                                        new StringDimensionSchema("dimA"),
+                                        new LongDimensionSchema("__time"),
+                                        new StringDimensionSchema("dimB")
+                                    )
+                                )
+                                .setDimensionExclusions(ImmutableList.of("dimC"))
+                                .build()
+              )
+              .withGranularity(ARBITRARY_GRANULARITY)
+              .withObjectMapper(jsonMapper)
+              .build();
+  }
+
+  @Test
+  public void testOverlapTimeAndDimPositionOne_withExplicitSortOrder()
+  {
+    DataSchema schema =
+        DataSchema.builder()
+                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                  .withTimestamp(new TimestampSpec("time", "auto", null))
+                  .withDimensions(
+                      DimensionsSpec.builder()
+                                    .setDimensions(
+                                        ImmutableList.of(
+                                            new StringDimensionSchema("dimA"),
+                                            new LongDimensionSchema("__time"),
+                                            new StringDimensionSchema("dimB")
+                                        )
+                                    )
+                                    .setDimensionExclusions(ImmutableList.of("dimC"))
+                                    .setForceSegmentSortByTime(false)
+                                    .build()
+                  )
+                  .withGranularity(ARBITRARY_GRANULARITY)
+                  .withObjectMapper(jsonMapper)
+                  .build();
+
+    Assert.assertEquals(
+        ImmutableList.of("dimA", "__time", "dimB"),
+        schema.getDimensionsSpec().getDimensionNames()
+    );
+
+    Assert.assertFalse(schema.getDimensionsSpec().isForceSegmentSortByTime());
   }
 
   @Test
@@ -304,20 +406,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parser,
-        null,
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withParserMap(parser)
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
 
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "Cannot specify a column more than once: [__time] seen in dimensions list, primary timestamp "
-        + "(__time cannot appear as a dimension or metric)"
-    );
+
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage("Encountered dimension[__time] with incorrect type[STRING]. Type must be 'long'.");
 
     schema.getParser();
   }
@@ -341,26 +439,25 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    expectedException.expect(IllegalArgumentException.class);
+    expectedException.expect(DruidException.class);
     expectedException.expectMessage(
         "Cannot specify a column more than once: [metric1] seen in metricsSpec list (2 occurrences); "
         + "[metric3] seen in metricsSpec list (2 occurrences)"
     );
 
-    DataSchema schema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            new DoubleSumAggregatorFactory("metric1", "col3"),
-            new DoubleSumAggregatorFactory("metric3", "col4"),
-            new DoubleSumAggregatorFactory("metric3", "col5"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                  .withParserMap(parser)
+                                  .withAggregators(
+                                      new DoubleSumAggregatorFactory("metric1", "col1"),
+                                      new DoubleSumAggregatorFactory("metric2", "col2"),
+                                      new DoubleSumAggregatorFactory("metric1", "col3"),
+                                      new DoubleSumAggregatorFactory("metric3", "col4"),
+                                      new DoubleSumAggregatorFactory("metric3", "col5")
+                                  )
+                                  .withGranularity(ARBITRARY_GRANULARITY)
+                                  .withObjectMapper(jsonMapper)
+                                  .build();
   }
 
   @Test
@@ -415,24 +512,20 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DruidExceptionMatcher
-        .invalidInput()
-        .expectMessageIs("Invalid value for field [dataSource]: must not be null")
-        .assertThrowsAndMatches(
-            () -> new DataSchema(
-                "",
-                parser,
-                new AggregatorFactory[]{
-                    new DoubleSumAggregatorFactory("metric1", "col1"),
-                    new DoubleSumAggregatorFactory("metric2", "col2"),
-                    },
-                new ArbitraryGranularitySpec(
-                    Granularities.DAY,
-                    ImmutableList.of(Intervals.of("2014/2015"))
-                ),
-                null,
-                jsonMapper
-            ));
+    DruidExceptionMatcher.ThrowingSupplier thrower =
+        () -> DataSchema.builder()
+                        .withDataSource("")
+                        .withParserMap(parser)
+                        .withAggregators(
+                            new DoubleSumAggregatorFactory("metric1", "col1"),
+                            new DoubleSumAggregatorFactory("metric2", "col2")
+                        )
+                        .withGranularity(ARBITRARY_GRANULARITY)
+                        .withObjectMapper(jsonMapper)
+                        .build();
+    DruidExceptionMatcher.invalidInput()
+                         .expectMessageIs("Invalid value for field [dataSource]: must not be null")
+                         .assertThrowsAndMatches(thrower);
   }
 
 
@@ -452,14 +545,11 @@ public class DataSchemaTest extends InitializedNullHandlingTest
           dataSource
       );
       DruidExceptionMatcher.invalidInput().expectMessageIs(msg).assertThrowsAndMatches(
-          () -> new DataSchema(
-              dataSource,
-              Collections.emptyMap(),
-              null,
-              null,
-              null,
-              jsonMapper
-          )
+          () -> DataSchema.builder()
+                          .withDataSource(dataSource)
+                          .withParserMap(Collections.emptyMap())
+                          .withObjectMapper(jsonMapper)
+                          .build()
       );
     }
   }
@@ -591,17 +681,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
         ), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    DataSchema originalSchema = new DataSchema(
-        IdUtilsTest.VALID_ID_CHARS,
-        parser,
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
-            },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
-        null,
-        jsonMapper
-    );
+    DataSchema originalSchema = DataSchema.builder()
+                                          .withDataSource(IdUtilsTest.VALID_ID_CHARS)
+                                          .withParserMap(parser)
+                                          .withAggregators(
+                                              new DoubleSumAggregatorFactory("metric1", "col1"),
+                                              new DoubleSumAggregatorFactory("metric2", "col2")
+                                          )
+                                          .withGranularity(ARBITRARY_GRANULARITY)
+                                          .withObjectMapper(jsonMapper)
+                                          .build();
 
     String serialized = jsonMapper.writeValueAsString(originalSchema);
     TestModifiedDataSchema deserialized = jsonMapper.readValue(serialized, TestModifiedDataSchema.class);
@@ -639,7 +728,7 @@ public class DataSchemaTest extends InitializedNullHandlingTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
             },
-        new ArbitraryGranularitySpec(Granularities.DAY, ImmutableList.of(Intervals.of("2014/2015"))),
+        ARBITRARY_GRANULARITY,
         null,
         parser,
         jsonMapper,
@@ -670,10 +759,16 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     Map<String, Object> parserMap = Mockito.mock(Map.class);
     Mockito.when(newDimSpec.withDimensionExclusions(ArgumentMatchers.any(Set.class))).thenReturn(newDimSpec);
 
-    DataSchema oldSchema = new DataSchema("dataSource", tsSpec, oldDimSpec,
-                                          new AggregatorFactory[]{aggFactory}, gSpec,
-                                          transSpec, parserMap, jsonMapper
-    );
+    DataSchema oldSchema = DataSchema.builder()
+                                     .withDataSource("dataSource")
+                                     .withTimestamp(tsSpec)
+                                     .withDimensions(oldDimSpec)
+                                     .withAggregators(aggFactory)
+                                     .withGranularity(gSpec)
+                                     .withTransform(transSpec)
+                                     .withParserMap(parserMap)
+                                     .withObjectMapper(jsonMapper)
+                                     .build();
     DataSchema newSchema = oldSchema.withDimensionsSpec(newDimSpec);
     Assert.assertSame(oldSchema.getDataSource(), newSchema.getDataSource());
     Assert.assertSame(oldSchema.getTimestampSpec(), newSchema.getTimestampSpec());
@@ -683,5 +778,27 @@ public class DataSchemaTest extends InitializedNullHandlingTest
     Assert.assertSame(oldSchema.getTransformSpec(), newSchema.getTransformSpec());
     Assert.assertSame(oldSchema.getParserMap(), newSchema.getParserMap());
 
+  }
+
+  @Test
+  public void testCombinedDataSchemaSetsMultiValuedColumnsInfo()
+  {
+    Set<String> multiValuedDimensions = ImmutableSet.of("dimA");
+
+    CombinedDataSchema schema = new CombinedDataSchema(
+        IdUtilsTest.VALID_ID_CHARS,
+        new TimestampSpec("time", "auto", null),
+        DimensionsSpec.builder()
+                      .setDimensions(
+                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimA", "dimB", "metric1"))
+                      )
+                      .setDimensionExclusions(ImmutableList.of("dimC"))
+                      .build(),
+        null,
+        ARBITRARY_GRANULARITY,
+        null,
+        multiValuedDimensions
+    );
+    Assert.assertEquals(ImmutableSet.of("dimA"), schema.getMultiValuedDimensions());
   }
 }

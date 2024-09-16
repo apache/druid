@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -44,6 +45,7 @@ import org.apache.druid.frame.processor.FileOutputChannelFactory;
 import org.apache.druid.frame.processor.FrameChannelHashPartitioner;
 import org.apache.druid.frame.processor.FrameChannelMixer;
 import org.apache.druid.frame.processor.FrameProcessor;
+import org.apache.druid.frame.processor.FrameProcessorDecorator;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -55,6 +57,7 @@ import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -62,9 +65,12 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
+import org.apache.druid.msq.counters.CpuCounters;
 import org.apache.druid.msq.indexing.CountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
@@ -92,7 +98,6 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
@@ -102,7 +107,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -110,7 +116,29 @@ import java.util.stream.Collectors;
  */
 public class RunWorkOrder
 {
-  private final String controllerTaskId;
+  enum State
+  {
+    /**
+     * Initial state. Must be in this state to call {@link #startAsync()}.
+     */
+    INIT,
+
+    /**
+     * State entered upon calling {@link #startAsync()}.
+     */
+    STARTED,
+
+    /**
+     * State entered upon calling {@link #stop()}.
+     */
+    STOPPING,
+
+    /**
+     * State entered when a call to {@link #stop()} concludes.
+     */
+    STOPPED
+  }
+
   private final WorkOrder workOrder;
   private final InputChannelFactory inputChannelFactory;
   private final CounterTracker counterTracker;
@@ -123,7 +151,9 @@ public class RunWorkOrder
   private final boolean reindex;
   private final boolean removeNullBytes;
   private final ByteTracker intermediateSuperSorterLocalStorageTracker;
-  private final AtomicBoolean started = new AtomicBoolean();
+  private final AtomicReference<State> state = new AtomicReference<>(State.INIT);
+  private final CountDownLatch stopLatch = new CountDownLatch(1);
+  private final AtomicReference<Either<Throwable, Object>> resultForListener = new AtomicReference<>();
 
   @MonotonicNonNull
   private InputSliceReader inputSliceReader;
@@ -139,7 +169,6 @@ public class RunWorkOrder
   private ListenableFuture<OutputChannels> stageOutputChannelsFuture;
 
   public RunWorkOrder(
-      final String controllerTaskId,
       final WorkOrder workOrder,
       final InputChannelFactory inputChannelFactory,
       final CounterTracker counterTracker,
@@ -152,7 +181,6 @@ public class RunWorkOrder
       final boolean removeNullBytes
   )
   {
-    this.controllerTaskId = controllerTaskId;
     this.workOrder = workOrder;
     this.inputChannelFactory = inputChannelFactory;
     this.counterTracker = counterTracker;
@@ -178,15 +206,16 @@ public class RunWorkOrder
    * Execution proceeds asynchronously after this method returns. The {@link RunWorkOrderListener} passed to the
    * constructor of this instance can be used to track progress.
    */
-  public void start() throws IOException
+  public void startAsync()
   {
-    if (started.getAndSet(true)) {
-      throw new ISE("Already started");
+    if (!state.compareAndSet(State.INIT, State.STARTED)) {
+      throw new ISE("Cannot start from state[%s]", state);
     }
 
     final StageDefinition stageDef = workOrder.getStageDefinition();
 
     try {
+      exec.registerCancellationId(cancellationId);
       makeInputSliceReader();
       makeWorkOutputChannelFactory();
       makeShuffleOutputChannelFactory();
@@ -203,16 +232,78 @@ public class RunWorkOrder
       setUpCompletionCallbacks();
     }
     catch (Throwable t) {
-      // If start() has problems, cancel anything that was already kicked off, and close the FrameContext.
+      stopUnchecked();
+    }
+  }
+
+  /**
+   * Stops an execution that was previously initiated through {@link #startAsync()} and closes the {@link FrameContext}.
+   * May be called to cancel execution. Must also be called after successful execution in order to ensure that resources
+   * are all properly cleaned up.
+   *
+   * Blocks until execution is fully stopped.
+   */
+  public void stop() throws InterruptedException
+  {
+    if (state.compareAndSet(State.INIT, State.STOPPING)
+        || state.compareAndSet(State.STARTED, State.STOPPING)) {
+      // Initiate stopping.
+      Throwable e = null;
+
       try {
         exec.cancel(cancellationId);
       }
-      catch (Throwable t2) {
-        t.addSuppressed(t2);
+      catch (Throwable e2) {
+        e = e2;
       }
 
-      CloseableUtils.closeAndSuppressExceptions(frameContext, t::addSuppressed);
-      throw t;
+      try {
+        frameContext.close();
+      }
+      catch (Throwable e2) {
+        if (e == null) {
+          e = e2;
+        } else {
+          e.addSuppressed(e2);
+        }
+      }
+
+      try {
+        // notifyListener will ignore this cancellation error if work has already succeeded.
+        notifyListener(Either.error(new MSQException(CanceledFault.instance())));
+      }
+      catch (Throwable e2) {
+        if (e == null) {
+          e = e2;
+        } else {
+          e.addSuppressed(e2);
+        }
+      }
+
+      stopLatch.countDown();
+
+      if (e != null) {
+        Throwables.throwIfInstanceOf(e, InterruptedException.class);
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
+    }
+
+    stopLatch.await();
+  }
+
+  /**
+   * Calls {@link #stop()}. If the call to {@link #stop()} throws {@link InterruptedException}, this method sets
+   * the interrupt flag and throws an unchecked exception.
+   */
+  public void stopUnchecked()
+  {
+    try {
+      stop();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
     }
   }
 
@@ -240,9 +331,10 @@ public class RunWorkOrder
             workOrder.getQueryDefinition(),
             InputSlices.allReadablePartitions(workOrder.getInputs()),
             inputChannelFactory,
-            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getStandardFrameSize()),
+            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getFrameSize()),
             exec,
             cancellationId,
+            counterTracker,
             removeNullBytes
         );
 
@@ -267,18 +359,8 @@ public class RunWorkOrder
     final OutputChannelFactory baseOutputChannelFactory;
 
     if (workOrder.getStageDefinition().doesShuffle()) {
-      // Writing to a consumer in the same JVM (which will be set up later on in this method). Use the large frame
-      // size if we're writing to a SuperSorter, since we'll generate fewer temp files if we use larger frames.
-      // Otherwise, use the standard frame size.
-      final int frameSize;
-
-      if (workOrder.getStageDefinition().getShuffleSpec().kind().isSort()) {
-        frameSize = frameContext.memoryParameters().getLargeFrameSize();
-      } else {
-        frameSize = frameContext.memoryParameters().getStandardFrameSize();
-      }
-
-      baseOutputChannelFactory = new BlockingQueueOutputChannelFactory(frameSize);
+      // Writing to a consumer in the same JVM (which will be set up later on in this method).
+      baseOutputChannelFactory = new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
     } else {
       // Writing stage output.
       baseOutputChannelFactory = makeStageOutputChannelFactory();
@@ -348,9 +430,9 @@ public class RunWorkOrder
     }
 
     final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
-        processorManager,
+        counterTracker.trackCpu(processorManager, CpuCounters.LABEL_MAIN),
         maxOutstandingProcessors,
-        frameContext.processorBouncer(),
+        processorFactory.usesProcessingBuffers() ? frameContext.processingBuffers().getBouncer() : Bouncer.unlimited(),
         cancellationId
     );
 
@@ -391,13 +473,13 @@ public class RunWorkOrder
         if (shuffleSpec.partitionCount() == 1) {
           // Single partition; no need to write temporary files.
           hashOutputChannelFactory =
-              new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getStandardFrameSize());
+              new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
         } else {
           // Multi-partition; write temporary files and then sort each one file-by-file.
           hashOutputChannelFactory =
               new FileOutputChannelFactory(
                   frameContext.tempDir("hash-parts"),
-                  frameContext.memoryParameters().getStandardFrameSize(),
+                  frameContext.memoryParameters().getFrameSize(),
                   null
               );
         }
@@ -466,17 +548,31 @@ public class RunWorkOrder
               writeDurableStorageSuccessFile();
             }
 
-            listener.onSuccess(resultObject);
+            notifyListener(Either.value(resultObject));
           }
 
           @Override
           public void onFailure(final Throwable t)
           {
-            listener.onFailure(t);
+            notifyListener(Either.error(t));
           }
         },
         Execs.directExecutor()
     );
+  }
+
+  /**
+   * Notify {@link RunWorkOrderListener} that the job is done, if not already notified.
+   */
+  private void notifyListener(final Either<Throwable, Object> result)
+  {
+    if (resultForListener.compareAndSet(null, result)) {
+      if (result.isError()) {
+        listener.onFailure(result.error());
+      } else {
+        listener.onSuccess(result.valueOrThrow());
+      }
+    }
   }
 
   /**
@@ -487,7 +583,7 @@ public class RunWorkOrder
     final DurableStorageOutputChannelFactory durableStorageOutputChannelFactory =
         makeDurableStorageOutputChannelFactory(
             frameContext.tempDir("durable"),
-            frameContext.memoryParameters().getStandardFrameSize(),
+            frameContext.memoryParameters().getFrameSize(),
             workOrder.getOutputChannelMode() == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
         );
 
@@ -507,7 +603,7 @@ public class RunWorkOrder
   {
     // Use the standard frame size, since we assume this size when computing how much is needed to merge output
     // files from different workers.
-    final int frameSize = frameContext.memoryParameters().getStandardFrameSize();
+    final int frameSize = frameContext.memoryParameters().getFrameSize();
     final OutputChannelMode outputChannelMode = workOrder.getOutputChannelMode();
 
     switch (outputChannelMode) {
@@ -539,7 +635,7 @@ public class RunWorkOrder
 
   private OutputChannelFactory makeSuperSorterIntermediateOutputChannelFactory(final File tmpDir)
   {
-    final int frameSize = frameContext.memoryParameters().getLargeFrameSize();
+    final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tmpDir, StringUtils.format("intermediate_output_stage_%06d", workOrder.getStageNumber()));
     final FileOutputChannelFactory fileOutputChannelFactory =
@@ -568,7 +664,7 @@ public class RunWorkOrder
   )
   {
     return DurableStorageOutputChannelFactory.createStandardImplementation(
-        controllerTaskId,
+        workerContext.queryId(),
         workOrder.getWorkerNumber(),
         workOrder.getStageNumber(),
         workerContext.workerId(),
@@ -641,7 +737,7 @@ public class RunWorkOrder
                 );
 
             return new ResultAndChannels<>(
-                exec.runFully(mixer, cancellationId),
+                exec.runFully(counterTracker.trackCpu(mixer, CpuCounters.LABEL_MIX), cancellationId),
                 OutputChannels.wrap(Collections.singletonList(outputChannel.readOnly()))
             );
           }
@@ -723,11 +819,19 @@ public class RunWorkOrder
                 stageDefinition.getSortKey(),
                 partitionBoundariesFuture,
                 exec,
+                new FrameProcessorDecorator()
+                {
+                  @Override
+                  public <T> FrameProcessor<T> decorate(FrameProcessor<T> processor)
+                  {
+                    return counterTracker.trackCpu(processor, CpuCounters.LABEL_SORT);
+                  }
+                },
                 outputChannelFactory,
                 makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
-                memoryParameters.getSuperSorterMaxActiveProcessors(),
-                memoryParameters.getSuperSorterMaxChannelsPerProcessor(),
-                -1,
+                memoryParameters.getSuperSorterConcurrentProcessors(),
+                memoryParameters.getSuperSorterMaxChannelsPerMerger(),
+                stageDefinition.getShuffleSpec().limitHint(),
                 cancellationId,
                 counterTracker.sortProgress(),
                 removeNullBytes
@@ -763,14 +867,18 @@ public class RunWorkOrder
                 workOrder.getStageDefinition().getFrameReader(),
                 workOrder.getStageDefinition().getClusterBy().getColumns().size(),
                 FrameWriters.makeRowBasedFrameWriterFactory(
-                    new ArenaMemoryAllocatorFactory(frameContext.memoryParameters().getStandardFrameSize()),
+                    new ArenaMemoryAllocatorFactory(frameContext.memoryParameters().getFrameSize()),
                     workOrder.getStageDefinition().getSignature(),
                     workOrder.getStageDefinition().getSortKey(),
                     removeNullBytes
                 )
             );
 
-            final ListenableFuture<Long> partitionerFuture = exec.runFully(partitioner, cancellationId);
+            final ListenableFuture<Long> partitionerFuture =
+                exec.runFully(
+                    counterTracker.trackCpu(partitioner, CpuCounters.LABEL_HASH_PARTITION),
+                    cancellationId
+                );
 
             final ResultAndChannels<Long> retVal =
                 new ResultAndChannels<>(partitionerFuture, OutputChannels.wrap(outputChannels));
@@ -844,11 +952,19 @@ public class RunWorkOrder
                         stageDefinition.getSortKey(),
                         Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
                         exec,
+                        new FrameProcessorDecorator()
+                        {
+                          @Override
+                          public <T> FrameProcessor<T> decorate(FrameProcessor<T> processor)
+                          {
+                            return counterTracker.trackCpu(processor, CpuCounters.LABEL_SORT);
+                          }
+                        },
                         partitionOverrideOutputChannelFactory,
                         makeSuperSorterIntermediateOutputChannelFactory(sorterTmpDir),
                         1,
                         2,
-                        -1,
+                        ShuffleSpec.UNLIMITED,
                         cancellationId,
 
                         // Tracker is not actually tracked, since it doesn't quite fit into the way we report counters.
@@ -929,13 +1045,16 @@ public class RunWorkOrder
 
       final ListenableFuture<ClusterByStatisticsCollector> clusterByStatisticsCollectorFuture =
           exec.runAllFully(
-              ProcessorManagers.of(processors)
-                               .withAccumulation(
-                                   stageDefinition.createResultKeyStatisticsCollector(
-                                       frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+              counterTracker.trackCpu(
+                  ProcessorManagers.of(processors)
+                                   .withAccumulation(
+                                       stageDefinition.createResultKeyStatisticsCollector(
+                                           frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                       ),
+                                       ClusterByStatisticsCollector::addAll
                                    ),
-                                   ClusterByStatisticsCollector::addAll
-                               ),
+                  CpuCounters.LABEL_KEY_STATISTICS
+              ),
               // Run all processors simultaneously. They are lightweight and this keeps things moving.
               processors.size(),
               Bouncer.unlimited(),

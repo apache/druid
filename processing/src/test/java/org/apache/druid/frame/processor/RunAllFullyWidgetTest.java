@@ -41,7 +41,7 @@ import org.apache.druid.frame.processor.test.SleepyFrameProcessor;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -160,7 +160,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
     // Doesn't matter what's in this frame.
     final Frame frame =
         Iterables.getOnlyElement(
-            FrameSequenceBuilder.fromAdapter(new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex()))
+            FrameSequenceBuilder.fromCursorFactory(new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex()))
                                 .frameType(FrameType.ROW_BASED)
                                 .frames()
                                 .toList()
@@ -409,6 +409,8 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                  .mapToObj(i -> new SleepyFrameProcessor())
                  .collect(Collectors.toList());
 
+    final String cancellationId = "xyzzy";
+    exec.registerCancellationId(cancellationId);
     final ListenableFuture<Long> future = exec.runAllFully(
         possiblyDelay(
             ensureClose(
@@ -418,7 +420,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         ),
         maxOutstandingProcessors,
         bouncer,
-        "xyzzy"
+        cancellationId
     );
 
     for (int i = 0; i < expectedRunningProcessors; i++) {

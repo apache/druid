@@ -46,6 +46,7 @@ import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig
 import org.apache.druid.k8s.overlord.execution.Selector;
 import org.apache.druid.k8s.overlord.execution.SelectorBasedPodTemplateSelectStrategy;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -537,6 +538,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getId()).andReturn("id").anyTimes();
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
+    EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);
@@ -550,7 +552,46 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withIndexKafkaPodTemplateInRuntimeProperites() throws IOException
+  public void test_fromTask_withBroadcastDatasourceLoadingModeAll() throws IOException
+  {
+    Path templatePath = Files.createFile(tempDir.resolve("noop.yaml"));
+    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.queryable", templatePath.toString());
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        props,
+        taskLogs,
+        dynamicConfigRef
+    );
+
+    Task task = EasyMock.mock(Task.class);
+    EasyMock.expect(task.supportsQueries()).andReturn(true);
+    EasyMock.expect(task.getType()).andReturn("queryable").anyTimes();
+    EasyMock.expect(task.getId()).andReturn("id").anyTimes();
+    EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
+    EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
+    EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+
+    EasyMock.replay(task);
+    Job actual = adapter.fromTask(task);
+    EasyMock.verify(task);
+
+    Assertions.assertEquals(BroadcastDatasourceLoadingSpec.Mode.ALL.toString(), actual.getSpec().getTemplate()
+                                          .getSpec().getContainers()
+                                          .get(0).getEnv().stream()
+                                          .filter(env -> env.getName().equals(DruidK8sConstants.LOAD_BROADCAST_DATASOURCE_MODE_ENV))
+                                          .collect(Collectors.toList()).get(0).getValue());
+  }
+
+  @Test
+  public void test_fromTask_withIndexKafkaPodTemplateInRuntimeProperties() throws IOException
   {
     Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
     mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);

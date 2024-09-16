@@ -20,13 +20,16 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.MaxIngestedEventTimeInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -39,6 +42,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -159,9 +163,16 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
       }
 
       @Override
-      public StorageAdapter asStorageAdapter()
+      public CursorFactory asCursorFactory()
       {
-        return referencedSegment.asStorageAdapter();
+        return referencedSegment.asCursorFactory();
+      }
+
+      @Nullable
+      @Override
+      public <T> T as(@Nonnull Class<T> clazz)
+      {
+        return referencedSegment.as(clazz);
       }
 
       @Override
@@ -223,14 +234,15 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
   public void test_asQueryableIndex()
   {
     Assert.assertNull(hashJoinSegment.asQueryableIndex());
+    Assert.assertNull(hashJoinSegment.as(QueryableIndex.class));
   }
 
   @Test
   public void test_asStorageAdapter()
   {
     Assert.assertThat(
-        hashJoinSegment.asStorageAdapter(),
-        CoreMatchers.instanceOf(HashJoinSegmentStorageAdapter.class)
+        hashJoinSegment.asCursorFactory(),
+        CoreMatchers.instanceOf(HashJoinSegmentCursorFactory.class)
     );
   }
 
@@ -307,5 +319,23 @@ public class HashJoinSegmentTest extends InitializedNullHandlingTest
     Assert.assertEquals(1, referencedSegmentClosedCount);
     Assert.assertEquals(1, indexedTableJoinableReferenceCloseCount);
     Assert.assertEquals(0, allReferencesCloseCount);
+  }
+
+
+  @Test
+  public void testGetMinTime()
+  {
+    final TimeBoundaryInspector timeBoundaryInspector = hashJoinSegment.as(TimeBoundaryInspector.class);
+    Assert.assertNotNull("non-null inspector", timeBoundaryInspector);
+    Assert.assertEquals("minTime", DateTimes.of("2015-09-12T00:46:58.771Z"), timeBoundaryInspector.getMinTime());
+    Assert.assertEquals("maxTime", DateTimes.of("2015-09-12T05:21:00.059Z"), timeBoundaryInspector.getMaxTime());
+    Assert.assertFalse("exact", timeBoundaryInspector.isMinMaxExact());
+  }
+
+  @Test
+  public void testGetMaxIngestedEventTime()
+  {
+    final MaxIngestedEventTimeInspector inspector = referencedSegment.as(MaxIngestedEventTimeInspector.class);
+    Assert.assertNull(inspector);
   }
 }

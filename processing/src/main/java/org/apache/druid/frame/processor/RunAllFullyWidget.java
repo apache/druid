@@ -306,9 +306,11 @@ public class RunAllFullyWidget<T, ResultType>
                 }
 
                 if (isDone) {
-                  finished.compareAndSet(null, Either.value(processorManager.result()));
-
                   synchronized (runAllFullyLock) {
+                    if (finished.get() == null) {
+                      finished.compareAndSet(null, Either.value(processorManager.result()));
+                    }
+
                     cleanupIfNoMoreProcessors();
                   }
                 } else {

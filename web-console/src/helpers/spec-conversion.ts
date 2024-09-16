@@ -86,6 +86,14 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     context.arrayIngestMode = 'array';
   }
 
+  const forceSegmentSortByTime = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
+  );
+  if (typeof forceSegmentSortByTime !== 'undefined') {
+    context.forceSegmentSortByTime = forceSegmentSortByTime;
+  }
+
   const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
   if (indexSpec) {
     context.indexSpec = indexSpec;

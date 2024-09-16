@@ -20,7 +20,10 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 
 import javax.annotation.Nullable;
@@ -42,7 +45,10 @@ public interface CursorHolder extends Closeable
   @Nullable
   default VectorCursor asVectorCursor()
   {
-    throw new UOE("Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor' on %s.", this.getClass().getName());
+    throw new UOE(
+        "Cannot vectorize. Check 'canVectorize' before calling 'makeVectorCursor' on %s.",
+        this.getClass().getName()
+    );
   }
 
   /**
@@ -54,12 +60,45 @@ public interface CursorHolder extends Closeable
   }
 
   /**
+   * Returns true if the {@link Cursor} or {@link VectorCursor} contains pre-aggregated columns for all
+   * {@link AggregatorFactory} specified in {@link CursorBuildSpec#getAggregators()}.
+   * <p>
+   * If this method returns true, {@link ColumnSelectorFactory} and
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} created from {@link Cursor} and
+   * {@link VectorCursor} respectively will provide selectors for {@link AggregatorFactory#getName()}, and engines
+   * should rewrite the query using {@link AggregatorFactory#getCombiningFactory()}, since the values returned from
+   * these selectors will be of type {@link AggregatorFactory#getIntermediateType()}, so the cursor becomes a "fold"
+   * operation rather than a "build" operation.
+   */
+  default boolean isPreAggregated()
+  {
+    return false;
+  }
+
+  /**
    * Returns cursor ordering, which may or may not match {@link CursorBuildSpec#getPreferredOrdering()}. If returns
-   * null then the cursor has no defined ordering
+   * an empty list then the cursor has no defined ordering.
+   *
+   * Cursors associated with this holder return rows in this ordering, using the natural comparator for the column type.
+   * Includes {@link ColumnHolder#TIME_COLUMN_NAME} if appropriate.
    */
   default List<OrderBy> getOrdering()
   {
     return Collections.emptyList();
+  }
+
+  /**
+   * If {@link #getOrdering()} starts with {@link ColumnHolder#TIME_COLUMN_NAME}, returns the time ordering; otherwise
+   * returns {@link Order#NONE}.
+   */
+  default Order getTimeOrder()
+  {
+    final List<OrderBy> ordering = getOrdering();
+    if (!ordering.isEmpty() && ColumnHolder.TIME_COLUMN_NAME.equals(ordering.get(0).getColumnName())) {
+      return ordering.get(0).getOrder();
+    } else {
+      return Order.NONE;
+    }
   }
 
   /**

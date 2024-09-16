@@ -939,18 +939,19 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         null,
         null,
         new ParallelIndexIngestionSpec(
-            new DataSchema(
-                DATA_SOURCE,
-                new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
-                new UniformGranularitySpec(
-                    Granularities.HOUR,
-                    Granularities.MINUTE,
-                    ImmutableList.of(INTERVAL_TO_INDEX)
-                ),
-                null
-            ),
+            DataSchema.builder()
+                      .withDataSource(DATA_SOURCE)
+                      .withTimestamp(new TimestampSpec("ts", "auto", null))
+                      .withDimensions(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")))
+                      .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.HOUR,
+                              Granularities.MINUTE,
+                              ImmutableList.of(INTERVAL_TO_INDEX)
+                          )
+                      )
+                      .build(),
             ioConfig,
             tuningConfig
         ),

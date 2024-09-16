@@ -37,6 +37,7 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -53,7 +54,7 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -220,10 +221,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   @Test
   public void testCoordinatorReturnsAllDSSchema() throws InterruptedException
   {
-    final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
-    final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
-    final RowSignature someDataSourceRowSignature = new QueryableIndexStorageAdapter(indexAuto1).getRowSignature();
-    final RowSignature foo3RowSignature = new QueryableIndexStorageAdapter(indexAuto2).getRowSignature();
+    final RowSignature dataSource1RowSignature = new QueryableIndexCursorFactory(index1).getRowSignature();
+    final RowSignature dataSource2RowSignature = new QueryableIndexCursorFactory(index2).getRowSignature();
+    final RowSignature someDataSourceRowSignature = new QueryableIndexCursorFactory(indexAuto1).getRowSignature();
+    final RowSignature foo3RowSignature = new QueryableIndexCursorFactory(indexAuto2).getRowSignature();
 
     NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient() {
       @Override
@@ -272,9 +273,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   @Test
   public void testCoordinatorReturnsFewDSSchema() throws InterruptedException
   {
-    final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
-    final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
-    final RowSignature someDataSourceRowSignature = new QueryableIndexStorageAdapter(indexAuto1).getRowSignature();
+    final RowSignature dataSource1RowSignature = new QueryableIndexCursorFactory(index1).getRowSignature();
+    final RowSignature dataSource2RowSignature = new QueryableIndexCursorFactory(index2).getRowSignature();
+    final RowSignature someDataSourceRowSignature = new QueryableIndexCursorFactory(indexAuto1).getRowSignature();
 
     NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient() {
       @Override
@@ -1139,71 +1140,109 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   }
 
   @Test
-  public void testTombstoneSegmentIsNotAdded() throws InterruptedException
+  public void testTombstoneSegmentIsNotRefreshed() throws IOException
   {
-    String datasource = "newSegmentAddTest";
-    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
+
+    TestHelper.makeJsonMapper();
+    InternalQueryConfig internalQueryConfig = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(brokerInternalQueryConfigJson, InternalQueryConfig.class)
+        ),
+        InternalQueryConfig.class
+    );
+
+    QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
+    QueryLifecycle lifecycleMock = EasyMock.createMock(QueryLifecycle.class);
+
     BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
-        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        factoryMock,
         serverView,
-        BrokerSegmentMetadataCacheConfig.create(),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new InternalQueryConfig(),
+        internalQueryConfig,
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
-    )
-    {
-      @Override
-      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
-      {
-        super.addSegment(server, segment);
-        if (datasource.equals(segment.getDataSource())) {
-          addSegmentLatch.countDown();
-        }
-      }
-    };
-
-    schema.start();
-    schema.awaitInitialization();
-
-    DataSegment segment = new DataSegment(
-        datasource,
-        Intervals.of("2001/2002"),
-        "1",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        TombstoneShardSpec.INSTANCE,
-        null,
-        null,
-        0
     );
 
-    Assert.assertEquals(6, schema.getTotalSegments());
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    );
 
-    serverView.addSegment(segment, ServerType.HISTORICAL);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
-    Assert.assertEquals(0, addSegmentLatch.getCount());
+    DataSegment segment = newSegment("test", 0);
+    DataSegment tombstone = DataSegment.builder()
+                                       .dataSource("test")
+                                       .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                       .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                       .shardSpec(new TombstoneShardSpec())
+                                       .loadSpec(Collections.singletonMap(
+                                           "type",
+                                           DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                       ))
+                                       .size(0)
+                                       .build();
 
-    Assert.assertEquals(6, schema.getTotalSegments());
-    List<AvailableSegmentMetadata> metadatas = schema
-        .getSegmentMetadataSnapshot()
-        .values()
-        .stream()
-        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
-        .collect(Collectors.toList());
-    Assert.assertEquals(0, metadatas.size());
+    final ImmutableDruidServer historicalServer = druidServers.stream()
+                                                     .filter(s -> s.getType().equals(ServerType.HISTORICAL))
+                                                     .findAny()
+                                                     .orElse(null);
 
-    serverView.removeSegment(segment, ServerType.HISTORICAL);
-    Assert.assertEquals(6, schema.getTotalSegments());
-    metadatas = schema
-        .getSegmentMetadataSnapshot()
-        .values()
-        .stream()
-        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
-        .collect(Collectors.toList());
-    Assert.assertEquals(0, metadatas.size());
+    Assert.assertNotNull(historicalServer);
+    final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
+
+    schema.addSegment(historicalServerMetadata, segment);
+    schema.addSegment(historicalServerMetadata, tombstone);
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    List<SegmentId> segmentIterable = ImmutableList.of(segment.getId(), tombstone.getId());
+
+    SegmentMetadataQuery expectedMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(segment.getDataSource()),
+        new MultipleSpecificSegmentSpec(
+            segmentIterable.stream()
+                           .filter(id -> !id.equals(tombstone.getId()))
+                           .map(SegmentId::toDescriptor)
+                           .collect(Collectors.toList())
+        ),
+        new AllColumnIncluderator(),
+        false,
+        queryContext,
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        null,
+        null
+    );
+
+    EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+            .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
+
+    EasyMock.replay(factoryMock, lifecycleMock);
+
+    Set<SegmentId> segmentsToRefresh = new HashSet<>();
+    segmentsToRefresh.add(segment.getId());
+    schema.refresh(segmentsToRefresh, Collections.singleton("test"));
+
+    // verify that metadata is not issued for tombstone segment
+    EasyMock.verify(factoryMock, lifecycleMock);
+
+    // Verify that datasource schema building logic doesn't mark the tombstone segment for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata("test", tombstone.getId());
+    Assert.assertNotNull(availableSegmentMetadata);
+    // fetching metadata for tombstone segment shouldn't mark it for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
+    schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
+
+    Assert.assertEquals(1, metadatas.stream().filter(metadata -> metadata.getSegment().isTombstone()).count());
+
+    // iterating over entire metadata doesn't cause tombstone to be marked for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
   }
 }

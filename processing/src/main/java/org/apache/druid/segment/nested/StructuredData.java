@@ -26,6 +26,7 @@ import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -45,7 +46,7 @@ public class StructuredData implements Comparable<StructuredData>
   private static long computeHash(StructuredData data)
   {
     try {
-      final byte[] bytes = NestedDataComplexTypeSerde.OBJECT_MAPPER.writeValueAsBytes(data.value);
+      final byte[] bytes = ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(data.value);
       return HASH_FUNCTION.hash(bytes, 0, bytes.length, SEED);
     }
     catch (JsonProcessingException e) {

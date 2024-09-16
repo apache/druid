@@ -29,16 +29,16 @@ import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -60,7 +60,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   private static final byte CACHE_PREFIX = 0x01;
 
   private final QueryableIndexSegment segment;
-  private final QueryableIndexStorageAdapter adapter;
+  private final CursorFactory cursorFactory;
   private final QueryableIndex queryableIndex;
   private final Set<String> keyColumns;
   private final RowSignature rowSignature;
@@ -76,23 +76,18 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     this.keyColumns = keyColumns;
     this.version = version;
     this.segment = Preconditions.checkNotNull(theSegment, "Segment must not be null");
-    this.adapter = Preconditions.checkNotNull(
-        (QueryableIndexStorageAdapter) segment.asStorageAdapter(),
-        "Segment[%s] must have a QueryableIndexStorageAdapter",
+    this.cursorFactory = Preconditions.checkNotNull(
+        segment.asCursorFactory(),
+        "Segment[%s] must have a cursor factory",
         segment.getId()
     );
     this.queryableIndex = Preconditions.checkNotNull(
-        segment.asQueryableIndex(),
-        "Segment[%s] must have a QueryableIndexSegment",
+        segment.as(QueryableIndex.class),
+        "Segment[%s] must have a QueryableIndex",
         segment.getId()
     );
 
-    RowSignature.Builder sigBuilder = RowSignature.builder();
-    sigBuilder.add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG);
-    for (String column : queryableIndex.getColumnNames()) {
-      sigBuilder.add(column, adapter.getColumnCapabilities(column).toColumnType());
-    }
-    this.rowSignature = sigBuilder.build();
+    this.rowSignature = cursorFactory.getRowSignature();
 
     // initialize keycolumn index builders
     final ArrayList<RowBasedIndexBuilder> indexBuilders = new ArrayList<>(rowSignature.size());
@@ -112,7 +107,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
       indexBuilders.add(m);
     }
 
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {
         this.keyColumnsIndexes = Collections.emptyList();
@@ -128,7 +123,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
           .stream()
           .map(columnName -> {
             // multi-value dimensions are not currently supported
-            if (adapter.getColumnCapabilities(columnName).hasMultipleValues().isMaybeTrue()) {
+            if (columnSelectorFactory.getColumnCapabilities(columnName).hasMultipleValues().isMaybeTrue()) {
               return NilColumnValueSelector.instance();
             }
             return columnSelectorFactory.makeColumnValueSelector(columnName);
@@ -183,7 +178,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
   @Override
   public int numRows()
   {
-    return adapter.getNumRows();
+    return queryableIndex.getNumRows();
   }
 
   @Override
@@ -198,7 +193,7 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
     if (!rowSignature.contains(column)) {
       throw new IAE("Column[%d] is not a valid column for segment[%s]", column, segment.getId());
     }
-    final SimpleAscendingOffset offset = new SimpleAscendingOffset(adapter.getNumRows());
+    final SimpleAscendingOffset offset = new SimpleAscendingOffset(queryableIndex.getNumRows());
     final BaseColumn baseColumn = queryableIndex.getColumnHolder(rowSignature.getColumnName(column)).getColumn();
     final BaseObjectColumnValueSelector<?> selector = baseColumn.makeColumnValueSelector(offset);
 
@@ -222,11 +217,11 @@ public class BroadcastSegmentIndexedTable implements IndexedTable
 
   @Nullable
   @Override
-  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, boolean descending, Closer closer)
+  public ColumnSelectorFactory makeColumnSelectorFactory(ReadableOffset offset, Closer closer)
   {
     return new QueryableIndexColumnSelectorFactory(
         VirtualColumns.EMPTY,
-        descending,
+        Cursors.getTimeOrdering(queryableIndex.getOrdering()),
         offset,
         new ColumnCache(queryableIndex, closer)
     );

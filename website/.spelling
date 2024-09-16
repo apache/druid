@@ -279,6 +279,7 @@ averager
 averagers
 backend
 backfills
+backfilled
 backpressure
 base64
 big-endian
@@ -301,6 +302,7 @@ colocation
 colocating
 compactable
 compactionTask
+complexMetricCompression
 config
 configs
 consumerProperties
@@ -2418,3 +2420,4 @@ percentilesSpectatorHistogram
 quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
+snapshotVersion

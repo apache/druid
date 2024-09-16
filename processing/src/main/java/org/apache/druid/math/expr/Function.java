@@ -530,11 +530,6 @@ public interface Function extends NamedFunction
    */
   abstract class ArraysMergeFunction extends ArraysFunction
   {
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
 
     @Override
     public boolean hasArrayOutput()
@@ -1181,16 +1176,6 @@ public interface Function extends NamedFunction
     public String name()
     {
       return NAME;
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return ExpressionTypeConversion.function(
-          args.get(0).getOutputType(inspector),
-          args.get(1).getOutputType(inspector)
-      );
     }
 
     @Override
@@ -2315,18 +2300,6 @@ public interface Function extends NamedFunction
       return ExprEval.ofLongBoolean(!super.apply(args, bindings).asBoolean());
     }
 
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      validationHelperCheckArgumentCount(args, 2);
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return ExpressionType.LONG;
-    }
   }
 
   /**
@@ -3400,18 +3373,6 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return Collections.emptySet();
-    }
-
-    @Override
     public boolean hasArrayOutput()
     {
       return true;
@@ -3542,12 +3503,6 @@ public interface Function extends NamedFunction
 
       final String split = args.get(1).eval(bindings).asString();
       return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
-    }
-
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
     }
 
     @Override

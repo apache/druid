@@ -41,6 +41,7 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -92,6 +93,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   private final PlannerContext plannerContext;
   private final ObjectMapper jsonMapper;
   private final List<Entry<Integer, String>> fieldMapping;
+  private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
 
   MSQTaskQueryMaker(
@@ -99,7 +101,8 @@ public class MSQTaskQueryMaker implements QueryMaker
       final OverlordClient overlordClient,
       final PlannerContext plannerContext,
       final ObjectMapper jsonMapper,
-      final List<Entry<Integer, String>> fieldMapping
+      final List<Entry<Integer, String>> fieldMapping,
+      final MSQTerminalStageSpecFactory terminalStageSpecFactory
   )
   {
     this.targetDataSource = targetDataSource;
@@ -107,6 +110,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     this.plannerContext = Preconditions.checkNotNull(plannerContext, "plannerContext");
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
     this.fieldMapping = Preconditions.checkNotNull(fieldMapping, "fieldMapping");
+    this.terminalStageSpecFactory = terminalStageSpecFactory;
   }
 
   @Override
@@ -237,21 +241,24 @@ public class MSQTaskQueryMaker implements QueryMaker
 
       final List<String> segmentSortOrder = MultiStageQueryContext.getSortOrder(sqlQueryContext);
 
-      MSQTaskQueryMakerUtils.validateSegmentSortOrder(
+      MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
           segmentSortOrder,
-          fieldMapping.stream().map(f -> f.getValue()).collect(Collectors.toList())
+          fieldMapping.stream().map(Entry::getValue).collect(Collectors.toSet())
       );
 
-      final DataSourceMSQDestination dataSourceMSQDestination = new DataSourceMSQDestination(
+      final DataSourceMSQDestination dataSourceDestination = new DataSourceMSQDestination(
           targetDataSource.getDestinationName(),
           segmentGranularityObject,
           segmentSortOrder,
           replaceTimeChunks,
-          null
+          null,
+          terminalStageSpecFactory.createTerminalStageSpec(
+              druidQuery,
+              plannerContext
+          )
       );
-      MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext,
-                                                        dataSourceMSQDestination.isReplaceTimeChunks());
-      destination = dataSourceMSQDestination;
+      MultiStageQueryContext.validateAndGetTaskLockType(sqlQueryContext, dataSourceDestination.isReplaceTimeChunks());
+      destination = dataSourceDestination;
     } else {
       final MSQSelectDestination msqSelectDestination = MultiStageQueryContext.getSelectDestination(sqlQueryContext);
       if (msqSelectDestination.equals(MSQSelectDestination.TASKREPORT)) {

@@ -74,6 +74,7 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final ServiceMetricEvent.Builder metricBuilder;
+  private final MemoryIntrospector memoryIntrospector;
 
   public IndexerControllerContext(
       final MSQControllerTask task,
@@ -89,6 +90,7 @@ public class IndexerControllerContext implements ControllerContext
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
     this.metricBuilder = new ServiceMetricEvent.Builder();
+    this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
   }
 
@@ -98,7 +100,6 @@ public class IndexerControllerContext implements ControllerContext
       final QueryDefinition queryDef
   )
   {
-    final MemoryIntrospector memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final ControllerMemoryParameters memoryParameters =
         ControllerMemoryParameters.createProductionInstance(
             memoryIntrospector,
@@ -200,6 +201,14 @@ public class IndexerControllerContext implements ControllerContext
     );
   }
 
+  @Override
+  public int defaultTargetPartitionsPerWorker()
+  {
+    // Assume tasks are symmetric: workers have the same number of processors available as a controller.
+    // Create one partition per processor per task, for maximum parallelism.
+    return memoryIntrospector.numProcessingThreads();
+  }
+
   /**
    * Helper method for {@link #queryKernelConfig(MSQSpec, QueryDefinition)}. Also used in tests.
    */
@@ -264,13 +273,15 @@ public class IndexerControllerContext implements ControllerContext
     final ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getQuery().context());
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context());
+    final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(querySpec.getQuery().context());
 
     taskContextOverridesBuilder
         .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, queryKernelConfig.isDurableStorage())
         .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
         .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec))
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, queryKernelConfig.getMaxConcurrentStages())
-        .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes);
+        .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
+        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {

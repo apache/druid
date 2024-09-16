@@ -173,10 +173,10 @@ overhead.
 |`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch (1970-01-01 00:00:00 UTC) into a timestamp.|
 |`TIMESTAMP_TO_MILLIS(timestamp_expr)`|Converts a timestamp into a number of milliseconds since the epoch.|
 |`EXTRACT(unit FROM timestamp_expr)`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
-|`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`CEIL(timestamp_expr TO unit)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`TIMESTAMPADD(unit, count, timestamp)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
-|`TIMESTAMPDIFF(unit, timestamp1, timestamp2)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`CEIL(timestamp_expr TO unit)`|Rounds up a timestamp, returning it as a new timestamp. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPADD(unit, count, timestamp)`|Adds a `count` number of time `unit` to timestamp, equivalent to `timestamp + count * unit`. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPDIFF(unit, timestamp1, timestamp2)`|Returns a signed number of `unit` between `timestamp1` and `timestamp2`. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 
 
 ## Reduction functions

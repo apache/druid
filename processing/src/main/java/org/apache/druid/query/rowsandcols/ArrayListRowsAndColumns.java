@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import org.apache.druid.common.semantic.SemanticCreator;
 import org.apache.druid.common.semantic.SemanticUtils;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -40,9 +41,9 @@ import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowAdapter;
-import org.apache.druid.segment.RowBasedStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -153,10 +154,27 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
       return new LimitedColumn(retVal, startOffset, endOffset);
     }
 
-    final Function<RowType, Object> adapterForValue = rowAdapter.columnFunction(name);
     final Optional<ColumnType> maybeColumnType = rowSignature.getColumnType(name);
     final ColumnType columnType = maybeColumnType.orElse(ColumnType.UNKNOWN_COMPLEX);
     final Comparator<Object> comparator = Comparator.nullsFirst(columnType.getStrategy());
+
+    final Function<RowType, Object> adapterForValue;
+    if (columnType.equals(ColumnType.STRING)) {
+      // special handling to reject MVDs
+      adapterForValue = f -> {
+        Object value = rowAdapter.columnFunction(name).apply(f);
+        if (value instanceof List) {
+          throw InvalidInput.exception(
+              "Encountered a multi value column [%s]. Window processing does not support MVDs. "
+              + "Consider using UNNEST or MV_TO_ARRAY.",
+              name
+          );
+        }
+        return value;
+      };
+    } else {
+      adapterForValue = rowAdapter.columnFunction(name);
+    }
 
     return new Column()
     {
@@ -356,9 +374,9 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
 
   @SuppressWarnings("unused")
   @SemanticCreator
-  public StorageAdapter toStorageAdapter()
+  public CursorFactory toCursorFactory()
   {
-    return new RowBasedStorageAdapter<RowType>(Sequences.simple(rows), rowAdapter, rowSignature);
+    return new RowBasedCursorFactory<>(Sequences.simple(rows), rowAdapter, rowSignature);
   }
 
   private class MyClusteredGroupPartitioner implements ClusteredGroupPartitioner

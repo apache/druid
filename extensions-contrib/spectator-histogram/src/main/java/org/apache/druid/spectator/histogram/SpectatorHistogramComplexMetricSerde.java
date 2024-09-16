@@ -21,6 +21,7 @@ package org.apache.druid.spectator.histogram;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
@@ -97,7 +98,11 @@ public class SpectatorHistogramComplexMetricSerde extends ComplexMetricSerde
   }
 
   @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     return SpectatorHistogramSerializer.create(
         segmentWriteOutMedium,

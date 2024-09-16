@@ -1816,12 +1816,6 @@ public class RowBasedGrouperHelper
       }
 
       @Override
-      public int getKeyBufferValueSize()
-      {
-        return Integer.BYTES;
-      }
-
-      @Override
       public BufferComparator getBufferComparator()
       {
         return bufferComparator;
