@@ -54,11 +54,11 @@ import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
+import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.input.InputSpecSlicer;
-import org.apache.druid.msq.input.table.TableInputSpecSlicer;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -304,9 +304,9 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer()
+  public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
   {
-    return new TableInputSpecSlicer(
+    return new IndexerTableInputSpecSlicer(
         coordinatorClient,
         taskActionClient,
         MultiStageQueryContext.getSegmentSources(queryContext)

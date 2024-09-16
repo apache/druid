@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.actions.TaskAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.exec.SegmentSource;
+import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -39,9 +40,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Collections;
 
-public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
+public class IndexerTableInputSpecSlicerTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "test-ds";
   private static final long BYTES_PER_SEGMENT = 1000;
@@ -97,11 +99,11 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
       BYTES_PER_SEGMENT
   );
   private SegmentTimeline timeline;
-  private TableInputSpecSlicer slicer;
+  private IndexerTableInputSpecSlicer slicer;
   private TaskActionClient taskActionClient;
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
     timeline = SegmentTimeline.forSegments(ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3));
     taskActionClient = new TaskActionClient()
@@ -131,7 +133,7 @@ public class TableInputSpecSlicerTest extends InitializedNullHandlingTest
       }
     };
 
-    slicer = new TableInputSpecSlicer(
+    slicer = new IndexerTableInputSpecSlicer(
         null /* not used for SegmentSource.NONE */,
         taskActionClient,
         SegmentSource.NONE

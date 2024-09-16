@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input.table;
+package org.apache.druid.msq.indexing;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -35,6 +35,12 @@ import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.SlicerUtils;
+import org.apache.druid.msq.input.table.DataSegmentWithLocation;
+import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
+import org.apache.druid.msq.input.table.DataServerSelector;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
+import org.apache.druid.msq.input.table.SegmentsInputSlice;
+import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
@@ -60,15 +66,15 @@ import java.util.stream.StreamSupport;
 /**
  * Slices {@link TableInputSpec} into {@link SegmentsInputSlice} in tasks.
  */
-public class TableInputSpecSlicer implements InputSpecSlicer
+public class IndexerTableInputSpecSlicer implements InputSpecSlicer
 {
-  private static final Logger log = new Logger(TableInputSpecSlicer.class);
+  private static final Logger log = new Logger(IndexerTableInputSpecSlicer.class);
 
   private final CoordinatorClient coordinatorClient;
   private final TaskActionClient taskActionClient;
   private final SegmentSource includeSegmentSource;
 
-  public TableInputSpecSlicer(
+  public IndexerTableInputSpecSlicer(
       CoordinatorClient coordinatorClient,
       TaskActionClient taskActionClient,
       SegmentSource includeSegmentSource
