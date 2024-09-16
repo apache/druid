@@ -35,6 +35,7 @@ import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -993,24 +994,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               ASSERTION_EPSILON
           );
         } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
-          final Object[] expectedCellCasted;
-          if (expectedCell instanceof Object[]) {
-            expectedCellCasted = (Object[]) expectedCell;
-          } else {
-            expectedCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
-          }
-          final Object[] resultCellCasted;
-          if (resultCell instanceof List) {
-            resultCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
-          } else {
-            resultCellCasted = (Object[]) resultCell;
-          }
+          final Object[] expectedCellCasted = homogenizeArray(expectedCell);
+          final Object[] resultCellCasted = homogenizeArray(resultCell);
           if (expectedCellCasted.length != resultCellCasted.length) {
             throw new RE(
                 "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
-                expectedCellCasted,
+                Arrays.toString(expectedCellCasted),
                 expectedCellCasted.length,
-                resultCellCasted,
+                Arrays.toString(resultCellCasted),
                 resultCellCasted.length
             );
           }
@@ -1022,11 +1013,26 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         }
       }
     },
+
+    RELAX_NULLS_EPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS_EPS.validate(row, column, type, expectedCell, resultCell);
+      }
+    },
+
     /**
      * Comparision which accepts 1000 units of least precision.
      */
     EQUALS_RELATIVE_1000_ULPS {
-      static final int ASSERTION_ERROR_ULPS = 1000;
+      private static final int ASSERTION_ERROR_ULPS = 1000;
 
       @Override
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
@@ -1048,24 +1054,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               eps
           );
         } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
-          final Object[] expectedCellCasted;
-          if (expectedCell instanceof Object[]) {
-            expectedCellCasted = (Object[]) expectedCell;
-          } else {
-            expectedCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
-          }
-          final Object[] resultCellCasted;
-          if (resultCell instanceof List) {
-            resultCellCasted = ExprEval.coerceListToArray((List) resultCell, true).rhs;
-          } else {
-            resultCellCasted = (Object[]) resultCell;
-          }
+          final Object[] expectedCellCasted = homogenizeArray(expectedCell);
+          final Object[] resultCellCasted = homogenizeArray(resultCell);
+
           if (expectedCellCasted.length != resultCellCasted.length) {
             throw new RE(
                 "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
-                expectedCellCasted,
+                Arrays.toString(expectedCellCasted),
                 expectedCellCasted.length,
-                resultCellCasted,
+                Arrays.toString(resultCellCasted),
                 resultCellCasted.length
             );
           }
@@ -1082,8 +1079,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
      * Relax nulls which accepts 1000 units of least precision.
      */
     RELAX_NULLS_RELATIVE_1000_ULPS {
-      static final int ASSERTION_ERROR_ULPS = 1000;
-
       @Override
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
@@ -1102,6 +1097,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     private static String mismatchMessage(int row, int column)
     {
       return StringUtils.format("column content mismatch at %d,%d", row, column);
+    }
+
+    private static Object[] homogenizeArray(Object array)
+    {
+      if (array instanceof Object[]) {
+        return (Object[]) array;
+      } else if (array instanceof List) {
+        return ExprEval.coerceListToArray((List) array, true).rhs;
+      }
+      throw new ISE("Found array[%s] of type[%s] which is not handled", array.toString(), array.getClass().getName());
     }
   }
 
