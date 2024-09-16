@@ -111,7 +111,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       false,
       false,
       0,
-      null);
+      null
+  );
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, useMultiValueDim={3}, intervalToIndex={4}")
   public static Iterable<Object[]> constructorFeeder()
