@@ -1,4 +1,4 @@
-# testGroupByWithLiteralInSubqueryGrouping@NullHandling=default case-crc:a63c5a2f
+# testGroupByWithLiteralInSubqueryGrouping case-crc:a63c5a2f
 # quidem testcase reason: IMPROVED_PLAN
 !set debug true
 !set defaultTimeout 300000
