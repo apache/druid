@@ -71,11 +71,11 @@ public class ParserUtils
       }
 
       if (input.contains(listDelimiter)) {
-          return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-              .map(NullHandling::emptyToNullIfNeeded)
-              .map(value -> shouldParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
-              .collect(Collectors.toList());
-        } else {
+        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+            .map(NullHandling::emptyToNullIfNeeded)
+            .map(value -> shouldParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
+            .collect(Collectors.toList());
+      } else {
         return shouldParseNumbers ?
             tryParseStringAsNumber(input) :
             NullHandling.emptyToNullIfNeeded(input);

@@ -57,6 +57,13 @@ public class ParserUtilsTest
   @Test
   public void testInputWithDelimiterAndParserDisabled()
   {
+    assertNull(
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply(null)
+    );
+    assertEquals(
+        NullHandling.emptyToNullIfNeeded(""),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("")
+    );
     assertEquals(
         ImmutableList.of("foo", "boo"),
         getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("foo|boo")
@@ -108,6 +115,13 @@ public class ParserUtilsTest
   @Test
   public void testInputWithDelimiterAndParserEnabled()
   {
+    assertNull(
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply(null)
+    );
+    assertEquals(
+        NullHandling.emptyToNullIfNeeded(""),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("")
+    );
     assertEquals(
         ImmutableList.of("foo", "boo"),
         getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("foo|boo")
@@ -159,6 +173,13 @@ public class ParserUtilsTest
   @Test
   public void testInputWithoutDelimiterAndNumberParsingDisabled()
   {
+    assertNull(
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("$"), false).apply(null)
+    );
+    assertEquals(
+        NullHandling.emptyToNullIfNeeded(""),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("$"), false).apply("")
+    );
     assertEquals(
         "foo|boo",
         getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("foo|boo")
@@ -202,6 +223,13 @@ public class ParserUtilsTest
   @Test
   public void testInputWithoutDelimiterAndNumberParsingEnabled()
   {
+    assertNull(
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply(null)
+    );
+    assertEquals(
+        NullHandling.emptyToNullIfNeeded(""),
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("")
+    );
     assertEquals(
         "foo|boo",
         getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("foo|boo")
