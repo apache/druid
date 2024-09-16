@@ -23,18 +23,9 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.column.RowSignature;
 
-import javax.annotation.Nullable;
-
 public interface FrameRowsAndColumns extends RowsAndColumns
 {
   Frame getFrame();
 
   RowSignature getSignature();
-
-  @Nullable
-  @Override
-  default <T> T as(Class<T> clazz)
-  {
-    return RowsAndColumns.super.as(clazz);
-  }
 }
