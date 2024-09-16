@@ -67,6 +67,17 @@ public class FrameSequenceBuilder
     return new FrameSequenceBuilder(cursorFactory);
   }
 
+  /**
+   * Returns what {@link #signature()} would return if {@link #populateRowNumber()} is set.
+   */
+  public static RowSignature signatureWithRowNumber(final RowSignature signature)
+  {
+    return RowSignature.builder()
+                       .addAll(signature)
+                       .add(FrameTestUtil.ROW_NUMBER_COLUMN, ColumnType.LONG)
+                       .build();
+  }
+
   public FrameSequenceBuilder frameType(final FrameType frameType)
   {
     this.frameType = frameType;
@@ -108,10 +119,7 @@ public class FrameSequenceBuilder
     final RowSignature baseSignature;
 
     if (populateRowNumber) {
-      baseSignature = RowSignature.builder()
-                                  .addAll(cursorFactory.getRowSignature())
-                                  .add(FrameTestUtil.ROW_NUMBER_COLUMN, ColumnType.LONG)
-                                  .build();
+      baseSignature = signatureWithRowNumber(cursorFactory.getRowSignature());
     } else {
       baseSignature = cursorFactory.getRowSignature();
     }

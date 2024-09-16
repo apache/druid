@@ -48,9 +48,12 @@ import java.util.List;
  */
 public class TestArrayCursorFactory extends QueryableIndexCursorFactory
 {
+  private final RowSignature signature;
+
   public TestArrayCursorFactory(QueryableIndex index)
   {
     super(index);
+    this.signature = computeRowSignature(index);
   }
 
   @Override
@@ -81,26 +84,10 @@ public class TestArrayCursorFactory extends QueryableIndexCursorFactory
     };
   }
 
-
   @Override
   public RowSignature getRowSignature()
   {
-    final RowSignature.Builder builder = RowSignature.builder();
-    builder.addTimeColumn();
-
-    for (final String column : super.getRowSignature().getColumnNames()) {
-      ColumnCapabilities columnCapabilities = super.getColumnCapabilities(column);
-      ColumnType columnType = columnCapabilities == null ? null : columnCapabilities.toColumnType();
-      //change MV strings columns to Array<String>
-      if (columnType != null
-          && columnType.equals(ColumnType.STRING)
-          && columnCapabilities.hasMultipleValues().isMaybeTrue()) {
-        columnType = ColumnType.STRING_ARRAY;
-      }
-      builder.add(column, columnType);
-    }
-
-    return builder.build();
+    return signature;
   }
 
   @Nullable
@@ -113,6 +100,26 @@ public class TestArrayCursorFactory extends QueryableIndexCursorFactory
     } else {
       return super.getColumnCapabilities(column);
     }
+  }
+
+  private static RowSignature computeRowSignature(final QueryableIndex index)
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+    builder.addTimeColumn();
+
+    for (final String column : new QueryableIndexCursorFactory(index).getRowSignature().getColumnNames()) {
+      ColumnCapabilities columnCapabilities = index.getColumnCapabilities(column);
+      ColumnType columnType = columnCapabilities == null ? null : columnCapabilities.toColumnType();
+      //change MV strings columns to Array<String>
+      if (columnType != null
+          && columnType.equals(ColumnType.STRING)
+          && columnCapabilities.hasMultipleValues().isMaybeTrue()) {
+        columnType = ColumnType.STRING_ARRAY;
+      }
+      builder.add(column, columnType);
+    }
+
+    return builder.build();
   }
 
   private class DecoratedCursor implements Cursor
