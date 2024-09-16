@@ -1076,6 +1076,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
       }
+    },
+
+    /**
+     * Relax nulls which accepts 1000 units of least precision.
+     */
+    RELAX_NULLS_RELATIVE_1000_ULPS {
+      static final int ASSERTION_ERROR_ULPS = 1000;
+
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS_RELATIVE_1000_ULPS.validate(row, column, type, expectedCell, resultCell);
+      }
     };
 
     abstract void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell);

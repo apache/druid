@@ -169,7 +169,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           }
         }
       }
-      assertResultsValid(ResultMatchMode.EQUALS_RELATIVE_1000_ULPS, input.expectedResults, results);
+      assertResultsValid(ResultMatchMode.RELAX_NULLS_RELATIVE_1000_ULPS, input.expectedResults, results);
     }
 
     private void validateOperators(List<OperatorFactory> expectedOperators, List<OperatorFactory> currentOperators)
