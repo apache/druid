@@ -1480,8 +1480,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
                 null,
                 ImmutableList.of("t", "dim1", "dim2", "met1"),
                 false,
-                0,
-                null
+                0
             )
         );
       default:

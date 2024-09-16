@@ -216,8 +216,7 @@ public class DatasourceRecordReaderSegmentReaderTest
             null,
             ImmutableList.of("timestamp", "host", "visited", "x", "y", "spatial"),
             false,
-            0,
-            null
+            0
         ),
         StandardCharsets.UTF_8.toString()
     );

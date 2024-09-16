@@ -318,8 +318,7 @@ public class DatasourcePathSpecTest
                             null,
                             ImmutableList.of("timestamp", "host", "visited"),
                             false,
-                            0,
-                            null
+                            0
                         ),
                         null
                     ),

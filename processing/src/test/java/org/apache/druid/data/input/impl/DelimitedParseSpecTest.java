@@ -42,8 +42,7 @@ public class DelimitedParseSpecTest
         "\u0002",
         Collections.singletonList("abc"),
         false,
-        0,
-        null
+        0
     );
     final DelimitedParseSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
@@ -73,8 +72,7 @@ public class DelimitedParseSpecTest
         null,
         Collections.singletonList("a,"),
         false,
-        0,
-        null
+        0
     );
   }
 
@@ -93,8 +91,7 @@ public class DelimitedParseSpecTest
         null,
         null,
         false,
-        0,
-        null
+        0
     );
   }
 }

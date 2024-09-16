@@ -443,8 +443,7 @@ public class BatchDeltaIngestionTest
                             null,
                             ImmutableList.of("timestamp", "host", "host2", "visited_num"),
                             false,
-                            0,
-                            null
+                            0
                         ),
                         null
                     ),

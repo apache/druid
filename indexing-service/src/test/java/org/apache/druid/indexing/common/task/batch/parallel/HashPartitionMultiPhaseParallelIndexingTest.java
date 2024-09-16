@@ -77,8 +77,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       null,
       Arrays.asList("ts", "dim1", "dim2", "val"),
       false,
-      0,
-      null
+      0
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),

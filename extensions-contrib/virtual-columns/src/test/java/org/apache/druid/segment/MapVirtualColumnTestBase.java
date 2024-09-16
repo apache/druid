@@ -53,8 +53,7 @@ public class MapVirtualColumnTestBase extends InitializedNullHandlingTest
             ",",
             Arrays.asList("ts", "dim", "keys", "values"),
             false,
-            0,
-            null
+            0
         ),
         "utf8"
     );

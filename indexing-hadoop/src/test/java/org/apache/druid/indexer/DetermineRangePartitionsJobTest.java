@@ -349,8 +349,7 @@ public class DetermineRangePartitionsJobTest
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num"),
                             false,
-                            0,
-                            null
+                            0
                         ),
                         null
                     ),

@@ -152,8 +152,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             "\t",
             ImmutableList.of("timestamp", "product", "tags", "othertags"),
             false,
-            0,
-            null
+            0
         ),
         "UTF-8"
     );

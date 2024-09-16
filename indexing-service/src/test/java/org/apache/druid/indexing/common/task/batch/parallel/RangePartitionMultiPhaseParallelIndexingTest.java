@@ -103,8 +103,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       LIST_DELIMITER,
       Arrays.asList(TIME, DIM1, DIM2, "val"),
       false,
-      0,
-      null
+      0
   );
   private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList(TIME, DIM1, DIM2, "val"),

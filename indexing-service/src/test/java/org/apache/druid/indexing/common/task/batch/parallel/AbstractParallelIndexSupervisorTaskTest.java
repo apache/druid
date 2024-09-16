@@ -156,8 +156,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       null,
       Arrays.asList("ts", "dim", "val"),
       false,
-      0,
-      null
+      0
   );
   static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),

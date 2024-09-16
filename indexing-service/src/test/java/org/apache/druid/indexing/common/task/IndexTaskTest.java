@@ -156,8 +156,7 @@ public class IndexTaskTest extends IngestionTestBase
       null,
       Arrays.asList("ts", "dim", "val"),
       false,
-      0,
-      null
+      0
   );
   private static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
@@ -517,7 +516,7 @@ public class IndexTaskTest extends IngestionTestBase
       indexIngestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, dimensionsSpec, listDelimiter, columns, false, 0, null),
+          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, dimensionsSpec, listDelimiter, columns, false, 0),
           transformSpec,
           null,
           tuningConfig,
@@ -923,7 +922,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, null, true, 0, null),
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, null, true, 0),
           null,
           null,
           tuningConfig,
@@ -985,7 +984,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0, null),
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
           null,
           tuningConfig,
@@ -1385,7 +1384,7 @@ public class IndexTaskTest extends IngestionTestBase
       parseExceptionIgnoreSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0, null),
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
           null,
           tuningConfig,
@@ -1435,7 +1434,7 @@ public class IndexTaskTest extends IngestionTestBase
       indexIngestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0, null),
+          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
           null,
           tuningConfig,
@@ -1676,7 +1675,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0, null),
+          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
           null,
           null,
           tuningConfig,
@@ -1795,7 +1794,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0, null),
+          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
           null,
           null,
           tuningConfig,
@@ -1889,7 +1888,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, null, true, 0, null),
+          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, null, true, 0),
           null,
           null,
           tuningConfig,
@@ -1959,7 +1958,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           jsonMapper,
           tmpDir,
-          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, columns, true, 0, null),
+          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, columns, true, 0),
           null,
           null,
           tuningConfig,
