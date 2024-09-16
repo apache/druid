@@ -1363,6 +1363,11 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <dependency>
+              <groupId>org.jruby.joni</groupId>
+              <artifactId>joni</artifactId>
+              <version>2.1.34</version>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
