@@ -28,7 +28,9 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.druid.java.util.common.parsers.ParserUtils.*;
+import static org.apache.druid.java.util.common.parsers.ParserUtils.findDuplicates;
+import static org.apache.druid.java.util.common.parsers.ParserUtils.getMultiValueFunction;
+import static org.apache.druid.java.util.common.parsers.ParserUtils.tryParseStringAsNumber;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 

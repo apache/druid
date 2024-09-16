@@ -85,11 +85,13 @@ public class ParserUtils
     try {
       // see if it's a long, if not try parsing as a double.
       return Long.parseLong(input);
-    } catch (NumberFormatException e1) {
+    }
+    catch (NumberFormatException e1) {
       try {
         return Double.parseDouble(input);
-      } catch (NumberFormatException e2) {
-          return input;
+      }
+      catch (NumberFormatException e2) {
+        return input;
       }
     }
   }

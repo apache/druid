@@ -74,17 +74,6 @@ public class CatalogTests
     }
   }
 
-  public static InputFormat csvFormat()
-  {
-    return new CsvInputFormat(
-        Arrays.asList("x", "y", "z"),
-        null,  // listDelimiter
-        false, // hasHeaderRow
-        false, // findColumnsFromHeader
-        0,      // skipHeaderRows
-        null);
-  }
-
   public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
   public static class DbFixture
