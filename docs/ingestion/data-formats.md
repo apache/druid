@@ -125,6 +125,8 @@ Configure the CSV `inputFormat` to load CSV data as follows:
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
+| shouldParseNumbers| Boolean| If this is set, the task will attempt to parse numeric strings into long or double data type, in that order. If the value cannot be parsed as a number, it is retained as a string. | no (default = false) |
+
 
 For example:
 
@@ -150,6 +152,8 @@ Configure the TSV `inputFormat` to load TSV data as follows:
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
+| shouldParseNumbers| Boolean| If this is set, the task will attempt to parse numeric strings into long or double data type, in that order. If the value cannot be parsed as a number, it is retained as a string. | no (default = false) |
+
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
