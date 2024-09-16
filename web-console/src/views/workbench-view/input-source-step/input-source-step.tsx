@@ -127,13 +127,6 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
         const sampleResponse = await postToSampler(sampleSpec, 'input-source-step');
 
         sampleLines = filterMap(sampleResponse.data, l => (l.input ? l.input.raw : undefined));
-        // console.log('sample response: ', sampleResponse);
-        // console.log('sample response.data: ', sampleResponse.data);
-        // sampleLines = filterMap(sampleResponse.data, l => (l.input ? l.input.raw : undefined));
-        // sampleLines = filterMap(sampleResponse.data, l =>
-        // l.input ? JSON.stringify(l.input) : undefined,
-        // );
-        // console.log('sample lines: ', sampleLines);
       } else {
         const tableExpression = externalConfigToTableExpression({
           inputSource,
@@ -232,7 +225,6 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
       <div className="ingestion-cards">
         {renderIngestionCard('s3')}
         {renderIngestionCard('azureStorage')}
-        {renderIngestionCard('delta')}
         {renderIngestionCard('google')}
         {renderIngestionCard('hdfs')}
         {renderIngestionCard('http')}
