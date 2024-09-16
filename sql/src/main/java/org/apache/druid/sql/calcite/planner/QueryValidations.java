@@ -75,7 +75,7 @@ public class QueryValidations
       if (shuttle.found != null) {
         throw new ValidationException(
             StringUtils.format(
-                "%s join is not supported by engine [%s] with %s: [%s]. Try %s: %s.",
+                "%s JOIN is not supported by engine[%s] with %s[%s]. Try %s[%s].",
                 shuttle.found.getJoinType(),
                 plannerContext.getEngine().name(),
                 PlannerContext.CTX_SQL_JOIN_ALGORITHM,

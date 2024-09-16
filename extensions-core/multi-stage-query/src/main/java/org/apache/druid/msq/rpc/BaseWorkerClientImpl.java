@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.channel.ChannelClosedForWritesException;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.file.FrameFileHttpResponseHandler;
 import org.apache.druid.frame.file.FrameFilePartialFetch;
@@ -219,12 +220,18 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
           public void onSuccess(FrameFilePartialFetch partialFetch)
           {
             if (partialFetch.isExceptionCaught()) {
-              // Exception while reading channel. Recoverable.
-              log.noStackTrace().info(
-                  partialFetch.getExceptionCaught(),
-                  "Encountered exception while reading channel [%s]",
-                  channel.getId()
-              );
+              if (partialFetch.getExceptionCaught() instanceof ChannelClosedForWritesException) {
+                // Channel was closed. Stop trying.
+                retVal.setException(partialFetch.getExceptionCaught());
+                return;
+              } else {
+                // Exception while reading channel. Recoverable.
+                log.noStackTrace().warn(
+                    partialFetch.getExceptionCaught(),
+                    "Attempting recovery after exception while reading channel[%s]",
+                    channel.getId()
+                );
+              }
             }
 
             // Empty fetch means this is the last fetch for the channel.

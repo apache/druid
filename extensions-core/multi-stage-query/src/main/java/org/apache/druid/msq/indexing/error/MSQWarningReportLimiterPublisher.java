@@ -117,10 +117,4 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
     }
     delegate.publishException(stageNumber, e);
   }
-
-  @Override
-  public void close() throws IOException
-  {
-    delegate.close();
-  }
 }

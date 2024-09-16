@@ -123,7 +123,7 @@ public interface Filter
     final FilterBundle.SimpleMatcherBundle matcherBundle;
     if (needMatcher) {
       matcherBundle = new FilterBundle.SimpleMatcherBundle(
-          new FilterBundle.MatcherBundleInfo(this::getFilterString, null, null),
+          new FilterBundle.MatcherBundleInfo(this::toString, null, null),
           this::makeMatcher,
           this::makeVectorMatcher,
           this.canVectorizeMatcher(filterBundleBuilder.getColumnIndexSelector())

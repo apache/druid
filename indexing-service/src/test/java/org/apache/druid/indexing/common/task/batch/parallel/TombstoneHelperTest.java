@@ -67,8 +67,7 @@ public class TombstoneHelperTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, null, false,
                                                                  Collections.singletonList(interval)
     );
-    DataSchema dataSchema =
-        new DataSchema("test", null, null, null, granularitySpec, null);
+    DataSchema dataSchema = DataSchema.builder().withDataSource("test").withGranularity(granularitySpec).build();
     // no segments will be pushed when all rows are thrown away, assume that:
     List<DataSegment> pushedSegments = Collections.emptyList();
 
@@ -93,8 +92,7 @@ public class TombstoneHelperTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, null, false,
                                                                  Collections.singletonList(interval)
     );
-    DataSchema dataSchema =
-        new DataSchema("test", null, null, null, granularitySpec, null);
+    DataSchema dataSchema = DataSchema.builder().withDataSource("test").withGranularity(granularitySpec).build();
     // no segments will be pushed when all rows are thrown away, assume that:
     List<DataSegment> pushedSegments = Collections.emptyList();
 
