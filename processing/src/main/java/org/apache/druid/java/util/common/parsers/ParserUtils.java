@@ -84,22 +84,6 @@ public class ParserUtils
     };
   }
 
-  public static Function<String, Object> getMultiValueFunctionOld(
-      final String listDelimiter,
-      final Splitter listSplitter
-  )
-  {
-    return (input) -> {
-      if (input != null && input.contains(listDelimiter)) {
-        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-            .map(NullHandling::emptyToNullIfNeeded)
-            .collect(Collectors.toList());
-      } else {
-        return NullHandling.emptyToNullIfNeeded(input);
-      }
-    };
-  }
-
   /**
    * Attempts to parse the input string into a numeric value, if applicable. If the input is a number, the method first
    * tries to parse the input number as a {@code Long}. If parsing as a {@code Long} fails, it then attempts to parse
