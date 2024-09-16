@@ -47,9 +47,13 @@ import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -202,11 +206,26 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public int defaultTargetPartitionsPerWorker()
+  public QueryKitSpec makeQueryKitSpec(
+      final QueryKit<Query<?>> queryKit,
+      final String queryId,
+      final MSQSpec querySpec,
+      final ControllerQueryKernelConfig queryKernelConfig
+  )
   {
-    // Assume tasks are symmetric: workers have the same number of processors available as a controller.
-    // Create one partition per processor per task, for maximum parallelism.
-    return memoryIntrospector.numProcessingThreads();
+    return new QueryKitSpec(
+        queryKit,
+        queryId,
+        querySpec.getTuningConfig().getMaxNumWorkers(),
+        querySpec.getTuningConfig().getMaxNumWorkers(),
+
+        // Assume tasks are symmetric: workers have the same number of processors available as a controller.
+        // Create one partition per processor per task, for maximum parallelism.
+        MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
+            querySpec.getQuery().context(),
+            memoryIntrospector.numProcessingThreads()
+        )
+    );
   }
 
   /**
