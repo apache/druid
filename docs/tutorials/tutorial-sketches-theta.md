@@ -193,7 +193,7 @@ The `APPROX_COUNT_DISTINCT_DS_THETA` function applies the following:
 * `DS_THETA`: Creates a new Theta sketch from the column of Theta sketches.
 * `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`.
 
-Note that the FILTER clause limits an aggregation query to only the rows that match the filter.
+Note that the filter clause limits an aggregation query to only the rows that match the filter.
 
 ### Set operations
 
