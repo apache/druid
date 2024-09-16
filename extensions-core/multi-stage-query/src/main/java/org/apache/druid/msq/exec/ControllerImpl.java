@@ -117,6 +117,7 @@ import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
@@ -754,6 +755,11 @@ public class ControllerImpl implements Controller
     }
 
     workerErrorRef.compareAndSet(null, mapQueryColumnNameToOutputColumnName(errorReport));
+
+    // Wake up the main controller thread.
+    addToKernelManipulationQueue(kernel -> {
+      throw new MSQException(new WorkerFailedFault(errorReport.getTaskId(), null));
+    });
   }
 
   /**
