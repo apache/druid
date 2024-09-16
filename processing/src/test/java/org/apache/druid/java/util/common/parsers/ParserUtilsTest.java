@@ -29,7 +29,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.apache.druid.java.util.common.parsers.ParserUtils.findDuplicates;
-import static org.apache.druid.java.util.common.parsers.ParserUtils.getMultiValueFunction;
+import static org.apache.druid.java.util.common.parsers.ParserUtils.getMultiValueAndParseNumbersFunction;
 import static org.apache.druid.java.util.common.parsers.ParserUtils.tryParseStringAsNumber;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -55,33 +55,138 @@ public class ParserUtilsTest
   }
 
   @Test
-  public void testGetMultiValueFunction()
+  public void testMultiValueParseFunctionWithParseNumbersEnabled()
   {
     assertEquals(
         ImmutableList.of("foo", "boo"),
-        getMultiValueFunction("|", Splitter.on("|"), true).apply("foo|boo")
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("foo|boo")
     );
     assertEquals(
         ImmutableList.of(1L, 2L, 3L),
-        getMultiValueFunction("|", Splitter.on("|"), true).apply("1|2|3")
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("1|2|3")
     );
     assertEquals(
         ImmutableList.of(1L, -2L, 3L, 0L, -2L),
-        getMultiValueFunction("|", Splitter.on("|"), true).apply("1|-2|3|0|-2")
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("1|-2|3|0|-2")
     );
     assertEquals(
         1.23,
-        getMultiValueFunction("|", Splitter.on("|"), true).apply("1.23")
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("1.23")
     );
 
     // Some mixed types
     assertEquals(
         ImmutableList.of(-1.23, 3.13, 23L),
-        getMultiValueFunction("|", Splitter.on("|"), true).apply("-1.23|3.13|23")
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("-1.23|3.13|23")
     );
     assertEquals(
         ImmutableList.of(-1.23, 3.13, 23L, "foo", -9L),
-        getMultiValueFunction("|", Splitter.on("|"), true).apply("-1.23|3.13|23|foo|-9")
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), true).apply("-1.23|3.13|23|foo|-9")
+    );
+  }
+
+  @Test
+  public void testMultiValueParseFunctionWithParseNumbersDisabled()
+  {
+    assertEquals(
+        ImmutableList.of("foo", "boo"),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("foo|boo")
+    );
+    assertEquals(
+        ImmutableList.of("1", "2", "3"),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("1|2|3")
+    );
+    assertEquals(
+        ImmutableList.of("1", "-2", "3", "0", "-2"),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("1|-2|3|0|-2")
+    );
+    assertEquals(
+        "1.23",
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("1.23")
+    );
+
+    // Some mixed types
+    assertEquals(
+        ImmutableList.of("-1.23", "3.13", "23"),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("-1.23|3.13|23")
+    );
+    assertEquals(
+        ImmutableList.of("-1.23", "3.13", "23", "foo", "-9"),
+        getMultiValueAndParseNumbersFunction("|", Splitter.on("|"), false).apply("-1.23|3.13|23|foo|-9")
+    );
+  }
+
+  @Test
+  public void testInputWithoutDelimiterAndNumberParsingEnabled()
+  {
+    assertEquals(
+        "foo|boo",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("foo|boo")
+    );
+    assertEquals(
+        "1|2|3",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("1|2|3")
+    );
+    assertEquals(
+        "1|-2|3|0|-2",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("1|-2|3|0|-2")
+    );
+    assertEquals(
+        1.23,
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("1.23")
+    );
+
+    // Some mixed types
+    assertEquals(
+        "-1.23|3.13|23",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("-1.23|3.13|23")
+    );
+    assertEquals(
+        "-1.23|3.13|23|foo|-9",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("-1.23|3.13|23|foo|-9")
+    );
+  }
+
+  @Test
+  public void testInputWithoutDelimiterAndNumberParsingDisabled()
+  {
+    assertEquals(
+        "foo|boo",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("foo|boo")
+    );
+    assertEquals(
+        "100",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("100")
+    );
+    assertEquals(
+        "1.23",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("1.23")
+    );
+    assertEquals(
+        "-2.0",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("-2.0")
+    );
+    assertEquals(
+        "1|2|3",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("1|2|3")
+    );
+    assertEquals(
+        "1|-2|3|0|-2",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("1|-2|3|0|-2")
+    );
+    assertEquals(
+        "-1.0|-2.2|3.1|0.2|-2.1",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("-1.0|-2.2|3.1|0.2|-2.1")
+    );
+
+    // Some mixed types
+    assertEquals(
+        "-1.23|3.13|23",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("-1.23|3.13|23")
+    );
+    assertEquals(
+        "-1.23|3.13|23|foo|-9",
+        getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), false).apply("-1.23|3.13|23|foo|-9")
     );
   }
 

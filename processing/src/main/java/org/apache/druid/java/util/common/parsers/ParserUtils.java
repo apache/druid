@@ -53,7 +53,13 @@ public class ParserUtils
     }
   }
 
-  public static Function<String, Object> getMultiValueFunction(
+  /**
+   * @return a function that processes a given string input by splitting it into multiple values
+   * using the {@code listSplitter} if thge {@code list delimiter} is present in the input. If {@code shouldParseNumbers}
+   * is enabled, the function will also try to parse any numeric values present in the input -- integers as {@code Long}
+   * and floating-point numbers as {@code Double}.
+   */
+  public static Function<String, Object> getMultiValueAndParseNumbersFunction(
       final String listDelimiter,
       final Splitter listSplitter,
       final boolean shouldParseNumbers
@@ -77,15 +83,20 @@ public class ParserUtils
     };
   }
 
+  /**
+   * Attempts to parse the input string into a numeric value, if applicable. If the input is a number, the method first
+   * tries to parse the input number as a {@code Long}. If parsing as a {@code Long} fails, it then attempts to parse
+   * the input number as a {@code Double}. For all other scenarios, the input is returned as-is as a {@code String} type.
+   */
+  @VisibleForTesting
   @Nullable
-  public static Object tryParseStringAsNumber(@Nullable final String input)
+  static Object tryParseStringAsNumber(@Nullable final String input)
   {
     if (!NumberUtils.isNumber(input)) {
       return input;
     }
 
     try {
-      // see if it's a long, if not try parsing as a double.
       return Long.parseLong(input);
     }
     catch (NumberFormatException e1) {

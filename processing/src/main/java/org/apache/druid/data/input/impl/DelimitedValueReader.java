@@ -51,7 +51,7 @@ public class DelimitedValueReader extends TextReader.Bytes
 {
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final Function<String, Object> multiValueFunction;
+  private final Function<String, Object> multiValueParseFunction;
   private final DelimitedValueParser parser;
 
   /**
@@ -68,7 +68,6 @@ public class DelimitedValueReader extends TextReader.Bytes
   @Nullable
   private List<String> inputRowDimensions;
   private final boolean useListBasedInputRows;
-  private final boolean shouldParseNumbers;
 
   interface DelimitedValueParser
   {
@@ -91,8 +90,11 @@ public class DelimitedValueReader extends TextReader.Bytes
     this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
-    this.shouldParseNumbers = shouldParseNumbers;
-    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter), shouldParseNumbers);
+    this.multiValueParseFunction = ParserUtils.getMultiValueAndParseNumbersFunction(
+        finalListDelimeter,
+        Splitter.on(finalListDelimeter),
+        shouldParseNumbers
+    );
 
     if (!findColumnsFromHeader && columns != null) {
       // If findColumnsFromHeader, inputRowSignature will be set later.
@@ -137,7 +139,7 @@ public class DelimitedValueReader extends TextReader.Bytes
   private List<Object> readLineAsList(byte[] line) throws IOException
   {
     final List<String> parsed = parser.parseLine(line);
-    return new ArrayList<>(Lists.transform(parsed, multiValueFunction));
+    return new ArrayList<>(Lists.transform(parsed, multiValueParseFunction));
   }
 
   private Map<String, Object> readLineAsMap(byte[] line) throws IOException
@@ -145,7 +147,7 @@ public class DelimitedValueReader extends TextReader.Bytes
     final List<String> parsed = parser.parseLine(line);
     return Utils.zipMapPartial(
         Preconditions.checkNotNull(inputRowSignature, "inputRowSignature").getColumnNames(),
-        Iterables.transform(parsed, multiValueFunction)
+        Iterables.transform(parsed, multiValueParseFunction)
     );
   }
 
