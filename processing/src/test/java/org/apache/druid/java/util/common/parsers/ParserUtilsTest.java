@@ -30,7 +30,6 @@ import java.util.List;
 
 import static org.apache.druid.java.util.common.parsers.ParserUtils.findDuplicates;
 import static org.apache.druid.java.util.common.parsers.ParserUtils.getMultiValueAndParseNumbersFunction;
-import static org.apache.druid.java.util.common.parsers.ParserUtils.tryParseStringAsNumber;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -268,18 +267,5 @@ public class ParserUtilsTest
         "-1.23|3.13|23|foo|-9",
         getMultiValueAndParseNumbersFunction("$", Splitter.on("$"), true).apply("-1.23|3.13|23|foo|-9")
     );
-  }
-
-  @Test
-  public void testTryParseStringAsNumber()
-  {
-    assertNull(tryParseStringAsNumber(null));
-    assertEquals(NullHandling.emptyToNullIfNeeded(""), tryParseStringAsNumber(""));
-    assertEquals("a", tryParseStringAsNumber("a"));
-    assertEquals("ab", tryParseStringAsNumber("ab"));
-    assertEquals(12L, tryParseStringAsNumber("12"));
-    assertEquals(12.234, tryParseStringAsNumber("12.234"));
-    assertEquals(-1L, tryParseStringAsNumber("-1"));
-    assertEquals(-12.234, tryParseStringAsNumber("-12.234"));
   }
 }

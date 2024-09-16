@@ -89,9 +89,8 @@ public class ParserUtils
    * tries to parse the input number as a {@code Long}. If parsing as a {@code Long} fails, it then attempts to parse
    * the input number as a {@code Double}. For all other scenarios, the input is returned as-is as a {@code String} type.
    */
-  @VisibleForTesting
   @Nullable
-  static Object tryParseStringAsNumber(@Nullable final String input)
+  private static Object tryParseStringAsNumber(@Nullable final String input)
   {
     if (!NumberUtils.isNumber(input)) {
       return NullHandling.emptyToNullIfNeeded(input);
