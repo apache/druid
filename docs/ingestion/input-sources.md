@@ -29,10 +29,8 @@ For general information on native batch indexing and parallel task indexing, see
 
 ## S3 input source
 
-:::info
-
-You need to include the [`druid-s3-extensions`](../development/extensions-core/s3.md) as an extension to use the S3 input source.
-
+:::info Required extension
+To use the S3 input source, load the extension [`druid-s3-extensions`](../development/extensions-core/s3.md) in your `common.runtime.properties` file.
 :::
 
 The S3 input source reads objects directly from S3. You can specify either:
@@ -41,7 +39,7 @@ The S3 input source reads objects directly from S3. You can specify either:
 * a list of S3 location prefixes that attempts to list the contents and ingest
 all objects contained within the locations.
 
-The S3 input source is splittable. Therefore, you can use it with the [Parallel task](./native-batch.md). Each worker task of `index_parallel` reads one or multiple objects.
+The S3 input source is splittable. Therefore, you can use it with the [parallel task](./native-batch.md). Each worker task of `index_parallel` reads one or multiple objects.
 
 Sample specs:
 
@@ -219,16 +217,14 @@ If `accessKeyId` and `secretAccessKey` are not given, the default [S3 credential
 
 ## Google Cloud Storage input source
 
-:::info
-
-You need to include the [`druid-google-extensions`](../development/extensions-core/google.md) as an extension to use the Google Cloud Storage input source.
-
+:::info Required extension
+To use the Google Cloud Storage input source, load the extension [`druid-google-extensions`](../development/extensions-core/google.md) in your `common.runtime.properties` file.
 :::
 
 The Google Cloud Storage input source is to support reading objects directly
 from Google Cloud Storage. Objects can be specified as list of Google
 Cloud Storage URI strings. The Google Cloud Storage input source is splittable
-and can be used by the [Parallel task](./native-batch.md), where each worker task of `index_parallel` will read
+and can be used by the [parallel task](./native-batch.md), where each worker task of `index_parallel` will read
 one or multiple objects.
 
 Sample specs:
@@ -307,14 +303,12 @@ Google Cloud Storage object:
 
 ## Azure input source
 
-:::info
-
-You need to include the [`druid-azure-extensions`](../development/extensions-core/azure.md) as an extension to use the Azure input source.
-
+:::info Required extension
+To use the Azure input source, load the extension [`druid-azure-extensions`](../development/extensions-core/azure.md) in your `common.runtime.properties` file.
 :::
 
 The Azure input source (that uses the type `azureStorage`) reads objects directly from Azure Blob store or Azure Data Lake sources. You can
-specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [Parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
+specify objects as a list of file URI strings or prefixes. You can split the Azure input source for use with [parallel task](./native-batch.md) indexing and each worker task reads one chunk of the split data.
 
 The `azureStorage` input source is a new schema for Azure input sources that allows you to specify which storage account files should be ingested from. We recommend that you update any specs that use the old `azure` schema to use the new `azureStorage` schema. The new schema provides more functionality than the older `azure` schema.
 
@@ -491,15 +485,13 @@ The `objects` property is:
 
 ## HDFS input source
 
-:::info
-
-You need to include the [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) as an extension to use the HDFS input source.
-
+:::info Required extension
+To use the HDFS input source, load the extension [`druid-hdfs-storage`](../development/extensions-core/hdfs.md) in your `common.runtime.properties` file.
 :::
 
 The HDFS input source is to support reading files directly
 from HDFS storage. File paths can be specified as an HDFS URI string or a list
-of HDFS URI strings. The HDFS input source is splittable and can be used by the [Parallel task](./native-batch.md),
+of HDFS URI strings. The HDFS input source is splittable and can be used by the [parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple files.
 
 Sample specs:
@@ -593,7 +585,7 @@ The `http` input source is not limited to the HTTP or HTTPS protocols. It uses t
 
 For more information about security best practices, see [Security overview](../operations/security-overview.md#best-practices).
 
-The HTTP input source is _splittable_ and can be used by the [Parallel task](./native-batch.md),
+The HTTP input source is _splittable_ and can be used by the [parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read only one file. This input source does not support Split Hint Spec.
 
 Sample specs:
@@ -701,7 +693,7 @@ Sample spec:
 
 The Local input source is to support reading files directly from local storage,
 and is mainly intended for proof-of-concept testing.
-The Local input source is _splittable_ and can be used by the [Parallel task](./native-batch.md),
+The Local input source is _splittable_ and can be used by the [parallel task](./native-batch.md),
 where each worker task of `index_parallel` will read one or multiple files.
 
 Sample spec:
@@ -736,7 +728,7 @@ Sample spec:
 
 The Druid input source is to support reading data directly from existing Druid segments,
 potentially using a new schema and changing the name, dimensions, metrics, rollup, etc. of the segment.
-The Druid input source is _splittable_ and can be used by the [Parallel task](./native-batch.md).
+The Druid input source is _splittable_ and can be used by the [parallel task](./native-batch.md).
 This input source has a fixed input format for reading from Druid segments;
 no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
 
@@ -833,17 +825,29 @@ For more information on the `maxNumConcurrentSubTasks` field, see [Implementatio
 
 ## SQL input source
 
+:::info Required extension
+To use the SQL input source, you must load the appropriate extension in your `common.runtime.properties` file.
+* To connect to MySQL, load the extension [`mysql-metadata-storage`](../development/extensions-core/mysql.md).
+* To connect to PostgreSQL, load the extension [`postgresql-metadata-storage`](../development/extensions-core/postgresql.md).
+
+The MySQL extension requires a JDBC driver.
+For more information, see the [Installing the MySQL connector library](../development/extensions-core/mysql.md).
+:::
+
 The SQL input source is used to read data directly from RDBMS.
-The SQL input source is _splittable_ and can be used by the [Parallel task](./native-batch.md), where each worker task will read from one SQL query from the list of queries.
+You can _split_ the ingestion tasks for a SQL input source. When you use the [parallel task](./native-batch.md) type, each worker task reads from one SQL query from the list of queries.
 This input source does not support Split Hint Spec.
-Since this input source has a fixed input format for reading events, no `inputFormat` field needs to be specified in the ingestion spec when using this input source.
-Please refer to the Recommended practices section below before using this input source.
+
+The SQL input source has a fixed input format for reading events.
+Don't specify `inputFormat` when using this input source.
+
+Refer to the [recommended practices](#recommended-practices) before using this input source.
 
 |Property|Description|Required|
 |--------|-----------|---------|
 |type|Set the value to `sql`.|Yes|
-|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support. The specified extension must be loaded into Druid:<br/><br/><ul><li>[mysql-metadata-storage](../development/extensions-core/mysql.md) for `mysql`</li><li> [postgresql-metadata-storage](../development/extensions-core/postgresql.md) extension for `postgresql`.</li></ul><br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
-|foldCase|Toggle case folding of database column names. This may be enabled in cases where the database returns case insensitive column names in query results.|No|
+|database|Specifies the database connection details. The database type corresponds to the extension that supplies the `connectorConfig` support.<br/><br/>You can selectively allow JDBC properties in `connectURI`. See [JDBC connections security config](../configuration/index.md#jdbc-connections-to-external-databases) for more details.|Yes|
+|foldCase|Boolean to toggle case folding of database column names. For example, to ingest a database column named `Entry_Date` as `entry_date`, set `foldCase` to true and include `entry_date` in the [`dimensionsSpec`](ingestion-spec.md#dimensionsspec).|No|
 |sqls|List of SQL queries where each SQL query would retrieve the data to be indexed.|Yes|
 
 The following is an example of an SQL input source spec:
@@ -887,7 +891,7 @@ Compared to the other native batch input sources, SQL input source behaves diffe
 
 The Combining input source lets you read data from multiple input sources.
 It identifies the splits from delegate input sources and uses a worker task to process each split.
-Use the Combining input source only if all the delegates are splittable and can be used by the [Parallel task](./native-batch.md).
+Each delegate input source must be splittable and compatible with the [parallel task type](./native-batch.md).
 
 Similar to other input sources, the Combining input source supports a single `inputFormat`.
 Delegate input sources that require an `inputFormat` must have the same format for input data.
@@ -931,10 +935,8 @@ The following is an example of a Combining input source spec:
 
 ## Iceberg input source
 
-:::info
-
-To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md).
-
+:::info Required extension
+To use the Iceberg input source, load the extension [`druid-iceberg-extensions`](../development/extensions-contrib/iceberg.md) in your `common.runtime.properties` file.
 :::
 
 You use the Iceberg input source to read data stored in the Iceberg table format. For a given table, the input source scans up to the latest Iceberg snapshot from the configured Hive catalog. Druid ingests the underlying live data files using the existing input source formats.
@@ -1138,10 +1140,8 @@ This input source provides the following filters: `and`, `equals`, `interval`, a
 
 ## Delta Lake input source
 
-:::info
-
-To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md).
-
+:::info Required extension
+To use the Delta Lake input source, load the extension [`druid-deltalake-extensions`](../development/extensions-contrib/delta-lake.md) in your `common.runtime.properties` file.
 :::
 
 You can use the Delta input source to read data stored in a Delta Lake table. For a given table, the input source scans
