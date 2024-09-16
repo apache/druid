@@ -203,7 +203,7 @@ public class WorkerImpl implements Worker
         log.warn("%s", logMessage);
 
         if (controllerAlive) {
-          controllerClient.postWorkerError(context.workerId(), errorReport);
+          controllerClient.postWorkerError(errorReport);
         }
 
         if (t != null) {
