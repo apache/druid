@@ -164,7 +164,8 @@ public class IndexTaskTest extends IngestionTestBase
       null,
       false,
       0,
-      null);
+      null
+  );
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()

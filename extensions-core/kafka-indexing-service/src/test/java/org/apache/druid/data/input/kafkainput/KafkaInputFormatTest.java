@@ -713,7 +713,8 @@ public class KafkaInputFormatTest
             false,
             false,
             0,
-            null),
+            null
+        ),
         "kafka.newheader.",
         "kafka.newkey.key",
         "kafka.newts.timestamp",

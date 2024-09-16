@@ -87,7 +87,8 @@ public class DelimitedInputFormatTest
         null,
         true,
         0,
-        null);
+        null
+    );
     Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
@@ -101,7 +102,8 @@ public class DelimitedInputFormatTest
         null,
         true,
         0,
-        null);
+        null
+    );
     Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
@@ -149,7 +151,8 @@ public class DelimitedInputFormatTest
         null,
         null,
         0,
-        null);
+        null
+    );
     Assert.assertFalse(format.isFindColumnsFromHeader());
   }
 

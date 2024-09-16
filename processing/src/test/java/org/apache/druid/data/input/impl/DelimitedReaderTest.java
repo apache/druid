@@ -70,7 +70,8 @@ public class DelimitedReaderTest
         null,
         false,
         0,
-        null);
+        null
+    );
     assertResult(source, format);
     // use this test!
   }
@@ -92,7 +93,8 @@ public class DelimitedReaderTest
         null,
         false,
         0,
-        false);
+        false
+    );
     assertResult(source, format);
     // use this test!
   }
@@ -130,7 +132,8 @@ public class DelimitedReaderTest
         null,
         false,
         1,
-        null);
+        null
+    );
     assertResult(source, format);
   }
 
@@ -235,7 +238,8 @@ public class DelimitedReaderTest
         null,
         false,
         0,
-        null);
+        null
+    );
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       Assert.assertTrue(iterator.hasNext());
@@ -279,6 +283,7 @@ public class DelimitedReaderTest
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
+        // fixme
         System.out.println("Score" + row.getRaw("score"));
         System.out.println("Score instanceof String" + (row.getRaw("score") instanceof String));
         System.out.println("Score instanceof Long" + (row.getRaw("score") instanceof Long));

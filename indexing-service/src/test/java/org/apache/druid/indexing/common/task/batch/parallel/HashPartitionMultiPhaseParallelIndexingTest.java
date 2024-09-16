@@ -85,7 +85,8 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       false,
       false,
       0,
-      null);
+      null
+  );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
   private static final String INPUT_FILTER = "test_*";
 
