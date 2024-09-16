@@ -82,7 +82,7 @@ public class CsvInputFormat extends FlatTextInputFormat
         getSkipHeaderRows(),
         line -> Arrays.asList(parser.parseLine(StringUtils.fromUtf8(line))),
         useListBasedInputRows(),
-        true
+        shouldParseNumbers()
     );
   }
 

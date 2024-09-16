@@ -283,13 +283,11 @@ public class DelimitedReaderTest
         );
         if (format.shouldParseNumbers()) {
           Assert.assertEquals(((numResults + 1) * 5L), row.getRaw("score"));
-          Assert.assertTrue((row.getRaw("score") instanceof Long));
           if (format.getColumns().contains("rating_dbl")) {
             Assert.assertEquals(numResults * 1.0, row.getRaw("rating_dbl"));
           }
         } else {
           Assert.assertEquals(Integer.toString((numResults + 1) * 5), row.getRaw("score"));
-          Assert.assertTrue((row.getRaw("score") instanceof String));
           if (format.getColumns().contains("rating_dbl")) {
             Assert.assertEquals(Double.toString(numResults * 1.0), row.getRaw("rating_dbl"));
           }

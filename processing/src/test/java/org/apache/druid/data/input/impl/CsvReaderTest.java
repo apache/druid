@@ -61,12 +61,34 @@ public class CsvReaderTest
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "2019-01-01T00:00:10Z,name_1,5",
-            "2019-01-01T00:00:20Z,name_2,10",
-            "2019-01-01T00:00:30Z,name_3,15"
+            "2019-01-01T00:00:10Z,name_1,5,0.0",
+            "2019-01-01T00:00:20Z,name_2,10,1.0",
+            "2019-01-01T00:00:30Z,name_3,15,2.0"
         )
     );
     final CsvInputFormat format = new CsvInputFormat(ImmutableList.of("ts", "name", "score"), null, null, false, 0, null);
+    assertResult(source, format);
+  }
+
+  @Test
+  public void testParseNumbers() throws IOException
+  {
+    final ByteEntity source = writeData(
+        ImmutableList.of(
+            "2019-01-01T00:00:10Z,name_1,5,0.0",
+            "2019-01-01T00:00:20Z,name_2,10,1.0",
+            "2019-01-01T00:00:30Z,name_3,15,2.0"
+        )
+    );
+    final CsvInputFormat format = new CsvInputFormat(
+        ImmutableList.of("ts", "name", "score", "rating_dbl"),
+        null,
+        null,
+        false,
+        0,
+        true
+    );
+
     assertResult(source, format);
   }
 
@@ -228,7 +250,8 @@ public class CsvReaderTest
         null,
         false,
         0,
-        null);
+        false
+    );
     final InputEntityReader reader = format.createReader(
         new InputRowSchema(
             new TimestampSpec("Timestamp", "auto", null),
@@ -300,6 +323,17 @@ public class CsvReaderTest
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
+        if (format.shouldParseNumbers()) {
+          Assert.assertEquals(((numResults + 1) * 5L), row.getRaw("score"));
+          if (format.getColumns().contains("rating_dbl")) {
+            Assert.assertEquals(numResults * 1.0, row.getRaw("rating_dbl"));
+          }
+        } else {
+          Assert.assertEquals(Integer.toString((numResults + 1) * 5), row.getRaw("score"));
+          if (format.getColumns().contains("rating_dbl")) {
+            Assert.assertEquals(Double.toString(numResults * 1.0), row.getRaw("rating_dbl"));
+          }
+        }
         Assert.assertEquals(
             Integer.toString((numResults + 1) * 5),
             Iterables.getOnlyElement(row.getDimension("score"))
