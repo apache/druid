@@ -119,10 +119,8 @@ GROUP BY 1, 2, 3
 PARTITIONED BY DAY
 ```
 
-Notice that there is no `uid` in the `SELECT` statement.
-
+Notice the `theta_uid` column in the `SELECT` statement. It defines the `thetaSketch` aggregator on the `uid` column during ingestion.
 In this scenario you are not interested in individual user IDs, only the unique counts.
-
 Instead you create Theta sketches on the values of `uid` using the `DS_THETA` function.
 
 [`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) has an optional second parameter that controls the accuracy and size of the sketches.
