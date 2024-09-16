@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.storage.sql.CatalogManager;
 import org.apache.druid.catalog.storage.sql.SQLCatalogManager;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule;
 import org.apache.druid.server.security.Access;
@@ -34,8 +32,6 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
-
-import java.util.Arrays;
 
 public class CatalogTests
 {

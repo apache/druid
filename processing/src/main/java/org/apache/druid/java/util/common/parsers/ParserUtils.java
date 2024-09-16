@@ -66,17 +66,34 @@ public class ParserUtils
   )
   {
     return (input) -> {
-      if (input != null) {
-        if (input.contains(listDelimiter)) {
+      if (input == null) {
+        return NullHandling.emptyToNullIfNeeded(input);
+      }
+
+      if (input.contains(listDelimiter)) {
           return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
               .map(NullHandling::emptyToNullIfNeeded)
               .map(value -> shouldParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
               .collect(Collectors.toList());
-        } else if (shouldParseNumbers) {
-          return tryParseStringAsNumber(input);
         } else {
-          return input;
-        }
+        return shouldParseNumbers ?
+            tryParseStringAsNumber(input) :
+            NullHandling.emptyToNullIfNeeded(input);
+
+      }
+    };
+  }
+
+  public static Function<String, Object> getMultiValueFunctionOld(
+      final String listDelimiter,
+      final Splitter listSplitter
+  )
+  {
+    return (input) -> {
+      if (input != null && input.contains(listDelimiter)) {
+        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+            .map(NullHandling::emptyToNullIfNeeded)
+            .collect(Collectors.toList());
       } else {
         return NullHandling.emptyToNullIfNeeded(input);
       }
@@ -93,7 +110,7 @@ public class ParserUtils
   static Object tryParseStringAsNumber(@Nullable final String input)
   {
     if (!NumberUtils.isNumber(input)) {
-      return input;
+      return NullHandling.emptyToNullIfNeeded(input);
     }
 
     try {

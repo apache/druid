@@ -194,7 +194,7 @@ public class ParserUtilsTest
   public void testTryParseStringAsNumber()
   {
     assertNull(tryParseStringAsNumber(null));
-    assertEquals("", tryParseStringAsNumber(""));
+    assertEquals(NullHandling.emptyToNullIfNeeded(""), tryParseStringAsNumber(""));
     assertEquals("a", tryParseStringAsNumber("a"));
     assertEquals("ab", tryParseStringAsNumber("ab"));
     assertEquals(12L, tryParseStringAsNumber("12"));
