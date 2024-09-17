@@ -100,14 +100,10 @@ public class HttpInputSource
 
   public static void throwIfForbiddenHeaders(HttpInputSourceConfig config, Map<String, String> requestHeaders)
   {
-    String message = null;
-    if (config.getAllowedHeaders().size() == 0 && requestHeaders.size() > 0) {
-      message = "You can set the property druid.ingestion.http.allowedHeaders in middle managers or peons to whitelist request headers";
-    }
     for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
       if (!config.getAllowedHeaders().contains(StringUtils.toLowerCase(entry.getKey()))) {
         throw InvalidInput.exception("Got forbidden header [%s], allowed headers are only [%s]. You can control the allowed headers by updating druid.ingestion.http.allowedHeaders",
-                                     entry.getKey(), config.getAllowedHeaders(), message
+                                     entry.getKey(), config.getAllowedHeaders()
         );
       }
     }
