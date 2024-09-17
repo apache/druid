@@ -722,12 +722,6 @@ Auto-cleanup of compaction configs of inactive datasources is now enabled by def
 
 [#15705](https://github.com/apache/druid/pull/15705)
 
-#### Changed `useMaxMemoryEstimates` for Hadoop jobs
-
-The default value of the `useMaxMemoryEstimates` parameter for Hadoop jobs is now `false`.
-
-[#16280](https://github.com/apache/druid/pull/16280)
-
 ### Developer notes
 
 #### Dependency updates
