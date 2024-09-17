@@ -153,7 +153,7 @@ You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift
 
 Unlike Kafka, Kinesis does not offer built in compression. Due to the operational costs of operating Kinesis streams at scale, you may find it advantageous to compress incoming data.
 
-Druid supports `bz2`, `gz`, `snappy`, `xz`, `zip`, and `zstd` compressed kinesis data. If your incoming data is compressed, include the compression type in the `compressionFormat` field. 
+Druid supports `bz2`, `gz`, `snappy`, `xz`, `zip`, and `zstd` compressed Kinesis data. If your incoming data is compressed, include the compression type in the `compressionFormat` field. 
 
 ### Tuning configuration
 
