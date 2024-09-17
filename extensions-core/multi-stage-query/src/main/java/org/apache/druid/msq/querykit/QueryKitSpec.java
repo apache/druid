@@ -39,8 +39,8 @@ public class QueryKitSpec
 
   /**
    * @param queryKit                  kit that is used to translate native subqueries; i.e.,
-   * @param queryId                   queryId of the resulting {@link QueryDefinition}
    *                                  {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
+   * @param queryId                   queryId of the resulting {@link QueryDefinition}
    * @param maxLeafWorkerCount        maximum number of workers for leaf stages: becomes
    *                                  {@link org.apache.druid.msq.kernel.StageDefinition#getMaxWorkerCount()}
    * @param maxNonLeafWorkerCount     maximum number of workers for non-leaf stages: becomes
