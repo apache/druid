@@ -562,8 +562,8 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
     this.selfDruidNode = context.selfNode();
-    this.netClient = new ExceptionWrappingWorkerClient(context.newWorkerClient());
-    closer.register(netClient);
+    this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
+    this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
     final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
@@ -594,7 +594,6 @@ public class ControllerImpl implements Controller
     QueryValidator.validateQueryDef(queryDef);
     queryDefRef.set(queryDef);
 
-    queryKernelConfig = context.queryKernelConfig(querySpec, queryDef);
     workerManager = context.newWorkerManager(
         queryId,
         querySpec,
