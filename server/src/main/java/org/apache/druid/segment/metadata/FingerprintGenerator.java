@@ -40,7 +40,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Utility to generate fingerprint for an object.
+ * Utility to generate schema fingerprint which is used to ensure schema uniqueness in the metadata database.
+ * Note, that the generated fingerprint is independent of the column order.
  */
 @LazySingleton
 public class FingerprintGenerator
@@ -62,6 +63,7 @@ public class FingerprintGenerator
   public String generateFingerprint(final SchemaPayload schemaPayload, final String dataSource, final int version)
   {
     // Sort the column names in lexicographic order
+    // The aggregator factories are column order independent since they are stored in a hashmap
     // This ensures that all permutations of a given columns would result in the same fingerprint
     // thus avoiding schema explosion in the metadata database
     // Note that this signature is not persisted anywhere, it is only used for fingerprint computation
