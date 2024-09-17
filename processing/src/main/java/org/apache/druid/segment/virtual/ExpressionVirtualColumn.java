@@ -419,6 +419,12 @@ public class ExpressionVirtualColumn implements VirtualColumn
     });
   }
 
+  /**
+   * {@link VirtualColumn.EquivalenceKey} for expressions. Note that this does not check true equivalence of
+   * expressions, for example it will not currently consider something like 'a + b' equivalent to 'b + a'. This is ok
+   * for current uses of this functionality, but in theory we could push down equivalence to the parsed expression
+   * instead of checking for an identical string expression, it would just be a lot more expensive.
+   */
   private static final class Expression implements EquivalenceKey
   {
     private final String expressionString;

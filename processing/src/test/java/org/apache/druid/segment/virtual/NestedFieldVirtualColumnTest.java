@@ -102,7 +102,7 @@ public class NestedFieldVirtualColumnTest
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(NestedFieldVirtualColumn.class)
-                  .withNonnullFields("columnName", "outputName")
+                  .withNonnullFields("fieldSpec", "outputName")
                   .withIgnoredFields("hasNegativeArrayIndex")
                   .usingGetClass()
                   .verify();
