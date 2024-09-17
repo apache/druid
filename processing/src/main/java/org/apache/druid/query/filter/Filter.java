@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
@@ -38,25 +37,6 @@ import java.util.Set;
 @SubclassesMustOverrideEqualsAndHashCode
 public interface Filter
 {
-  default String getFilterString()
-  {
-    return toString();
-  }
-
-  /**
-   * Returns an ordered set of all child filters for this filter with no duplicates. The default return value is an
-   * empty set.
-   * <p>
-   * Only {@link org.apache.druid.segment.filter.AndFilter} and {@link org.apache.druid.segment.filter.OrFilter} have
-   * child filters. Other filters would return empty (including {@link org.apache.druid.segment.filter.NotFilter}).
-   * <p>
-   * The ordering of child filters is important in some cases, e.x.short-curcuiting.
-   */
-  default ImmutableSet<Filter> getFilters()
-  {
-    return ImmutableSet.of();
-  }
-
   /**
    * Compute indexes and build a container {@link FilterBundle} to be used during
    * {@link org.apache.druid.segment.Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} creation, combining

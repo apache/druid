@@ -22,7 +22,6 @@ package org.apache.druid.segment.filter;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,7 +46,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,14 +58,18 @@ public class AndFilter implements BooleanFilter
 {
   public static final Joiner AND_JOINER = Joiner.on(" && ");
 
-  private final ImmutableSet<Filter> filters;
+  private final LinkedHashSet<Filter> filters;
 
-  @VisibleForTesting
-  public AndFilter(Collection<Filter> filters)
+  public AndFilter(LinkedHashSet<Filter> filters)
   {
     Preconditions.checkArgument(filters.size() > 0, "Can't construct empty AndFilter");
-    // The order of elements in filters param would be preserved.
-    this.filters = ImmutableSet.copyOf(filters);
+    this.filters = filters;
+  }
+
+  @VisibleForTesting
+  public AndFilter(List<Filter> filters)
+  {
+    this(new LinkedHashSet<>(filters));
   }
 
   public static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
@@ -126,12 +129,6 @@ public class AndFilter implements BooleanFilter
         return match;
       }
     };
-  }
-
-  @Override
-  public String getFilterString()
-  {
-    return "AND";
   }
 
   @Override
@@ -380,7 +377,7 @@ public class AndFilter implements BooleanFilter
   }
 
   @Override
-  public ImmutableSet<Filter> getFilters()
+  public LinkedHashSet<Filter> getFilters()
   {
     return filters;
   }
