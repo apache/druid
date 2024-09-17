@@ -190,15 +190,15 @@ public class DelimitedReaderTest
   }
 
   @Test
-  public void testParseNumericData() throws IOException
+  public void testDataWithParseNumbersEnabled() throws IOException
   {
     final ByteEntity source = writeData(
         ImmutableList.of(
-            "3\t1.0\t2\t1|2|3\t2018-05-05T10:00:00Z",
-            "34\t-2.0\tfoo\t1\t2018-05-06T10:00:00Z",
-            "343\t3.0\tbar\t2|3|4\t2018-05-07T10:00:00Z",
-            "545\t-4.0\t7\t2\t2018-05-08T10:00:00Z",
-            "65\t5.0\tbaz\t3|4\t2018-05-09T10:00:00Z"
+            "3\t1.0\t2\t1|2|3\tfalse\t2018-05-05T10:00:00Z",
+            "34\t-2.0\tfoo\t1\ttrue\t2018-05-06T10:00:00Z",
+            "343\t3.0\tbar\t2|3|4\tfalse\t2018-05-07T10:00:00Z",
+            "545\t-4.0\t7\t2\ttrue\t2018-05-08T10:00:00Z",
+            "65\t5.0\tbaz\t3|4\tfalse\t2018-05-09T10:00:00Z"
         )
     );
     final RowSignature signature =
@@ -207,6 +207,7 @@ public class DelimitedReaderTest
                     .add("Value2", null)
                     .add("Value3", null)
                     .add("Value4", null)
+                    .add("Value5", null)
                     .add("Timestamp", null)
                     .build();
 
@@ -220,6 +221,7 @@ public class DelimitedReaderTest
                 1.0,
                 2L,
                 ImmutableList.of(1L, 2L, 3L),
+                "false",
                 "2018-05-05T10:00:00Z"
             )
         ),
@@ -232,6 +234,7 @@ public class DelimitedReaderTest
                 -2.0,
                 "foo",
                 1L,
+                "true",
                 "2018-05-06T10:00:00Z"
             )
         ),
@@ -244,6 +247,7 @@ public class DelimitedReaderTest
                 3.0,
                 "bar",
                 ImmutableList.of(2L, 3L, 4L),
+                "false",
                 "2018-05-07T10:00:00Z"
             )
         ),
@@ -256,6 +260,7 @@ public class DelimitedReaderTest
                 -4.0,
                 7L,
                 2L,
+                "true",
                 "2018-05-08T10:00:00Z"
             )
         ),
@@ -268,6 +273,7 @@ public class DelimitedReaderTest
                 5.0,
                 "baz",
                 ImmutableList.of(3L, 4L),
+                "false",
                 "2018-05-09T10:00:00Z"
             )
         )
