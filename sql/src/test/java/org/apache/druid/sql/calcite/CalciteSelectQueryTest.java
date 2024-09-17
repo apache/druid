@@ -2194,7 +2194,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
     testQueryThrows(
         "SELECT cityName,sum(1) OVER () as w FROM wikipedia group by cityName HAVING w > 10",
-        ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true),
         DruidException.class,
         invalidSqlContains("Window functions are not allowed in HAVING")
     );
