@@ -45,7 +45,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -400,20 +399,19 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   )
   {
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            DEFAULT_TIMESTAMP_SPEC,
-            DEFAULT_DIMENSIONS_SPEC,
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("dataSource")
+                  .withTimestamp(DEFAULT_TIMESTAMP_SPEC)
+                  .withDimensions(DEFAULT_DIMENSIONS_SPEC)
+                  .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.MINUTE,
+                          interval == null ? null : Collections.singletonList(interval)
+                      )
+                  )
+                  .build(),
         ioConfig,
         TuningConfigBuilder.forParallelIndexTask().withMaxNumConcurrentSubTasks(NUM_SUB_TASKS).build()
     );

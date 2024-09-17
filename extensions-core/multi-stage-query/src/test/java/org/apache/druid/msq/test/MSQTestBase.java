@@ -92,12 +92,12 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
-import org.apache.druid.msq.guice.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
+import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.error.InsertLockPreemptedFaultTest;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -381,6 +381,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @AfterEach
   public void tearDown2()
   {
+    Mockito.framework().clearInlineMocks();
     groupByBuffers.close();
   }
 
@@ -429,6 +430,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
         binder -> {
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
           {
+            @Override
+            public int getNumThreads()
+            {
+              return 1;
+            }
+
+            @Override
+            public int intermediateComputeSizeBytes()
+            {
+              return 10_000_000;
+            }
+
             @Override
             public String getFormatString()
             {
@@ -751,14 +764,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   public static WorkerMemoryParameters makeTestWorkerMemoryParameters()
   {
-    return WorkerMemoryParameters.createInstance(
-        WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-        2,
-        10,
+    return new WorkerMemoryParameters(
+        100_000_000,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE,
         1,
-        2,
-        1,
-        0
+        50,
+        10_000_000,
+        10_000_000
     );
   }
 

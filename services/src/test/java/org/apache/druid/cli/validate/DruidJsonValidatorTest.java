@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -133,14 +132,11 @@ public class DruidJsonValidatorTest
         null,
         new TaskResource("rofl", 2),
         new IndexTask.IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                null,
-                new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null),
-                null,
-                jsonMapper
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
+                      .withObjectMapper(jsonMapper)
+                      .build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),

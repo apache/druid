@@ -221,14 +221,13 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              timestampSpec,
-              dimensionsSpec,
-              DEFAULT_METRICS_SPEC,
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(timestampSpec)
+                    .withDimensions(dimensionsSpec)
+                    .withAggregators(DEFAULT_METRICS_SPEC)
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
@@ -241,14 +240,13 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
           dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
-              DEFAULT_METRICS_SPEC,
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(parseSpec.getTimestampSpec())
+                    .withDimensions(parseSpec.getDimensionsSpec())
+                    .withAggregators(DEFAULT_METRICS_SPEC)
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );

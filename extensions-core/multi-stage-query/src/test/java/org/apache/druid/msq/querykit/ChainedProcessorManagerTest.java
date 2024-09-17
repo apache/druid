@@ -32,9 +32,9 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.processor.FrameProcessorExecutorTest;
 import org.apache.druid.frame.processor.FrameProcessors;
+import org.apache.druid.frame.processor.manager.NilFrameProcessor;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
-import org.apache.druid.frame.processor.manager.SequenceProcessorManagerTest;
 import org.apache.druid.frame.processor.test.SimpleReturningFrameProcessor;
 import org.apache.druid.frame.processor.test.SingleChannelFrameProcessor;
 import org.apache.druid.frame.processor.test.SingleRowWritingFrameProcessor;
@@ -184,7 +184,7 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         ProcessorManagers.of(
             ImmutableList.of(
                 new SimpleReturningFrameProcessor<>(ImmutableList.of(4L, 5L, 6L)),
-                new SequenceProcessorManagerTest.NilFrameProcessor<>()
+                new NilFrameProcessor<>()
             )
         ),
         (values) -> createNextProcessors(
