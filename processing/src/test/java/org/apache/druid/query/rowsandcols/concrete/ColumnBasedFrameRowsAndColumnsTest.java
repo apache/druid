@@ -37,7 +37,15 @@ public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
 
   public static ColumnBasedFrameRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(input, null, null, null, OffsetLimit.limit(Integer.MAX_VALUE), null, null);
+    LazilyDecoratedRowsAndColumns rac = new LazilyDecoratedRowsAndColumns(
+        input,
+        null,
+        null,
+        null,
+        OffsetLimit.limit(Integer.MAX_VALUE),
+        null,
+        null
+    );
 
     rac.numRows(); // materialize
     return (ColumnBasedFrameRowsAndColumns) rac.getBase();
