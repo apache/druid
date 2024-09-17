@@ -43,6 +43,7 @@ public class CompleteSegment implements Closeable
   }
 
   @Nullable
+  @SuppressWarnings("unused")
   public DataSegment getDataSegment()
   {
     return dataSegment;
