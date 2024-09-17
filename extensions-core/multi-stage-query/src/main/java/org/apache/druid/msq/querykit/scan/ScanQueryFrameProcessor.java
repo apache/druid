@@ -54,7 +54,6 @@ import org.apache.druid.msq.input.ParseExceptionUtils;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.external.ExternalSegment;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
-import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafFrameProcessor;
 import org.apache.druid.msq.querykit.QueryKitUtils;
@@ -65,6 +64,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
@@ -246,7 +246,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      final ResourceHolder<SegmentWithMetadata> segmentHolder = closer.register(segment.getOrLoad());
+      final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
 
       final Segment mappedSegment = mapSegment(segmentHolder.get().getSegment());
       final CursorFactory cursorFactory = mappedSegment.asCursorFactory();

@@ -109,7 +109,6 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
@@ -135,6 +134,7 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
@@ -635,7 +635,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   }
 
   @Nonnull
-  protected Supplier<ResourceHolder<SegmentWithMetadata>> getSupplierForSegment(
+  protected Supplier<ResourceHolder<CompleteSegment>> getSupplierForSegment(
       Function<String, File> tempFolderProducer,
       SegmentId segmentId
   )
@@ -736,7 +736,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                          .shardSpec(new LinearShardSpec(0))
                                          .size(0)
                                          .build();
-    return () -> ReferenceCountingResourceHolder.fromCloseable(new SegmentWithMetadata(dataSegment, segmentManager.getSegment(segmentId)));
+    return () -> ReferenceCountingResourceHolder.fromCloseable(new CompleteSegment(dataSegment, segmentManager.getSegment(segmentId)));
   }
 
   public SelectTester testSelectQuery()

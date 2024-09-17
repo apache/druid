@@ -21,7 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.input.table.SegmentWithMetadata;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.function.Supplier;
@@ -35,7 +35,7 @@ public interface DataSegmentProvider
    * <br>
    * It is not necessary to call {@link ResourceHolder#close()} if you never call {@link Supplier#get()}.
    */
-  Supplier<ResourceHolder<SegmentWithMetadata>> fetchSegment(
+  Supplier<ResourceHolder<CompleteSegment>> fetchSegment(
       SegmentId segmentId,
       ChannelCounters channelCounters,
       boolean isReindex

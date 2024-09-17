@@ -17,9 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input.table;
+package org.apache.druid.segment;
 
-import org.apache.druid.segment.Segment;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
@@ -31,13 +30,13 @@ import java.util.Objects;
  * Contains the {@link DataSegment} and {@link Segment}. The datasegment could be null if the segment is a dummy, such
  * as those created by {@link org.apache.druid.msq.input.inline.InlineInputSliceReader}.
  */
-public class SegmentWithMetadata implements Closeable
+public class CompleteSegment implements Closeable
 {
   @Nullable
   private final DataSegment dataSegment;
   private final Segment segment;
 
-  public SegmentWithMetadata(@Nullable DataSegment dataSegment, Segment segment)
+  public CompleteSegment(@Nullable DataSegment dataSegment, Segment segment)
   {
     this.dataSegment = dataSegment;
     this.segment = segment;
@@ -63,7 +62,7 @@ public class SegmentWithMetadata implements Closeable
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    SegmentWithMetadata that = (SegmentWithMetadata) o;
+    CompleteSegment that = (CompleteSegment) o;
     return Objects.equals(dataSegment, that.dataSegment) && Objects.equals(segment, that.segment);
   }
 

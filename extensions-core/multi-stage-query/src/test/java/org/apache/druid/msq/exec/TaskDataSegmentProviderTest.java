@@ -42,8 +42,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.msq.input.table.SegmentWithMetadata;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
@@ -187,7 +187,7 @@ public class TaskDataSegmentProviderTest
     for (int i = 0; i < iterations; i++) {
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
-      final ListenableFuture<Supplier<ResourceHolder<SegmentWithMetadata>>> f =
+      final ListenableFuture<Supplier<ResourceHolder<CompleteSegment>>> f =
           exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters(), false));
 
       testFutures.add(
@@ -195,7 +195,7 @@ public class TaskDataSegmentProviderTest
               f,
               holderSupplier -> {
                 try {
-                  final ResourceHolder<SegmentWithMetadata> holder = holderSupplier.get();
+                  final ResourceHolder<CompleteSegment> holder = holderSupplier.get();
                   Assert.assertEquals(segment.getId(), holder.get().getSegment().getId());
 
                   final String expectedStorageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);

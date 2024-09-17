@@ -21,6 +21,7 @@ package org.apache.druid.msq.input.table;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Segment;
 
 import java.util.Objects;
@@ -31,7 +32,7 @@ import java.util.function.Supplier;
  */
 public class SegmentWithDescriptor
 {
-  private final Supplier<? extends ResourceHolder<SegmentWithMetadata>> segmentSupplier;
+  private final Supplier<? extends ResourceHolder<CompleteSegment>> segmentSupplier;
   private final RichSegmentDescriptor descriptor;
 
   /**
@@ -42,7 +43,7 @@ public class SegmentWithDescriptor
    * @param descriptor                segment descriptor
    */
   public SegmentWithDescriptor(
-      final Supplier<? extends ResourceHolder<SegmentWithMetadata>> segmentSupplier,
+      final Supplier<? extends ResourceHolder<CompleteSegment>> segmentSupplier,
       final RichSegmentDescriptor descriptor
   )
   {
@@ -59,7 +60,7 @@ public class SegmentWithDescriptor
    * It is not necessary to call {@link Segment#close()} on the returned segment. Calling {@link ResourceHolder#close()}
    * is enough.
    */
-  public ResourceHolder<SegmentWithMetadata> getOrLoad()
+  public ResourceHolder<CompleteSegment> getOrLoad()
   {
     return segmentSupplier.get();
   }

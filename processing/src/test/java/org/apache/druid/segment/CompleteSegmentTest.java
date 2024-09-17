@@ -17,17 +17,17 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input.table;
+package org.apache.druid.segment;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
-public class SegmentWithMetadataTest
+public class CompleteSegmentTest
 {
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(SegmentWithMetadata.class)
+    EqualsVerifier.forClass(CompleteSegment.class)
                   .withNonnullFields("segment", "dataSegment")
                   .usingGetClass()
                   .verify();
