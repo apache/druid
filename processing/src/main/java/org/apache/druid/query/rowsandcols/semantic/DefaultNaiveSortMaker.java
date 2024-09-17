@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols.semantic;
 
 import it.unimi.dsi.fastutil.Arrays;
+import org.apache.druid.frame.read.columnar.StringFrameColumnReader;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.EmptyRowsAndColumns;
@@ -112,7 +113,12 @@ public class DefaultNaiveSortMaker implements NaiveSortMaker
           (k1, k2) -> {
             for (int i = 0; i < numColsToCompare; ++i) {
               final ColumnAccessor accessy = accessors[i];
-              int val = accessy.compareRows(sortedPointers[k1], sortedPointers[k2]);
+              int val;
+              if (accessy instanceof StringFrameColumnReader.StringFrameColumn) {
+                val = ((StringFrameColumnReader.StringFrameColumn) accessy).compare(sortedPointers[k1], sortedPointers[k2]);
+              } else {
+                val = accessy.compareRows(sortedPointers[k1], sortedPointers[k2]);
+              }
               if (val != 0) {
                 return val * direction[i];
               }
