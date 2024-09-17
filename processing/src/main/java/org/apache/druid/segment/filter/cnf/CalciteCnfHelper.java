@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter.cnf;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.filter.AndFilter;
@@ -32,6 +31,7 @@ import org.apache.druid.segment.filter.TrueFilter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -44,7 +44,7 @@ public class CalciteCnfHelper
 {
   public static Filter pull(Filter rex)
   {
-    final ImmutableSet<Filter> operands;
+    final LinkedHashSet<Filter> operands;
     if (rex instanceof AndFilter) {
       operands = ((AndFilter) rex).getFilters();
       return and(pullList(operands));
