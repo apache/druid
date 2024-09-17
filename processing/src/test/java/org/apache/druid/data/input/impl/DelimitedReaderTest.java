@@ -279,7 +279,7 @@ public class DelimitedReaderTest
         )
     );
     final DelimitedInputFormat format = new DelimitedInputFormat(
-        ImmutableList.of("Value1", "Value2", "Value3", "Value4", "Timestamp"),
+        ImmutableList.of("Value1", "Value2", "Value3", "Value4", "Value5", "Timestamp"),
         "|",
         null,
         false,
