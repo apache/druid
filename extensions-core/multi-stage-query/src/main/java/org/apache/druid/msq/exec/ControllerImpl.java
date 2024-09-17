@@ -366,7 +366,7 @@ public class ControllerImpl implements Controller
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory =
-          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer());
+          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
 
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
           new RunQueryUntilDone(
