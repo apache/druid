@@ -164,11 +164,4 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
       );
     }
   }
-
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
-  {
-    return null;
-  }
 }
