@@ -22,6 +22,8 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Longs;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.joda.time.DateTimeZone;
@@ -96,17 +98,16 @@ public class ParserUtils
       return NullHandling.emptyToNullIfNeeded(input);
     }
 
-    try {
-      return Long.parseLong(input);
+    final Long l = Longs.tryParse(input);
+    if (l != null) {
+      return l;
     }
-    catch (NumberFormatException e1) {
-      try {
-        return Double.parseDouble(input);
-      }
-      catch (NumberFormatException e2) {
-        return input;
-      }
+    final Double d = Doubles.tryParse(input);
+    if (d != null) {
+      return d;
     }
+    // fall back to given input if we cannot parse the input as a Long & Double for whatever reason
+    return input;
   }
 
   public static ArrayList<String> generateFieldNames(int length)
