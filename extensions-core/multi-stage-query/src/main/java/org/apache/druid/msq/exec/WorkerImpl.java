@@ -582,34 +582,11 @@ public class WorkerImpl implements Worker
       );
     }
 
-    // This condition can be removed once we can rely on QueryContext always being in the WorkOrder.
-    // (It will be there for newer controllers; this is a backwards-compatibility thing.)
-    final QueryContext queryContext;
-    if (workOrder.hasQueryContext()) {
-      queryContext = workOrder.getWorkerContext();
-    } else if (task != null && task.getContext() != null) {
-      queryContext = QueryContext.of(task.getContext());
-    } else {
-      queryContext = QueryContext.empty();
-    }
+    final WorkOrder workOrderToUse = makeWorkOrderToUse(
+        workOrder,
+        task != null && task.getContext() != null ? QueryContext.of(task.getContext()) : QueryContext.empty()
+    );
 
-    // This stack of conditions can be removed once we can rely on OutputChannelMode always being in the WorkOrder.
-    // (It will be there for newer controllers; this is a backwards-compatibility thing.)
-    final OutputChannelMode outputChannelMode;
-    if (workOrder.hasOutputChannelMode()) {
-      outputChannelMode = workOrder.getOutputChannelMode();
-    } else {
-      outputChannelMode = ControllerQueryKernelUtils.getOutputChannelMode(
-          workOrder.getQueryDefinition(),
-          workOrder.getStageNumber(),
-          MultiStageQueryContext.getSelectDestination(queryContext),
-          task != null && MultiStageQueryContext.isDurableStorageEnabled(QueryContext.of(task.getContext())),
-          false
-      );
-    }
-
-    final WorkOrder workOrderToUse =
-        workOrder.withQueryContext(queryContext).withOutputChannelMode(outputChannelMode);
     kernelManipulationQueue.add(
         kernelHolders ->
             kernelHolders.addKernel(WorkerStageKernel.create(workOrderToUse))
@@ -1018,6 +995,48 @@ public class WorkerImpl implements Worker
           throw new MSQException(CanceledFault.INSTANCE);
         }
     );
+  }
+
+  /**
+   * Returns a work order based on the provided "originalWorkOrder", but where {@link WorkOrder#hasOutputChannelMode()}
+   * and {@link WorkOrder#hasWorkerContext()} are both true. If the original work order didn't have those fields, they
+   * are populated from the "taskContext". Otherwise the "taskContext" is ignored.
+   *
+   * This method can be removed once we can rely on these fields always being set in the WorkOrder.
+   * (They will be there for newer controllers; this is a backwards-compatibility method.)
+   *
+   * @param originalWorkOrder work order from controller
+   * @param taskContext       task context
+   */
+  static WorkOrder makeWorkOrderToUse(final WorkOrder originalWorkOrder, @Nullable final QueryContext taskContext)
+  {
+    // This condition can be removed once we can rely on QueryContext always being in the WorkOrder.
+    // (It will be there for newer controllers; this is a backwards-compatibility thing.)
+    final QueryContext queryContext;
+    if (originalWorkOrder.hasWorkerContext()) {
+      queryContext = originalWorkOrder.getWorkerContext();
+    } else if (taskContext != null) {
+      queryContext = taskContext;
+    } else {
+      queryContext = QueryContext.empty();
+    }
+
+    // This stack of conditions can be removed once we can rely on OutputChannelMode always being in the WorkOrder.
+    // (It will be there for newer controllers; this is a backwards-compatibility thing.)
+    final OutputChannelMode outputChannelMode;
+    if (originalWorkOrder.hasOutputChannelMode()) {
+      outputChannelMode = originalWorkOrder.getOutputChannelMode();
+    } else {
+      outputChannelMode = ControllerQueryKernelUtils.getOutputChannelMode(
+          originalWorkOrder.getQueryDefinition(),
+          originalWorkOrder.getStageNumber(),
+          MultiStageQueryContext.getSelectDestination(queryContext),
+          MultiStageQueryContext.isDurableStorageEnabled(queryContext),
+          false
+      );
+    }
+
+    return originalWorkOrder.withWorkerContext(queryContext).withOutputChannelMode(outputChannelMode);
   }
 
   /**

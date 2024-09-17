@@ -46,7 +46,7 @@ public class ControllerQueryKernelConfig
   private final List<String> workerIds;
   private final Map<String, Object> workerContextMap;
 
-  private ControllerQueryKernelConfig(
+  ControllerQueryKernelConfig(
       int maxRetainedPartitionSketchBytes,
       int maxConcurrentStages,
       boolean pipeline,

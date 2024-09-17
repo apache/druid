@@ -59,7 +59,6 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;

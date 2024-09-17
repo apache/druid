@@ -126,7 +126,7 @@ public class QueryValidatorTest
     QueryValidator.validateWorkOrder(workOrder);
   }
 
-  private static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)
+  public static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)
   {
     QueryDefinitionBuilder builder = QueryDefinition.builder(UUID.randomUUID().toString());
 

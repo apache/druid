@@ -149,7 +149,7 @@ public class WorkOrder
     return outputChannelMode;
   }
 
-  public boolean hasQueryContext()
+  public boolean hasWorkerContext()
   {
     return workerContext != null;
   }
@@ -201,7 +201,7 @@ public class WorkOrder
     }
   }
 
-  public WorkOrder withQueryContext(final QueryContext newContext)
+  public WorkOrder withWorkerContext(final QueryContext newContext)
   {
     if (Objects.equals(newContext, this.workerContext)) {
       return this;

@@ -46,7 +46,7 @@ import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.TableInputSpecSlicer;
-import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidMetrics;
@@ -212,7 +212,7 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   /**
-   * Helper method for {@link #queryKernelConfig(MSQSpec, QueryDefinition)}. Also used in tests.
+   * Helper method for {@link #queryKernelConfig(String, MSQSpec)}. Also used in tests.
    */
   public static ControllerQueryKernelConfig makeQueryKernelConfig(
       final MSQSpec querySpec,
