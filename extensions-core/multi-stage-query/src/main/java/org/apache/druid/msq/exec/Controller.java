@@ -87,7 +87,7 @@ public interface Controller
    * taskId, not by query/stage/worker, because system errors are associated
    * with a task rather than a specific query/stage/worker execution context.
    *
-   * @see ControllerClient#postWorkerError(String, MSQErrorReport)
+   * @see ControllerClient#postWorkerError(MSQErrorReport)
    */
   void workerError(MSQErrorReport errorReport);
 
