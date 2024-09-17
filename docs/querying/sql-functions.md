@@ -558,35 +558,17 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 ## DIV
 
+`DIV(x, y)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Returns the result of integer division of `x` by `y`.
-
-* **Syntax:** `DIV(x, y)`
-* **Function type:** Scalar, numeric
-
-
-<details><summary>Example</summary>
-
-  The following calculates integer divisions of `78` by `10`.
-
-  ```sql
-  SELECT DIV(78, 10) as "division"
-  ``` 
-
-  Returns the following:
-
-  | `division` |
-  | -- |
-  | `7` |
-
-</details>
 
 :::info
 
   The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md/#safe_divide) instead. 
 
 :::
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## DS_CDF
 
