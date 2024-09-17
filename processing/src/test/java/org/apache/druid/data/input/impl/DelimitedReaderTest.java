@@ -26,9 +26,11 @@ import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -36,6 +38,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -183,6 +186,117 @@ public class DelimitedReaderTest
         numResults++;
       }
       Assert.assertEquals(3, numResults);
+    }
+  }
+
+  @Test
+  public void testParseNumericData() throws IOException
+  {
+    final ByteEntity source = writeData(
+        ImmutableList.of(
+            "3\t1.0\t2\t1|2|3\t2018-05-05T10:00:00Z",
+            "34\t-2.0\tfoo\t1\t2018-05-06T10:00:00Z",
+            "343\t3.0\tbar\t2|3|4\t2018-05-07T10:00:00Z",
+            "545\t-4.0\t7\t2\t2018-05-08T10:00:00Z",
+            "65\t5.0\tbaz\t3|4\t2018-05-09T10:00:00Z"
+        )
+    );
+    final RowSignature signature =
+        RowSignature.builder()
+                    .add("Value1", null)
+                    .add("Value2", null)
+                    .add("Value3", null)
+                    .add("Value4", null)
+                    .add("Timestamp", null)
+                    .build();
+
+    final List<InputRow> expectedResults = ImmutableList.of(
+        new ListBasedInputRow(
+            signature,
+            DateTimes.of("2018-05-05T10:00:00Z"),
+            ImmutableList.of("Timestamp"),
+            ImmutableList.of(
+                3L,
+                1.0,
+                2L,
+                ImmutableList.of(1L, 2L, 3L),
+                "2018-05-05T10:00:00Z"
+            )
+        ),
+        new ListBasedInputRow(
+            signature,
+            DateTimes.of("2018-05-06T10:00:00Z"),
+            ImmutableList.of("Timestamp"),
+            ImmutableList.of(
+                34L,
+                -2.0,
+                "foo",
+                1L,
+                "2018-05-06T10:00:00Z"
+            )
+        ),
+        new ListBasedInputRow(
+            signature,
+            DateTimes.of("2018-05-07T10:00:00Z"),
+            ImmutableList.of("Timestamp"),
+            ImmutableList.of(
+                343L,
+                3.0,
+                "bar",
+                ImmutableList.of(2L, 3L, 4L),
+                "2018-05-07T10:00:00Z"
+            )
+        ),
+        new ListBasedInputRow(
+            signature,
+            DateTimes.of("2018-05-08T10:00:00Z"),
+            ImmutableList.of("Timestamp"),
+            ImmutableList.of(
+                545L,
+                -4.0,
+                7L,
+                2L,
+                "2018-05-08T10:00:00Z"
+            )
+        ),
+        new ListBasedInputRow(
+            signature,
+            DateTimes.of("2018-05-09T10:00:00Z"),
+            ImmutableList.of("Timestamp"),
+            ImmutableList.of(
+                65L,
+                5.0,
+                "baz",
+                ImmutableList.of(3L, 4L),
+                "2018-05-09T10:00:00Z"
+            )
+        )
+    );
+    final DelimitedInputFormat format = new DelimitedInputFormat(
+        ImmutableList.of("Value1", "Value2", "Value3", "Value4", "Timestamp"),
+        "|",
+        null,
+        false,
+        null,
+        0,
+        true
+    );
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("Timestamp", "auto", null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("Timestamp"))),
+            ColumnsFilter.all()
+        ),
+        source,
+        null
+    );
+
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      final Iterator<InputRow> expectedRowIterator = expectedResults.iterator();
+      while (iterator.hasNext()) {
+        Assert.assertTrue(expectedRowIterator.hasNext());
+        Assert.assertEquals(expectedRowIterator.next(), iterator.next());
+      }
     }
   }
 
