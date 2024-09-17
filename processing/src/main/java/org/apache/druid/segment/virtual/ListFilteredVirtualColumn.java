@@ -252,18 +252,6 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public boolean isEquivalent(VirtualColumn other)
-  {
-    if (getClass() != other.getClass()) {
-      return false;
-    }
-    ListFilteredVirtualColumn that = (ListFilteredVirtualColumn) other;
-    return allowList == that.allowList &&
-           delegate.equals(that.delegate) &&
-           values.equals(that.values);
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

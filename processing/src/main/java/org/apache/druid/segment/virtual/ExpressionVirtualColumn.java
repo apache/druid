@@ -61,9 +61,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private static final Logger log = new Logger(ExpressionVirtualColumn.class);
 
   private final String name;
-  private final String expression;
-  @Nullable
-  private final ColumnType outputType;
+  private final Expression expression;
   private final Supplier<Expr> parsedExpression;
   private final Supplier<byte[]> cacheKey;
 
@@ -126,8 +124,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   )
   {
     this.name = Preconditions.checkNotNull(name, "name");
-    this.expression = Preconditions.checkNotNull(expression, "expression");
-    this.outputType = outputType;
+    this.expression = new Expression(Preconditions.checkNotNull(expression, "expression"), outputType);
     this.parsedExpression = parsedExpression;
     this.cacheKey = makeCacheKeySupplier();
   }
@@ -142,14 +139,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @JsonProperty
   public String getExpression()
   {
-    return expression;
+    return expression.expressionString;
   }
 
   @Nullable
   @JsonProperty
   public ColumnType getOutputType()
   {
-    return outputType;
+    return expression.outputType;
   }
 
   @JsonIgnore
@@ -273,7 +270,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       ColumnIndexSelector columnIndexSelector
   )
   {
-    return getParsedExpression().get().asColumnIndexSupplier(columnIndexSelector, outputType);
+    return getParsedExpression().get().asColumnIndexSupplier(columnIndexSelector, expression.outputType);
   }
 
   @Override
@@ -283,7 +280,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     // are unable to compute the output type of the expression, either due to incomplete type information of the
     // inputs or because of unimplemented methods on expression implementations themselves, or, because a
     // ColumnInspector is not available
-
+    final ColumnType outputType = expression.outputType;
     if (ExpressionProcessing.processArraysAsMultiValueStrings() && outputType != null && outputType.isArray()) {
       return new ColumnCapabilitiesImpl().setType(ColumnType.STRING).setHasMultipleValues(true);
     }
@@ -299,6 +296,8 @@ public class ExpressionVirtualColumn implements VirtualColumn
       return inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
     }
 
+    final ColumnType outputType = expression.outputType;
+
     final ExpressionPlan plan = ExpressionPlanner.plan(inspector, parsedExpression.get());
     final ColumnCapabilities inferred = plan.inferColumnCapabilities(outputType);
     // if we can infer the column capabilities from the expression plan, then use that
@@ -311,14 +310,14 @@ public class ExpressionVirtualColumn implements VirtualColumn
           log.warn(
               "Projected output type %s of expression %s does not match provided type %s",
               inferred.asTypeString(),
-              expression,
+              expression.expressionString,
               outputType
           );
         } else {
           log.debug(
               "Projected output type %s of expression %s does not match provided type %s",
               inferred.asTypeString(),
-              expression,
+              expression.expressionString,
               outputType
           );
         }
@@ -348,15 +347,11 @@ public class ExpressionVirtualColumn implements VirtualColumn
     return cacheKey.get();
   }
 
+  @Nullable
   @Override
-  public boolean isEquivalent(VirtualColumn other)
+  public EquivalenceKey getEquivalanceKey()
   {
-    if (getClass() != other.getClass()) {
-      return false;
-    }
-    final ExpressionVirtualColumn that = (ExpressionVirtualColumn) other;
-    return Objects.equals(expression, that.expression) &&
-           Objects.equals(outputType, that.outputType);
+    return expression;
   }
 
   @Override
@@ -370,14 +365,13 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
     final ExpressionVirtualColumn that = (ExpressionVirtualColumn) o;
     return Objects.equals(name, that.name) &&
-           Objects.equals(expression, that.expression) &&
-           Objects.equals(outputType, that.outputType);
+           Objects.equals(expression, that.expression);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(name, expression, outputType);
+    return Objects.hash(name, expression);
   }
 
   @Override
@@ -385,8 +379,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   {
     return "ExpressionVirtualColumn{" +
            "name='" + name + '\'' +
-           ", expression='" + expression + '\'' +
-           ", outputType=" + outputType +
+           ", expression=" + expression +
            '}';
   }
 
@@ -400,10 +393,10 @@ public class ExpressionVirtualColumn implements VirtualColumn
       final ColumnCapabilities baseCapabilities =
           inspector.getColumnCapabilities(parsedExpression.get().getBindingIfIdentifier());
 
-      if (outputType == null) {
+      if (expression.outputType == null) {
         // No desired output type. Anything from the source is fine.
         return true;
-      } else if (baseCapabilities != null && outputType.equals(baseCapabilities.toColumnType())) {
+      } else if (baseCapabilities != null && expression.outputType.equals(baseCapabilities.toColumnType())) {
         // Desired output type matches the type from the source.
         return true;
       }
@@ -419,10 +412,51 @@ public class ExpressionVirtualColumn implements VirtualColumn
           .appendString(name)
           .appendCacheable(parsedExpression.get());
 
-      if (outputType != null) {
-        builder.appendString(outputType.toString());
+      if (expression.outputType != null) {
+        builder.appendString(expression.outputType.toString());
       }
       return builder.build();
     });
+  }
+
+  private static final class Expression implements EquivalenceKey
+  {
+    private final String expressionString;
+    @Nullable
+    private final ColumnType outputType;
+
+    private Expression(String expression, @Nullable ColumnType outputType)
+    {
+      this.expressionString = expression;
+      this.outputType = outputType;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Expression that = (Expression) o;
+      return Objects.equals(expressionString, that.expressionString) && Objects.equals(outputType, that.outputType);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(expressionString, outputType);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "Expression{" +
+             "expression='" + expressionString + '\'' +
+             ", outputType=" + outputType +
+             '}';
+    }
   }
 }

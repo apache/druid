@@ -90,10 +90,12 @@ public class NestedFieldVirtualColumnTest
   public void testEquivalence()
   {
     NestedFieldVirtualColumn v1 = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v0", ColumnType.LONG);
-    NestedFieldVirtualColumn v2 = new NestedFieldVirtualColumn("nestedDifferentName", "$.x.y.z", "v0", ColumnType.LONG);
+    NestedFieldVirtualColumn v2 = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v1", ColumnType.LONG);
     NestedFieldVirtualColumn v3 = new NestedFieldVirtualColumn("nested", "$.x.y.z[0]", "v0", ColumnType.LONG);
-    Assert.assertTrue(v1.isEquivalent(v2));
-    Assert.assertFalse(v1.isEquivalent(v3));
+    Assert.assertNotEquals(v1, v2);
+    Assert.assertEquals(v1.getEquivalanceKey(), v2.getEquivalanceKey());
+    Assert.assertNotEquals(v1, v3);
+    Assert.assertNotEquals(v1.getEquivalanceKey(), v3.getEquivalanceKey());
   }
 
   @Test

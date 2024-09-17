@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -338,10 +339,20 @@ public interface VirtualColumn extends Cacheable
   }
 
   /**
-   * Check if a virtual column is the same as some other virtual column, ignoring output name.
+   * Returns a key used for "equivalence" comparisons, for checking if some virtual column is equivalent to some other
+   * virtual column, regardless of the output name. If this method returns null, it does not participate in equivalence
+   * comparisons.
+   * 
+   * @see VirtualColumns#findEquivalent(VirtualColumn) 
    */
-  default boolean isEquivalent(VirtualColumn other)
+  @Nullable
+  default EquivalenceKey getEquivalanceKey()
   {
-    return this.equals(other);
+    return null;
+  }
+
+  @SubclassesMustOverrideEqualsAndHashCode
+  interface EquivalenceKey
+  {
   }
 }

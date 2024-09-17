@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
@@ -131,6 +132,8 @@ public class VirtualColumns implements Cacheable
   // For equals, hashCode, toString, and serialization:
   private final List<VirtualColumn> virtualColumns;
   private final List<String> virtualColumnNames;
+  // For equivalence
+  private final Map<VirtualColumn.EquivalenceKey, VirtualColumn> equivalence;
 
   // For getVirtualColumn:
   private final Map<String, VirtualColumn> withDotSupport;
@@ -148,10 +151,14 @@ public class VirtualColumns implements Cacheable
     this.withoutDotSupport = withoutDotSupport;
     this.virtualColumnNames = new ArrayList<>(virtualColumns.size());
     this.hasNoDotColumns = withDotSupport.isEmpty();
-
+    this.equivalence = Maps.newHashMapWithExpectedSize(virtualColumns.size());
     for (VirtualColumn virtualColumn : virtualColumns) {
       detectCycles(virtualColumn, null);
       virtualColumnNames.add(virtualColumn.getOutputName());
+      VirtualColumn.EquivalenceKey key = virtualColumn.getEquivalanceKey();
+      if (key != null) {
+        equivalence.put(key, virtualColumn);
+      }
     }
   }
 
@@ -188,12 +195,7 @@ public class VirtualColumns implements Cacheable
   @Nullable
   public VirtualColumn findEquivalent(VirtualColumn virtualColumn)
   {
-    for (VirtualColumn vc : virtualColumns) {
-      if (vc.isEquivalent(virtualColumn)) {
-        return vc;
-      }
-    }
-    return null;
+    return equivalence.get(virtualColumn.getEquivalanceKey());
   }
 
   /**
