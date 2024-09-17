@@ -266,7 +266,7 @@ GROUP BY servers.server;
 
 ### TASKS table
 
-The tasks table provides information about active and recently-completed indexing tasks. For more information
+The tasks table provides information about active and recently-completed tasks. For more information
 check out the documentation for [ingestion tasks](../ingestion/tasks.md).
 
 |Column|Type|Notes|
