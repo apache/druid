@@ -74,7 +74,7 @@ public interface ControllerContext
   /**
    * Provides an {@link InputSpecSlicer} that slices {@link TableInputSpec} into {@link SegmentsInputSlice}.
    */
-  InputSpecSlicer newTableInputSpecSlicer();
+  InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager);
 
   /**
    * Provide access to segment actions in the Overlord. Only called for ingestion queries, i.e., where
