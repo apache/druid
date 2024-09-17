@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.metrics;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -39,6 +40,7 @@ import oshi.software.os.OperatingSystem;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * SysMonitor implemented using {@link oshi}
@@ -72,43 +74,31 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   private final TcpStats tcpStats;
 
   private final Map<String, String[]> dimensions;
+  private final OshiSysMonitorConfig config;
+  private final Map<String, Consumer<ServiceEmitter>> monitoringFunctions = ImmutableMap.of(
+      "mem", this::monitorMemStats,
+      "swap", this::monitorSwapStats,
+      "fs", this::monitorFsStats,
+      "disk", this::monitorDiskStats,
+      "net", this::monitorNetStats,
+      "cpu", this::monitorCpuStats,
+      "sys", this::monitorSysStats,
+      "tcp", this::monitorTcpStats
+  );
 
-  public OshiSysMonitor()
+  public OshiSysMonitor(Map<String, String[]> dimensions, OshiSysMonitorConfig config)
   {
-    this(ImmutableMap.of());
-  }
-
-  public OshiSysMonitor(Map<String, String[]> dimensions)
-  {
-    this(dimensions, DEFAULT_METRICS_FEED);
-  }
-
-  public OshiSysMonitor(Map<String, String[]> dimensions, String feed)
-  {
-    super(feed);
-    Preconditions.checkNotNull(dimensions);
-    this.dimensions = ImmutableMap.copyOf(dimensions);
-
-    this.si = new SystemInfo();
-    this.hal = si.getHardware();
-    this.os = si.getOperatingSystem();
-
-    this.memStats = new MemStats();
-    this.swapStats = new SwapStats();
-    this.fsStats = new FsStats();
-    this.diskStats = new DiskStats();
-    this.netStats = new NetStats();
-    this.cpuStats = new CpuStats();
-    this.sysStats = new SysStats();
-    this.tcpStats = new TcpStats();
-
+    this(dimensions, config, new SystemInfo());
   }
 
   // Create an object with mocked systemInfo for testing purposes
-  public OshiSysMonitor(SystemInfo systemInfo)
+  @VisibleForTesting
+  public OshiSysMonitor(Map<String, String[]> dimensions, OshiSysMonitorConfig config, SystemInfo systemInfo)
   {
-    super("metrics");
-    this.dimensions = ImmutableMap.of();
+    super(DEFAULT_METRICS_FEED);
+    Preconditions.checkNotNull(dimensions);
+    this.dimensions = ImmutableMap.copyOf(dimensions);
+    this.config = config;
 
     this.si = systemInfo;
     this.hal = si.getHardware();
@@ -127,14 +117,11 @@ public class OshiSysMonitor extends FeedDefiningMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    monitorMemStats(emitter);
-    monitorSwapStats(emitter);
-    monitorFsStats(emitter);
-    monitorDiskStats(emitter);
-    monitorNetStats(emitter);
-    monitorCpuStats(emitter);
-    monitorSysStats(emitter);
-    monitorTcpStats(emitter);
+    monitoringFunctions.forEach((key, function) -> {
+      if (config.shouldEmitMetricCategory(key)) {
+        function.accept(emitter);
+      }
+    });
     return true;
   }
 

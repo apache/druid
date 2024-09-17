@@ -68,6 +68,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       QueryKit<Query<?>> queryKit,
       ShuffleSpecFactory resultShuffleSpecFactory,
       int maxWorkerCount,
+      int targetPartitionsPerWorker,
       int minStageNumber
   )
   {
@@ -97,11 +98,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         originalQuery.getFilter(),
         null,
         maxWorkerCount,
+        targetPartitionsPerWorker,
         minStageNumber,
         false
     );
 
-    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
+    ShuffleSpec nextShuffleSpec =
+        findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount * targetPartitionsPerWorker);
     final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryId, dataSourcePlan, nextShuffleSpec);
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
@@ -192,7 +195,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           stageRowSignature = finalWindowStageRowSignature;
           nextShuffleSpec = finalWindowStageShuffleSpec;
         } else {
-          nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
+          nextShuffleSpec =
+              findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount * targetPartitionsPerWorker);
           if (nextShuffleSpec == null) {
             stageRowSignature = intermediateSignature;
           } else {
@@ -285,7 +289,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     return operatorList;
   }
 
-  private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int maxWorkerCount)
+  private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int partitionCount)
   {
     NaivePartitioningOperatorFactory partition = null;
     NaiveSortOperatorFactory sort = null;
@@ -325,7 +329,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       keyColsOfWindow.add(kc);
     }
 
-    return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), maxWorkerCount);
+    return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
   }
 
   /**

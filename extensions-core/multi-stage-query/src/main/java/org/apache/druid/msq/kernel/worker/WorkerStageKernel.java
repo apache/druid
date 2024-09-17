@@ -182,6 +182,12 @@ public class WorkerStageKernel
       throw new NullPointerException("resultObject must not be null");
     }
 
+    if (phase.isTerminal()) {
+      // Ignore RESULTS_COMPLETE if work is already finished. This can happen if we transition to FINISHED early
+      // due to a downstream stage including a limit.
+      return;
+    }
+
     transitionTo(WorkerStagePhase.RESULTS_COMPLETE);
     this.resultObject = resultObject;
   }

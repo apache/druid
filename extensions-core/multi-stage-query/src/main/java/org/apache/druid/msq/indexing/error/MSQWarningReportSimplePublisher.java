@@ -63,10 +63,4 @@ public class MSQWarningReportSimplePublisher implements MSQWarningReportPublishe
       throw new RuntimeException(e2);
     }
   }
-
-  @Override
-  public void close()
-  {
-
-  }
 }

@@ -367,34 +367,19 @@ public class WorkerImpl implements Worker
     final WorkerStageKernel kernel = kernelHolder.kernel;
     final WorkOrder workOrder = kernel.getWorkOrder();
     final StageDefinition stageDefinition = workOrder.getStageDefinition();
-    final String cancellationId = cancellationIdFor(stageDefinition.getId());
+    final String cancellationId = cancellationIdFor(stageDefinition.getId(), workOrder.getWorkerNumber());
 
     log.info(
-        "Processing work order for stage[%s]%s",
+        "Starting work order for stage[%s], workerNumber[%d]%s",
         stageDefinition.getId(),
+        workOrder.getWorkerNumber(),
         (log.isDebugEnabled()
          ? StringUtils.format(", payload[%s]", context.jsonMapper().writeValueAsString(workOrder)) : "")
     );
 
-    final FrameContext frameContext = kernelHolder.processorCloser.register(
-        context.frameContext(
-            workOrder.getQueryDefinition(),
-            stageDefinition.getStageNumber(),
-            workOrder.getOutputChannelMode()
-        )
-    );
-    kernelHolder.processorCloser.register(() -> {
-      try {
-        workerExec.cancel(cancellationId);
-      }
-      catch (InterruptedException e) {
-        // Strange that cancellation would itself be interrupted. Log and suppress.
-        log.warn(e, "Cancellation interrupted for stage[%s]", stageDefinition.getId());
-        Thread.currentThread().interrupt();
-      }
-    });
+    final FrameContext frameContext = context.frameContext(workOrder);
 
-    // Set up cleanup functions for this work order.
+    // Set up resultsCloser (called when we are done reading results).
     kernelHolder.resultsCloser.register(() -> FileUtils.deleteDirectory(frameContext.tempDir()));
     kernelHolder.resultsCloser.register(() -> removeStageOutputChannels(stageDefinition.getId()));
 
@@ -403,13 +388,9 @@ public class WorkerImpl implements Worker
     final InputChannelFactory inputChannelFactory =
         makeBaseInputChannelFactory(workOrder, controllerClient, kernelHolder.processorCloser);
 
-    // Start working on this stage immediately.
-    kernel.startReading();
-
     final QueryContext queryContext = task != null ? QueryContext.of(task.getContext()) : QueryContext.empty();
-    final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
+    final boolean includeAllCounters = context.includeAllCounters();
     final RunWorkOrder runWorkOrder = new RunWorkOrder(
-        task.getControllerTaskId(),
         workOrder,
         inputChannelFactory,
         stageCounters.computeIfAbsent(
@@ -425,7 +406,12 @@ public class WorkerImpl implements Worker
         MultiStageQueryContext.removeNullBytes(queryContext)
     );
 
-    runWorkOrder.start();
+    // Set up processorCloser (called when processing is done).
+    kernelHolder.processorCloser.register(runWorkOrder::stopUnchecked);
+
+    // Start working on this stage immediately.
+    kernel.startReading();
+    runWorkOrder.startAsync();
     kernelHolder.partitionBoundariesFuture = runWorkOrder.getStagePartitionBoundariesFuture();
   }
 
@@ -993,9 +979,9 @@ public class WorkerImpl implements Worker
   /**
    * Returns cancellation ID for a particular stage, to be used in {@link FrameProcessorExecutor#cancel(String)}.
    */
-  private static String cancellationIdFor(final StageId stageId)
+  private static String cancellationIdFor(final StageId stageId, final int workerNumber)
   {
-    return stageId.toString();
+    return StringUtils.format("%s_%s", stageId, workerNumber);
   }
 
   /**
@@ -1250,9 +1236,18 @@ public class WorkerImpl implements Worker
   private static class KernelHolder
   {
     private final WorkerStageKernel kernel;
-    private final Closer processorCloser;
-    private final Closer resultsCloser;
     private SettableFuture<ClusterByPartitions> partitionBoundariesFuture;
+
+    /**
+     * Closer for processing. This is closed when all processing for a stage has completed.
+     */
+    private final Closer processorCloser;
+
+    /**
+     * Closer for results. This is closed when results for a stage are no longer needed. Always closed
+     * *after* {@link #processorCloser} is done closing.
+     */
+    private final Closer resultsCloser;
 
     public KernelHolder(WorkerStageKernel kernel)
     {

@@ -130,7 +130,6 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
     final GroupingEngine groupingEngine = new GroupingEngine(
         PROCESSING_CONFIG,
         configSupplier,
-        BUFFER_POOL,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
@@ -140,7 +139,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         groupingEngine,
         groupByResourcesReservationPool
     );
-    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, BUFFER_POOL);
   }
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(

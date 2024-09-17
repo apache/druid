@@ -19,11 +19,12 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SequenceWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -37,6 +38,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.Query;
@@ -374,7 +376,7 @@ public class QueryResource implements QueryCountStatsProvider
       return responseType;
     }
 
-    ObjectWriter newOutputWriter(
+    ObjectMapper newOutputWriter(
         @Nullable QueryToolChest<?, Query<?>> toolChest,
         @Nullable Query<?> query,
         boolean serializeDateTimeAsLong
@@ -387,7 +389,7 @@ public class QueryResource implements QueryCountStatsProvider
       } else {
         decoratedMapper = mapper;
       }
-      return isPretty ? decoratedMapper.writerWithDefaultPrettyPrinter() : decoratedMapper.writer();
+      return isPretty ? decoratedMapper.copy().enable(SerializationFeature.INDENT_OUTPUT) : decoratedMapper;
     }
 
     Response ok(Object object) throws IOException
@@ -531,35 +533,7 @@ public class QueryResource implements QueryCountStatsProvider
         @Override
         public Writer makeWriter(OutputStream out) throws IOException
         {
-          final ObjectWriter objectWriter = queryLifecycle.newOutputWriter(io);
-          final SequenceWriter sequenceWriter = objectWriter.writeValuesAsArray(out);
-          return new Writer()
-          {
-
-            @Override
-            public void writeResponseStart()
-            {
-              // Do nothing
-            }
-
-            @Override
-            public void writeRow(Object obj) throws IOException
-            {
-              sequenceWriter.write(obj);
-            }
-
-            @Override
-            public void writeResponseEnd()
-            {
-              // Do nothing
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-              sequenceWriter.close();
-            }
-          };
+          return new NativeQueryWriter(queryLifecycle.newOutputWriter(io), out);
         }
 
         @Override
@@ -585,8 +559,49 @@ public class QueryResource implements QueryCountStatsProvider
     @Override
     public void writeException(Exception e, OutputStream out) throws IOException
     {
-      final ObjectWriter objectWriter = queryLifecycle.newOutputWriter(io);
-      out.write(objectWriter.writeValueAsBytes(e));
+      final ObjectMapper objectMapper = queryLifecycle.newOutputWriter(io);
+      out.write(objectMapper.writeValueAsBytes(e));
+    }
+  }
+
+  static class NativeQueryWriter implements QueryResultPusher.Writer
+  {
+    private final SerializerProvider serializers;
+    private final JsonGenerator jsonGenerator;
+
+    public NativeQueryWriter(final ObjectMapper responseMapper, final OutputStream out) throws IOException
+    {
+      // Don't use objectWriter.writeValuesAsArray(out), because that causes an end array ] to be written when the
+      // writer is closed, even if it's closed in case of an exception. This causes valid JSON to be emitted in case
+      // of an exception, which makes it difficult for callers to detect problems. Note: this means that if an error
+      // occurs on a Historical (or other data server) after it started to push results to the Broker, the Broker
+      // will experience that as "JsonEOFException: Unexpected end-of-input: expected close marker for Array".
+      this.serializers = responseMapper.getSerializerProviderInstance();
+      this.jsonGenerator = responseMapper.createGenerator(out);
+    }
+
+    @Override
+    public void writeResponseStart() throws IOException
+    {
+      jsonGenerator.writeStartArray();
+    }
+
+    @Override
+    public void writeRow(Object obj) throws IOException
+    {
+      JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, obj);
+    }
+
+    @Override
+    public void writeResponseEnd() throws IOException
+    {
+      jsonGenerator.writeEndArray();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      jsonGenerator.close();
     }
   }
 }

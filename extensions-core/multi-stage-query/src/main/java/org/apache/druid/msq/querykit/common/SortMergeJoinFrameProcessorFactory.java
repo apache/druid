@@ -197,6 +197,12 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
     );
   }
 
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
+
   /**
    * Extracts key columns from a {@link JoinConditionAnalysis}. The returned list has two elements: 0 is the
    * left-hand side, 1 is the right-hand side. Each sub-list has one element for each equi-condition.

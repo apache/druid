@@ -44,7 +44,6 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -135,17 +134,16 @@ public class StreamAppenderatorTester implements AutoCloseable
         ),
         Map.class
     );
-    schema = new DataSchema(
-        DATASOURCE,
-        parserMap,
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count"),
-            new LongSumAggregatorFactory("met", "met")
-        },
-        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
-        null,
-        objectMapper
-    );
+    schema = DataSchema.builder()
+                       .withDataSource(DATASOURCE)
+                       .withParserMap(parserMap)
+                       .withAggregators(
+                           new CountAggregatorFactory("count"),
+                           new LongSumAggregatorFactory("met", "met")
+                       )
+                       .withGranularity(new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null))
+                       .withObjectMapper(objectMapper)
+                       .build();
     tuningConfig = new TestAppenderatorConfig(
       TuningConfig.DEFAULT_APPENDABLE_INDEX,
       maxRowsInMemory,
