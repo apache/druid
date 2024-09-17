@@ -302,7 +302,8 @@ public class ControllerQueryKernel
           workerInputs.inputsForWorker(workerNumber),
           extraInfoHolder,
           config.getWorkerIds(),
-          outputChannelMode
+          outputChannelMode,
+          config.getWorkerContextMap()
       );
 
       QueryValidator.validateWorkOrder(workOrder);

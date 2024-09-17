@@ -28,7 +28,6 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -43,7 +42,7 @@ public interface ControllerContext
   /**
    * Configuration for {@link org.apache.druid.msq.kernel.controller.ControllerQueryKernel}.
    */
-  ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec, QueryDefinition queryDef);
+  ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec);
 
   /**
    * Callback from the controller implementation to "register" the controller. Used in the indexing task implementation
@@ -88,7 +87,7 @@ public interface ControllerContext
    *
    * @param queryId               query ID
    * @param querySpec             query spec
-   * @param queryKernelConfig     config from {@link #queryKernelConfig(MSQSpec, QueryDefinition)}
+   * @param queryKernelConfig     config from {@link #queryKernelConfig(String, MSQSpec)}
    * @param workerFailureListener listener that receives callbacks when workers fail
    */
   WorkerManager newWorkerManager(
