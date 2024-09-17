@@ -33,7 +33,7 @@ public abstract class BaseMemoryAllocatorTest
 {
   private static final int ALLOCATOR_SIZE = 10;
 
-  protected abstract MemoryAllocator makeAllocator(final int capacity);
+  protected abstract MemoryAllocator makeAllocator(int capacity);
 
   @Test
   public void testAllocationInSinglePass()
