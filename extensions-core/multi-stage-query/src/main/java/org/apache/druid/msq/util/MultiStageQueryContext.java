@@ -120,7 +120,6 @@ public class MultiStageQueryContext
   public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
   public static final String CTX_MAX_CONCURRENT_STAGES = "maxConcurrentStages";
-  public static final int DEFAULT_MAX_CONCURRENT_STAGES = 1;
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
@@ -210,11 +209,14 @@ public class MultiStageQueryContext
     );
   }
 
-  public static int getMaxConcurrentStages(final QueryContext queryContext)
+  public static int getMaxConcurrentStagesWithDefault(
+      final QueryContext queryContext,
+      final int defaultMaxConcurrentStages
+  )
   {
     return queryContext.getInt(
         CTX_MAX_CONCURRENT_STAGES,
-        DEFAULT_MAX_CONCURRENT_STAGES
+        defaultMaxConcurrentStages
     );
   }
 
@@ -345,16 +347,6 @@ public class MultiStageQueryContext
     return QueryContexts.getAsEnum(
         CTX_SELECT_DESTINATION,
         queryContext.getString(CTX_SELECT_DESTINATION, DEFAULT_SELECT_DESTINATION),
-        MSQSelectDestination.class
-    );
-  }
-
-  @Nullable
-  public static MSQSelectDestination getSelectDestinationOrNull(final QueryContext queryContext)
-  {
-    return QueryContexts.getAsEnum(
-        CTX_SELECT_DESTINATION,
-        queryContext.getString(CTX_SELECT_DESTINATION),
         MSQSelectDestination.class
     );
   }
