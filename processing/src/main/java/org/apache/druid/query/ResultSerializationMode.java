@@ -17,21 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.msq.guice;
-
-import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
-import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
+package org.apache.druid.query;
 
 /**
- * Configures ingestion queries to create new segments with the results in all cases.
+ * Serialization medium of the query results on the broker. It is currently used to communicate the result's format between
+ * the main query processing walker and the individual toolchests while materializing subquery's rows
  */
-public class SegmentGenerationTerminalStageSpecFactory implements MSQTerminalStageSpecFactory
+public enum ResultSerializationMode
 {
-  @Override
-  public TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext)
-  {
-    return SegmentGenerationStageSpec.instance();
-  }
+  /**
+   * Materialize the inner results as rows
+   */
+  ROWS,
+
+  /**
+   * Materialize the inner results as frames
+   */
+  FRAMES;
+
+  public static final String CTX_SERIALIZATION_PARAMETER = "serialization";
 }

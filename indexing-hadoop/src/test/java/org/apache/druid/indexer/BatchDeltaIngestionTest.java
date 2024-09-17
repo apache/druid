@@ -433,30 +433,33 @@ public class BatchDeltaIngestionTest
   {
     HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
-                            null,
-                            ImmutableList.of("timestamp", "host", "host2", "visited_num"),
-                            false,
-                            0
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                aggregators != null ? aggregators : new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited_num"),
-                    new HyperUniquesAggregatorFactory("unique_hosts", "host2")
-                },
-                new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)),
-                null,
-                MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource("website")
+                      .withParserMap(MAPPER.convertValue(
+                          new StringInputRowParser(
+                              new CSVParseSpec(
+                                  new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
+                                  null,
+                                  ImmutableList.of("timestamp", "host", "host2", "visited_num"),
+                                  false,
+                                  0
+                              ),
+                              null
+                          ),
+                          Map.class
+                      ))
+                      .withAggregators(aggregators != null ? aggregators : new AggregatorFactory[]{
+                          new LongSumAggregatorFactory("visited_sum", "visited_num"),
+                          new HyperUniquesAggregatorFactory("unique_hosts", "host2")
+                      })
+                      .withGranularity(new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.NONE,
+                          ImmutableList.of(INTERVAL_FULL)
+                      ))
+                      .withObjectMapper(MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 inputSpec,
                 null,

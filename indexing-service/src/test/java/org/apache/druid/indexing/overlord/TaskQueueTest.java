@@ -549,14 +549,15 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopTaskContextEnricher()
     );
 
-    final DataSchema dataSchema = new DataSchema(
-        "DS",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(null),
-        null,
-        new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null),
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("DS")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null)
+                  )
+                  .build();
     final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
         new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
                             "user",
