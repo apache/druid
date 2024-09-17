@@ -17,36 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols;
+package org.apache.druid.query;
 
-import org.apache.druid.query.rowsandcols.column.Column;
-
-import java.util.Collection;
-
-public class NoAsRowsAndColumns implements RowsAndColumns
+/**
+ * Serialization medium of the query results on the broker. It is currently used to communicate the result's format between
+ * the main query processing walker and the individual toolchests while materializing subquery's rows
+ */
+public enum ResultSerializationMode
 {
-  private final RowsAndColumns rac;
+  /**
+   * Materialize the inner results as rows
+   */
+  ROWS,
 
-  public NoAsRowsAndColumns(RowsAndColumns rac)
-  {
-    this.rac = rac;
-  }
+  /**
+   * Materialize the inner results as frames
+   */
+  FRAMES;
 
-  @Override
-  public Collection<String> getColumnNames()
-  {
-    return rac.getColumnNames();
-  }
-
-  @Override
-  public int numRows()
-  {
-    return rac.numRows();
-  }
-
-  @Override
-  public Column findColumn(String name)
-  {
-    return rac.findColumn(name);
-  }
+  public static final String CTX_SERIALIZATION_PARAMETER = "serialization";
 }

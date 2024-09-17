@@ -19,44 +19,21 @@
 
 package org.apache.druid.query.rowsandcols.concrete;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.segment.CloseableShapeshifter;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.LinkedHashMap;
 
-public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
+public class ColumnBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
-  private final Frame frame;
-  private final RowSignature signature;
-  private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
-
   public ColumnBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    this.frame = FrameType.COLUMNAR.ensureType(frame);
-    this.signature = signature;
-  }
-
-  @Override
-  public Collection<String> getColumnNames()
-  {
-    return signature.getColumnNames();
-  }
-
-  @Override
-  public int numRows()
-  {
-    return frame.numRows();
+    super(FrameType.COLUMNAR.ensureType(frame), signature);
   }
 
   @Nullable
@@ -71,28 +48,17 @@ public class ColumnBasedFrameRowsAndColumns implements RowsAndColumns, AutoClose
       } else {
         final ColumnType columnType = signature
             .getColumnType(columnIndex)
-            .orElseThrow(() -> new ISE("just got the id, why is columnType not there?"));
+            .orElseThrow(
+                () -> DruidException.defensive(
+                    "just got the id [%s][%s], why is columnType not there?",
+                    columnIndex,
+                    name
+                )
+            );
 
         colCache.put(name, FrameColumnReaders.create(name, columnIndex, columnType).readRACColumn(frame));
       }
     }
     return colCache.get(name);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
-  {
-    if (CursorFactory.class.equals(clazz)) {
-      return (T) FrameReader.create(signature).makeCursorFactory(frame);
-    }
-    return null;
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
   }
 }
