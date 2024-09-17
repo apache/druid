@@ -191,7 +191,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     return getStartOfStringLengthSection(numRows, multiValue) + (long) Integer.BYTES * totalNumValues;
   }
 
-  public static class StringFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
+  private static class StringFrameColumn extends ObjectColumnAccessorBase implements DictionaryEncodedColumn<String>
   {
     private final Frame frame;
     private final Memory memory;
@@ -507,6 +507,20 @@ public class StringFrameColumnReader implements FrameColumnReader
       return Comparator.nullsFirst(Comparator.comparing(o -> ((String) o)));
     }
 
+    @Override
+    public int compareRows(int rowNum1, int rowNum2)
+    {
+      ByteBuffer buffer1 = getStringUtf8(rowNum1);
+      ByteBuffer buffer2 = getStringUtf8(rowNum2);
+
+      if (buffer1 == null) {
+        return -1;
+      } else if (buffer2 == null) {
+        return 1;
+      }
+      return buffer1.compareTo(buffer2);
+    }
+
     /**
      * Returns a ByteBuffer containing UTF-8 encoded string number {@code index}. The ByteBuffer is always newly
      * created, so it is OK to change its position, limit, etc. However, it may point to shared memory, so it is
@@ -618,73 +632,6 @@ public class StringFrameColumnReader implements FrameColumnReader
       } else {
         return Collections.singletonList((ByteBuffer) object);
       }
-    }
-
-    public int compare(int rowNum1, int rowNum2) {
-      int index1 = frame.physicalRow(rowNum1);
-      int index2 = frame.physicalRow(rowNum2);
-
-      final long dataStart1;
-      final long dataEnd1 =
-          startOfStringDataSection +
-          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index1);
-
-      if (index1 == 0) {
-        dataStart1 = startOfStringDataSection;
-      } else {
-        dataStart1 =
-            startOfStringDataSection +
-            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index1 - 1));
-      }
-
-      int dataLength = Ints.checkedCast(dataEnd1 - dataStart1);
-
-      if ((dataLength == 0 && NullHandling.replaceWithDefault()) ||
-          (dataLength == 1 && memory.getByte(dataStart1) == FrameWriterUtils.NULL_STRING_MARKER)) {
-        return -1;
-      }
-
-
-      final long dataStart2;
-      final long dataEnd2 =
-          startOfStringDataSection +
-          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index2);
-
-      if (index2 == 0) {
-        dataStart2 = startOfStringDataSection;
-      } else {
-        dataStart2 =
-            startOfStringDataSection +
-            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index2 - 1));
-      }
-
-      dataLength = Ints.checkedCast(dataEnd2 - dataStart2);
-
-      if ((dataLength == 0 && NullHandling.replaceWithDefault()) ||
-          (dataLength == 1 && memory.getByte(dataStart2) == FrameWriterUtils.NULL_STRING_MARKER)) {
-        return 1;
-      }
-
-      final byte[] stringData1 = new byte[(int) (dataEnd1 - dataStart1)];
-      memory.getByteArray(dataStart1, stringData1, 0, (int) (dataEnd1 - dataStart1));
-
-      final byte[] stringData2 = new byte[(int) (dataEnd1 - dataStart1)];
-      memory.getByteArray(dataStart1, stringData2, 0, (int) (dataEnd1 - dataStart1));
-
-      int length1 = stringData1.length;
-      int length2 = stringData2.length;
-      int minLength = Math.min(length1, length2);
-
-      // Compare element by element
-      for (int i = 0; i < minLength; i++) {
-        int diff = Byte.compare(stringData1[i], stringData2[i]);
-        if (diff != 0) {
-          return diff; // Return the difference when mismatch occurs
-        }
-      }
-
-      // If all elements up to minLength are equal, the shorter array is "less"
-      return Integer.compare(length1, length2);
     }
   }
 }
