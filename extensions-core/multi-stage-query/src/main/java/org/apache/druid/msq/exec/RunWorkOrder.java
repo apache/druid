@@ -129,12 +129,12 @@ public class RunWorkOrder
     STARTED,
 
     /**
-     * State entered upon calling {@link #stop()}.
+     * State entered upon calling {@link #stop(Throwable)}.
      */
     STOPPING,
 
     /**
-     * State entered when a call to {@link #stop()} concludes.
+     * State entered when a call to {@link #stop(Throwable)} concludes.
      */
     STOPPED
   }
@@ -232,7 +232,7 @@ public class RunWorkOrder
       setUpCompletionCallbacks();
     }
     catch (Throwable t) {
-      stopUnchecked();
+      stopUnchecked(t);
     }
   }
 
@@ -242,64 +242,72 @@ public class RunWorkOrder
    * are all properly cleaned up.
    *
    * Blocks until execution is fully stopped.
+   *
+   * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
+   *          Will also be thrown at the end of this method.
    */
-  public void stop() throws InterruptedException
+  public void stop(@Nullable Throwable t) throws InterruptedException
   {
     if (state.compareAndSet(State.INIT, State.STOPPING)
         || state.compareAndSet(State.STARTED, State.STOPPING)) {
       // Initiate stopping.
-      Throwable e = null;
-
       try {
         exec.cancel(cancellationId);
       }
       catch (Throwable e2) {
-        e = e2;
+        if (t == null) {
+          t = e2;
+        } else {
+          t.addSuppressed(e2);
+        }
       }
 
       try {
         frameContext.close();
       }
       catch (Throwable e2) {
-        if (e == null) {
-          e = e2;
+        if (t == null) {
+          t = e2;
         } else {
-          e.addSuppressed(e2);
+          t.addSuppressed(e2);
         }
       }
 
       try {
-        // notifyListener will ignore this cancellation error if work has already succeeded.
-        notifyListener(Either.error(new MSQException(CanceledFault.instance())));
+        // notifyListener will ignore this error if work has already succeeded.
+        notifyListener(Either.error(t != null ? t : new MSQException(CanceledFault.instance())));
       }
       catch (Throwable e2) {
-        if (e == null) {
-          e = e2;
+        if (t == null) {
+          t = e2;
         } else {
-          e.addSuppressed(e2);
+          t.addSuppressed(e2);
         }
       }
 
       stopLatch.countDown();
-
-      if (e != null) {
-        Throwables.throwIfInstanceOf(e, InterruptedException.class);
-        Throwables.throwIfUnchecked(e);
-        throw new RuntimeException(e);
-      }
     }
 
     stopLatch.await();
+
+    if (t != null) {
+      Throwables.throwIfInstanceOf(t, InterruptedException.class);
+      Throwables.throwIfUnchecked(t);
+      throw new RuntimeException(t);
+    }
   }
 
   /**
-   * Calls {@link #stop()}. If the call to {@link #stop()} throws {@link InterruptedException}, this method sets
-   * the interrupt flag and throws an unchecked exception.
+   * Calls {@link #stop(Throwable)}. If the call to {@link #stop(Throwable)} throws {@link InterruptedException},
+   * this method sets the interrupt flag and throws an unchecked exception.
+   *
+   * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
+   *          Will also be thrown at the end of this method.
    */
-  public void stopUnchecked()
+  public void stopUnchecked(@Nullable final Throwable t)
   {
     try {
-      stop();
+      stop(t);
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
