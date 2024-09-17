@@ -87,6 +87,16 @@ public class NestedFieldVirtualColumnTest
   }
 
   @Test
+  public void testEquivalence()
+  {
+    NestedFieldVirtualColumn v1 = new NestedFieldVirtualColumn("nested", "$.x.y.z", "v0", ColumnType.LONG);
+    NestedFieldVirtualColumn v2 = new NestedFieldVirtualColumn("nestedDifferentName", "$.x.y.z", "v0", ColumnType.LONG);
+    NestedFieldVirtualColumn v3 = new NestedFieldVirtualColumn("nested", "$.x.y.z[0]", "v0", ColumnType.LONG);
+    Assert.assertTrue(v1.isEquivalent(v2));
+    Assert.assertFalse(v1.isEquivalent(v3));
+  }
+
+  @Test
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(NestedFieldVirtualColumn.class)

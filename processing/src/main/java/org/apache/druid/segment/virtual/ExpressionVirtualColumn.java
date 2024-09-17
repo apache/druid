@@ -349,6 +349,17 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean isEquivalent(VirtualColumn other)
+  {
+    if (getClass() != other.getClass()) {
+      return false;
+    }
+    final ExpressionVirtualColumn that = (ExpressionVirtualColumn) other;
+    return Objects.equals(expression, that.expression) &&
+           Objects.equals(outputType, that.outputType);
+  }
+
+  @Override
   public boolean equals(final Object o)
   {
     if (this == o) {

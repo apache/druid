@@ -1297,6 +1297,19 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean isEquivalent(VirtualColumn other)
+  {
+    if (getClass() != other.getClass()) {
+      return false;
+    }
+    NestedFieldVirtualColumn that = (NestedFieldVirtualColumn) other;
+    return parts.equals(that.parts) &&
+           Objects.equals(expectedType, that.expectedType) &&
+           processFromRaw == that.processFromRaw;
+  }
+
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

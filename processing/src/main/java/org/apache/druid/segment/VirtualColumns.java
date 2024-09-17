@@ -135,6 +135,7 @@ public class VirtualColumns implements Cacheable
   // For getVirtualColumn:
   private final Map<String, VirtualColumn> withDotSupport;
   private final Map<String, VirtualColumn> withoutDotSupport;
+  private final boolean hasNoDotColumns;
 
   private VirtualColumns(
       List<VirtualColumn> virtualColumns,
@@ -146,6 +147,7 @@ public class VirtualColumns implements Cacheable
     this.withDotSupport = withDotSupport;
     this.withoutDotSupport = withoutDotSupport;
     this.virtualColumnNames = new ArrayList<>(virtualColumns.size());
+    this.hasNoDotColumns = withDotSupport.isEmpty();
 
     for (VirtualColumn virtualColumn : virtualColumns) {
       detectCycles(virtualColumn, null);
@@ -172,8 +174,26 @@ public class VirtualColumns implements Cacheable
     if (vc != null) {
       return vc;
     }
+    if (hasNoDotColumns) {
+      return null;
+    }
     final String baseColumnName = splitColumnName(columnName).lhs;
     return withDotSupport.get(baseColumnName);
+  }
+
+  /**
+   * Check if a virtual column is already defined which is the same as some other virtual column, ignoring output name,
+   * returning that virtual column if it exists, or null if there is no equivalent virtual column.
+   */
+  @Nullable
+  public VirtualColumn findEquivalent(VirtualColumn virtualColumn)
+  {
+    for (VirtualColumn vc : virtualColumns) {
+      if (vc.isEquivalent(virtualColumn)) {
+        return vc;
+      }
+    }
+    return null;
   }
 
   /**

@@ -62,6 +62,31 @@ public class ListFilteredVirtualColumnTest
   }
 
   @Test
+  public void testEquivalence()
+  {
+    ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
+        "hello",
+        new DefaultDimensionSpec("column", "output", ColumnType.STRING),
+        ImmutableSet.of("foo", "bar"),
+        false
+    );
+    ListFilteredVirtualColumn virtualColumn2 = new ListFilteredVirtualColumn(
+        "hello2",
+        new DefaultDimensionSpec("column", "output", ColumnType.STRING),
+        ImmutableSet.of("foo", "bar"),
+        false
+    );
+    ListFilteredVirtualColumn virtualColumn3 = new ListFilteredVirtualColumn(
+        "hello",
+        new DefaultDimensionSpec("column", "output", ColumnType.STRING),
+        ImmutableSet.of("foo", "bar", "baz"),
+        false
+    );
+    Assert.assertTrue(virtualColumn.isEquivalent(virtualColumn2));
+    Assert.assertFalse(virtualColumn.isEquivalent(virtualColumn3));
+  }
+
+  @Test
   public void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(ListFilteredVirtualColumn.class).usingGetClass().verify();

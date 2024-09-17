@@ -336,4 +336,12 @@ public interface VirtualColumn extends Cacheable
   {
     return NoIndexesColumnIndexSupplier.getInstance();
   }
+
+  /**
+   * Check if a virtual column is the same as some other virtual column, ignoring output name.
+   */
+  default boolean isEquivalent(VirtualColumn other)
+  {
+    return this.equals(other);
+  }
 }
