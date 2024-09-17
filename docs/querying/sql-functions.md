@@ -564,6 +564,10 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 Returns the result of integer division of `x` by `y`.
 
+:::info
+The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md#safe_divide) instead. 
+:::
+
 ## DS_CDF
 
 `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
