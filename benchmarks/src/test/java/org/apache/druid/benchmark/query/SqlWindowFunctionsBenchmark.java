@@ -342,8 +342,8 @@ public class SqlWindowFunctionsBenchmark
   {
     final Map<String, Object> context = ImmutableMap.of(
         PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto"//,
-        //QueryContexts.MAX_SUBQUERY_ROWS_KEY, -1
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "disabled",
+        QueryContexts.MAX_SUBQUERY_ROWS_KEY, -1
     );
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
       final PlannerResult plannerResult = planner.plan();
