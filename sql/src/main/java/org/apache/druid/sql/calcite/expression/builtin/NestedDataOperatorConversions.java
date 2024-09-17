@@ -780,6 +780,52 @@ public class NestedDataOperatorConversions
     }
   }
 
+  public static class JsonMergeOperatorConversion implements SqlOperatorConversion
+  {
+    private static final String FUNCTION_NAME = "json_merge";
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder(FUNCTION_NAME)
+        .operandTypeChecker(OperandTypes.variadic(SqlOperandCountRanges.from(1)))
+        .operandTypeInference((callBinding, returnType, operandTypes) -> {
+          RelDataTypeFactory typeFactory = callBinding.getTypeFactory();
+          for (int i = 0; i < operandTypes.length; i++) {
+            operandTypes[i] = typeFactory.createTypeWithNullability(
+                typeFactory.createSqlType(SqlTypeName.ANY),
+                true
+            );
+          }
+        })
+        .returnTypeInference(NESTED_RETURN_TYPE_INFERENCE)
+        .functionCategory(SqlFunctionCategory.SYSTEM)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      return OperatorConversions.convertCall(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions -> DruidExpression.ofExpression(
+              ColumnType.NESTED_DATA,
+              DruidExpression.functionCall("json_merge"),
+              druidExpressions
+          )
+      );
+    }
+  }
+
   public static class ToJsonStringOperatorConversion implements SqlOperatorConversion
   {
     private static final String FUNCTION_NAME = "to_json_string";

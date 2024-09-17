@@ -38,6 +38,7 @@ You can use the following JSON functions to extract, transform, and create `COMP
 | --- | --- |
 |`JSON_KEYS(expr, path)`| Returns an array of field names from `expr` at the specified `path`.|
 |`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])` | Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.|
+|`JSON_MERGE(expr1, expr2[, expr3 ...])`| Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.|
 |`JSON_PATHS(expr)`| Returns an array of all paths which refer to literal values in `expr` in JSONPath format. |
 |`JSON_QUERY(expr, path)`| Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`. |
 |`JSON_QUERY_ARRAY(expr, path)`| Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).|
