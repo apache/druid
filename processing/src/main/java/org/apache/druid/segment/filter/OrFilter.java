@@ -452,8 +452,7 @@ public class OrFilter implements BooleanFilter
 
     final long bitmapConstructionStartNs = System.nanoTime();
     for (FilterBundle.Builder subFilterBundleBuilder : filterBundleBuilder.getChildBuilders()) {
-      final FilterBundle bundle = subFilterBundleBuilder.getFilter().makeFilterBundle(
-          subFilterBundleBuilder,
+      final FilterBundle bundle = subFilterBundleBuilder.build(
           bitmapResultFactory,
           Math.min(applyRowCount, totalRowCount - indexUnionSize),
           totalRowCount,

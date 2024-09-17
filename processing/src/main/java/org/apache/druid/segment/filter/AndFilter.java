@@ -157,8 +157,7 @@ public class AndFilter implements BooleanFilter
     // operation, this is valid (and even preferable).
     final long bitmapConstructionStartNs = System.nanoTime();
     for (FilterBundle.Builder subFilterBundleBuilder : filterBundleBuilder.getChildBuilders()) {
-      final FilterBundle subBundle = subFilterBundleBuilder.getFilter().makeFilterBundle(
-          subFilterBundleBuilder,
+      final FilterBundle subBundle = subFilterBundleBuilder.build(
           bitmapResultFactory,
           Math.min(applyRowCount, indexIntersectionSize),
           totalRowCount,

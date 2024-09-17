@@ -37,6 +37,7 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -170,9 +171,14 @@ public class FilterBundle
       this.columnIndexSelector = columnIndexSelector;
       this.bitmapColumnIndex = filter.getBitmapColumnIndex(columnIndexSelector);
       // Construct Builder instances for all child filters recursively.
-      this.childBuilders = new ArrayList<>(filter.getFilters().size());
-      for (Filter childFilter : filter.getFilters()) {
-        childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
+      if (filter instanceof BooleanFilter) {
+        Collection<Filter> childFilters = ((BooleanFilter) filter).getFilters();
+        this.childBuilders = new ArrayList<>(childFilters.size());
+        for (Filter childFilter : childFilters) {
+          this.childBuilders.add(new FilterBundle.Builder(childFilter, columnIndexSelector, cursorAutoArrangeFilters));
+        }
+      } else {
+        this.childBuilders = new ArrayList<>(0);
       }
       if (cursorAutoArrangeFilters) {
         // Sort child builders by cost in ASCENDING order, should be stable by default.
@@ -201,11 +207,6 @@ public class FilterBundle
         cost += childCost;
       }
       return cost;
-    }
-
-    public Filter getFilter()
-    {
-      return filter;
     }
 
     public ColumnIndexSelector getColumnIndexSelector()
