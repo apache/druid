@@ -55,6 +55,7 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
       "inputFormat": {
         "type": "json"
       },
+      "compressionFormat": "zstd",
       "useEarliestSequenceNumber": true
     },
     "tuningConfig": {
@@ -147,6 +148,12 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 * `protobuf`
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
+
+### Compression
+
+Unlike Kafka, Kinesis does not offer built in compression. Due to the operational costs of operating Kinesis streams at scale, you may find it advantageous to compress incoming data.
+
+Druid supports `bz2`, `gz`, `snappy`, `xz`, `zip`, and `zstd` compressed kinesis data. If your incoming data is compressed, include the compression type in the `compressionFormat` field. 
 
 ### Tuning configuration
 

@@ -19,6 +19,8 @@
 
 package org.apache.druid.utils;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -28,10 +30,17 @@ import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorInputStream;
+import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream;
+import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorInputStream;
+import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
 import org.apache.commons.compress.utils.FileNameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
@@ -39,17 +48,20 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StreamUtils;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.NativeIO;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
@@ -107,6 +119,19 @@ public class CompressionUtils
     public String getExtension()
     {
       return extension;
+    }
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(this.name());
+    }
+
+    @JsonCreator
+    public static Format fromString(String name)
+    {
+      return valueOf(StringUtils.toUpperCase(name));
     }
 
     @Nullable
@@ -612,6 +637,95 @@ public class CompressionUtils
       return reducedFname;
     }
     throw new IAE("[%s] is not a valid gz file name", fname);
+  }
+
+  /**
+   * Compress an output stream based on a given format specification.
+   * This uses default settings for each algorithm.
+   * 
+   * @param in The OutputStream to compress
+   * @param format The desired format for compression.
+   * 
+   * @return A compressed OutputStream
+   * 
+   * @throws IOException
+   */
+  public static OutputStream compress(final OutputStream in, final Format format) throws IOException
+  {
+    switch (format) {
+      case GZ: return new GzipCompressorOutputStream(in);
+      case BZ2: return new BZip2CompressorOutputStream(in);
+      case XZ: return new XZCompressorOutputStream(in);
+      case SNAPPY: return new FramedSnappyCompressorOutputStream(in);
+      case ZSTD: return new ZstdCompressorOutputStream(in);
+      case ZIP: return new ZipOutputStream(in, StandardCharsets.UTF_8);
+      default: return in;
+    }
+  }
+
+  /**
+   * Compress a ByteBuffer based on a given format specification.
+   * This uses default settings for each algorithm.
+   * This method creates and wraps a ByteArrayOutputStream. 
+   * This may have memory implications when applied in memory constrained contexts.
+   * 
+   * @param in The ByteBuffer to compress
+   * @param format The desired format for compression.
+   * 
+   * @return A compressed ByteBuffer
+   * 
+   * @throws IOException
+   */
+  public static ByteBuffer compress(ByteBuffer in, Format format) throws IOException 
+  {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    try (OutputStream compressedStream = compress(baos, format)) {
+      compressedStream.write(in.array());
+    }
+    return ByteBuffer.wrap(baos.toByteArray());
+  }
+
+  /**
+   * Decompress an InputStream based on a given format specification.
+   * 
+   * @param in The InputStream to decompress
+   * @param format The target format for decompression.
+   * 
+   * @returnA compressed ByteBuffer
+   * 
+   * @throws IOException
+   */
+  public static InputStream decompress(final InputStream in, final Format format) throws IOException 
+  {
+    switch (format) {
+      case GZ: return gzipInputStream(in);
+      case BZ2: return new BZip2CompressorInputStream(in, true);
+      case XZ: return new XZCompressorInputStream(in, true);
+      case SNAPPY: return new FramedSnappyCompressorInputStream(in);
+      case ZSTD: return new ZstdCompressorInputStream(in);
+      case ZIP: return new ZipInputStream(in, StandardCharsets.UTF_8);
+      default: return in;
+    }
+  }
+
+  /**
+   * Decompress a ByteBuffer based on a given format specification.
+   * This method creates and wraps a ByteArrayInputStream.
+   * This may have memory implications when applied in memory constrained contexts.
+   * 
+   * @param in The ByteBuffer to decompress
+   * @param format The target format for decompression.
+   * 
+   * @return A decompressed ByteBuffer
+   * 
+   * @throws IOException
+   */
+  public static ByteBuffer decompress(ByteBuffer in, Format format) throws IOException 
+  {
+    ByteArrayInputStream bais = new ByteArrayInputStream(in.array());
+    try (InputStream decompressedStream = decompress(bais, format)) {
+      return ByteBuffer.wrap(IOUtils.toByteArray(decompressedStream));
+    }
   }
 
   /**

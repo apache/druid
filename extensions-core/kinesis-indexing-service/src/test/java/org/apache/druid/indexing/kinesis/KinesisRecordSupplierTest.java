@@ -44,6 +44,8 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.utils.CompressionUtils;
+import org.apache.druid.utils.CompressionUtils.Format;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -54,6 +56,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -69,6 +72,22 @@ import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.UNREAD_TRI
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
+  private static List<Record> compressRecords(List<Record> baseRecords, CompressionUtils.Format format)
+  {
+    return baseRecords.stream()
+      .map(record -> {
+        try {
+          return new Record().withData(
+                  CompressionUtils.compress(record.getData(), format)
+          ).withSequenceNumber(record.getSequenceNumber());
+        } 
+        catch (Exception e) {
+          throw new RuntimeException("Error compressing record data", e);
+        }
+      })
+      .collect(Collectors.toList());
+  }
+
   private static final String STREAM = "stream";
   private static final long POLL_TIMEOUT_MILLIS = 2000;
   private static final String SHARD_ID1 = "1";
@@ -120,7 +139,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
           ))
           .collect(Collectors.toList()))
       .build();
-
 
   private static ByteBuffer jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
@@ -216,7 +234,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -273,7 +292,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        true
+        true,
+        null
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -380,7 +400,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             5000,
         1_000_000,
             true,
-            false
+            false,
+            null
     );
 
     recordSupplier.assign(partitions);
@@ -437,7 +458,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -512,7 +534,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -576,7 +599,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -609,7 +633,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -669,7 +694,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -758,7 +784,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -832,7 +859,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
@@ -867,7 +895,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
     return recordSupplier;
   }
@@ -954,7 +983,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -1009,7 +1039,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
     StreamPartition<String> partition = new StreamPartition<>(STREAM, SHARD_ID0);
 
@@ -1039,6 +1070,192 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("10")));
   }
+
+
+  @Test
+  public void testPollDeaggregateWithCompressedData() throws InterruptedException
+  {
+    EasyMock.expect(kinesis.getShardIterator(
+            EasyMock.anyObject(),
+            EasyMock.eq(SHARD_ID0),
+            EasyMock.anyString(),
+            EasyMock.anyString()
+    )).andReturn(
+            getShardIteratorResult0).anyTimes();
+
+    EasyMock.expect(kinesis.getShardIterator(
+            EasyMock.anyObject(),
+            EasyMock.eq(SHARD_ID1),
+            EasyMock.anyString(),
+            EasyMock.anyString()
+    )).andReturn(
+            getShardIteratorResult1).anyTimes();
+
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
+    EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
+            .andReturn(getRecordsResult0)
+            .anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
+            .andReturn(getRecordsResult1)
+            .anyTimes();
+    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(compressRecords(SHARD0_RECORDS, Format.ZSTD)).once();
+    EasyMock.expect(getRecordsResult1.getRecords()).andReturn(compressRecords(SHARD1_RECORDS, Format.ZSTD)).once();
+    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(SHARD0_LAG_MILLIS).once();
+    EasyMock.expect(getRecordsResult1.getMillisBehindLatest()).andReturn(SHARD1_LAG_MILLIS).once();
+
+    replayAll();
+
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+            StreamPartition.of(STREAM, SHARD_ID0),
+            StreamPartition.of(STREAM, SHARD_ID1)
+    );
+
+
+    recordSupplier = new KinesisRecordSupplier(
+            kinesis,
+            0,
+            2,
+            10_000,
+            5000,
+            5000,
+            1_000_000,
+            true,
+            false,
+            Format.ZSTD
+    );
+
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
+
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 12; i++) {
+      Thread.sleep(100);
+    }
+
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+            POLL_TIMEOUT_MILLIS));
+
+    verifyAll();
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
+    Assert.assertEquals(SHARDS_LAG_MILLIS, recordSupplier.getPartitionResourcesTimeLag());
+  }
+
+  @Test
+  public void testPollWithCompressedData() throws Exception
+  {
+    // Step 1: Create original data
+    List<ByteBuffer> originalData = Arrays.asList(
+            jb("2021-01-01T00:00:00Z", "a", "x", "1", "1.0", "1.0"),
+            jb("2021-01-01T00:01:00Z", "b", "y", "2", "2.0", "2.0")
+    );
+
+    // Step 2: Compress the data using the specified compression format
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.ZSTD;
+
+    List<ByteBuffer> compressedData = new ArrayList<>();
+    for (ByteBuffer data : originalData) {
+      ByteBuffer compressed = CompressionUtils.compress(data, compressionFormat);
+      compressedData.add(compressed);
+    }
+
+    // Step 3: Create Kinesis Records with the compressed data
+    List<Record> compressedRecords = new ArrayList<>();
+    int sequenceNumber = 0;
+    for (ByteBuffer compressed : compressedData) {
+      Record record = new Record().withData(compressed).withSequenceNumber(Integer.toString(sequenceNumber++));
+      compressedRecords.add(record);
+    }
+
+    // Step 4: Mock Kinesis client methods to return our compressed records
+    EasyMock.expect(kinesis.getShardIterator(
+            EasyMock.eq(STREAM),
+            EasyMock.eq(SHARD_ID0),
+            EasyMock.eq(ShardIteratorType.TRIM_HORIZON.toString()),
+            EasyMock.or(EasyMock.matches("\\d+"), EasyMock.isNull())
+    )).andReturn(
+            getShardIteratorResult0).anyTimes();
+
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
+
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
+            .andReturn(getRecordsResult0)
+            .anyTimes();
+
+    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(compressedRecords).once();
+
+    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(0L).once();
+
+    replayAll();
+
+    // Step 5: Create KinesisRecordSupplier with the compression format set
+    recordSupplier = new KinesisRecordSupplier(
+            kinesis,
+            0,
+            1,
+            100,
+            5000,
+            5000,
+            1_000_000,
+            true,
+            false,
+            compressionFormat // Set the compression format
+    );
+
+    // Step 6: Assign partition, seek to earliest, and start the supplier
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+            StreamPartition.of(STREAM, SHARD_ID0)
+    );
+
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
+
+    // Step 7: Poll the supplier and wait for data to be available
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < compressedRecords.size(); i++) {
+      Thread.sleep(100);
+    }
+    Map<String, Long> timeLag = recordSupplier.getPartitionResourcesTimeLag();
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertEquals(SHARDS_LAG_MILLIS_EMPTY, timeLag);
+
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = recordSupplier.poll(POLL_TIMEOUT_MILLIS);
+
+    // Step 8: Verify that the data retrieved matches the original data after decompression
+    Assert.assertEquals(compressedRecords.size(), polledRecords.size());
+
+    ObjectMapper objectMapper = new ObjectMapper();
+
+    for (int i = 0; i < polledRecords.size(); i++) {
+      OrderedPartitionableRecord<String, String, KinesisRecordEntity> record = polledRecords.get(i);
+      ByteBuffer dataBuffer = record.getData().get(0).getBuffer();
+
+      // Extract bytes from the ByteBuffer
+      byte[] dataBytes = new byte[dataBuffer.remaining()];
+      dataBuffer.get(dataBytes);
+
+      // Deserialize the data to Map
+      Map<String, Object> dataMap = objectMapper.readValue(dataBytes, Map.class);
+
+      // Similarly, get the expected data from the original uncompressed data
+      ByteBuffer expectedDataBuffer = originalData.get(i).asReadOnlyBuffer();
+      byte[] expectedDataBytes = new byte[expectedDataBuffer.remaining()];
+      expectedDataBuffer.get(expectedDataBytes);
+      Map<String, Object> expectedDataMap = objectMapper.readValue(expectedDataBytes, Map.class);
+
+      // Assert that the decompressed data matches the original data
+      Assert.assertEquals("Data maps should match after decompression", expectedDataMap, dataMap);
+    }
+
+    verifyAll();
+  }
+
 
   private void setupMockKinesisForShardId(AmazonKinesis kinesis, String shardId,
                                           List<Record> records, String nextIterator)

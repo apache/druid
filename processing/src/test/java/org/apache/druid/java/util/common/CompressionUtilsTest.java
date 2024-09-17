@@ -31,10 +31,13 @@ import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutp
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
 import org.apache.druid.utils.CompressionUtils;
+import org.apache.druid.utils.CompressionUtils.Format;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
@@ -891,5 +894,100 @@ public class CompressionUtilsTest
     zipOutputStream.write(output);
     zipOutputStream.closeEntry();
     zipOutputStream.close();
+  }
+
+
+  // Helper method for copying Input to Output
+  private void copyStream(InputStream input, OutputStream output) throws IOException
+  {
+    byte[] buffer = new byte[8192];
+    int length;
+    while ((length = input.read(buffer)) != -1) {
+      output.write(buffer, 0, length);
+    }
+  }
+
+  // Helper method for InputStream conversion
+  private String readStream(InputStream input) throws IOException
+  {
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    copyStream(input, output);
+    return output.toString(StandardCharsets.UTF_8.name());
+  }
+
+  // Helper method for compressing a string
+  private byte[] compressString(String input, Format format) throws IOException
+  {
+    InputStream inputStream = new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8));
+    // Compress
+    ByteArrayOutputStream compressedOutput = new ByteArrayOutputStream();
+    try (OutputStream compressedStream = CompressionUtils.compress(compressedOutput, format)) {
+      copyStream(inputStream, compressedStream);
+    }
+    return compressedOutput.toByteArray();
+  }
+
+  // Helper method for decompressing a string
+  private String decompressString(byte[] input, Format format) throws IOException
+  {
+    InputStream compressedInput = new ByteArrayInputStream(input);
+    InputStream decompressedStream = CompressionUtils.decompress(compressedInput, format);
+    return readStream(decompressedStream);
+  }
+
+  /**
+   * Dynamic round-trip compression/decompression test for each format.
+   */
+  @ParameterizedTest
+  @EnumSource(CompressionUtils.Format.class)
+  void testCompressAndDecompressForAllFormats(CompressionUtils.Format format) throws IOException
+  {
+    String originalString = "This is a test string for compression in format: " + format;
+
+    // Compress and then decompress
+    byte[] compressedData = compressString(originalString, format);
+    String decompressedString = decompressString(compressedData, format);
+
+    // Verify the original and decompressed strings match
+    Assert.assertEquals(decompressedString, "Decompressed string does not match the original for format: " + format, originalString);
+  }
+
+  /**
+   * Dynamic chaos test for mismatched compression and decompression formats.
+   * This attempts to decompress data compressed in one format using a different format.
+   */
+  @ParameterizedTest
+  @EnumSource(CompressionUtils.Format.class)
+  void testChaosCompressionDecompression(CompressionUtils.Format format) throws IOException
+  {
+    String originalString = "This is a chaos test string for compression in format: " + format;
+
+    // Compress with the selected format
+    byte[] compressedData = compressString(originalString, format);
+
+    // Try decompressing with a different format
+    for (CompressionUtils.Format wrongFormat : CompressionUtils.Format.values()) {
+      if (wrongFormat != format) {
+        try {
+          decompressString(compressedData, wrongFormat);
+          Assert.fail("Expected decompression failure for mismatched formats. Compressed with: " + format + ", decompressed with: " + wrongFormat);
+        } 
+        catch (IOException e) {
+          // Expected exception, continue
+          Assert.assertNotNull(e.getMessage(), "Exception message should exist on decompression failure.");
+        }
+      }
+    }
+  }
+
+  /**
+   * Test for compressing with an unsupported or invalid input.
+   */
+  @Test
+  void testCompressWithInvalidInput()
+  {
+    CompressionUtils.Format format = CompressionUtils.Format.GZ;
+    // Attempting to compress a null input should throw an exception
+    Assert.assertThrows("Expected NullPointerException for null input", NullPointerException.class, () -> compressString(null, format));
   }
 }
