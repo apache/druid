@@ -298,7 +298,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     );
 
     assertEquals(
-        "Encountered a multi value column [v0]. Window processing does not support MVDs. "
+        "Encountered a multi value column. Window processing does not support MVDs. "
         + "Consider using UNNEST or MV_TO_ARRAY.",
         e.getMessage()
     );
