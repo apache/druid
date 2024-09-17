@@ -30,25 +30,17 @@ public interface QueryKit<QueryType extends Query<?>>
   /**
    * Creates a {@link QueryDefinition} from a {@link Query}.
    *
-   * @param queryId                  query ID of the resulting {@link QueryDefinition}
+   * @param queryKitSpec             collection of parameters necessary for planning {@link QueryDefinition}
    * @param query                    native query to translate
-   * @param toolKitForSubQueries     kit that is used to translate native subqueries; i.e.,
-   *                                 {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
    * @param resultShuffleSpecFactory shuffle spec factory for the final output of this query.
-   * @param maxWorkerCount           maximum number of workers: becomes
-   *                                 {@link org.apache.druid.msq.kernel.StageDefinition#getMaxWorkerCount()}
    * @param minStageNumber           lowest stage number to use for any generated stages. Useful if the resulting
    *                                 {@link QueryDefinition} is going to be added to an existing
    *                                 {@link org.apache.druid.msq.kernel.QueryDefinitionBuilder}.
-   * @param targetPartitionsPerWorker preferred number of partitions per worker for subqueries
    */
   QueryDefinition makeQueryDefinition(
-      String queryId,
+      QueryKitSpec queryKitSpec,
       QueryType query,
-      QueryKit<Query<?>> toolKitForSubQueries,
       ShuffleSpecFactory resultShuffleSpecFactory,
-      int maxWorkerCount,
-      int targetPartitionsPerWorker,
       int minStageNumber
   );
 }

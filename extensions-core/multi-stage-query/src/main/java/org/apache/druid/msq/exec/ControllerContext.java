@@ -30,7 +30,8 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.msq.querykit.QueryKitSpec;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.DruidNode;
 
 /**
@@ -103,8 +104,13 @@ public interface ControllerContext
   WorkerClient newWorkerClient();
 
   /**
-   * Default target partitions per worker for {@link QueryKit#makeQueryDefinition}. Can be overridden using
-   * {@link MultiStageQueryContext#CTX_TARGET_PARTITIONS_PER_WORKER}.
+   * Create a {@link QueryKitSpec}. This method provides controller contexts a way to customize parameters around the
+   * number of workers and partitions.
    */
-  int defaultTargetPartitionsPerWorker();
+  QueryKitSpec makeQueryKitSpec(
+      QueryKit<Query<?>> queryKit,
+      String queryId,
+      MSQSpec querySpec,
+      ControllerQueryKernelConfig queryKernelConfig
+  );
 }
