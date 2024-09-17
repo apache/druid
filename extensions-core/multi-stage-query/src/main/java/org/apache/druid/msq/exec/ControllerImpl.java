@@ -151,6 +151,7 @@ import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
@@ -566,14 +567,9 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
-        queryId(),
-        makeQueryControllerToolKit(),
+        context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
         querySpec,
         context.jsonMapper(),
-        MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            queryContext,
-            context.defaultTargetPartitionsPerWorker()
-        ),
         resultsContext
     );
 
@@ -1196,7 +1192,7 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit makeQueryControllerToolKit()
+  private QueryKit<Query<?>> makeQueryControllerToolKit()
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
@@ -1720,11 +1716,9 @@ public class ControllerImpl implements Controller
 
   @SuppressWarnings("unchecked")
   private static QueryDefinition makeQueryDefinition(
-      final String queryId,
-      @SuppressWarnings("rawtypes") final QueryKit toolKit,
+      final QueryKitSpec queryKitSpec,
       final MSQSpec querySpec,
       final ObjectMapper jsonMapper,
-      final int targetPartitionsPerWorker,
       final ResultsContext resultsContext
   )
   {
@@ -1768,13 +1762,10 @@ public class ControllerImpl implements Controller
     final QueryDefinition queryDef;
 
     try {
-      queryDef = toolKit.makeQueryDefinition(
-          queryId,
+      queryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
+          queryKitSpec,
           queryToPlan,
-          toolKit,
           resultShuffleSpecFactory,
-          tuningConfig.getMaxNumWorkers(),
-          targetPartitionsPerWorker,
           0
       );
     }
@@ -1803,7 +1794,7 @@ public class ControllerImpl implements Controller
 
       // Add all query stages.
       // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
 
       for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
         if (stageDef.equals(finalShuffleStageDef)) {
@@ -1829,7 +1820,7 @@ public class ControllerImpl implements Controller
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
       if (finalShuffleStageDef.doesSortDuringShuffle()) {
-        final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+        final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
         builder.addAll(queryDef);
         builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                    .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1866,7 +1857,7 @@ public class ControllerImpl implements Controller
       }
 
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
       builder.addAll(queryDef);
       builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                  .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1874,7 +1865,7 @@ public class ControllerImpl implements Controller
                                  .signature(queryDef.getFinalStageDefinition().getSignature())
                                  .shuffleSpec(null)
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
-                                     queryId,
+                                     queryKitSpec.getQueryId(),
                                      exportStorageProvider,
                                      resultFormat,
                                      columnMappings,
