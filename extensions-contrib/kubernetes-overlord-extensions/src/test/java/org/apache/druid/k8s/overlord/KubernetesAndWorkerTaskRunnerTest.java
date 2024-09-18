@@ -371,4 +371,14 @@ public class KubernetesAndWorkerTaskRunnerTest extends EasyMockSupport
     runner.updateLocation(task, TaskLocation.unknown());
     verifyAll();
   }
+
+  @Test
+  public void test_getMaximumCapacity()
+  {
+    EasyMock.expect(kubernetesTaskRunner.getMaximumCapacity()).andReturn(1);
+    EasyMock.expect(workerTaskRunner.getMaximumCapacity()).andReturn(1);
+    replayAll();
+    Assert.assertEquals(2, runner.getMaximumCapacity());
+    verifyAll();
+  }
 }

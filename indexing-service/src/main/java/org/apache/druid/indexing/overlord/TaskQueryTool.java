@@ -21,7 +21,6 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -33,7 +32,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.http.TaskStateLookup;
 import org.apache.druid.indexing.overlord.http.TotalWorkerCapacityResponse;
-import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -49,7 +47,6 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -377,38 +374,9 @@ public class TaskQueryTool
     }
     TaskRunner taskRunner = taskRunnerOptional.get();
 
-    Collection<ImmutableWorkerInfo> workers = taskRunner instanceof WorkerTaskRunner ?
-                                              ((WorkerTaskRunner) taskRunner).getWorkers() : ImmutableList.of();
-
     int currentCapacity = taskRunner.getTotalCapacity();
     int usedCapacity = taskRunner.getUsedCapacity();
-    // Calculate maximum capacity with auto scale
-    int maximumCapacity;
-    WorkerBehaviorConfig workerBehaviorConfig = getLatestWorkerConfig();
-    if (workerBehaviorConfig == null) {
-      // Auto scale not setup
-      log.debug("Cannot calculate maximum worker capacity as worker behavior config is not configured");
-      maximumCapacity = -1;
-    } else if (workerBehaviorConfig instanceof DefaultWorkerBehaviorConfig) {
-      DefaultWorkerBehaviorConfig defaultWorkerBehaviorConfig = (DefaultWorkerBehaviorConfig) workerBehaviorConfig;
-      if (defaultWorkerBehaviorConfig.getAutoScaler() == null) {
-        // Auto scale not setup
-        log.debug("Cannot calculate maximum worker capacity as auto scaler not configured");
-        maximumCapacity = -1;
-      } else {
-        int maxWorker = defaultWorkerBehaviorConfig.getAutoScaler().getMaxNumWorkers();
-        int expectedWorkerCapacity = provisioningStrategy.getExpectedWorkerCapacity(workers);
-        maximumCapacity = expectedWorkerCapacity == -1 ? -1 : maxWorker * expectedWorkerCapacity;
-      }
-    } else {
-      // Auto-scale is not using DefaultWorkerBehaviorConfig
-      log.debug(
-          "Cannot calculate maximum worker capacity as WorkerBehaviorConfig [%s] of type [%s] does not support getting max capacity",
-          workerBehaviorConfig,
-          workerBehaviorConfig.getClass().getSimpleName()
-      );
-      maximumCapacity = -1;
-    }
+    int maximumCapacity = taskRunner.getMaximumCapacity();
 
     return new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity);
   }

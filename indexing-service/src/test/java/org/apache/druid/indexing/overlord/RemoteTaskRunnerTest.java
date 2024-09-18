@@ -47,6 +47,8 @@ import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceActio
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.EqualDistributionWorkerSelectStrategy;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -153,6 +155,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(3, remoteTaskRunner.getTotalCapacity());
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacity());
     Assert.assertEquals(0, remoteTaskRunner.getUsedCapacity());
 
 
@@ -606,6 +609,46 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(
         taskStatus.getErrorMsg().startsWith("The worker that this task is assigned did not start it in timeout")
     );
+  }
+
+  @Test
+  public void testGetMaximumCapacity_noWorkerConfig()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        null
+    );
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacity());
+  }
+
+  @Test
+  public void testGetMaximumCapacity_noAutoScaler()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null), null)
+    );
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacity());
+  }
+
+  @Test
+  public void testGetMaximumCapacity_withAutoScaler()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        DefaultWorkerBehaviorConfig.defaultConfig()
+    );
+    // Default autoscaler has max workers of 0
+    Assert.assertEquals(0, remoteTaskRunner.getMaximumCapacity());
   }
 
   private void doSetup() throws Exception
