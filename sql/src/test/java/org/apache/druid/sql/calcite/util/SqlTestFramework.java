@@ -679,7 +679,8 @@ public class SqlTestFramework
 
     @Provides
     @Named("isExplainSupported")
-    public Boolean isExplainSupported() {
+    public Boolean isExplainSupported()
+    {
       return builder.componentSupplier.isExplainSupported();
     }
   }

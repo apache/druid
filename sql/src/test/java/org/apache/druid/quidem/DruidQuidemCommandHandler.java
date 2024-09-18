@@ -113,9 +113,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
 
       final SqlCommand sqlCommand = x.previousSqlCommand();
 
-      if(isExplainSupported) {
+      if (isExplainSupported) {
         executeQuery(x, "explain plan for " + sqlCommand.sql);
-      }else {
+      } else {
         executeQuery(x, sqlCommand.sql);
       }
     }
@@ -151,6 +151,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
       super(lines, content);
     }
 
+    @Override
     protected void executeExplain(Context x) throws Exception
     {
       DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();

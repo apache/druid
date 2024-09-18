@@ -125,7 +125,7 @@ public class DruidAvaticaTestDriver implements Driver
         ObjectMapper objectMapper,
         DruidHookDispatcher druidHookDispatcher,
         @Named("isExplainSupported") Boolean isExplainSupported
-        )
+    )
     {
       return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher, isExplainSupported);
     }
