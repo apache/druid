@@ -1151,7 +1151,8 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         thePlan.is(
             ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.NEEDS_APPLIED
+            ExpressionPlan.Trait.NEEDS_APPLIED,
+            ExpressionPlan.Trait.VECTORIZABLE
         )
     );
     Assert.assertFalse(
@@ -1160,8 +1161,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
             ExpressionPlan.Trait.INCOMPLETE_INPUTS,
-            ExpressionPlan.Trait.UNKNOWN_INPUTS,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.UNKNOWN_INPUTS
         )
     );
 
@@ -1251,7 +1251,8 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     ExpressionPlan thePlan = plan("array(long1, long2)");
     Assert.assertTrue(
         thePlan.is(
-            ExpressionPlan.Trait.NON_SCALAR_OUTPUT
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+            ExpressionPlan.Trait.VECTORIZABLE
         )
     );
     Assert.assertFalse(
@@ -1261,8 +1262,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
             ExpressionPlan.Trait.INCOMPLETE_INPUTS,
             ExpressionPlan.Trait.NEEDS_APPLIED,
-            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS
         )
     );
     Assert.assertEquals(ExpressionType.LONG_ARRAY, thePlan.getOutputType());
@@ -1387,7 +1387,8 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
   {
     Assert.assertTrue(
         thePlan.is(
-            ExpressionPlan.Trait.NON_SCALAR_INPUTS
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
+            ExpressionPlan.Trait.VECTORIZABLE
         )
     );
     Assert.assertFalse(
@@ -1397,8 +1398,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
             ExpressionPlan.Trait.INCOMPLETE_INPUTS,
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
-            ExpressionPlan.Trait.NEEDS_APPLIED,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NEEDS_APPLIED
         )
     );
   }
@@ -1408,7 +1408,8 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         thePlan.is(
             ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.NON_SCALAR_OUTPUT
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
+            ExpressionPlan.Trait.VECTORIZABLE
         )
     );
     Assert.assertFalse(
@@ -1417,8 +1418,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE,
             ExpressionPlan.Trait.INCOMPLETE_INPUTS,
             ExpressionPlan.Trait.UNKNOWN_INPUTS,
-            ExpressionPlan.Trait.NEEDS_APPLIED,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NEEDS_APPLIED
         )
     );
   }

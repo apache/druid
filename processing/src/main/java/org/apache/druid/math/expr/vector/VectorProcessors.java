@@ -85,11 +85,14 @@ public class VectorProcessors
    *
    * @see org.apache.druid.math.expr.ConstantExpr
    */
-  public static <T> ExprVectorProcessor<T> constant(@Nullable String constant, int maxVectorSize)
+  public static <T> ExprVectorProcessor<T> constant(@Nullable Object constant, int maxVectorSize, ExpressionType type)
   {
-    final Object[] strings = new Object[maxVectorSize];
-    Arrays.fill(strings, constant);
-    final ExprEvalObjectVector eval = new ExprEvalObjectVector(strings, ExpressionType.STRING);
+    final Object[] objects = new Object[maxVectorSize];
+    if (type.isNumeric()) {
+      return constant((Long) null, maxVectorSize);
+    }
+    Arrays.fill(objects, constant);
+    final ExprEvalObjectVector eval = new ExprEvalObjectVector(objects, type);
     return new ExprVectorProcessor<T>()
     {
       @Override
@@ -101,7 +104,7 @@ public class VectorProcessors
       @Override
       public ExpressionType getOutputType()
       {
-        return ExpressionType.STRING;
+        return type;
       }
     };
   }
@@ -195,14 +198,7 @@ public class VectorProcessors
     if (inputType == null) {
       // nil column, we can be anything, so be a string because it's the most flexible
       // (numbers will be populated with default values in default mode and non-null)
-      return new IdentifierVectorProcessor<Object[]>(ExpressionType.STRING)
-      {
-        @Override
-        public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
-        {
-          return new ExprEvalObjectVector(bindings.getObjectVector(binding), ExpressionType.STRING);
-        }
-      };
+      return constant((Long) null, inspector.getMaxVectorSize());
     }
     switch (inputType.getType()) {
       case LONG:
@@ -293,34 +289,7 @@ public class VectorProcessors
     final long[] outputValues = new long[inspector.getMaxVectorSize()];
 
     ExprVectorProcessor<?> processor = null;
-    if (Types.is(type, ExprType.STRING)) {
-      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
-      processor = new ExprVectorProcessor<long[]>()
-      {
-        @Override
-        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
-        {
-          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
-
-          final int currentSize = bindings.getCurrentVectorSize();
-          final Object[] values = inputEval.values();
-          for (int i = 0; i < currentSize; i++) {
-            if (values[i] == null) {
-              outputValues[i] = 1L;
-            } else {
-              outputValues[i] = 0L;
-            }
-          }
-          return new ExprEvalLongVector(outputValues, null);
-        }
-
-        @Override
-        public ExpressionType getOutputType()
-        {
-          return ExpressionType.LONG;
-        }
-      };
-    } else if (Types.is(type, ExprType.LONG)) {
+    if (Types.is(type, ExprType.LONG)) {
       final ExprVectorProcessor<long[]> input = expr.asVectorProcessor(inspector);
       processor = new ExprVectorProcessor<long[]>()
       {
@@ -382,11 +351,35 @@ public class VectorProcessors
           return ExpressionType.LONG;
         }
       };
+    } else {
+      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
+      processor = new ExprVectorProcessor<long[]>()
+      {
+        @Override
+        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
+        {
+          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
+
+          final int currentSize = bindings.getCurrentVectorSize();
+          final Object[] values = inputEval.values();
+          for (int i = 0; i < currentSize; i++) {
+            if (values[i] == null) {
+              outputValues[i] = 1L;
+            } else {
+              outputValues[i] = 0L;
+            }
+          }
+          return new ExprEvalLongVector(outputValues, null);
+        }
+
+        @Override
+        public ExpressionType getOutputType()
+        {
+          return ExpressionType.LONG;
+        }
+      };
     }
 
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
     return (ExprVectorProcessor<T>) processor;
   }
 
@@ -407,34 +400,7 @@ public class VectorProcessors
     final long[] outputValues = new long[inspector.getMaxVectorSize()];
 
     ExprVectorProcessor<?> processor = null;
-    if (Types.is(type, ExprType.STRING)) {
-      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
-      processor = new ExprVectorProcessor<long[]>()
-      {
-        @Override
-        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
-        {
-          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
-
-          final int currentSize = bindings.getCurrentVectorSize();
-          final Object[] values = inputEval.values();
-          for (int i = 0; i < currentSize; i++) {
-            if (values[i] == null) {
-              outputValues[i] = 0L;
-            } else {
-              outputValues[i] = 1L;
-            }
-          }
-          return new ExprEvalLongVector(outputValues, null);
-        }
-
-        @Override
-        public ExpressionType getOutputType()
-        {
-          return ExpressionType.LONG;
-        }
-      };
-    } else if (Types.is(type, ExprType.LONG)) {
+    if (Types.is(type, ExprType.LONG)) {
       final ExprVectorProcessor<long[]> input = expr.asVectorProcessor(inspector);
       processor = new ExprVectorProcessor<long[]>()
       {
@@ -496,11 +462,35 @@ public class VectorProcessors
           return ExpressionType.LONG;
         }
       };
+    } else {
+      final ExprVectorProcessor<Object[]> input = expr.asVectorProcessor(inspector);
+      processor = new ExprVectorProcessor<long[]>()
+      {
+        @Override
+        public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
+        {
+          final ExprEvalVector<Object[]> inputEval = input.evalVector(bindings);
+
+          final int currentSize = bindings.getCurrentVectorSize();
+          final Object[] values = inputEval.values();
+          for (int i = 0; i < currentSize; i++) {
+            if (values[i] == null) {
+              outputValues[i] = 0L;
+            } else {
+              outputValues[i] = 1L;
+            }
+          }
+          return new ExprEvalLongVector(outputValues, null);
+        }
+
+        @Override
+        public ExpressionType getOutputType()
+        {
+          return ExpressionType.LONG;
+        }
+      };
     }
 
-    if (processor == null) {
-      throw Exprs.cannotVectorize();
-    }
     return (ExprVectorProcessor<T>) processor;
   }
 

@@ -20,12 +20,14 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.math.expr.ApplyFunction;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Function;
+import org.apache.druid.math.expr.LambdaExpr;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -69,6 +71,25 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
         () -> function.apply(adaptedArgs, UnusedBinding.INSTANCE),
         adaptedArgs,
         function.getOutputType(inspector, args),
+        inspector
+    );
+  }
+
+  /**
+   * Create a processor for a non-vectorizable {@link org.apache.druid.math.expr.ApplyFunction}.
+   */
+  public static <T> FallbackVectorProcessor<T> create(
+      final ApplyFunction function,
+      final LambdaExpr lambdaExpr,
+      final List<Expr> args,
+      final Expr.VectorInputBindingInspector inspector
+  )
+  {
+    final List<Expr> adaptedArgs = makeAdaptedArgs(args, inspector);
+    return makeFallbackProcessor(
+        () -> function.apply(lambdaExpr, adaptedArgs, UnusedBinding.INSTANCE),
+        adaptedArgs,
+        function.getOutputType(inspector, lambdaExpr, args),
         inspector
     );
   }

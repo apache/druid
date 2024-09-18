@@ -5848,9 +5848,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 IN ('abc', 'def', 'ghi'), COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -5914,9 +5911,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInOrIsNullExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 IN ('abc', 'def', 'ghi') OR dim1 IS NULL, COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -5948,9 +5942,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNotInOrIsNullExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT NOT (dim1 IN ('abc', 'def', 'ghi') OR dim1 IS NULL), COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -5982,9 +5973,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNotInAndIsNotNullExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 NOT IN ('abc', 'def', 'ghi') AND dim1 IS NOT NULL, COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -6016,9 +6004,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInOrGreaterThanExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 IN ('abc', 'def', 'ghi') OR dim1 > 'zzz', COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -6050,9 +6035,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNotInAndLessThanExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 NOT IN ('abc', 'def', 'ghi') AND dim1 < 'zzz', COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -6084,9 +6066,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNotInOrEqualToOneOfThemExpression()
   {
-    // Cannot vectorize scalar_in_array expression.
-    cannotVectorize();
-
     testQuery(
         "SELECT dim1 NOT IN ('abc', 'def', 'ghi') OR dim1 = 'def', COUNT(*)\n"
         + "FROM druid.foo\n"
