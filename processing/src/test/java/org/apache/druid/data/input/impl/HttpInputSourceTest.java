@@ -158,8 +158,8 @@ public class HttpInputSourceTest
     );
     expectedException.expect(DruidException.class);
     expectedException.expectMessage(
-        "Got forbidden header r-Cookie, allowed headers are only []. "
-        + "You can set the property druid.ingestion.http.allowedHeaders in middle managers or peons to whitelist request headers");
+        "Got forbidden header [r-Cookie], allowed headers are only [[]]. "
+        + "You can control the allowed headers by updating druid.ingestion.http.allowedHeaders");
 
     final HttpInputSource inputSource = new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
@@ -180,7 +180,7 @@ public class HttpInputSourceTest
     );
     expectedException.expect(DruidException.class);
     expectedException.expectMessage(
-        "Got forbidden header G-Cookie, allowed headers are only [r-cookie, content-type]");
+        "Got forbidden header [G-Cookie], allowed headers are only [[r-cookie, content-type]]");
     new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
         "myName",
