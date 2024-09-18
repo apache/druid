@@ -119,6 +119,19 @@ public class ReadableByteChunksFrameChannelTest
     }
 
     @Test
+    public void testAddChunkAfterDoneWriting()
+    {
+      try (final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false)) {
+        channel.doneWriting();
+
+        Assert.assertThrows(
+            ChannelClosedForWritesException.class,
+            () -> channel.addChunk(new byte[]{})
+        );
+      }
+    }
+
+    @Test
     public void testTruncatedFrameFile() throws IOException
     {
       final int allocatorSize = 64000;

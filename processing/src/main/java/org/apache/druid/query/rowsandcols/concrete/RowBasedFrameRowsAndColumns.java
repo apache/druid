@@ -24,40 +24,17 @@ import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
-import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
-import org.apache.druid.segment.CloseableShapeshifter;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
-import java.util.LinkedHashMap;
 
-public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseable, CloseableShapeshifter
+public class RowBasedFrameRowsAndColumns extends AbstractFrameRowsAndColumns
 {
-  private final Frame frame;
-  private final RowSignature signature;
-  private final LinkedHashMap<String, Column> colCache = new LinkedHashMap<>();
-
   public RowBasedFrameRowsAndColumns(Frame frame, RowSignature signature)
   {
-    this.frame = FrameType.ROW_BASED.ensureType(frame);
-    this.signature = signature;
-  }
-
-  @Override
-  public Collection<String> getColumnNames()
-  {
-    return signature.getColumnNames();
-  }
-
-  @Override
-  public int numRows()
-  {
-    return frame.numRows();
+    super(FrameType.ROW_BASED.ensureType(frame), signature);
   }
 
   @Nullable
@@ -85,22 +62,5 @@ public class RowBasedFrameRowsAndColumns implements RowsAndColumns, AutoCloseabl
       }
     }
     return colCache.get(name);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
-  {
-    if (CursorFactory.class.equals(clazz)) {
-      return (T) FrameReader.create(signature).makeCursorFactory(frame);
-    }
-    return null;
-  }
-
-  @Override
-  public void close()
-  {
-    // nothing to close
   }
 }

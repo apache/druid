@@ -99,9 +99,9 @@ public class IncrementalIndexCursorFactory implements CursorFactory
     return snapshotColumnCapabilities(index, column);
   }
 
-  static ColumnCapabilities snapshotColumnCapabilities(IncrementalIndex index, String column)
+  static ColumnCapabilities snapshotColumnCapabilities(IncrementalIndexRowSelector selector, String column)
   {
-    IncrementalIndex.DimensionDesc desc = index.getDimension(column);
+    IncrementalIndex.DimensionDesc desc = selector.getDimension(column);
     // nested column indexer is a liar, and behaves like any type if it only processes unnested literals of a single
     // type, so force it to use nested column type
     if (desc != null && desc.getIndexer() instanceof NestedDataColumnIndexerV4) {
@@ -122,7 +122,7 @@ public class IncrementalIndexCursorFactory implements CursorFactory
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
     return ColumnCapabilitiesImpl.snapshot(
-        index.getColumnCapabilities(column),
+        selector.getColumnCapabilities(column),
         COERCE_LOGIC
     );
   }

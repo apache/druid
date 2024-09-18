@@ -17,21 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.query.rowsandcols.semantic;
+package org.apache.druid.query.rowsandcols.concrete;
 
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.segment.column.RowSignature;
 
-public interface WireTransferable
+public interface FrameRowsAndColumns extends RowsAndColumns
 {
-  static WireTransferable fromRAC(RowsAndColumns rac)
-  {
-    WireTransferable retVal = rac.as(WireTransferable.class);
-    if (retVal == null) {
-      throw new ISE("Rac[%s] cannot be transferred over the wire", rac.getClass());
-    }
-    return retVal;
-  }
+  Frame getFrame();
 
-  byte[] bytesToTransfer();
+  RowSignature getSignature();
 }

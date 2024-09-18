@@ -59,7 +59,6 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -90,7 +89,6 @@ public class ServerManager implements QuerySegmentWalker
   private final ObjectMapper objectMapper;
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
-  private final JoinableFactoryWrapper joinableFactoryWrapper;
   private final ServerConfig serverConfig;
 
   @Inject
@@ -103,7 +101,6 @@ public class ServerManager implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       ServerConfig serverConfig
   )
   {
@@ -117,7 +114,6 @@ public class ServerManager implements QuerySegmentWalker
 
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
-    this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.serverConfig = serverConfig;
   }
 
