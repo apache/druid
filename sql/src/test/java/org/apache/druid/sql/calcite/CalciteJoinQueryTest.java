@@ -3508,7 +3508,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLeftJoinRightTableCanBeEmpty()
   {
-    // HashJoinSegmentStorageAdapter is not vectorizable
+    // HashJoinSegmentCursorFactory is not vectorizable
     cannotVectorize();
 
     final DataSource rightTable;

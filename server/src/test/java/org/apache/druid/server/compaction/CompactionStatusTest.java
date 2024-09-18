@@ -162,7 +162,7 @@ public class CompactionStatusTest
   }
 
   @Test
-  public void testFindPartitionsSpecWhenGivenIsRange()
+  public void testFindPartitionsSpecWhenGivenIsRangeWithMaxRows()
   {
     final PartitionsSpec partitionsSpec =
         new DimensionRangePartitionsSpec(null, 10000, Collections.singletonList("dim"), false);
@@ -170,6 +170,19 @@ public class CompactionStatusTest
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
     Assert.assertEquals(
         partitionsSpec,
+        CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
+    );
+  }
+
+  @Test
+  public void testFindPartitionsSpecWhenGivenIsRangeWithTargetRows()
+  {
+    final PartitionsSpec partitionsSpec =
+        new DimensionRangePartitionsSpec(10000, null, Collections.singletonList("dim"), false);
+    final ClientCompactionTaskQueryTuningConfig tuningConfig
+        = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
+    Assert.assertEquals(
+        new DimensionRangePartitionsSpec(null, 15000, Collections.singletonList("dim"), false),
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
   }

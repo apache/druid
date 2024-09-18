@@ -22,6 +22,7 @@ package org.apache.druid.query.topn.types;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
+import org.apache.druid.query.topn.TopNCursorInspector;
 import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
@@ -29,7 +30,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -61,7 +61,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   }
 
   @Override
-  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
+  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, TopNCursorInspector cursorInspector)
   {
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
@@ -74,8 +74,8 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     final BaseTopNAlgorithm.AggregatorArrayProvider provider = new BaseTopNAlgorithm.AggregatorArrayProvider(
         (DimensionSelector) params.getSelectorPlus().getSelector(),
         query,
-        params.getCardinality(),
-        storageAdapter
+        cursorInspector,
+        params.getCardinality()
     );
 
     return provider.build();

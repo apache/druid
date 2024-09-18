@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedSegment;
@@ -76,14 +75,14 @@ public class SinkTest extends InitializedNullHandlingTest
   @Test
   public void testSwap() throws Exception
   {
-    final DataSchema schema = new DataSchema(
-        "test",
-        new TimestampSpec(null, null, null),
-        DimensionsSpec.EMPTY,
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
-        null
-    );
+    final DataSchema schema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(DimensionsSpec.EMPTY)
+                  .withAggregators(new CountAggregatorFactory("rows"))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null))
+                  .build();
 
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();
@@ -256,18 +255,17 @@ public class SinkTest extends InitializedNullHandlingTest
   @Test
   public void testGetSinkSignature() throws IndexSizeExceededException
   {
-    final DataSchema schema = new DataSchema(
-        "test",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(
-            Arrays.asList(
-                new StringDimensionSchema("dim1"),
-                new LongDimensionSchema("dimLong")
-            )),
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null),
-        null
-    );
+    final DataSchema schema =
+        DataSchema.builder()
+                  .withDataSource("test")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(
+                      new StringDimensionSchema("dim1"),
+                      new LongDimensionSchema("dimLong")
+                  )
+                  .withAggregators(new CountAggregatorFactory("rows"))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.MINUTE, null))
+                  .build();
 
     final Interval interval = Intervals.of("2013-01-01/2013-01-02");
     final String version = DateTimes.nowUtc().toString();

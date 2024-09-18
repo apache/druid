@@ -28,8 +28,10 @@ import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.DruidNode;
 
 /**
@@ -41,7 +43,7 @@ public interface ControllerContext
   /**
    * Configuration for {@link org.apache.druid.msq.kernel.controller.ControllerQueryKernel}.
    */
-  ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec, QueryDefinition queryDef);
+  ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec);
 
   /**
    * Callback from the controller implementation to "register" the controller. Used in the indexing task implementation
@@ -73,7 +75,7 @@ public interface ControllerContext
   /**
    * Provides an {@link InputSpecSlicer} that slices {@link TableInputSpec} into {@link SegmentsInputSlice}.
    */
-  InputSpecSlicer newTableInputSpecSlicer();
+  InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager);
 
   /**
    * Provide access to segment actions in the Overlord. Only called for ingestion queries, i.e., where
@@ -86,7 +88,7 @@ public interface ControllerContext
    *
    * @param queryId               query ID
    * @param querySpec             query spec
-   * @param queryKernelConfig     config from {@link #queryKernelConfig(MSQSpec, QueryDefinition)}
+   * @param queryKernelConfig     config from {@link #queryKernelConfig(String, MSQSpec)}
    * @param workerFailureListener listener that receives callbacks when workers fail
    */
   WorkerManager newWorkerManager(
@@ -100,4 +102,15 @@ public interface ControllerContext
    * Client for communicating with workers.
    */
   WorkerClient newWorkerClient();
+
+  /**
+   * Create a {@link QueryKitSpec}. This method provides controller contexts a way to customize parameters around the
+   * number of workers and partitions.
+   */
+  QueryKitSpec makeQueryKitSpec(
+      QueryKit<Query<?>> queryKit,
+      String queryId,
+      MSQSpec querySpec,
+      ControllerQueryKernelConfig queryKernelConfig
+  );
 }

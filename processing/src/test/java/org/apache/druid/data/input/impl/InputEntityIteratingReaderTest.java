@@ -204,7 +204,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
         ),
         CloseableIterators.withEmptyBaggage(
             ImmutableList.of(
-                new HttpEntity(new URI("testscheme://some/path"), null, null)
+                new HttpEntity(new URI("testscheme://some/path"), null, null, null)
                 {
                   @Override
                   protected int getMaxRetries()

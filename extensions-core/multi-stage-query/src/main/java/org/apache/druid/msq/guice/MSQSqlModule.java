@@ -27,6 +27,8 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
+import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
@@ -54,7 +56,7 @@ public class MSQSqlModule implements DruidModule
     // We want this module to bring InputSourceModule along for the ride.
     binder.install(new InputSourceModule());
 
-    binder.bind(MSQTerminalStageSpecFactory.class).toInstance(new MSQTerminalStageSpecFactory());
+    binder.bind(MSQTerminalStageSpecFactory.class).to(SegmentGenerationTerminalStageSpecFactory.class).in(LazySingleton.class);
 
     binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);
 

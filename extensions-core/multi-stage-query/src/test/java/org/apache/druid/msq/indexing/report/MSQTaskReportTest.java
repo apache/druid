@@ -37,6 +37,7 @@ import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -69,7 +70,8 @@ public class MSQTaskReportTest
                       new GlobalSortMaxCountShuffleSpec(
                           new ClusterBy(ImmutableList.of(new KeyColumn("s", KeyOrder.ASCENDING)), 0),
                           2,
-                          false
+                          false,
+                          ShuffleSpec.UNLIMITED
                       )
                   )
                   .maxWorkerCount(3)

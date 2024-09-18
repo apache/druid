@@ -45,7 +45,6 @@ import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -63,8 +62,9 @@ import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 /**
- * Contains logic to process a groupBy query on a single {@link StorageAdapter} in a vectorized manner.
- * This code runs on anything that processes {@link StorageAdapter} directly, typically data servers like Historicals.
+ * Contains logic to process a groupBy query on a single {@link org.apache.druid.segment.CursorFactory} in a vectorized
+ * manner. This code runs on anything that processes {@link org.apache.druid.segment.CursorFactory} directly, typically
+ * data servers like Historicals.
  * <p>
  * Used for vectorized processing by {@link GroupingEngine#process}.
  *
@@ -79,7 +79,6 @@ public class VectorGroupByEngine
 
   public static Sequence<ResultRow> process(
       final GroupByQuery query,
-      final StorageAdapter storageAdapter,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       final CursorHolder cursorHolder,
       final ByteBuffer processingBuffer,
@@ -145,7 +144,6 @@ public class VectorGroupByEngine
                 query,
                 config,
                 processingConfig,
-                storageAdapter,
                 timeBoundaryInspector,
                 cursor,
                 cursorHolder.getTimeOrder(),
@@ -209,7 +207,6 @@ public class VectorGroupByEngine
     private final GroupByQuery query;
     private final GroupByQueryConfig querySpecificConfig;
     private final DruidProcessingConfig processingConfig;
-    private final StorageAdapter storageAdapter;
     private final VectorCursor cursor;
     private final List<GroupByVectorColumnSelector> selectors;
     private final ByteBuffer processingBuffer;
@@ -241,7 +238,6 @@ public class VectorGroupByEngine
         final GroupByQuery query,
         final GroupByQueryConfig querySpecificConfig,
         final DruidProcessingConfig processingConfig,
-        final StorageAdapter storageAdapter,
         @Nullable TimeBoundaryInspector timeBoundaryInspector,
         final VectorCursor cursor,
         final Order timeOrder,
@@ -254,7 +250,6 @@ public class VectorGroupByEngine
       this.query = query;
       this.querySpecificConfig = querySpecificConfig;
       this.processingConfig = processingConfig;
-      this.storageAdapter = storageAdapter;
       this.cursor = cursor;
       this.selectors = selectors;
       this.processingBuffer = processingBuffer;
@@ -330,11 +325,13 @@ public class VectorGroupByEngine
     VectorGrouper makeGrouper()
     {
       final VectorGrouper grouper;
+      final VectorColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
       final int cardinalityForArrayAggregation = GroupingEngine.getCardinalityForArrayAggregation(
           querySpecificConfig,
           query,
-          storageAdapter,
+          columnSelectorFactory,
+          selectors,
           processingBuffer
       );
 
@@ -342,7 +339,7 @@ public class VectorGroupByEngine
         grouper = new BufferArrayGrouper(
             Suppliers.ofInstance(processingBuffer),
             AggregatorAdapters.factorizeVector(
-                cursor.getColumnSelectorFactory(),
+                columnSelectorFactory,
                 query.getAggregatorSpecs()
             ),
             cardinalityForArrayAggregation

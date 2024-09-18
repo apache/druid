@@ -55,7 +55,8 @@ public class DeltaInputRowTest
     Object[][] data = new Object[][]{
         {NonPartitionedDeltaTable.DELTA_TABLE_PATH, NonPartitionedDeltaTable.FULL_SCHEMA, NonPartitionedDeltaTable.DIMENSIONS, NonPartitionedDeltaTable.EXPECTED_ROWS},
         {PartitionedDeltaTable.DELTA_TABLE_PATH, PartitionedDeltaTable.FULL_SCHEMA, PartitionedDeltaTable.DIMENSIONS, PartitionedDeltaTable.EXPECTED_ROWS},
-        {ComplexTypesDeltaTable.DELTA_TABLE_PATH, ComplexTypesDeltaTable.FULL_SCHEMA, ComplexTypesDeltaTable.DIMENSIONS, ComplexTypesDeltaTable.EXPECTED_ROWS}
+        {ComplexTypesDeltaTable.DELTA_TABLE_PATH, ComplexTypesDeltaTable.FULL_SCHEMA, ComplexTypesDeltaTable.DIMENSIONS, ComplexTypesDeltaTable.EXPECTED_ROWS},
+        {SnapshotDeltaTable.DELTA_TABLE_PATH, SnapshotDeltaTable.FULL_SCHEMA, SnapshotDeltaTable.DIMENSIONS, SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS}
     };
     return Arrays.asList(data);
   }
@@ -124,7 +125,7 @@ public class DeltaInputRowTest
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReadNonExistentTable()
   {
-    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null);
+    final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
     MatcherAssert.assertThat(
         Assert.assertThrows(

@@ -46,14 +46,14 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.IndexedInts;
@@ -231,8 +231,8 @@ public class FilterPartitionBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void stringRead(Blackhole blackhole)
   {
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, null)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, null)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -243,8 +243,8 @@ public class FilterPartitionBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void longRead(Blackhole blackhole)
   {
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, null)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, null)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
@@ -255,8 +255,8 @@ public class FilterPartitionBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void timeFilterNone(Blackhole blackhole)
   {
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (CursorHolder cursorHolder = makeCursorHolder(sa, timeFilterNone)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, timeFilterNone)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
@@ -267,8 +267,8 @@ public class FilterPartitionBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void timeFilterHalf(Blackhole blackhole)
   {
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, timeFilterHalf)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, timeFilterHalf)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
@@ -279,8 +279,8 @@ public class FilterPartitionBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void timeFilterAll(Blackhole blackhole)
   {
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, timeFilterAll)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, timeFilterAll)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursorLong(cursor, blackhole);
     }
@@ -293,8 +293,8 @@ public class FilterPartitionBenchmark
   {
     Filter filter = new SelectorFilter("dimSequential", "199");
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, filter)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -307,8 +307,8 @@ public class FilterPartitionBenchmark
   {
     Filter filter = new NoBitmapSelectorFilter("dimSequential", "199");
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, filter)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -321,8 +321,8 @@ public class FilterPartitionBenchmark
   {
     Filter filter = new SelectorDimFilter("dimSequential", "super-199", JS_EXTRACTION_FN).toFilter();
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, filter)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -335,8 +335,8 @@ public class FilterPartitionBenchmark
   {
     Filter filter = new NoBitmapSelectorDimFilter("dimSequential", "super-199", JS_EXTRACTION_FN).toFilter();
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, filter)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, filter)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -354,8 +354,8 @@ public class FilterPartitionBenchmark
         )
     );
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, andFilter)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, andFilter)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -370,8 +370,8 @@ public class FilterPartitionBenchmark
     Filter filter2 = new AndFilter(Arrays.asList(new SelectorFilter("dimMultivalEnumerated2", "Corundum"), new NoBitmapSelectorFilter("dimMultivalEnumerated", "Bar")));
     Filter orFilter = new OrFilter(Arrays.asList(filter, filter2));
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, orFilter)) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, orFilter)) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -386,8 +386,8 @@ public class FilterPartitionBenchmark
     Filter filter2 = new AndFilter(Arrays.asList(new SelectorFilter("dimMultivalEnumerated2", "Corundum"), new NoBitmapSelectorFilter("dimMultivalEnumerated", "Bar")));
     Filter orFilter = new OrFilter(Arrays.asList(filter, filter2));
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, Filters.toCnf(orFilter))) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, Filters.toCnf(orFilter))) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -425,8 +425,8 @@ public class FilterPartitionBenchmark
         ))
     );
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, dimFilter3.toFilter())) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, dimFilter3.toFilter())) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
@@ -464,16 +464,16 @@ public class FilterPartitionBenchmark
         ))
     );
 
-    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
-    try (final CursorHolder cursorHolder = makeCursorHolder(sa, Filters.toCnf(dimFilter3.toFilter()))) {
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(qIndex);
+    try (final CursorHolder cursorHolder = makeCursorHolder(cursorFactory, Filters.toCnf(dimFilter3.toFilter()))) {
       final Cursor cursor = cursorHolder.asCursor();
       readCursor(cursor, blackhole);
     }
   }
 
-  private CursorHolder makeCursorHolder(StorageAdapter sa, Filter filter)
+  private CursorHolder makeCursorHolder(CursorFactory factory, Filter filter)
   {
-    return sa.makeCursorHolder(
+    return factory.makeCursorHolder(
         CursorBuildSpec.builder()
                        .setFilter(filter)
                        .setInterval(schemaInfo.getDataInterval())

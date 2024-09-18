@@ -20,7 +20,6 @@
 package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -43,7 +42,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -90,12 +89,6 @@ public class MSQTaskSqlEngine implements SqlEngine
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   @Inject
-  public MSQTaskSqlEngine(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
-  {
-    this(overlordClient, jsonMapper, new MSQTerminalStageSpecFactory());
-  }
-
-  @VisibleForTesting
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
