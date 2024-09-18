@@ -43,7 +43,6 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import javax.inject.Provider;
 import javax.net.ssl.SSLContext;
 import java.lang.annotation.Annotation;
-
 import java.util.Map;
 
 /**

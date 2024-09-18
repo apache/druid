@@ -133,6 +133,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`jetty/threadPool/min`|Number of minimum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/max`|Number of maximum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/queueSize`|Size of the worker queue.|Not much higher than `druid.server.http.queueSize`.|
+|`jetty/httpClient/threadpool/queueSize`|Size of the worker queue at jetty http client.|Less than or equal to 1024(default value).|
 
 ### Cache
 
