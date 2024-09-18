@@ -17,7 +17,8 @@
  */
 
 @import 'normalize.css/normalize';
-@import 'fontsource-open-sans/index.css';
+@import '@fontsource/open-sans/400.css'; // Normal
+@import '@fontsource/open-sans/700.css'; // Bold
 @import './blueprint-overrides';
 @import '@blueprintjs/core/src/blueprint';
 @import '@blueprintjs/datetime/src/blueprint-datetime';
@@ -61,4 +62,15 @@ body {
     height: 100%;
     width: 100%;
   }
+}
+
+// Make segmented control buttons appear blue when they are primary
+.#{$bp-ns}-segmented-control > .#{$bp-ns}-button.#{$bp-ns}-small.#{$bp-ns}-intent-primary {
+  color: $blue5;
+}
+
+// Prevent popover menus from being longer than 45% of available height, let them scroll instead
+.#{$bp-ns}-popover-content > .#{$bp-ns}-menu {
+  max-height: 47vh;
+  overflow: auto;
 }

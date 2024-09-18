@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withBalancer(strategy)
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
                              .withSegments(segments)
                              .build();
@@ -99,7 +100,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withBalancer(strategy)
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
                              .withSegments(segments)
                              .build();
@@ -145,7 +146,7 @@ public class BalancingStrategiesTest extends CoordinatorSimulationBaseTest
     CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withBalancer(strategy)
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.WIKI, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
                              .withSegments(segments)
                              .build();

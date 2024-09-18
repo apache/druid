@@ -7,10 +7,11 @@ sql: |
     count(*) OVER (partition by dim2 ORDER BY dim1 ROWS 1 PRECEDING),
     count(*) OVER (partition by dim2 ORDER BY dim1 ROWS CURRENT ROW),
     count(*) OVER (partition by dim2 ORDER BY dim1 ROWS 1 FOLLOWING),
-    count(*) OVER (partition by dim2 ORDER BY dim1 ROWS UNBOUNDED FOLLOWING)
+    count(*) OVER W
   FROM numfoo
   WHERE dim2 IN ('a', 'abc')
   GROUP BY dim2, dim1
+  WINDOW W AS (partition by dim2 ORDER BY dim1 ROWS UNBOUNDED FOLLOWING)
 
 expectedOperators:
   - {"type":"naiveSort","columns":[{"column":"_d1","direction":"ASC"},{"column":"_d0","direction":"ASC"}]}
@@ -19,60 +20,43 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: true
-          lowOffset: 0
-          uppUnbounded: false
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          upperOffset: 0
       aggregations:
         - { type: "count", name: "w0" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: -1
-          uppUnbounded: false
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          lowerOffset: -1
+          upperOffset: 0
       aggregations:
         - { type: "count", name: "w1" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: 0
-          uppUnbounded: false
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          lowerOffset: 0
+          upperOffset: 0
       aggregations:
         - { type: "count", name: "w2" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: 0
-          uppUnbounded: false
-          uppOffset: 1
-          orderBy: null
+          type: "rows"
+          lowerOffset: 0
+          upperOffset: 1
       aggregations:
         - { type: "count", name: "w3" }
   - type: "window"
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: 0
-          uppUnbounded: true
-          uppOffset: 0
-          orderBy: null
+          type: "rows"
+          lowerOffset: 0
       aggregations:
         - { type: "count", name: "w4" }
 

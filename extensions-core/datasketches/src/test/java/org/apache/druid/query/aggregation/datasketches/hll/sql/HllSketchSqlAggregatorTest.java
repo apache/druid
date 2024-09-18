@@ -24,7 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -86,6 +88,7 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -100,6 +103,10 @@ import java.util.stream.Collectors;
 @SqlTestFrameworkConfig.ComponentSupplier(HllSketchComponentSupplier.class)
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   private static final boolean ROUND = true;
 
   // For testHllSketchPostAggsGroupBy, testHllSketchPostAggsTimeseries
@@ -300,6 +307,15 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                      .size(0)
                      .build(),
           index
+      ).add(
+          DataSegment.builder()
+                     .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                     .interval(Intervals.of("2015-09-12/2015-09-13"))
+                     .version("1")
+                     .shardSpec(new NumberedShardSpec(0, 0))
+                     .size(0)
+                     .build(),
+          TestDataBuilder.makeWikipediaIndexWithAggregation(tempDirProducer.newTempFolder())
       );
     }
   }
@@ -506,6 +522,33 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             new Object[]{"a", 2L}
         )
     );
+  }
+
+  @Test
+  public void testApproxCountDistinctOnUnsupportedComplexColumn()
+  {
+    assertQueryIsUnplannable(
+        "SELECT COUNT(distinct double_first_added) FROM druid.wikipedia_first_last",
+        "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
+        + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<serializablePairLongDouble>]."
+        + " You can disable approximation by setting [useApproximateCountDistinct: false] in the query context."
+    );
+  }
+
+  @Test
+  public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
+  {
+    DruidException druidException = Assert.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT APPROX_COUNT_DISTINCT_DS_HLL(double_first_added) FROM druid.wikipedia_first_last",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertTrue(druidException.getMessage().contains(
+        "Cannot apply 'APPROX_COUNT_DISTINCT_DS_HLL' to arguments of type 'APPROX_COUNT_DISTINCT_DS_HLL(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"
+    ));
   }
 
   @Test

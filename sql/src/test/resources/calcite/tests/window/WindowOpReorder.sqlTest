@@ -15,13 +15,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame:
-        peerType: "ROWS"
-        lowUnbounded: true
-        lowOffset: 0
-        uppUnbounded: true
-        uppOffset: 0
-        orderBy: null
+      frame: { type: "rows" }
       aggregations:
         - { "type": "doubleSum", "name": "w1", "fieldName": "_d1" }
   - type: "naiveSort"
@@ -33,13 +27,7 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame:
-        peerType: "ROWS"
-        lowUnbounded: true
-        lowOffset: 0
-        uppUnbounded: true
-        uppOffset: 0
-        orderBy: null
+      frame: { type: "rows" }
       aggregations:
         - { "type": "doubleSum", "name": "w0", "fieldName": "_d0" }
 expectedResults:

@@ -60,7 +60,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -68,14 +67,15 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -93,7 +93,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -166,6 +166,25 @@ public class IndexTaskTest extends IngestionTestBase
       0
   );
 
+  private static final DataSchema DATA_SCHEMA =
+      DataSchema.builder()
+                .withDataSource("test-json")
+                .withTimestamp(DEFAULT_TIMESTAMP_SPEC)
+                .withDimensions(
+                    new StringDimensionSchema("ts"),
+                    new StringDimensionSchema("dim"),
+                    new LongDimensionSchema("valDim")
+                )
+                .withAggregators(new LongSumAggregatorFactory("valMet", "val"))
+                .withGranularity(
+                    new UniformGranularitySpec(
+                        Granularities.DAY,
+                        Granularities.MINUTE,
+                        Collections.singletonList(Intervals.of("2014/P1D"))
+                    )
+                )
+                .build();
+
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
@@ -225,26 +244,8 @@ public class IndexTaskTest extends IngestionTestBase
   {
     IndexTask indexTask = createIndexTask(
         new IndexIngestionSpec(
-            new DataSchema(
-                "test-json",
-                DEFAULT_TIMESTAMP_SPEC,
-                new DimensionsSpec(
-                    ImmutableList.of(
-                        new StringDimensionSchema("ts"),
-                        new StringDimensionSchema("dim"),
-                        new LongDimensionSchema("valDim")
-                    )
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    Collections.singletonList(Intervals.of("2014/P1D"))
-                ),
-                null
-            ),
+            DATA_SCHEMA,
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -276,26 +277,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     IndexTask indexTask = createIndexTask(
         new IndexIngestionSpec(
-            new DataSchema(
-                "test-json",
-                DEFAULT_TIMESTAMP_SPEC,
-                new DimensionsSpec(
-                    ImmutableList.of(
-                        new StringDimensionSchema("ts"),
-                        new StringDimensionSchema("dim"),
-                        new LongDimensionSchema("valDim")
-                    )
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    Collections.singletonList(Intervals.of("2014/P1D"))
-                ),
-                null
-            ),
+            DATA_SCHEMA,
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -339,26 +322,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     IndexTask indexTask = createIndexTask(
         new IndexIngestionSpec(
-            new DataSchema(
-                "test-json",
-                DEFAULT_TIMESTAMP_SPEC,
-                new DimensionsSpec(
-                    ImmutableList.of(
-                        new StringDimensionSchema("ts"),
-                        new StringDimensionSchema("dim"),
-                        new LongDimensionSchema("valDim")
-                    )
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    Collections.singletonList(Intervals.of("2014/P1D"))
-                ),
-                null
-            ),
+            DATA_SCHEMA,
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -539,75 +504,69 @@ public class IndexTaskTest extends IngestionTestBase
     DataSegment segment = segments.get(0);
     final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-    final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-        new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
+    final WindowedCursorFactory windowed = new WindowedCursorFactory(
+        new QueryableIndexCursorFactory(indexIO.loadIndex(segmentFile)),
         segment.getInterval()
     );
-    final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-        null,
-        segment.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-    final List<Map<String, Object>> transforms = cursorSequence
-        .map(cursor -> {
-          final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
-          final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec(
-                                                        "dimtarray1",
-                                                        "dimtarray1"
-                                                    ));
-          final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec(
-                                                        "dimtarray2",
-                                                        "dimtarray2"
-                                                    ));
-          final DimensionSelector selector4 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec(
-                                                        "dimtnum_array",
-                                                        "dimtnum_array"
-                                                    ));
+    try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      final List<Map<String, Object>> transforms = new ArrayList<>();
+
+      final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
+      final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec(
+                                                    "dimtarray1",
+                                                    "dimtarray1"
+                                                ));
+      final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec(
+                                                    "dimtarray2",
+                                                    "dimtarray2"
+                                                ));
+      final DimensionSelector selector4 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec(
+                                                    "dimtnum_array",
+                                                    "dimtnum_array"
+                                                ));
 
 
-          Map<String, Object> row = new HashMap<>();
-          row.put("dimt", selector1.defaultGetObject());
-          row.put("dimtarray1", selector2.defaultGetObject());
-          row.put("dimtarray2", selector3.defaultGetObject());
-          row.put("dimtnum_array", selector4.defaultGetObject());
-          cursor.advance();
-          return row;
-        })
-        .toList();
-    Assert.assertEquals(1, transforms.size());
-    Assert.assertEquals("bb", transforms.get(0).get("dimt"));
-    Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
-    Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
-    Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
+      Map<String, Object> row = new HashMap<>();
+      row.put("dimt", selector1.defaultGetObject());
+      row.put("dimtarray1", selector2.defaultGetObject());
+      row.put("dimtarray2", selector3.defaultGetObject());
+      row.put("dimtnum_array", selector4.defaultGetObject());
+      transforms.add(row);
+      cursor.advance();
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+      Assert.assertEquals(1, transforms.size());
+      Assert.assertEquals("bb", transforms.get(0).get("dimt"));
+      Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
+      Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
+      Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
 
-    verifySchemaAndAggFactory(
-        segmentWithSchemas,
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("ts", ColumnType.STRING)
-                    .add("dim", ColumnType.STRING)
-                    .add("dim_array", ColumnType.STRING)
-                    .add("dim_num_array", ColumnType.STRING)
-                    .add("dimt", ColumnType.STRING)
-                    .add("dimtarray1", ColumnType.STRING)
-                    .add("dimtarray2", ColumnType.STRING)
-                    .add("dimtnum_array", ColumnType.STRING)
-                    .add("val", ColumnType.LONG)
-                    .build(),
-        Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val"))
-    );
+      Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+      Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+      Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+      Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+
+      verifySchemaAndAggFactory(
+          segmentWithSchemas,
+          RowSignature.builder()
+                      .add("__time", ColumnType.LONG)
+                      .add("ts", ColumnType.STRING)
+                      .add("dim", ColumnType.STRING)
+                      .add("dim_array", ColumnType.STRING)
+                      .add("dim_num_array", ColumnType.STRING)
+                      .add("dimt", ColumnType.STRING)
+                      .add("dimtarray1", ColumnType.STRING)
+                      .add("dimtarray2", ColumnType.STRING)
+                      .add("dimtnum_array", ColumnType.STRING)
+                      .add("val", ColumnType.LONG)
+                      .build(),
+          Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val"))
+      );
+    }
   }
 
   @Test
@@ -774,36 +733,31 @@ public class IndexTaskTest extends IngestionTestBase
 
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(indexIO.loadIndex(segmentFile)),
           segment.getInterval()
       );
 
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-      final List<Integer> hashes = cursorSequence
-          .map(cursor -> {
-            final DimensionSelector selector = cursor.getColumnSelectorFactory()
-                                                     .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-            final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
-                HashBasedNumberedShardSpec.serializeGroupKey(
-                    jsonMapper,
-                    Collections.singletonList(selector.getObject())
-                ),
-                hashBasedNumberedShardSpec.getNumBuckets()
-            );
-            cursor.advance();
-            return hash;
-          })
-          .toList();
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        final List<Integer> hashes = new ArrayList<>();
+        final DimensionSelector selector = cursor.getColumnSelectorFactory()
+                                                 .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+        while (!cursor.isDone()) {
+          final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+              HashBasedNumberedShardSpec.serializeGroupKey(
+                  jsonMapper,
+                  // list of list because partitioning extractKeys uses InputRow.getDimension which always returns a List<String>
+                  Collections.singletonList(Collections.singletonList(selector.getObject()))
+              ),
+              hashBasedNumberedShardSpec.getNumBuckets()
+          );
+          hashes.add(hash);
+          cursor.advance();
+        }
 
-      Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
+        Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
+      }
     }
   }
 
@@ -2712,22 +2666,21 @@ public class IndexTaskTest extends IngestionTestBase
     if (inputFormat != null) {
       Preconditions.checkArgument(parseSpec == null, "Can't use parseSpec");
       return new IndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
-              Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
-              granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                  Granularities.DAY,
-                  Granularities.MINUTE,
-                  Collections.singletonList(Intervals.of("2014/2015"))
-              ),
-              transformSpec
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(Preconditions.checkNotNull(timestampSpec, "timestampSpec"))
+                    .withDimensions(Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"))
+                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                    .withGranularity(
+                        granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
+                            Granularities.DAY,
+                            Granularities.MINUTE,
+                            Collections.singletonList(Intervals.of("2014/2015"))
+                        )
+                    )
+                    .withTransform(transformSpec)
+                    .build(),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
               appendToExisting,
@@ -2738,24 +2691,22 @@ public class IndexTaskTest extends IngestionTestBase
     } else {
       parseSpec = parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC;
       return new IndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
-              granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                  Granularities.DAY,
-                  Granularities.MINUTE,
-                  Collections.singletonList(Intervals.of("2014/2015"))
-              ),
-              transformSpec,
-              null,
-              objectMapper
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(parseSpec.getTimestampSpec())
+                    .withDimensions(parseSpec.getDimensionsSpec())
+                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                    .withGranularity(
+                        granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
+                            Granularities.DAY,
+                            Granularities.MINUTE,
+                            Collections.singletonList(Intervals.of("2014/2015"))
+                        )
+                    )
+                    .withTransform(transformSpec)
+                    .withObjectMapper(objectMapper)
+                    .build(),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               createInputFormatFromParseSpec(parseSpec),
               appendToExisting,

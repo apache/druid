@@ -40,7 +40,6 @@ import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
@@ -70,6 +69,7 @@ import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -395,7 +395,8 @@ public class CalciteRulesManager
     public RelNode run(RelOptPlanner planner, RelNode rel, RelTraitSet requiredOutputTraits,
         List<RelOptMaterialization> materializations, List<RelOptLattice> lattices)
     {
-      Hook.TRIMMED.run(rel);
+      PlannerContext pctx = planner.getContext().unwrapOrThrow(PlannerContext.class);
+      pctx.dispatchHook(DruidHook.LOGICAL_PLAN, rel);
       return rel;
     }
   }

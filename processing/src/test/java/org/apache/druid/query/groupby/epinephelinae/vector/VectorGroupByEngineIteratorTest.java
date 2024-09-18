@@ -27,13 +27,15 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.epinephelinae.VectorGrouper;
 import org.apache.druid.query.groupby.epinephelinae.vector.VectorGroupByEngine.VectorGroupByEngineIterator;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
@@ -60,16 +62,14 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         .setDimensions(new DefaultDimensionSpec("market", null, null))
         .setAggregatorSpecs(factory)
         .build();
-    final StorageAdapter storageAdapter = new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex());
-    final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
-    final VectorCursor cursor = storageAdapter.makeVectorCursor(
-        Filters.toFilter(query.getDimFilter()),
-        interval,
-        query.getVirtualColumns(),
-        false,
-        query.context().getVectorSize(),
-        null
+    final CursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
+    final QueryableIndexTimeBoundaryInspector timeBoundaryInspector =
+        QueryableIndexTimeBoundaryInspector.create(TestIndex.getMMappedTestIndex());
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(
+        GroupingEngine.makeCursorBuildSpec(query, null)
     );
+    final ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
+    final VectorCursor cursor = cursorHolder.asVectorCursor();
     final List<GroupByVectorColumnSelector> dimensions = query.getDimensions().stream().map(
         dimensionSpec ->
             ColumnProcessors.makeVectorProcessor(
@@ -83,8 +83,9 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         query,
         new GroupByQueryConfig(),
         GroupByQueryRunnerTest.DEFAULT_PROCESSING_CONFIG,
-        storageAdapter,
+        timeBoundaryInspector,
         cursor,
+        cursorHolder.getTimeOrder(),
         interval,
         dimensions,
         byteBuffer,
@@ -100,5 +101,6 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
     };
     iterator.close();
     Mockito.verify(grouperCaptor.getValue()).close();
+    cursorHolder.close();
   }
 }

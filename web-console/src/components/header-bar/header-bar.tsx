@@ -59,7 +59,6 @@ import './header-bar.scss';
 const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
 
 export type HeaderActiveTab =
-  | null
   | 'data-loader'
   | 'streaming-data-loader'
   | 'classic-batch-data-loader'
@@ -93,7 +92,7 @@ const DruidLogo = React.memo(function DruidLogo() {
 });
 
 export interface HeaderBarProps {
-  active: HeaderActiveTab;
+  active: HeaderActiveTab | null;
   capabilities: Capabilities;
   onUnrestrict(capabilities: Capabilities): void;
 }

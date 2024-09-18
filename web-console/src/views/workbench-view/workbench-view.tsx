@@ -37,10 +37,15 @@ import type {
   CapacityInfo,
   DruidEngine,
   Execution,
+  QueryContext,
   QueryWithContext,
   TabEntry,
 } from '../../druid-models';
-import { guessDataSourceNameFromInputSource, WorkbenchQuery } from '../../druid-models';
+import {
+  DEFAULT_SERVER_QUERY_CONTEXT,
+  guessDataSourceNameFromInputSource,
+  WorkbenchQuery,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
 import { getLink } from '../../links';
@@ -70,6 +75,7 @@ import type { ExecutionDetailsTab } from './execution-details-pane/execution-det
 import { ExecutionSubmitDialog } from './execution-submit-dialog/execution-submit-dialog';
 import { ExplainDialog } from './explain-dialog/explain-dialog';
 import { MetadataChangeDetector } from './metadata-change-detector';
+import type { QueryTabProps } from './query-tab/query-tab';
 import { QueryTab } from './query-tab/query-tab';
 import { RecentQueryTaskPanel } from './recent-query-task-panel/recent-query-task-panel';
 import { TabRenameDialog } from './tab-rename-dialog/tab-rename-dialog';
@@ -90,17 +96,40 @@ function externalDataTabId(tabId: string | undefined): boolean {
   return String(tabId).startsWith('connect-external-data');
 }
 
-export interface WorkbenchViewProps {
+type MoreMenuItem =
+  | 'explain'
+  | 'history'
+  | 'prettify'
+  | 'convert-ingestion-to-sql'
+  | 'attach-tab-from-task-id'
+  | 'open-query-detail-archive'
+  | 'druid-sql-documentation'
+  | 'load-demo-queries';
+
+export interface WorkbenchViewProps
+  extends Pick<
+    QueryTabProps,
+    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
+  > {
   capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
   initQueryWithContext: QueryWithContext | undefined;
-  defaultQueryContext?: Record<string, any>;
-  mandatoryQueryContext?: Record<string, any>;
+  baseQueryContext?: QueryContext;
+  defaultQueryContext?: QueryContext;
+  mandatoryQueryContext?: QueryContext;
+  serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
-  allowExplain: boolean;
+  hiddenMoreMenuItems?: MoreMenuItem[] | ((engine: DruidEngine) => MoreMenuItem[]);
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  hideToolbar?: boolean;
+  maxTasksOptions?:
+    | QueryTabProps['maxTasksOptions']
+    | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
+  hiddenOptions?:
+    | QueryTabProps['hiddenOptions']
+    | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
 }
 
 export interface WorkbenchViewState {
@@ -109,9 +138,6 @@ export interface WorkbenchViewState {
   columnMetadataState: QueryState<readonly ColumnMetadata[]>;
 
   details?: { id: string; initTab?: ExecutionDetailsTab; initExecution?: Execution };
-
-  defaultSchema?: string;
-  defaultTable?: string;
 
   connectExternalDataDialogOpen: boolean;
   explainDialogOpen: boolean;
@@ -244,11 +270,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     });
   };
 
+  private getInitWorkbenchQuery(): WorkbenchQuery {
+    return WorkbenchQuery.blank().changeQueryContext(this.props.defaultQueryContext || {});
+  }
+
   private getInitTab(): TabEntry {
     return {
       id: generate8HexId(),
       tabName: 'Tab 1',
-      query: WorkbenchQuery.blank().changeQueryContext(this.props.defaultQueryContext || {}),
+      query: this.getInitWorkbenchQuery(),
     };
   }
 
@@ -460,7 +490,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }
 
           this.handleNewTab(
-            WorkbenchQuery.fromEffectiveQueryAndContext(
+            WorkbenchQuery.fromTaskQueryAndContext(
               execution.sqlQuery,
               execution.queryContext,
             ).changeLastExecution({ engine: 'sql-msq-task', id: taskId }),
@@ -602,7 +632,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           icon={IconNames.PLUS}
           minimal
           onClick={() => {
-            this.handleNewTab(WorkbenchQuery.blank());
+            this.handleNewTab(this.getInitWorkbenchQuery());
           }}
         />
       </div>
@@ -610,8 +640,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   }
 
   private renderToolbar() {
-    const { queryEngines } = this.props;
+    const { queryEngines, hideToolbar } = this.props;
     if (!queryEngines.includes('sql-msq-task')) return;
+    if (hideToolbar) return;
 
     const { showRecentQueryTaskPanel } = this.state;
     return (
@@ -645,14 +676,26 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const {
       capabilities,
       mandatoryQueryContext,
+      baseQueryContext,
+      serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
-      allowExplain,
       goToTask,
       getClusterCapacity,
+      maxTasksMenuHeader,
+      enginesLabelFn,
+      maxTasksLabelFn,
+      maxTasksOptions,
+      fullClusterCapacityLabelFn,
+      hiddenOptions,
     } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
     const effectiveEngine = currentTabEntry.query.getEffectiveEngine();
+
+    const hiddenMoreMenuItems =
+      typeof this.props.hiddenMoreMenuItems === 'function'
+        ? this.props.hiddenMoreMenuItems(effectiveEngine)
+        : this.props.hiddenMoreMenuItems || [];
 
     return (
       <div className="center-panel">
@@ -665,6 +708,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           query={currentTabEntry.query}
           id={currentTabEntry.id}
           mandatoryQueryContext={mandatoryQueryContext}
+          baseQueryContext={baseQueryContext}
+          serverQueryContext={serverQueryContext}
           columnMetadata={columnMetadataState.getSomeData()}
           onQueryChange={this.handleQueryChange}
           onQueryTab={this.handleNewTab}
@@ -673,9 +718,21 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
           getClusterCapacity={getClusterCapacity}
+          maxTasksMenuHeader={maxTasksMenuHeader}
+          enginesLabelFn={enginesLabelFn}
+          maxTasksLabelFn={maxTasksLabelFn}
+          maxTasksOptions={
+            typeof maxTasksOptions === 'function'
+              ? maxTasksOptions(effectiveEngine)
+              : maxTasksOptions
+          }
+          fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
+          hiddenOptions={
+            typeof hiddenOptions === 'function' ? hiddenOptions(effectiveEngine) : hiddenOptions
+          }
           runMoreMenu={
             <Menu>
-              {allowExplain &&
+              {!hiddenMoreMenuItems.includes('explain') &&
                 (effectiveEngine === 'sql-native' || effectiveEngine === 'sql-msq-task') && (
                   <MenuItem
                     icon={IconNames.CLEAN}
@@ -683,14 +740,14 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                     onClick={this.openExplainDialog}
                   />
                 )}
-              {effectiveEngine !== 'sql-msq-task' && (
+              {effectiveEngine !== 'sql-msq-task' && !hiddenMoreMenuItems.includes('history') && (
                 <MenuItem
                   icon={IconNames.HISTORY}
                   text="Query history"
                   onClick={this.openHistoryDialog}
                 />
               )}
-              {currentTabEntry.query.canPrettify() && (
+              {currentTabEntry.query.canPrettify() && !hiddenMoreMenuItems.includes('prettify') && (
                 <MenuItem
                   icon={IconNames.ALIGN_LEFT}
                   text="Prettify query"
@@ -699,38 +756,47 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               )}
               {queryEngines.includes('sql-msq-task') && (
                 <>
-                  <MenuItem
-                    icon={IconNames.TEXT_HIGHLIGHT}
-                    text="Convert ingestion spec to SQL"
-                    onClick={this.openSpecDialog}
-                  />
-                  <MenuItem
-                    icon={IconNames.DOCUMENT_OPEN}
-                    text="Attach tab from task ID"
-                    onClick={this.openTaskIdSubmitDialog}
-                  />
-                  <MenuItem
-                    icon={IconNames.UNARCHIVE}
-                    text="Open query detail archive"
-                    onClick={this.openExecutionSubmitDialog}
-                  />
+                  {!hiddenMoreMenuItems.includes('convert-ingestion-to-sql') && (
+                    <MenuItem
+                      icon={IconNames.TEXT_HIGHLIGHT}
+                      text="Convert ingestion spec to SQL"
+                      onClick={this.openSpecDialog}
+                    />
+                  )}
+                  {!hiddenMoreMenuItems.includes('attach-tab-from-task-id') && (
+                    <MenuItem
+                      icon={IconNames.DOCUMENT_OPEN}
+                      text="Attach tab from task ID"
+                      onClick={this.openTaskIdSubmitDialog}
+                    />
+                  )}
+                  {!hiddenMoreMenuItems.includes('open-query-detail-archive') && (
+                    <MenuItem
+                      icon={IconNames.UNARCHIVE}
+                      text="Open query detail archive"
+                      onClick={this.openExecutionSubmitDialog}
+                    />
+                  )}
                 </>
               )}
               <MenuDivider />
-              <MenuItem
-                icon={IconNames.HELP}
-                text="DruidSQL documentation"
-                href={getLink('DOCS_SQL')}
-                target="_blank"
-              />
-              {queryEngines.includes('sql-msq-task') && (
+              {!hiddenMoreMenuItems.includes('druid-sql-documentation') && (
                 <MenuItem
-                  icon={IconNames.ROCKET_SLANT}
-                  text="Load demo queries"
-                  label="(replaces current tabs)"
-                  onClick={() => this.handleQueriesChange(getDemoQueries())}
+                  icon={IconNames.HELP}
+                  text="DruidSQL documentation"
+                  href={getLink('DOCS_SQL')}
+                  target="_blank"
                 />
               )}
+              {queryEngines.includes('sql-msq-task') &&
+                !hiddenMoreMenuItems.includes('load-demo-queries') && (
+                  <MenuItem
+                    icon={IconNames.ROCKET_SLANT}
+                    text="Load demo queries"
+                    label="(replaces current tabs)"
+                    onClick={() => this.handleQueriesChange(getDemoQueries())}
+                  />
+                )}
             </Menu>
           }
         />
@@ -788,12 +854,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();
 
-    let defaultSchema;
-    let defaultTable;
+    let defaultSchema: string | undefined;
+    let defaultTables: string[] | undefined;
     const parsedQuery = query.getParsedQuery();
     if (parsedQuery) {
       defaultSchema = parsedQuery.getFirstSchema();
-      defaultTable = parsedQuery.getFirstTableName();
+      defaultTables = parsedQuery.getUsedTableNames();
     }
 
     return (
@@ -810,8 +876,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+            defaultTables={defaultTables}
             defaultWhere={LAST_DAY}
-            defaultTable={defaultTable}
             highlightTable={undefined}
           />
         )}

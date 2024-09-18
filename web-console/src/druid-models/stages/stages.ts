@@ -74,6 +74,8 @@ export interface StageDefinition {
   startTime?: string;
   duration?: number;
   sort?: boolean;
+  shuffle?: string;
+  output?: string;
 }
 
 export interface ClusterBy {
@@ -169,7 +171,7 @@ export type SegmentGenerationProgressFields =
   | 'rowsPushed';
 
 export interface WarningCounter {
-  type: 'warning';
+  type: 'warnings';
   CannotParseExternalData?: number;
   // More types of warnings might be added later
 }
@@ -192,6 +194,8 @@ function zeroChannelFields(): Record<ChannelFields, number> {
   };
 }
 
+export type Counters = Record<string, Record<string, StageWorkerCounter>>;
+
 export class Stages {
   static readonly QUERY_START_FACTOR = 0.05;
   static readonly QUERY_END_FACTOR = 0.05;
@@ -205,12 +209,9 @@ export class Stages {
   }
 
   public readonly stages: StageDefinition[];
-  private readonly counters?: Record<string, Record<string, StageWorkerCounter>>;
+  private readonly counters?: Counters;
 
-  constructor(
-    stages: StageDefinition[],
-    counters?: Record<string, Record<string, StageWorkerCounter>>,
-  ) {
+  constructor(stages: StageDefinition[], counters?: Counters) {
     this.stages = stages;
     this.counters = counters;
   }

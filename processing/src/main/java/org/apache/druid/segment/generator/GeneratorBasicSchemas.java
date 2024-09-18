@@ -43,6 +43,20 @@ public class GeneratorBasicSchemas
 {
   private static final ImmutableMap.Builder<String, GeneratorSchemaInfo> SCHEMA_INFO_BUILDER = ImmutableMap.builder();
 
+  public static final String BASIC_SCHEMA = "basic";
+  public static final String BASIC_SCHEMA_EXPRESSION = "expression";
+  public static final String SIMPLE_SCHEMA = "simple";
+  public static final String SIMPLE_LONG_SCHEMA = "simpleLong";
+  public static final String SIMPLE_FLOAT_SCHEMA = "simpleFloat";
+  public static final String SIMPLE_NULLS_SCHEMA = "nulls";
+  public static final String ROLLUP_SCHEMA = "rollo";
+  public static final String NULLABLE_TEST_SCHEMA = "nullable";
+  public static final String EXPRESSION_TESTBENCH_SCHEMA = "expression-testbench";
+  public static final String NESTED_TESTBENCH_SCHEMA = "nested";
+  public static final String GROUPBY_TESTBENCH_SCHEMA = "groupBy-testbench";
+  public static final String IN_TESTBENCH_SCHEMA = "in-testbench";
+  public static final String WIDE_SCHEMA = "wide";
+
   static {
     // basic schema
     List<GeneratorColumnSchema> basicSchemaColumns = ImmutableList.of(
@@ -122,8 +136,8 @@ public class GeneratorBasicSchemas
         true
     );
 
-    SCHEMA_INFO_BUILDER.put("basic", basicSchema);
-    SCHEMA_INFO_BUILDER.put("expression", basicSchemaExpression);
+    SCHEMA_INFO_BUILDER.put(BASIC_SCHEMA, basicSchema);
+    SCHEMA_INFO_BUILDER.put(BASIC_SCHEMA_EXPRESSION, basicSchemaExpression);
   }
 
   static { // simple single string column and count agg schema, no rollup
@@ -143,7 +157,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_INFO_BUILDER.put("simple", basicSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_SCHEMA, basicSchema);
   }
 
   static {
@@ -165,7 +179,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_INFO_BUILDER.put("simpleLong", basicSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_LONG_SCHEMA, basicSchema);
   }
 
   static {
@@ -187,7 +201,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_INFO_BUILDER.put("simpleFloat", basicSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_FLOAT_SCHEMA, basicSchema);
   }
 
   static {
@@ -238,7 +252,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         true
     );
-    SCHEMA_INFO_BUILDER.put("rollo", rolloSchema);
+    SCHEMA_INFO_BUILDER.put(ROLLUP_SCHEMA, rolloSchema);
   }
 
   static {
@@ -268,7 +282,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("nulls", nullsSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_NULLS_SCHEMA, nullsSchema);
   }
 
   static {
@@ -309,7 +323,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("nulls-and-non-nulls", nullsSchema);
+    SCHEMA_INFO_BUILDER.put(NULLABLE_TEST_SCHEMA, nullsSchema);
   }
 
   static {
@@ -362,7 +376,8 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("expression-testbench", expressionsTestsSchema);
+    SCHEMA_INFO_BUILDER.put(EXPRESSION_TESTBENCH_SCHEMA, expressionsTestsSchema);
+    SCHEMA_INFO_BUILDER.put(NESTED_TESTBENCH_SCHEMA, expressionsTestsSchema);
   }
 
   static {
@@ -406,7 +421,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("groupBy-testbench", groupByTestsSchema);
+    SCHEMA_INFO_BUILDER.put(GROUPBY_TESTBENCH_SCHEMA, groupByTestsSchema);
   }
 
   static {
@@ -426,7 +441,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("in-testbench", expressionsTestsSchema);
+    SCHEMA_INFO_BUILDER.put(IN_TESTBENCH_SCHEMA, expressionsTestsSchema);
 
   }
 
@@ -532,7 +547,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("wide", nullsSchema);
+    SCHEMA_INFO_BUILDER.put(WIDE_SCHEMA, nullsSchema);
   }
 
   public static final Map<String, GeneratorSchemaInfo> SCHEMA_MAP = SCHEMA_INFO_BUILDER.build();

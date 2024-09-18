@@ -36,6 +36,7 @@ function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryConte
 export interface SubmitTaskQueryOptions {
   query: string | Record<string, any>;
   context?: QueryContext;
+  baseQueryContext?: QueryContext;
   prefixLines?: number;
   cancelToken?: CancelToken;
   preserveOnTermination?: boolean;
@@ -45,7 +46,15 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+  const {
+    query,
+    context,
+    baseQueryContext,
+    prefixLines,
+    cancelToken,
+    preserveOnTermination,
+    onSubmitted,
+  } = options;
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -53,7 +62,7 @@ export async function submitTaskQuery(
     sqlQuery = query;
     jsonQuery = {
       query: sqlQuery,
-      context: ensureExecutionModeIsSet(context),
+      context: ensureExecutionModeIsSet({ ...baseQueryContext, ...context }),
       resultFormat: 'array',
       header: true,
       typesHeader: true,
@@ -65,6 +74,7 @@ export async function submitTaskQuery(
     jsonQuery = {
       ...query,
       context: ensureExecutionModeIsSet({
+        ...baseQueryContext,
         ...query.context,
         ...context,
       }),
@@ -96,7 +106,7 @@ export async function submitTaskQuery(
     );
   }
 
-  const execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, context);
+  const execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, jsonQuery.context);
 
   if (onSubmitted) {
     onSubmitted(execution.id);
@@ -184,7 +194,7 @@ export async function getTaskExecution(
 
   if (!execution) {
     const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
+      `/druid/v2/sql/statements/${encodedId}?detail=true`,
       {
         cancelToken,
       },

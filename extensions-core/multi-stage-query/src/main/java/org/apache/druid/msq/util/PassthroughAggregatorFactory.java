@@ -39,7 +39,7 @@ import java.util.Objects;
  * Hack that allows "passing through" arbitrary complex types into
  * {@link org.apache.druid.segment.incremental.IncrementalIndex}.
  *
- * Used by {@link org.apache.druid.msq.exec.ControllerImpl#makeDimensionsAndAggregatorsForIngestion}.
+ * Used by {@link org.apache.druid.msq.indexing.destination.SegmentGenerationUtils#makeDimensionsAndAggregatorsForIngestion}.
  *
  * To move away from this, it would need to be possible to create complex columns in segments only knowing the complex
  * type; in particular, without knowing the type of an aggregator factory or dimension schema that corresponds to

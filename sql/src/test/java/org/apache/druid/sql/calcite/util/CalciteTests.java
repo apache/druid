@@ -365,18 +365,30 @@ public class CalciteTests
     return QueryFrameworkUtils.createOperatorTable(INJECTOR);
   }
 
+
+  public static DruidNode mockCoordinatorNode()
+  {
+    return new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
+  }
+
+  public static FakeDruidNodeDiscoveryProvider mockDruidNodeDiscoveryProvider(final DruidNode coordinatorNode)
+  {
+    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
+        ImmutableMap.of(
+            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
+        )
+    );
+    return provider;
+  }
+
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
       final SpecificSegmentsQuerySegmentWalker walker,
       final AuthorizerMapper authorizerMapper
   )
   {
-    final DruidNode coordinatorNode = new DruidNode("test-coordinator", "dummy", false, 8081, null, true, false);
-    FakeDruidNodeDiscoveryProvider provider = new FakeDruidNodeDiscoveryProvider(
-        ImmutableMap.of(
-            NodeRole.COORDINATOR, new FakeDruidNodeDiscovery(ImmutableMap.of(NodeRole.COORDINATOR, coordinatorNode))
-        )
-    );
+    final DruidNode coordinatorNode = mockCoordinatorNode();
+    FakeDruidNodeDiscoveryProvider provider = mockDruidNodeDiscoveryProvider(coordinatorNode);
 
     final DruidNode overlordNode = new DruidNode("test-overlord", "dummy", false, 8090, null, true, false);
 

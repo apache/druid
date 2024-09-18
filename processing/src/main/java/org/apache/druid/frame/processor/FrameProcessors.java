@@ -29,12 +29,9 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameCursor;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
 
 import java.io.Closeable;
@@ -115,13 +112,15 @@ public class FrameProcessors
       final VirtualColumns virtualColumns
   )
   {
-    // Safe to never close the Sequence that the FrameCursor comes from, because it does not need to be closed.
-    // Refer to FrameStorageAdapter#makeCursors.
-
-    return (FrameCursor) Yielders.each(
-        new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-            .makeCursors(null, Intervals.ETERNITY, virtualColumns, Granularities.ALL, false, null)
-    ).get();
+    final CursorBuildSpec cursorBuildSpec = CursorBuildSpec.builder()
+                                                           .setVirtualColumns(virtualColumns)
+                                                           .build();
+    // Despite appearances of columnar FrameCursorHolderFactory with its closers, it is currently safe to never close
+    // the CursorHolder that the FrameCursor comes from because it really does nothing. The row based
+    // FrameCursorHolderFactory has no closer stuff at all and is totally safe. If this ever changes, this method will
+    // probably need to wrap the cursor in something closeable, or be reworked to just return the CursorHolder so that
+    // callers can deal with closing the stuff.
+    return (FrameCursor) frameReader.makeCursorFactory(frame).makeCursorHolder(cursorBuildSpec).asCursor();
   }
 
   /**

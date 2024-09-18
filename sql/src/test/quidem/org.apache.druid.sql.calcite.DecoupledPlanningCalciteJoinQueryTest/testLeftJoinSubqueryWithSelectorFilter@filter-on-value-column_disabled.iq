@@ -94,6 +94,7 @@ DruidJoin(condition=[AND(=($0, $1), =('abc', $1))], joinType=[inner])
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

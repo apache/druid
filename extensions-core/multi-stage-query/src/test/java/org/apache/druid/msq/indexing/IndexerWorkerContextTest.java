@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Injector;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -30,6 +31,7 @@ import org.apache.druid.rpc.ServiceLocator;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 
@@ -44,9 +46,17 @@ public class IndexerWorkerContextTest
     Mockito.when(injectorMock.getInstance(SegmentCacheManagerFactory.class))
            .thenReturn(Mockito.mock(SegmentCacheManagerFactory.class));
 
+    final MSQWorkerTask task =
+        Mockito.mock(MSQWorkerTask.class, Mockito.withSettings().strictness(Strictness.STRICT_STUBS));
+    Mockito.when(task.getContext()).thenReturn(ImmutableMap.of());
+
     indexerWorkerContext = new IndexerWorkerContext(
+        task,
         Mockito.mock(TaskToolbox.class),
         injectorMock,
+        null,
+        null,
+        null,
         null,
         null,
         null,

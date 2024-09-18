@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -86,7 +87,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           "bob",
           new DefaultPasswordProvider("secret"),
           SystemFields.none(),
-          new HttpInputSourceConfig(null)
+          null,
+          new HttpInputSourceConfig(null, null)
       ),
       new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
       RowSignature.builder()
@@ -259,7 +261,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             "bob",
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
-            new HttpInputSourceConfig(null)
+            ImmutableMap.of("Accept", "application/ndjson", "a", "b"),
+            new HttpInputSourceConfig(null, null)
         ),
         new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
         RowSignature.builder()
@@ -280,7 +283,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "  userName => 'bob',\n" +
              "  password => 'secret',\n" +
              "  uris => ARRAY['http://example.com/foo.csv', 'http://example.com/bar.csv'],\n" +
-             "  format => 'csv'\n" +
+             "  format => 'csv',\n" +
+             "  headers=> '{\"Accept\":\"application/ndjson\", \"a\": \"b\" }'\n" +
              "  )\n" +
              ") EXTEND (\"timestamp\" VARCHAR, isRobot VARCHAR)\n" +
              "PARTITIONED BY HOUR")
@@ -313,19 +317,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         "                format => 'csv'))\n" +
         "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
         "PARTITIONED BY ALL TIME";
-    final String explanation = "[{" +
-        "\"query\":{\"queryType\":\"scan\"," +
-        "\"dataSource\":{\"type\":\"external\"," +
-        "\"inputSource\":{\"type\":\"http\",\"uris\":[\"http://foo.com/bar.csv\"],\"httpAuthenticationUsername\":\"bob\",\"httpAuthenticationPassword\":{\"type\":\"default\",\"password\":\"secret\"}}," +
-        "\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]}," +
-        "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]}," +
-        "\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"]," +
-        "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\"," +
-        "\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\"," +
-        "\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}," +
-        "\"columnTypes\":[\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"}}," +
-        "\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]," +
-        "\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"external\",\"inputSource\":{\"type\":\"http\",\"uris\":[\"http://foo.com/bar.csv\"],\"httpAuthenticationUsername\":\"bob\",\"httpAuthenticationPassword\":{\"type\":\"default\",\"password\":\"secret\"},\"requestHeaders\":{}},\"inputFormat\":{\"type\":\"csv\",\"columns\":[\"x\",\"y\",\"z\"]},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"x\",\"y\",\"z\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"STRING\",\"STRING\",\"LONG\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"x\",\"type\":\"STRING\"},{\"name\":\"y\",\"type\":\"STRING\"},{\"name\":\"z\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"x\",\"outputColumn\":\"x\"},{\"queryColumn\":\"y\",\"outputColumn\":\"y\"},{\"queryColumn\":\"z\",\"outputColumn\":\"z\"}]}]";
     final String resources = "[{\"name\":\"EXTERNAL\",\"type\":\"EXTERNAL\"},{\"name\":\"dst\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"INSERT\",\"targetDataSource\":\"dst\",\"partitionedBy\":{\"type\":\"all\"}}";
 
@@ -402,7 +394,8 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             "bob",
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
-            new HttpInputSourceConfig(null)
+            null,
+            new HttpInputSourceConfig(null, null)
         ),
         new JsonInputFormat(null, null, null, null, null),
         RowSignature.builder()

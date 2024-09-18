@@ -160,6 +160,16 @@ describe('ExplainDialog', () => {
               type: 'LONG',
             },
           ],
+          columnMappings: [
+            {
+              queryColumn: 'd0',
+              outputColumn: 'channel',
+            },
+            {
+              queryColumn: 'a0',
+              outputColumn: 'Count',
+            },
+          ],
         },
       ],
     });
@@ -199,6 +209,12 @@ describe('ExplainDialog', () => {
               type: 'STRING',
             },
           ],
+          columnMappings: [
+            {
+              queryColumn: 'channel',
+              outputColumn: 'channel',
+            },
+          ],
         },
         {
           query: {
@@ -232,6 +248,12 @@ describe('ExplainDialog', () => {
             {
               name: 'channel',
               type: 'STRING',
+            },
+          ],
+          columnMappings: [
+            {
+              queryColumn: 'channel',
+              outputColumn: 'channel',
             },
           ],
         },

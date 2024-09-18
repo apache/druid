@@ -19,36 +19,70 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.indexing.MSQWorkerTask;
-import org.apache.druid.msq.kernel.StageId;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.Map;
 
-
-@RunWith(MockitoJUnitRunner.class)
 public class WorkerImplTest
 {
-  @Mock
-  WorkerContext workerContext;
-
   @Test
-  public void testFetchStatsThrows()
+  public void test_makeWorkOrderToUse_nothingMissing()
   {
-    WorkerImpl worker = new WorkerImpl(new MSQWorkerTask("controller", "ds", 1, new HashMap<>(), 0), workerContext, WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE));
-    Assert.assertThrows(ISE.class, () -> worker.fetchStatisticsSnapshot(new StageId("xx", 1)));
+    final WorkOrder workOrder = new WorkOrder(
+        QueryValidatorTest.createQueryDefinition(10, 2),
+        0,
+        0,
+        Collections.singletonList(() -> 1),
+        null,
+        null,
+        OutputChannelMode.MEMORY,
+        ImmutableMap.of("foo", "bar")
+    );
+
+    Assert.assertSame(
+        workOrder,
+        WorkerImpl.makeWorkOrderToUse(
+            workOrder,
+            QueryContext.of(ImmutableMap.of("foo", "baz")) /* Conflicts with workOrder context; should be ignored */
+        )
+    );
   }
 
   @Test
-  public void testFetchStatsWithTimeChunkThrows()
+  public void test_makeWorkOrderToUse_missingOutputChannelModeAndWorkerContext()
   {
-    WorkerImpl worker = new WorkerImpl(new MSQWorkerTask("controller", "ds", 1, new HashMap<>(), 0), workerContext, WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE));
-    Assert.assertThrows(ISE.class, () -> worker.fetchStatisticsSnapshotForTimeChunk(new StageId("xx", 1), 1L));
-  }
+    final Map<String, Object> taskContext =
+        ImmutableMap.of("foo", "bar", MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true);
 
+    final WorkOrder workOrder = new WorkOrder(
+        QueryValidatorTest.createQueryDefinition(10, 2),
+        1,
+        2,
+        Collections.singletonList(() -> 1),
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertEquals(
+        new WorkOrder(
+            workOrder.getQueryDefinition(),
+            workOrder.getStageNumber(),
+            workOrder.getWorkerNumber(),
+            workOrder.getInputs(),
+            null,
+            null,
+            OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE,
+            taskContext
+        ),
+        WorkerImpl.makeWorkOrderToUse(workOrder, QueryContext.of(taskContext))
+    );
+  }
 }

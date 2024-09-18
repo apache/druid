@@ -88,7 +88,7 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionTask compactionTask
   )
   {
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**
@@ -157,7 +157,6 @@ public class NativeCompactionRunner implements CompactionRunner
     }
 
     return new ParallelIndexIOConfig(
-        null,
         new DruidInputSource(
             dataSchema.getDataSource(),
             interval,

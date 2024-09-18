@@ -129,4 +129,10 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
         OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
   }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 }

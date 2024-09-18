@@ -54,6 +54,8 @@ public interface LoadQueuePeon
 
   long getSizeOfSegmentsToLoad();
 
+  long getLoadRateKbps();
+
   CoordinatorRunStats getAndResetStats();
 
   /**

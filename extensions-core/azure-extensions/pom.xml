@@ -29,7 +29,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>31.0.0-SNAPSHOT</version>
+        <version>32.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -204,10 +204,6 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <configuration>
-                    <excludes>
-                        <!-- Ignore firehose code -->
-                        <exclude>org/apache/druid/firehose/azure/**/*</exclude> <!-- integration-tests -->
-                    </excludes>
                     <rules>
                         <rule>
                             <element>BUNDLE</element>

@@ -50,9 +50,9 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -96,6 +96,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private static final Duration LOAD_TIMEOUT = Duration.standardMinutes(15);
   private static final long COORDINATOR_START_DELAY = 1;
   private static final long COORDINATOR_PERIOD = 100;
+  private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
   private DruidCoordinator coordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -113,7 +114,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   private DruidCoordinatorConfig druidCoordinatorConfig;
   private ObjectMapper objectMapper;
   private DruidNode druidNode;
-  private NewestSegmentFirstPolicy newestSegmentFirstPolicy;
+  private CompactionStatusTracker statusTracker;
   private final LatchableServiceEmitter serviceEmitter = new LatchableServiceEmitter();
 
   @Before
@@ -136,18 +137,18 @@ public class DruidCoordinatorTest extends CuratorTestBase
     ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
     EasyMock.expect(
         configManager.watch(
-            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+            EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+    ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
-    newestSegmentFirstPolicy = new NewestSegmentFirstPolicy(objectMapper);
+    statusTracker = new CompactionStatusTracker(objectMapper);
     druidCoordinatorConfig = new DruidCoordinatorConfig(
         new CoordinatorRunConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD)),
         new CoordinatorPeriodConfig(null, null),
@@ -190,8 +191,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
   }
 
@@ -621,8 +622,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -633,7 +634,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(compactSegmentsDutyFromCustomGroups.isEmpty());
 
     // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
-    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
+    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(statusTracker);
     Assert.assertNotNull(duty);
   }
 
@@ -661,8 +662,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -673,7 +674,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(compactSegmentsDutyFromCustomGroups.isEmpty());
 
     // CompactSegments returned by this method should be created using the DruidCoordinatorConfig in the DruidCoordinator
-    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
+    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(statusTracker);
     Assert.assertNotNull(duty);
   }
 
@@ -683,7 +684,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
-        ImmutableList.of(new CompactSegments(null, null))
+        ImmutableList.of(new CompactSegments(statusTracker, null))
     );
     CoordinatorCustomDutyGroups customDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of(compactSegmentCustomGroup));
     coordinator = new DruidCoordinator(
@@ -701,8 +702,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     List<CoordinatorDuty> indexingDuties = coordinator.makeIndexingServiceDuties();
@@ -715,7 +716,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(compactSegmentsDutyFromCustomGroups.get(0));
 
     // CompactSegments returned by this method should be from the Custom Duty Group
-    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(newestSegmentFirstPolicy);
+    CompactSegments duty = coordinator.initializeCompactSegmentsDuty(statusTracker);
     Assert.assertNotNull(duty);
   }
 
@@ -734,11 +735,11 @@ public class DruidCoordinatorTest extends CuratorTestBase
     ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
     EasyMock.expect(
         configManager.watch(
-            EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
+            EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
             EasyMock.anyObject(Class.class),
             EasyMock.anyObject()
         )
-    ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+    ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
     DataSegment dataSegment = new DataSegment(
@@ -806,8 +807,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
         EasyMock.createNiceMock(LookupCoordinatorManager.class),
         new TestDruidLeaderSelector(),
         null,
-        null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
     coordinator.start();
 

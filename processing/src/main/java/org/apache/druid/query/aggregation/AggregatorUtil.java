@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.BaseLongColumnValueSelector;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -35,6 +37,8 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -427,5 +431,36 @@ public class AggregatorUtil
                        .put(expressionBytes)
                        .array();
     });
+  }
+
+  /**
+   * Whether a simple numeric aggregator should use {@link BaseObjectColumnValueSelector#getObject()}, and coerce the
+   * result to number, rather than using a primitive method like {@link BaseLongColumnValueSelector#getLong()}.
+   *
+   * @param fieldName field name, or null if the aggregator is expression-based
+   * @param columnSelectorFactory column selector factory
+   */
+  public static boolean shouldUseObjectColumnAggregatorWrapper(
+      @Nullable final String fieldName,
+      final ColumnSelectorFactory columnSelectorFactory
+  )
+  {
+    if (fieldName != null) {
+      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(fieldName);
+
+      // STRING can be coerced to a number. COMPLEX types can be subclasses of Number (or subclasses of some type
+      // that is coercible to a number.)
+      return Types.is(capabilities, ValueType.STRING) || Types.is(capabilities, ValueType.COMPLEX);
+    }
+    return false;
+  }
+
+  public static List<AggregatorFactory> getCombiningAggregators(List<AggregatorFactory> aggs)
+  {
+    List<AggregatorFactory> combining = new ArrayList<>(aggs.size());
+    for (AggregatorFactory agg : aggs) {
+      combining.add(agg.getCombiningFactory());
+    }
+    return combining;
   }
 }

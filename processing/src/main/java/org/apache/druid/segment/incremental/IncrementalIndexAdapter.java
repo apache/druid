@@ -116,9 +116,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public List<String> getDimensionNames()
+  public List<String> getDimensionNames(final boolean includeTime)
   {
-    return index.getDimensionNames();
+    return index.getDimensionNames(includeTime);
   }
 
   @Override

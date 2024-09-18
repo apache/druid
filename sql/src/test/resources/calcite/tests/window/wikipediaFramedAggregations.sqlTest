@@ -2,7 +2,7 @@ type: "operatorValidation"
 
 sql: |
     SELECT
-      countryIsoCode, 
+      countryIsoCode,
       CAST (FLOOR(__time TO HOUR) AS BIGINT) t,
       SUM(delta) delta, 
       SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY CAST (FLOOR(__time TO HOUR) AS BIGINT) ROWS BETWEEN 3 PRECEDING AND 2 FOLLOWING) windowedDelta
@@ -15,11 +15,9 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          peerType: "ROWS"
-          lowUnbounded: false
-          lowOffset: -3
-          uppUnbounded: false
-          uppOffset: 2
+          type: "rows"
+          lowerOffset: -3
+          upperOffset: 2
           orderBy: null
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }

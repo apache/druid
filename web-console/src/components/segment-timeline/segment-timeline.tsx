@@ -24,7 +24,7 @@ import type { ItemPredicate, ItemRenderer } from '@blueprintjs/select';
 import { Select } from '@blueprintjs/select';
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
-import { enUS } from 'date-fns/locale';
+import enUS from 'date-fns/locale/en-US';
 import React from 'react';
 
 import type { Capabilities } from '../../helpers';

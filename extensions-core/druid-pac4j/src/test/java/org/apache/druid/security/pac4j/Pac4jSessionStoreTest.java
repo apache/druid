@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.pac4j;
 
+import org.apache.druid.error.DruidException;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
@@ -41,7 +42,7 @@ public class Pac4jSessionStoreTest
   @Test
   public void testSetAndGet()
   {
-    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
+    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore<>(COOKIE_PASSPHRASE);
 
     WebContext webContext1 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext1.getScheme()).andReturn("https");
@@ -68,7 +69,7 @@ public class Pac4jSessionStoreTest
   @Test
   public void testSetAndGetClearUserProfile()
   {
-    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
+    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore<>(COOKIE_PASSPHRASE);
 
     WebContext webContext1 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext1.getScheme()).andReturn("https");
@@ -78,6 +79,7 @@ public class Pac4jSessionStoreTest
     EasyMock.replay(webContext1);
 
     CommonProfile profile = new CommonProfile();
+    profile.setId("profile1");
     profile.addAttribute(CommonProfileDefinition.DISPLAY_NAME, "name");
     sessionStore.set(webContext1, "pac4jUserProfiles", profile);
 
@@ -99,7 +101,7 @@ public class Pac4jSessionStoreTest
   @Test
   public void testSetAndGetClearUserMultipleProfile()
   {
-    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore(COOKIE_PASSPHRASE);
+    Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore<>(COOKIE_PASSPHRASE);
 
     WebContext webContext1 = EasyMock.mock(WebContext.class);
     EasyMock.expect(webContext1.getScheme()).andReturn("https");
@@ -109,8 +111,10 @@ public class Pac4jSessionStoreTest
     EasyMock.replay(webContext1);
 
     CommonProfile profile1 = new CommonProfile();
+    profile1.setId("profile1");
     profile1.addAttribute(CommonProfileDefinition.DISPLAY_NAME, "name1");
     CommonProfile profile2 = new CommonProfile();
+    profile2.setId("profile2");
     profile2.addAttribute(CommonProfileDefinition.DISPLAY_NAME, "name2");
     Map<String, CommonProfile> profiles = new HashMap<>();
     profiles.put("profile1", profile1);
@@ -130,5 +134,37 @@ public class Pac4jSessionStoreTest
     Optional<Object> value = sessionStore.get(webContext2, "pac4jUserProfiles");
     Assert.assertTrue(Objects.requireNonNull(value).isPresent());
     Assert.assertEquals(2, ((Map<String, CommonProfile>) value.get()).size());
+  }
+
+  @Test
+  public void testGetWithWrongPassphraseThrowsDruidException()
+  {
+    final WebContext webContext = EasyMock.mock(WebContext.class);
+    EasyMock.expect(webContext.getScheme()).andReturn("https");
+
+    final Capture<Cookie> cookieCapture = EasyMock.newCapture();
+    EasyMock.expect(webContext.getRequestCookies())
+            .andAnswer(() -> Collections.singleton(cookieCapture.getValue()));
+
+    webContext.addResponseCookie(EasyMock.capture(cookieCapture));
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(webContext);
+
+    // Create a cookie with an invalid passphrase
+    new Pac4jSessionStore<>("invalid-passphrase").set(webContext, "key", "value");
+
+    // Verify that trying to decrypt the invalid cookie throws an exception
+    final Pac4jSessionStore<WebContext> sessionStore = new Pac4jSessionStore<>(COOKIE_PASSPHRASE);
+    DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> sessionStore.get(webContext, "key")
+    );
+    Assert.assertEquals(
+        "Decryption failed. Check service logs.",
+        exception.getMessage()
+    );
+    Assert.assertNull(exception.getCause());
+
+    EasyMock.verify(webContext);
   }
 }

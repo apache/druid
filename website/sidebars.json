@@ -18,7 +18,7 @@
         "tutorials/tutorial-kafka",
         "tutorials/tutorial-rollup",
         "tutorials/tutorial-ingestion-spec",
-        "tutorials/tutorial-transform-spec",
+        "tutorials/tutorial-transform",
         "tutorials/tutorial-msq-convert-spec"
               ]},
       {"type": "category",
@@ -374,9 +374,11 @@
         "id": "release-info/migration-guide"
       },
       "items": [
+        "release-info/migr-mvd-array",
         "release-info/migr-front-coded-dict",
         "release-info/migr-subquery-limit",
-        "release-info/migr-mvd-array"
+        "release-info/migr-ansi-sql-null"
+        
       ]
     }
   ]},

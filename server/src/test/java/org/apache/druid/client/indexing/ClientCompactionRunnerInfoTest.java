@@ -52,7 +52,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithHashedPartitionsSpecIsInvalid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new HashedPartitionsSpec(100, null, null),
         Collections.emptyMap(),
         null,
@@ -64,8 +64,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "Invalid partitionsSpec type[HashedPartitionsSpec] for MSQ engine."
-        + " Type must be either 'dynamic' or 'range'.",
+        "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either 'dynamic' or 'range'",
         validationResult.getReason()
     );
   }
@@ -73,7 +72,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithMaxTotalRowsIsInvalid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(100, 100L),
         Collections.emptyMap(),
         null,
@@ -85,7 +84,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "maxTotalRows[100] in DynamicPartitionsSpec not supported for MSQ engine.",
+        "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning",
         validationResult.getReason()
     );
   }
@@ -93,7 +92,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithDynamicPartitionsSpecIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(100, null),
         Collections.emptyMap(),
         null,
@@ -106,7 +105,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithDimensionRangePartitionsSpecIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
         Collections.emptyMap(),
         null,
@@ -119,7 +118,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithQueryGranularityAllIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(Granularities.ALL, Granularities.ALL, false),
@@ -130,9 +129,9 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
-  public void testMSQEngineWithRollupFalseWithMetricsSpecIsInValid()
+  public void testMSQEngineWithRollupFalseWithMetricsSpecIsInvalid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, false),
@@ -144,18 +143,38 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "rollup in granularitySpec must be set to True if metricsSpec is specifed for MSQ engine.",
+        "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified",
         validationResult.getReason()
     );
   }
 
   @Test
-  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
+  public void testMSQEngineWithRollupTrueWithoutMetricsSpecIsInvalid()
   {
-    // Aggregators having different input and ouput column names are unsupported.
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, true),
+        null
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInvalid()
+  {
+    // Aggregators having combiningFactory different from the aggregatorFactory are unsupported.
     final String inputColName = "added";
     final String outputColName = "sum_added";
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, null),
@@ -167,7 +186,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "Different name[sum_added] and fieldName(s)[[added]] for aggregator unsupported for MSQ engine.",
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
         validationResult.getReason()
     );
   }
@@ -175,7 +194,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithRollupNullWithMetricsSpecIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, null),
@@ -185,7 +204,7 @@ public class ClientCompactionRunnerInfoTest
                                          .isValid());
   }
 
-  private static DataSourceCompactionConfig createCompactionConfig(
+  private static DataSourceCompactionConfig createMSQCompactionConfig(
       PartitionsSpec partitionsSpec,
       Map<String, Object> context,
       @Nullable UserCompactionTaskGranularityConfig granularitySpec,

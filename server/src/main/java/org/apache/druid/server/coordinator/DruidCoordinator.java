@@ -35,6 +35,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -54,8 +55,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionRunSimulator;
+import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
@@ -153,11 +156,11 @@ public class DruidCoordinator
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
   private final DruidLeaderSelector coordLeaderSelector;
+  private final CompactionStatusTracker compactionStatusTracker;
   private final CompactSegments compactSegments;
   @Nullable
   private final CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
-
 
   private volatile boolean started = false;
 
@@ -200,9 +203,9 @@ public class DruidCoordinator
       CoordinatorCustomDutyGroups customDutyGroups,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      CompactionSegmentSearchPolicy compactionSegmentSearchPolicy,
       @Nullable CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      CompactionStatusTracker compactionStatusTracker
   )
   {
     this.config = config;
@@ -220,7 +223,8 @@ public class DruidCoordinator
     this.balancerStrategyFactory = config.getBalancerStrategyFactory();
     this.lookupCoordinatorManager = lookupCoordinatorManager;
     this.coordLeaderSelector = coordLeaderSelector;
-    this.compactSegments = initializeCompactSegmentsDuty(compactionSegmentSearchPolicy);
+    this.compactionStatusTracker = compactionStatusTracker;
+    this.compactSegments = initializeCompactSegmentsDuty(this.compactionStatusTracker);
     this.loadQueueManager = loadQueueManager;
     this.coordinatorSegmentMetadataCache = coordinatorSegmentMetadataCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
@@ -342,12 +346,6 @@ public class DruidCoordinator
   }
 
   @Nullable
-  public Long getTotalSizeOfSegmentsAwaitingCompaction(String dataSource)
-  {
-    return compactSegments.getTotalSizeOfSegmentsAwaitingCompaction(dataSource);
-  }
-
-  @Nullable
   public AutoCompactionSnapshot getAutoCompactionSnapshotForDataSource(String dataSource)
   {
     return compactSegments.getAutoCompactionSnapshot(dataSource);
@@ -356,6 +354,16 @@ public class DruidCoordinator
   public Map<String, AutoCompactionSnapshot> getAutoCompactionSnapshot()
   {
     return compactSegments.getAutoCompactionSnapshot();
+  }
+
+  public CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest)
+  {
+    return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
+        metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
+        metadataManager.segments()
+                       .getSnapshotOfDataSourcesWithAllUsedSegments()
+                       .getUsedSegmentsTimelinesPerDataSource()
+    );
   }
 
   public String getCurrentLeader()
@@ -533,11 +541,26 @@ public class DruidCoordinator
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStop();
       }
+      compactionStatusTracker.stop();
       taskMaster.onLeaderStop();
       serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
       balancerStrategyFactory.stopExecutor();
+    }
+  }
+
+  /**
+   * Check if compaction supervisors are enabled on the Overlord.
+   */
+  private boolean isCompactionSupervisorEnabled()
+  {
+    try {
+      return FutureUtils.getUnchecked(overlordClient.isCompactionSupervisorEnabled(), true);
+    }
+    catch (Exception e) {
+      // The Overlord is probably on an older version, assume that compaction supervisor is not enabled
+      return false;
     }
   }
 
@@ -590,8 +613,7 @@ public class DruidCoordinator
       duties.add(new KillStalePendingSegments(overlordClient));
     }
 
-    // CompactSegmentsDuty should be the last duty as it can take a long time to complete
-    // We do not have to add compactSegments if it is already enabled in the custom duty group
+    // Do not add compactSegments if it is already included in the custom duty groups
     if (getCompactSegmentsDutyFromCustomGroups().isEmpty()) {
       duties.add(compactSegments);
     }
@@ -625,11 +647,11 @@ public class DruidCoordinator
   }
 
   @VisibleForTesting
-  CompactSegments initializeCompactSegmentsDuty(CompactionSegmentSearchPolicy compactionSegmentSearchPolicy)
+  CompactSegments initializeCompactSegmentsDuty(CompactionStatusTracker statusTracker)
   {
     List<CompactSegments> compactSegmentsDutyFromCustomGroups = getCompactSegmentsDutyFromCustomGroups();
     if (compactSegmentsDutyFromCustomGroups.isEmpty()) {
-      return new CompactSegments(compactionSegmentSearchPolicy, overlordClient);
+      return new CompactSegments(statusTracker, overlordClient);
     } else {
       if (compactSegmentsDutyFromCustomGroups.size() > 1) {
         log.warn(
@@ -706,7 +728,7 @@ public class DruidCoordinator
             = metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments();
 
         final CoordinatorDynamicConfig dynamicConfig = metadataManager.configs().getCurrentDynamicConfig();
-        final CoordinatorCompactionConfig compactionConfig = metadataManager.configs().getCurrentCompactionConfig();
+        final DruidCompactionConfig compactionConfig = metadataManager.configs().getCurrentCompactionConfig();
         DruidCoordinatorRuntimeParams params =
             DruidCoordinatorRuntimeParams
                 .newBuilder(coordinatorStartTime)
@@ -734,6 +756,10 @@ public class DruidCoordinator
           if (!coordinationPaused
               && coordLeaderSelector.isLeader()
               && startingLeaderCounter == coordLeaderSelector.localTerm()) {
+
+            if (shouldSkipAutoCompactDuty(duty)) {
+              continue;
+            }
 
             dutyRunTime.restart();
             params = duty.run(params);
@@ -779,6 +805,26 @@ public class DruidCoordinator
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
       }
+    }
+
+    /**
+     * @return true if this is an auto-compact CompactSegments duty and should
+     * not be run in case Compaction Scheduler is already running on Overlord.
+     * Manually triggered compaction should always be run.
+     */
+    private boolean shouldSkipAutoCompactDuty(CoordinatorDuty duty)
+    {
+      final boolean shouldSkipDuty = duty instanceof CompactSegments
+                                     && !COMPACT_SEGMENTS_DUTIES_DUTY_GROUP.equals(dutyGroupName)
+                                     && isCompactionSupervisorEnabled();
+      if (shouldSkipDuty) {
+        log.warn(
+            "Skipping Compact Segments duty in group[%s] since compaction"
+            + " supervisors are already running on Overlord.",
+            dutyGroupName
+        );
+      }
+      return shouldSkipDuty;
     }
 
     private void emitStat(CoordinatorStat stat, Map<Dimension, String> dimensionValues, long value)

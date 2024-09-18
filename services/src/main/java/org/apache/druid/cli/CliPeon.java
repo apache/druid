@@ -47,8 +47,6 @@ import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
-import org.apache.druid.guice.DruidProcessingModule;
-import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceTaskLogsModule;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
@@ -59,6 +57,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -116,14 +115,15 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.coordination.SegmentBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordination.ZkCoordinator;
@@ -177,11 +177,25 @@ public class CliPeon extends GuiceRunnable
   private boolean isZkEnabled = true;
 
   /**
+   * <p> This option is deprecated, see {@link #loadBroadcastDatasourcesMode} option. </p>
+   *
    * If set to "true", the peon will bind classes necessary for loading broadcast segments. This is used for
    * queryable tasks, such as streaming ingestion tasks.
+   *
    */
-  @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments", description = "Enable loading of broadcast segments")
+  @Deprecated
+  @Option(name = "--loadBroadcastSegments", title = "loadBroadcastSegments",
+      description = "Enable loading of broadcast segments. This option is deprecated and will be removed in a"
+                    + " future release. Use --loadBroadcastDatasourceMode instead.")
   public String loadBroadcastSegments = "false";
+
+  /**
+   * Broadcast datasource loading mode. The peon will bind classes necessary required for loading broadcast segments if
+   * the mode is {@link BroadcastDatasourceLoadingSpec.Mode#ALL} or {@link BroadcastDatasourceLoadingSpec.Mode#ONLY_REQUIRED}.
+   */
+  @Option(name = "--loadBroadcastDatasourceMode", title = "loadBroadcastDatasourceMode",
+      description = "Specify the broadcast datasource loading mode for the peon. Supported values are ALL, NONE, ONLY_REQUIRED.")
+  public String loadBroadcastDatasourcesMode = BroadcastDatasourceLoadingSpec.Mode.ALL.toString();
 
   @Option(name = "--taskId", title = "taskId", description = "TaskId for fetching task.json remotely")
   public String taskId = "";
@@ -206,7 +220,7 @@ public class CliPeon extends GuiceRunnable
   protected List<? extends Module> getModules()
   {
     return ImmutableList.of(
-        new DruidProcessingModule(),
+        new PeonProcessingModule(),
         new QueryableModule(),
         new QueryRunnerFactoryModule(),
         new SegmentWranglerModule(),
@@ -275,7 +289,11 @@ public class CliPeon extends GuiceRunnable
             binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.fromString(serverType)));
             LifecycleModule.register(binder, Server.class);
 
-            if ("true".equals(loadBroadcastSegments)) {
+            final BroadcastDatasourceLoadingSpec.Mode mode =
+                BroadcastDatasourceLoadingSpec.Mode.valueOf(loadBroadcastDatasourcesMode);
+            if ("true".equals(loadBroadcastSegments)
+                || mode == BroadcastDatasourceLoadingSpec.Mode.ALL
+                || mode == BroadcastDatasourceLoadingSpec.Mode.ONLY_REQUIRED) {
               binder.install(new BroadcastSegmentLoadingModule());
             }
           }
@@ -341,9 +359,16 @@ public class CliPeon extends GuiceRunnable
           {
             return task.getLookupLoadingSpec();
           }
+
+          @Provides
+          @LazySingleton
+          @Named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
+          public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
+          {
+            return task.getBroadcastDatasourceLoadingSpec();
+          }
         },
         new QueryablePeonModule(),
-        new IndexingServiceFirehoseModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),

@@ -49,6 +49,7 @@ import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -75,6 +76,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,6 +104,7 @@ public class MSQReplaceTest extends MSQTestBase
         };
     return Arrays.asList(data);
   }
+
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithAll(String contextName, Map<String, Object> context)
@@ -128,10 +131,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
     testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
                              + "SELECT __time, m1 "
@@ -141,7 +141,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of("foo", Intervals.of("2000-01-01T/P1D"), "test", 0),
                              SegmentId.of("foo", Intervals.of("2000-01-02T/P1D"), "test", 0),
@@ -195,6 +195,458 @@ public class MSQReplaceTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByDim(String contextName, Map<String, Object> context)
+  {
+    // Tests [CLUSTERED BY dim1] with the default forceSegmentSortByTime (true). In this case,
+    // partitioning uses [dim1] but segment sort uses [__time, dim1].
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY dim1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
+                             new Object[]{946771200000L, "10.1", 2.0f},
+                             new Object[]{946857600000L, "2", 3.0f},
+                             new Object[]{978307200000L, "1", 4.0f},
+                             new Object[]{978393600000L, "def", 5.0f},
+                             new Object[]{978480000000L, "abc", 6.0f}
+                         )
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.singletonList("dim1"),
+                             DimensionsSpec.builder()
+                                           .setDimensions(
+                                               ImmutableList.of(
+                                                   new StringDimensionSchema("dim1"),
+                                                   new FloatDimensionSchema("m1")
+                                               )
+                                           )
+                                           .setDimensionExclusions(Collections.singletonList("__time"))
+                                           .build(),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByDimExplicitSort(String contextName, Map<String, Object> context)
+  {
+    // Tests [CLUSTERED BY LOWER(dim1)], i.e. an expression that is not actually stored.
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY LOWER(dim1)")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
+                     .setExpectedShardSpec(NumberedShardSpec.class)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
+                             new Object[]{946771200000L, "10.1", 2.0f},
+                             new Object[]{946857600000L, "2", 3.0f},
+                             new Object[]{978307200000L, "1", 4.0f},
+                             new Object[]{978393600000L, "def", 5.0f},
+                             new Object[]{978480000000L, "abc", 6.0f}
+                         )
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.emptyList(),
+                             DimensionsSpec.builder()
+                                           .setDimensions(
+                                               ImmutableList.of(
+                                                   new StringDimensionSchema("dim1"),
+                                                   new FloatDimensionSchema("m1")
+                                               )
+                                           )
+                                           .setDimensionExclusions(Collections.singletonList("__time"))
+                                           .build(),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByExpression(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(DimensionsSpec.PARAMETER_FORCE_TIME_SORT, false);
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY dim1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(queryContext)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{NullHandling.sqlCompatible() ? "" : null, 946684800000L, 1.0f},
+                             new Object[]{"1", 978307200000L, 4.0f},
+                             new Object[]{"10.1", 946771200000L, 2.0f},
+                             new Object[]{"2", 946857600000L, 3.0f},
+                             new Object[]{"abc", 978480000000L, 6.0f},
+                             new Object[]{"def", 978393600000L, 5.0f}
+                         )
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.singletonList("dim1"),
+                             DimensionsSpec.builder()
+                                           .setDimensions(
+                                               ImmutableList.of(
+                                                   new StringDimensionSchema("dim1"),
+                                                   new LongDimensionSchema("__time"),
+                                                   new FloatDimensionSchema("m1")
+                                               )
+                                           )
+                                           .setForceSegmentSortByTime(false)
+                                           .build(),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByDimThenTimeExplicitSort(String contextName, Map<String, Object> context)
+  {
+    // Tests that [CLUSTERED BY dim1, __time] and [CLUSTERED BY dim1] are same when
+    // forceSegmentSortByTime = false. (Same expectations as the prior test,
+    // testReplaceOnFooWithAllClusteredByDimExplicitSort.)
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(DimensionsSpec.PARAMETER_FORCE_TIME_SORT, false);
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY dim1, __time")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(queryContext)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
+                     .setExpectedShardSpec(DimensionRangeShardSpec.class)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{NullHandling.sqlCompatible() ? "" : null, 946684800000L, 1.0f},
+                             new Object[]{"1", 978307200000L, 4.0f},
+                             new Object[]{"10.1", 946771200000L, 2.0f},
+                             new Object[]{"2", 946857600000L, 3.0f},
+                             new Object[]{"abc", 978480000000L, 6.0f},
+                             new Object[]{"def", 978393600000L, 5.0f}
+                         )
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.singletonList("dim1"),
+                             DimensionsSpec.builder()
+                                           .setDimensions(
+                                               ImmutableList.of(
+                                                   new StringDimensionSchema("dim1"),
+                                                   new LongDimensionSchema("__time"),
+                                                   new FloatDimensionSchema("m1")
+                                               )
+                                           )
+                                           .setForceSegmentSortByTime(false)
+                                           .build(),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByDimThenTimeError(String contextName, Map<String, Object> context)
+  {
+    // Tests that [CLUSTERED BY dim1, __time] is an error when forceSegmentSortByTime = true (the default).
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY dim1, __time")
+                     .setExpectedDataSource("foo")
+                     .setQueryContext(context)
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                         "Sort order (CLUSTERED BY) cannot include[__time] in position[1] unless context "
+                         + "parameter[forceSegmentSortByTime] is set to[false]."
+                     ))
+                     .verifyPlanningErrors();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByDimThenTimeError2(String contextName, Map<String, Object> context)
+  {
+    // Tests that setting segmentSortOrder = [dim1, __time] is an error when
+    // forceSegmentSortByTime = false (the default).
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(MultiStageQueryContext.CTX_SORT_ORDER, "dim1, __time");
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY dim1")
+                     .setExpectedDataSource("foo")
+                     .setQueryContext(queryContext)
+                     .setExpectedValidationErrorMatcher(invalidSqlContains(
+                         "Context parameter[segmentSortOrder] must start with[__time] unless context "
+                         + "parameter[forceSegmentSortByTime] is set to[false]."
+                     ))
+                     .verifyPlanningErrors();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnFooWithAllClusteredByTimeThenDimExplicitSort(String contextName, Map<String, Object> context)
+  {
+    // Tests [CLUSTERED BY __time, dim1] with forceSegmentSortByTime = false.
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    DataSegment existingDataSegment0 = DataSegment.builder()
+                                                  .interval(Intervals.of("2000-01-01T/2000-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    DataSegment existingDataSegment1 = DataSegment.builder()
+                                                  .interval(Intervals.of("2001-01-01T/2001-01-04T"))
+                                                  .size(50)
+                                                  .version(MSQTestTaskActionClient.VERSION)
+                                                  .dataSource("foo")
+                                                  .build();
+
+    Map<String, Object> queryContext = new HashMap<>(context);
+    queryContext.put(DimensionsSpec.PARAMETER_FORCE_TIME_SORT, false);
+
+    Mockito.doCallRealMethod()
+           .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
+           .when(testTaskActionClient)
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
+
+    testIngestQuery().setSql(" REPLACE INTO foo OVERWRITE ALL "
+                             + "SELECT __time, dim1, m1 "
+                             + "FROM foo "
+                             + "PARTITIONED BY ALL "
+                             + "CLUSTERED BY __time, dim1")
+                     .setExpectedDataSource("foo")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(queryContext)
+                     .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
+                     .setExpectedShardSpec(NumberedShardSpec.class)
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
+                             new Object[]{946771200000L, "10.1", 2.0f},
+                             new Object[]{946857600000L, "2", 3.0f},
+                             new Object[]{978307200000L, "1", 4.0f},
+                             new Object[]{978393600000L, "def", 5.0f},
+                             new Object[]{978480000000L, "abc", 6.0f}
+                         )
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(6),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.emptyList(),
+                             // For backwards-compatibility, compaction state is stored as if
+                             // forceSegmentSortByTime = true.
+                             ImmutableList.of(
+                                 new StringDimensionSchema("dim1"),
+                                 new FloatDimensionSchema("m1")
+                             ),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testReplaceOnFooWithWhere(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
@@ -213,7 +665,7 @@ public class MSQReplaceTest extends MSQTestBase
                          "2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-02T/P1D"),
                          "test",
@@ -280,10 +732,11 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
                              NumberedShardSpec.class.getSimpleName(),
-                             "Cannot use RangeShardSpec, RangedShardSpec only supports string CLUSTER BY keys. Using NumberedShardSpec instead."
+                             "Using[0] CLUSTERED BY columns for 'range' shard specs, since the next column is of "
+                             + "type[LONG]. Only string columns are included in 'range' shard specs."
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(
+                     .setExpectedSegments(ImmutableSet.of(
                                              SegmentId.of(
                                                  "foo1",
                                                  Intervals.of("2016-06-27T00:00:00.000Z/2016-06-27T01:00:00.000Z"),
@@ -373,7 +826,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of(
                          "2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo1",
                          Intervals.of("2016-06-27T01:00:00.000Z/2016-06-27T02:00:00.000Z"),
                          "test",
@@ -452,7 +905,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -468,7 +921,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -526,10 +979,7 @@ public class MSQReplaceTest extends MSQTestBase
     Mockito.doCallRealMethod()
            .doReturn(ImmutableSet.of(existingDataSegment0, existingDataSegment1))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.ETERNITY))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.ETERNITY)));
 
 
     testIngestQuery().setSql(" REPLACE INTO foo "
@@ -541,7 +991,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -557,7 +1007,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(
+                     .setExpectedSegments(ImmutableSet.of(
                                              SegmentId.of("foo", Intervals.of("2000-01-01T/P1M"), "test", 0),
                                              SegmentId.of("foo", Intervals.of("2001-01-01T/P1M"), "test", 0)
                                          )
@@ -612,10 +1062,7 @@ public class MSQReplaceTest extends MSQTestBase
 
     Mockito.doReturn(ImmutableSet.of(existingDataSegment0))
            .when(testTaskActionClient)
-           .submit(new RetrieveUsedSegmentsAction(
-               EasyMock.eq("foo"),
-               EasyMock.eq(ImmutableList.of(Intervals.of("2000-01-01/2000-03-01")))
-           ));
+           .submit(new RetrieveUsedSegmentsAction("foo", ImmutableList.of(Intervals.of("2000-01-01/2000-03-01"))));
 
     testIngestQuery().setSql(" REPLACE INTO foo "
                              + "OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-03-01' "
@@ -627,7 +1074,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -639,7 +1086,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -719,7 +1166,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -815,6 +1262,11 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(context)
                      .setExpectedDataSource("foo")
                      .setExpectedRowSignature(expectedRowSignature)
+                     .setExpectedSegments(
+                         ImmutableSet.of(
+                             SegmentId.of("foo", Intervals.ETERNITY, "test", 0)
+                         )
+                     )
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{1672531200000L, "day1_1"},
@@ -892,7 +1344,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2000-03-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -949,14 +1401,21 @@ public class MSQReplaceTest extends MSQTestBase
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0), SegmentId.of("foo1", Intervals.ETERNITY, "test", 1)))
                      .setExpectedResultRows(expectedRows)
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
                              DimensionRangeShardSpec.class.getSimpleName(),
-                             "Using RangeShardSpec to generate segments."
+                             "Using 'range' shard specs with all CLUSTERED BY fields."
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         queryContext,
+                         Collections.singletonList("dim1"),
+                         Collections.singletonList(new StringDimensionSchema("dim1")),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -996,12 +1455,11 @@ public class MSQReplaceTest extends MSQTestBase
                              + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
                              + "PARTITIONED BY MONTH")
                      .setExpectedDataSource("foo")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.of("2000-01-01T/2002-01-01T")))
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2001-01-01T/2001-02-01T")))
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1053,7 +1511,6 @@ public class MSQReplaceTest extends MSQTestBase
                              + "WHERE __time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-01-03' "
                              + "PARTITIONED BY MONTH")
                      .setExpectedDataSource("foo")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Collections.singletonList(Intervals.ETERNITY))
@@ -1063,7 +1520,7 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("%s/%s", "2000-02-01", Intervals.ETERNITY.getEnd())
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1101,17 +1558,16 @@ public class MSQReplaceTest extends MSQTestBase
                          "REPLACE INTO foo1 OVERWRITE ALL "
                          + "select  __time, dim1 , count(*) as cnt from foo  where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
                              DimensionRangeShardSpec.class.getSimpleName(),
-                             "Using RangeShardSpec to generate segments."
+                             "Using 'range' shard specs with all CLUSTERED BY fields."
                          )
                      )
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(expectedFooSegments())
+                     .setExpectedSegments(expectedFooSegments())
                      .setExpectedResultRows(expectedFooRows())
                      .setExpectedLastCompactionState(
                          expectedCompactionState(
@@ -1150,11 +1606,10 @@ public class MSQReplaceTest extends MSQTestBase
                          + "CLUSTERED BY dim1"
                      )
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{0L, NullHandling.sqlCompatible() ? "" : null, 1.0f, 1L},
@@ -1163,6 +1618,19 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{0L, "2", 3.0f, 1L},
                              new Object[]{0L, "abc", 6.0f, 1L},
                              new Object[]{0L, "def", 5.0f, 1L}
+                         )
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.singletonList("dim1"),
+                             Arrays.asList(
+                                 new StringDimensionSchema("dim1"),
+                                 new FloatDimensionSchema("m1"),
+                                 new LongDimensionSchema("cnt")
+                             ),
+                             GranularityType.ALL,
+                             Intervals.ETERNITY
                          )
                      )
                      .verifyResults();
@@ -1186,7 +1654,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foobar", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foobar", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
                              new Object[]{946684800000L, 1.0f},
@@ -1228,7 +1696,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(
+                     .setExpectedSegments(
                          ImmutableSet.of(
                              SegmentId.of(
                                  "foobar",
@@ -1304,7 +1772,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1313,7 +1781,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedMSQSegmentReport(
                          new MSQSegmentReport(
                              NumberedShardSpec.class.getSimpleName(),
-                             "Using NumberedShardSpec as no columns are supplied in the 'CLUSTERED BY' clause."
+                             "CLUSTERED BY clause is empty."
                          )
                      )
                      .setExpectedResultRows(
@@ -1328,7 +1796,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, null}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -1379,7 +1847,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
                      .setExpectedDestinationIntervals(Intervals.ONLY_ETERNITY)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of(
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
                          "foo",
                          Intervals.of("2000-01-01T/P1M"),
                          "test",
@@ -1401,7 +1869,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{978480000000L, 6.0f}
                          )
                      )
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
                      .setExpectedCountersForStageWorkerChannel(
                          CounterSnapshotMatcher
                              .with().totalFiles(1),
@@ -1571,6 +2039,7 @@ public class MSQReplaceTest extends MSQTestBase
                          + "GROUP BY 1, 2 "
                          + "PARTITIONED by TIME_FLOOR(__time, 'P3M') "
                          + "CLUSTERED by dim1")
+                     .setQueryContext(context)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
@@ -1582,6 +2051,16 @@ public class MSQReplaceTest extends MSQTestBase
                          )
                      )
                      .setExpectedResultRows(expectedResults)
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.singletonList("dim1"),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.QUARTER,
+                         Intervals.of("2000-01-01T00:00:00.000Z/2002-01-01T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -1652,6 +2131,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(existingSegmentInterval))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1688,6 +2177,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.HOUR,
+                         Intervals.of("2016-06-27T01:00:00/2016-06-27T02:00:00")
+                     ))
                      .verifyResults();
   }
 
@@ -1726,6 +2225,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-30T/2016-07-01T")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.of("2016-06-29T00:00:00.000Z/2016-07-03T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -1764,6 +2273,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-02T/2016-06-03T")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.of("2016-05-25T00:00:00.000Z/2016-06-03T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -1802,6 +2321,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1838,6 +2367,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.of("2016-06-01T/2016-09-01T")))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1874,6 +2413,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1906,6 +2455,16 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedResultRows(ImmutableList.of())
                      .setExpectedTombstoneIntervals(ImmutableSet.of(Intervals.ETERNITY))
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.ALL,
+                         Intervals.ETERNITY
+                     ))
                      .verifyResults();
   }
 
@@ -1966,6 +2525,16 @@ public class MSQReplaceTest extends MSQTestBase
                              Intervals.of("2016-06-02T/2016-06-03T")
                          )
                      )
+                     .setExpectedLastCompactionState(expectedCompactionState(
+                         context,
+                         Collections.emptyList(),
+                         ImmutableList.of(
+                             new StringDimensionSchema("dim1"),
+                             new LongDimensionSchema("cnt")
+                         ),
+                         GranularityType.DAY,
+                         Intervals.of("2016-06-01T00:00:00.000Z/2016-06-03T00:00:00.000Z")
+                     ))
                      .verifyResults();
   }
 
@@ -2043,26 +2612,45 @@ public class MSQReplaceTest extends MSQTestBase
       Interval interval
   )
   {
+    return expectedCompactionState(
+        context,
+        partitionDimensions,
+        new DimensionsSpec.Builder().setDimensions(dimensions)
+                                    .setDimensionExclusions(Collections.singletonList("__time"))
+                                    .build(),
+        segmentGranularity,
+        interval
+    );
+  }
+
+  private CompactionState expectedCompactionState(
+      Map<String, Object> context,
+      List<String> partitionDimensions,
+      DimensionsSpec dimensionsSpec,
+      GranularityType segmentGranularity,
+      Interval interval
+  )
+  {
     if (!context.containsKey(Tasks.STORE_COMPACTION_STATE_KEY)
         || !((Boolean) context.get(Tasks.STORE_COMPACTION_STATE_KEY))) {
       return null;
     }
     PartitionsSpec partitionsSpec;
     if (partitionDimensions.isEmpty()) {
-      partitionsSpec = new DynamicPartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, Long.MAX_VALUE);
-
+      partitionsSpec = new DynamicPartitionsSpec(
+          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
+          Long.MAX_VALUE
+      );
     } else {
-      partitionsSpec = new DimensionRangePartitionsSpec(MultiStageQueryContext.DEFAULT_ROWS_PER_SEGMENT, null,
-                                                        partitionDimensions, false
+      partitionsSpec = new DimensionRangePartitionsSpec(
+          null,
+          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
+          partitionDimensions,
+          false
       );
     }
-    DimensionsSpec dimensionsSpec = new DimensionsSpec.Builder()
-        .setDimensions(dimensions)
-        .setDimensionExclusions(Collections.singletonList(
-            "__time"))
-        .build();
 
-    IndexSpec indexSpec = new IndexSpec(null, null, null, null, null, null, null);
+    IndexSpec indexSpec = IndexSpec.DEFAULT;
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity.getDefaultGranularity(),
         GranularityType.NONE.getDefaultGranularity(),

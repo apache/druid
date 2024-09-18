@@ -57,8 +57,8 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -89,6 +89,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -674,7 +675,8 @@ public class SqlBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(injector)),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     return Pair.of(plannerFactory, engine);
@@ -692,8 +694,8 @@ public class SqlBenchmark
     } else if (STORAGE_FRAME_ROW.equals(storageType)) {
       walker.add(
           descriptor,
-          FrameTestUtil.adapterToFrameSegment(
-              new QueryableIndexStorageAdapter(index),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(index),
               FrameType.ROW_BASED,
               descriptor.getId()
           )
@@ -701,8 +703,8 @@ public class SqlBenchmark
     } else if (STORAGE_FRAME_COLUMNAR.equals(storageType)) {
       walker.add(
           descriptor,
-          FrameTestUtil.adapterToFrameSegment(
-              new QueryableIndexStorageAdapter(index),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(index),
               FrameType.COLUMNAR,
               descriptor.getId()
           )

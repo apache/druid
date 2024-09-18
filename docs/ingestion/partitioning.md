@@ -44,33 +44,60 @@ Partitioning by time is important for two reasons:
 The most common choices to balance these considerations are `hour` and `day`. For streaming ingestion, `hour` is especially
 common, because it allows compaction to follow ingestion with less of a time delay.
 
+The following table describes how to configure time chunk partitioning.
+
+|Method|Configuration|
+|------|------------|
+|[SQL](../multi-stage-query/index.md)|[`PARTITIONED BY`](../multi-stage-query/concepts.md#partitioning)|
+|[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|`segmentGranularity` inside the [`granularitySpec`](ingestion-spec.md#granularityspec)|
+|[Native batch](native-batch.md) or [Hadoop](hadoop.md)|`segmentGranularity` inside the [`granularitySpec`](ingestion-spec.md#granularityspec)|
+
 ## Secondary partitioning
 
-Druid can partition segments within a particular time chunk further depending upon options that vary based on the ingestion type you have chosen. In general, secondary partitioning on a particular dimension improves locality. This means that rows with the same value for that dimension are stored together, decreasing access time.
+Druid further partitions each time chunk into immutable segments. Secondary partitioning on a particular dimension improves locality. This means that rows with the same value for that dimension are stored together, decreasing access time.
 
-To achieve the best performance and smallest overall footprint, partition your data on a "natural"
-dimension that you often use as a filter when possible. Such partitioning often improves compression and query performance. For example, some cases have yielded threefold storage size decreases.
+To achieve the best performance and smallest overall footprint, partition your data on a "natural" dimension that
+you often use as a filter, or that achieves some alignment within your data. Such partitioning can improve compression
+and query performance by significant multiples.
 
-## Partitioning and sorting
+The following table describes how to configure secondary partitioning.
 
-Partitioning and sorting work well together. If you do have a "natural" partitioning dimension, consider placing it first in the `dimensions` list of your `dimensionsSpec`. This way Druid sorts rows within each segment by that column. This sorting configuration frequently improves compression more than using partitioning alone.
-
-Note that Druid always sorts rows within a segment by timestamp first, even before the first dimension listed in your `dimensionsSpec`. This sorting can preclude the efficacy of dimension sorting. To work around this limitation if necessary, set your `queryGranularity` equal to `segmentGranularity` in your [`granularitySpec`](./ingestion-spec.md#granularityspec). Druid will set all timestamps within the segment to the same value, letting you identify a [secondary timestamp](schema-design.md#secondary-timestamps) as the "real" timestamp.
-
-## How to configure partitioning
-
-Not all ingestion methods support an explicit partitioning configuration, and not all have equivalent levels of flexibility. If you are doing initial ingestion through a less-flexible method like
-Kafka), you can use [reindexing](../data-management/update.md#reindex) or [compaction](../data-management/compaction.md) to repartition your data after initial ingestion. This is a powerful technique you can use to optimally partition any data older than a certain time threshold while you continuously add new data from a stream.
-
-The following table shows how each ingestion method handles partitioning:
-
-|Method|How it works|
+|Method|Configuration|
 |------|------------|
-|[Native batch](native-batch.md)|Configured using [`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`.|
-|[SQL](../multi-stage-query/index.md)|Configured using [`PARTITIONED BY`](../multi-stage-query/concepts.md#partitioning) and [`CLUSTERED BY`](../multi-stage-query/concepts.md#clustering).|
-|[Hadoop](hadoop.md)|Configured using [`partitionsSpec`](hadoop.md#partitionsspec) inside the `tuningConfig`.|
-|[Kafka indexing service](../ingestion/kafka-ingestion.md)|Kafka topic partitioning defines how Druid partitions the datasource. You can also [reindex](../data-management/update.md#reindex) or [compact](../data-management/compaction.md) to repartition after initial ingestion.|
-|[Kinesis indexing service](../ingestion/kinesis-ingestion.md)|Kinesis stream sharding defines how Druid partitions the datasource. You can also [reindex](../data-management/update.md#reindex) or [compact](../data-management/compaction.md) to repartition after initial ingestion.|
+|[SQL](../multi-stage-query/index.md)|[`CLUSTERED BY`](../multi-stage-query/concepts.md#clustering)|
+|[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|Upstream partitioning defines how Druid partitions the datasource. You can also alter clustering using [`REPLACE`](../multi-stage-query/concepts.md#replace) (with `CLUSTERED BY`) or [compaction](../data-management/compaction.md) after initial ingestion.|
+|[Native batch](native-batch.md) or [Hadoop](hadoop.md)|[`partitionsSpec`](native-batch.md#partitionsspec) inside the `tuningConfig`|
+
+## Sorting
+
+Each segment is internally sorted to promote compression and locality.
+
+Partitioning and sorting work well together. If you do have a "natural" partitioning dimension, consider placing it
+first in your sort order as well. This way, Druid sorts rows within each segment by that column. This sorting configuration
+frequently improves compression and performance more than using partitioning alone.
+
+The following table describes how to configure sorting.
+
+|Method|Configuration|
+|------|------------|
+|[SQL](../multi-stage-query/index.md)|Uses order of fields in [`CLUSTERED BY`](../multi-stage-query/concepts.md#clustering) or [`segmentSortOrder`](../multi-stage-query/reference.md#context) in the query context|
+|[Kafka](../ingestion/kafka-ingestion.md) or [Kinesis](../ingestion/kinesis-ingestion.md)|Uses order of fields in [`dimensionsSpec`](ingestion-spec.md#granularityspec)|
+|[Native batch](native-batch.md) or [Hadoop](hadoop.md)|Uses order of fields in [`dimensionsSpec`](ingestion-spec.md#granularityspec)|
+
+:::info
+Druid implicitly sorts rows within a segment by `__time` first before any `dimensions` or `CLUSTERED BY` fields, unless
+you set `forceSegmentSortByTime` to `false` in your
+[query context](../multi-stage-query/reference.md#context-parameters) (for SQL) or in your
+[`dimensionsSpec`](ingestion-spec.md#dimensionsspec) (for other ingestion forms).
+
+Setting `forceSegmentSortByTime` to `false` is an experimental feature. Segments created with sort orders that
+do not start with `__time` can only be read by Druid 31 or later. Additionally, at this time, certain queries are not
+supported on such segments, including:
+
+- Native queries with `granularity` other than `all`.
+- Native `scan` query with ascending or descending time order.
+- SQL queries that plan into an unsupported native query.
+:::
 
 ## Learn more
 

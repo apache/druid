@@ -33,6 +33,7 @@ import {
   columnToWidth,
   formatNumber,
   getNumericColumnBraces,
+  isNumberLike,
 } from '../../utils';
 import { BracedText } from '../braced-text/braced-text';
 import { CellFilterMenu } from '../cell-filter-menu/cell-filter-menu';
@@ -157,7 +158,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
-                          text={formatNumber(value)}
+                          text={isNumberLike(value) ? formatNumber(value) : String(value)}
                           braces={numericColumnBraces[i]}
                           padFractionalPart
                         />

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -45,8 +46,10 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.File;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
@@ -65,6 +68,19 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   ) || developerIDEdetected();
 
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
+
+  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
+      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+      QueryContexts.ENABLE_DEBUG, true,
+      QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false
+  );
+
+  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_QUERY_CONTEXT)
+                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "0")
+                  .build();
 
   public static Object[] parametersForWindowQueryTest() throws Exception
   {
@@ -153,7 +169,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           }
         }
       }
-      assertResultsValid(ResultMatchMode.RELAX_NULLS, input.expectedResults, results);
+      assertResultsValid(ResultMatchMode.RELAX_NULLS_EPS, input.expectedResults, results);
     }
 
     private void validateOperators(List<OperatorFactory> expectedOperators, List<OperatorFactory> currentOperators)
@@ -184,6 +200,11 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         log.info("Actual results:\n%s", sb.toString());
       }
     }
+
+    public Map<? extends String, ? extends Object> getQueryContext()
+    {
+      return input.queryContext == null ? Collections.emptyMap() : input.queryContext;
+    }
   }
 
   @MethodSource("parametersForWindowQueryTest")
@@ -199,10 +220,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(
-              PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-              QueryContexts.ENABLE_DEBUG, true
-              ))
+          .queryContext(
+              ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_QUERY_CONTEXT)
+                  .putAll(testCase.getQueryContext())
+                  .build()
+          )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
@@ -211,7 +234,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   @MethodSource("parametersForWindowQueryTest")
   @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void windowQueryTestWithCustomContextMaxSubqueryBytes(String filename) throws Exception
+  public void windowQueryTestsWithSubqueryBytes(String filename) throws Exception
   {
     TestCase testCase = new TestCase(filename);
 
@@ -221,103 +244,15 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       testBuilder()
           .skipVectorize(true)
           .sql(testCase.getSql())
-          .queryContext(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true,
-                                        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000"
-                        )
+          .queryContext(
+              ImmutableMap.<String, Object>builder()
+                          .putAll(DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES)
+                          .putAll(testCase.getQueryContext())
+                          .build()
           )
           .addCustomVerification(QueryVerification.ofResults(testCase))
           .run();
     }
-  }
-
-  @Test
-  public void testEmptyWindowInSubquery()
-  {
-    testBuilder()
-        .sql(
-            "select c from (\n"
-            + "  select channel, row_number() over () as c\n"
-            + "  from wikipedia\n"
-            + "  group by channel\n"
-            + ") LIMIT 5"
-        )
-        .queryContext(ImmutableMap.of(
-            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true
-        ))
-        .expectedResults(ImmutableList.of(
-            new Object[]{1L},
-            new Object[]{2L},
-            new Object[]{3L},
-            new Object[]{4L},
-            new Object[]{5L}
-        ))
-        .run();
-  }
-
-  @Test
-  public void testWindow()
-  {
-    testBuilder()
-        .sql("SELECT\n" +
-             "(rank() over (order by count(*) desc)),\n" +
-             "(rank() over (order by count(*) desc))\n" +
-             "FROM \"wikipedia\"")
-        .queryContext(ImmutableMap.of(
-            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true
-        ))
-        .expectedResults(ImmutableList.of(
-            new Object[]{1L, 1L}
-        ))
-        .run();
-  }
-
-  @Test
-  public void testWindowAllBoundsCombination()
-  {
-    testBuilder()
-        .sql("select\n"
-             + "cityName,\n"
-             + "count(*) over (partition by cityName order by countryName rows between unbounded preceding and 1 preceding) c1,\n"
-             + "count(*) over (partition by cityName order by countryName rows between unbounded preceding and current row) c2,\n"
-             + "count(*) over (partition by cityName order by countryName rows between unbounded preceding and 1 following) c3,\n"
-             + "count(*) over (partition by cityName order by countryName rows between unbounded preceding and unbounded following) c4,\n"
-             + "count(*) over (partition by cityName order by countryName rows between 3 preceding and 1 preceding) c5,\n"
-             + "count(*) over (partition by cityName order by countryName rows between 1 preceding and current row) c6,\n"
-             + "count(*) over (partition by cityName order by countryName rows between 1 preceding and 1 FOLLOWING) c7,\n"
-             + "count(*) over (partition by cityName order by countryName rows between 1 preceding and unbounded FOLLOWING) c8,\n"
-             + "count(*) over (partition by cityName order by countryName rows between 1 FOLLOWING and unbounded FOLLOWING) c9,\n"
-             + "count(*) over (partition by cityName order by countryName rows between 1 FOLLOWING and 3 FOLLOWING) c10,\n"
-             + "count(*) over (partition by cityName order by countryName rows between current row and 1 following) c11,\n"
-             + "count(*) over (partition by cityName order by countryName rows between current row and unbounded following) c12\n"
-             + "from wikipedia\n"
-             + "where cityName in ('Vienna', 'Seoul')\n"
-             + "group by countryName, cityName, added")
-        .queryContext(ImmutableMap.of(
-            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true
-        ))
-        .expectedResults(ImmutableList.of(
-            new Object[]{"Seoul", 0L, 1L, 2L, 13L, 0L, 1L, 2L, 13L, 12L, 3L, 2L, 13L},
-            new Object[]{"Seoul", 1L, 2L, 3L, 13L, 1L, 2L, 3L, 13L, 11L, 3L, 2L, 12L},
-            new Object[]{"Seoul", 2L, 3L, 4L, 13L, 2L, 2L, 3L, 12L, 10L, 3L, 2L, 11L},
-            new Object[]{"Seoul", 3L, 4L, 5L, 13L, 3L, 2L, 3L, 11L, 9L, 3L, 2L, 10L},
-            new Object[]{"Seoul", 4L, 5L, 6L, 13L, 3L, 2L, 3L, 10L, 8L, 3L, 2L, 9L},
-            new Object[]{"Seoul", 5L, 6L, 7L, 13L, 3L, 2L, 3L, 9L, 7L, 3L, 2L, 8L},
-            new Object[]{"Seoul", 6L, 7L, 8L, 13L, 3L, 2L, 3L, 8L, 6L, 3L, 2L, 7L},
-            new Object[]{"Seoul", 7L, 8L, 9L, 13L, 3L, 2L, 3L, 7L, 5L, 3L, 2L, 6L},
-            new Object[]{"Seoul", 8L, 9L, 10L, 13L, 3L, 2L, 3L, 6L, 4L, 3L, 2L, 5L},
-            new Object[]{"Seoul", 9L, 10L, 11L, 13L, 3L, 2L, 3L, 5L, 3L, 3L, 2L, 4L},
-            new Object[]{"Seoul", 10L, 11L, 12L, 13L, 3L, 2L, 3L, 4L, 2L, 2L, 2L, 3L},
-            new Object[]{"Seoul", 11L, 12L, 13L, 13L, 3L, 2L, 3L, 3L, 1L, 1L, 2L, 2L},
-            new Object[]{"Seoul", 12L, 13L, 13L, 13L, 3L, 2L, 2L, 2L, 0L, 0L, 1L, 1L},
-            new Object[]{"Vienna", 0L, 1L, 2L, 3L, 0L, 1L, 2L, 3L, 2L, 2L, 2L, 3L},
-            new Object[]{"Vienna", 1L, 2L, 3L, 3L, 1L, 2L, 3L, 3L, 1L, 1L, 2L, 2L},
-            new Object[]{"Vienna", 2L, 3L, 3L, 3L, 2L, 2L, 2L, 2L, 0L, 0L, 1L, 1L}
-        ))
-        .run();
   }
 
   @Test
@@ -330,24 +265,43 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
              + "where countryName in ('Austria', 'Republic of Korea') "
              + "and (cityName in ('Vienna', 'Seoul') or cityName is null)\n"
              + "group by countryName, cityName, channel")
-        .queryContext(ImmutableMap.of(
-            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true
-        ))
+        .queryContext(DEFAULT_QUERY_CONTEXT)
         .expectedResults(
             ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
-              new Object[]{"Austria", null, "#de.wikipedia", "[\"abc\",\"#de.wikipedia\"]"},
-              new Object[]{"Republic of Korea", null, "#en.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Republic of Korea", null, "#ja.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Republic of Korea", null, "#ko.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Republic of Korea", "Seoul", "#ko.wikipedia", "[\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Austria", "Vienna", "#de.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"},
-              new Object[]{"Austria", "Vienna", "#es.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"},
-              new Object[]{"Austria", "Vienna", "#tr.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"}
+              new Object[]{"Austria", null, "#de.wikipedia", ImmutableList.of("abc", "#de.wikipedia")},
+              new Object[]{"Republic of Korea", null, "#en.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#en.wikipedia", "abc", "#ja.wikipedia", "abc", "#ko.wikipedia")},
+              new Object[]{"Republic of Korea", null, "#ja.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#en.wikipedia", "abc", "#ja.wikipedia", "abc", "#ko.wikipedia")},
+              new Object[]{"Republic of Korea", null, "#ko.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#en.wikipedia", "abc", "#ja.wikipedia", "abc", "#ko.wikipedia")},
+              new Object[]{"Republic of Korea", "Seoul", "#ko.wikipedia", ImmutableList.of("abc", "#ko.wikipedia")},
+              new Object[]{"Austria", "Vienna", "#de.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#es.wikipedia", "abc", "#tr.wikipedia")},
+              new Object[]{"Austria", "Vienna", "#es.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#es.wikipedia", "abc", "#tr.wikipedia")},
+              new Object[]{"Austria", "Vienna", "#tr.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#es.wikipedia", "abc", "#tr.wikipedia")}
             )
         )
         .run();
+  }
+
+  @Test
+  public void testFailure_partitionByMVD()
+  {
+    final DruidException e = Assert.assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("select cityName, countryName, array_to_mv(array[1,length(cityName)]),\n"
+                 + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName)\n"
+                 + "from wikipedia\n"
+                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
+                 + "order by 1, 2, 3")
+            .queryContext(DEFAULT_QUERY_CONTEXT)
+            .run()
+    );
+
+    assertEquals(
+        "Encountered a multi value column. Window processing does not support MVDs. "
+        + "Consider using UNNEST or MV_TO_ARRAY.",
+        e.getMessage()
+    );
   }
 
   private WindowOperatorQuery getWindowOperatorQuery(List<Query<?>> queries)
@@ -366,8 +320,12 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       failingTest,
       operatorValidation
     }
+
     @JsonProperty
     public TestType type;
+
+    @JsonProperty
+    public Map<String, String> queryContext;
 
     @JsonProperty
     public String sql;

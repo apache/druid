@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.junit.jupiter.api.Test;
 
 import java.sql.Connection;
@@ -51,6 +52,6 @@ public class DruidAvaticaDriverTest
   @Test
   public void testURIParse() throws SQLException
   {
-    DruidAvaticaTestDriver.buildConfigfromURIParams("druidtest:///");
+    SqlTestFrameworkConfig.fromURL("druidtest:///");
   }
 }

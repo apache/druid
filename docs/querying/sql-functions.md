@@ -27,46 +27,18 @@ sidebar_label: "All functions"
  Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
-<!-- The **Learn More** at the end of each function section provides further documentation. -->
-This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more details on a function, refer to the following:
-* [Aggregation functions](sql-aggregations.md)
-* [Array functions](sql-array-functions.md)
-* [JSON functions](sql-json-functions.md)
-* [Multi-value string functions](sql-multivalue-string-functions.md)
-* [Scalar functions](sql-scalar.md)
-* [Window functions](sql-window-functions.md)
 
-The examples on this page use the following example datasources:
-* `flight-carriers` using `FlightCarrierOnTime (1 month)` 
-* `taxi-trips` using `NYC Taxi cabs (3 files)`
+
+This page provides a reference of all Druid SQL functions in alphabetical order.
+Click the linked function type for documentation on a particular function.
 
 ## ABS
 
+`ABS(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the absolute value of a numeric expression.
-
-* **Syntax:** `ABS(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example applies the ABS function to the `ArrDelay` column from the `flight-carriers` datasource.
-
-```sql
-SELECT
-  "ArrDelay" AS "arrival_delay",
-  ABS("ArrDelay") AS "absolute_arrival_delay"
-FROM "flight-carriers"
-WHERE "ArrDelay" < 0
-LIMIT 1
-```
-Returns the following:
-
-| `arrival_delay` | `absolute_arrival_delay` | 
-| -- | -- | 
-| `-27` | `27` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## ACOS
 
@@ -92,7 +64,6 @@ Returns any value of the specified expression.
 
 Counts distinct values of a regular column or a prebuilt sketch column.
 
-## APPROX_COUNT_DISTINCT_BUILTIN
 `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
 
 **Function type:** [Aggregation](sql-aggregations.md)
@@ -448,29 +419,11 @@ Rounds up a timestamp by a given time unit.
 
 ## CEIL (numeric)
 
+`CEIL(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the smallest integer value greater than or equal to the numeric expression.
-* **Syntax:** `CEIL(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example applies the CEIL function to the `fare_amount` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "fare_amount" AS "fare_amount",
-  CEIL("fare_amount") AS "ceiling_fare_amount"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `fare_amount` | `ceiling_fare_amount` | 
-| -- | -- | 
-| `21.25` | `22` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## CHAR_LENGTH
 
@@ -611,6 +564,10 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 Returns the result of integer division of `x` by `y`.
 
+:::info
+The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md#safe_divide) instead. 
+:::
+
 ## DS_CDF
 
 `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
@@ -744,26 +701,11 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 ## EXP
 
+`EXP(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates _e_ raised to the power of the numeric expression.
-
-* **Syntax:** `EXP(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates _e_ to the power of 1.
-
-```sql
-SELECT EXP(1) AS "exponential" 
-```
-Returns the following:
-
-| `exponential` |
-| -- |
-| `2.7182818284590455` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## EXTRACT
 
@@ -791,30 +733,11 @@ Rounds down a timestamp by a given time unit.
 
 ## FLOOR (numeric)
 
-Calculates the largest integer less than or equal to the numeric expression.
+`FLOOR(<NUMERIC>)`
 
-* **Syntax:** `FLOOR(<NUMERIC>)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example applies the FLOOR function to the `fare_amount` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "fare_amount" AS "fare_amount",
-  FLOOR("fare_amount") AS "floor_fare_amount"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `fare_amount` | `floor_fare_amount` | 
-| -- | -- | 
-| `21.25` | `21` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the largest integer value less than or equal to the numeric expression.
 
 ## GREATEST
 
@@ -936,6 +859,13 @@ Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 Returns an array of field names from `expr` at the specified `path`.
 
+## JSON_MERGE
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_MERGE(expr1, expr2[, expr3 ...])`
+Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
+
 ## JSON_OBJECT
 
 **Function type:** [JSON](sql-json-functions.md)
@@ -1042,30 +972,11 @@ Returns the length of the expression in UTF-16 encoding.
 
 ## LN
 
+`LN(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the natural logarithm of the numeric expression.
-
-* **Syntax:** `LN(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example applies the LN function to the `max_temperature` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "max_temperature" AS "max_temperature",
-  LN("max_temperature") AS "natural_log_max_temp"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `max_temperature` | `natural_log_max_temp` | 
-| -- | -- | 
-| `76` | `4.330733340286331` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## LOG10
 
@@ -1782,4 +1693,3 @@ Calculates the sample variance of a set of values.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Alias for [`VAR_SAMP`](#var_samp).
-

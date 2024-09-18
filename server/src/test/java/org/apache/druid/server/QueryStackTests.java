@@ -87,7 +87,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.LookupJoinableFactory;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
@@ -117,7 +116,6 @@ public class QueryStackTests
 
   public static final int DEFAULT_NUM_MERGE_BUFFERS = -1;
 
-  private static final ServiceEmitter EMITTER = new NoopServiceEmitter();
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
   private QueryStackTests()
@@ -131,11 +129,12 @@ public class QueryStackTests
       final QuerySegmentWalker localWalker,
       final QueryRunnerFactoryConglomerate conglomerate,
       final JoinableFactory joinableFactory,
-      final ServerConfig serverConfig
+      final ServerConfig serverConfig,
+      final ServiceEmitter emitter
   )
   {
     return new ClientQuerySegmentWalker(
-        EMITTER,
+        emitter,
         clusterWalker,
         localWalker,
         new QueryToolChestWarehouse()
@@ -172,7 +171,8 @@ public class QueryStackTests
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final QueryScheduler scheduler
+      final QueryScheduler scheduler,
+      final ServiceEmitter emitter
   )
   {
     return new LocalQuerySegmentWalker(
@@ -180,7 +180,7 @@ public class QueryStackTests
         segmentWrangler,
         joinableFactoryWrapper,
         scheduler,
-        EMITTER
+        emitter
     );
   }
 

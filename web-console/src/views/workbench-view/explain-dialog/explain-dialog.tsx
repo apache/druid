@@ -40,7 +40,7 @@ import { Api } from '../../../singletons';
 import type { QueryExplanation } from '../../../utils';
 import {
   deepGet,
-  formatSignature,
+  formatColumnMappingsAndSignature,
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
@@ -141,7 +141,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           />
         </FormGroup>
         <FormGroup className="signature-group" label="Signature">
-          <InputGroup defaultValue={formatSignature(queryExplanation)} readOnly />
+          <InputGroup defaultValue={formatColumnMappingsAndSignature(queryExplanation)} readOnly />
         </FormGroup>
         {openQueryLabel && (
           <Button

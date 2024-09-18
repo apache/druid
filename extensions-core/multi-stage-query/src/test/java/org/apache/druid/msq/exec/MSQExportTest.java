@@ -57,7 +57,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
@@ -88,7 +88,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
@@ -127,7 +127,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
@@ -168,7 +168,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
@@ -219,7 +219,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
@@ -258,7 +258,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(DEFAULT_MSQ_CONTEXT)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 
@@ -335,7 +335,7 @@ public class MSQExportTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setQueryContext(queryContext)
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedSegment(ImmutableSet.of())
+                     .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
                      .verifyResults();
 

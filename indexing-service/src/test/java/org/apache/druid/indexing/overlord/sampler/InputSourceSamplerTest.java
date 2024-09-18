@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.thisptr.jackson.jq.internal.misc.Lists;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.InputFormat;
@@ -1497,24 +1497,24 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   ) throws IOException
   {
     if (useInputFormatApi) {
-      return new DataSchema(
-          "sampler",
-          timestampSpec,
-          dimensionsSpec,
-          aggregators,
-          granularitySpec,
-          transformSpec
-      );
+      return DataSchema.builder()
+                       .withDataSource("sampler")
+                       .withTimestamp(timestampSpec)
+                       .withDimensions(dimensionsSpec)
+                       .withAggregators(aggregators)
+                       .withGranularity(granularitySpec)
+                       .withTransform(transformSpec)
+                       .build();
     } else {
       final Map<String, Object> parserMap = getParserMap(createInputRowParser(timestampSpec, dimensionsSpec));
-      return new DataSchema(
-          "sampler",
-          parserMap,
-          aggregators,
-          granularitySpec,
-          transformSpec,
-          OBJECT_MAPPER
-      );
+      return DataSchema.builder()
+                       .withDataSource("sampler")
+                       .withParserMap(parserMap)
+                       .withAggregators(aggregators)
+                       .withGranularity(granularitySpec)
+                       .withTransform(transformSpec)
+                       .withObjectMapper(OBJECT_MAPPER)
+                       .build();
     }
   }
 

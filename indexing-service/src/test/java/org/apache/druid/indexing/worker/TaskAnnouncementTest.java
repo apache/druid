@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.junit.Assert;
 import org.junit.Test;
@@ -46,12 +45,12 @@ public class TaskAnnouncementTest
   @Test
   public void testBackwardsCompatibleSerde() throws Exception
   {
-    final IndexTask.IndexIOConfig ioConfig = new IndexTask.IndexIOConfig(null, new NoopInputSource(), null, null, null);
+    final IndexTask.IndexIOConfig ioConfig = new IndexTask.IndexIOConfig(new NoopInputSource(), null, null, null);
     final Task task = new IndexTask(
         "theid",
         new TaskResource("rofl", 2),
         new IndexTask.IndexIngestionSpec(
-            new DataSchema("foo", null, new AggregatorFactory[0], null, null, new DefaultObjectMapper()),
+            DataSchema.builder().withDataSource("foo").withObjectMapper(new DefaultObjectMapper()).build(),
             ioConfig,
             null
         ),

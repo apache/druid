@@ -26,9 +26,9 @@ import org.apache.druid.java.util.RetryableException;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
@@ -82,12 +82,12 @@ public class KillCompactionConfig extends MetadataCleanupDuty
   /**
    * Creates a new compaction config by deleting entries for inactive datasources.
    */
-  private CoordinatorCompactionConfig deleteConfigsForInactiveDatasources(
-      CoordinatorCompactionConfig current
+  private DruidCompactionConfig deleteConfigsForInactiveDatasources(
+      DruidCompactionConfig current
   )
   {
     // If current compaction config is empty then there is nothing to do
-    if (CoordinatorCompactionConfig.empty().equals(current)) {
+    if (DruidCompactionConfig.empty().equals(current)) {
       log.info("Nothing to do as compaction config is already empty.");
       return current;
     }
@@ -102,7 +102,7 @@ public class KillCompactionConfig extends MetadataCleanupDuty
         .filter(dataSourceCompactionConfig -> activeDatasources.contains(dataSourceCompactionConfig.getDataSource()))
         .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
 
-    return CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(updated.values()));
+    return current.withDatasourceConfigs(ImmutableList.copyOf(updated.values()));
   }
 
   /**
@@ -116,7 +116,7 @@ public class KillCompactionConfig extends MetadataCleanupDuty
 
     ConfigManager.SetResult result = configManager.getAndUpdateCompactionConfig(
         current -> {
-          final CoordinatorCompactionConfig updated = deleteConfigsForInactiveDatasources(current);
+          final DruidCompactionConfig updated = deleteConfigsForInactiveDatasources(current);
           int numCurrentConfigs = current.getCompactionConfigs() == null ? 0 : current.getCompactionConfigs().size();
           int numUpdatedConfigs = updated.getCompactionConfigs() == null ? 0 : updated.getCompactionConfigs().size();
           compactionConfigRemoved.set(Math.max(0, numCurrentConfigs - numUpdatedConfigs));

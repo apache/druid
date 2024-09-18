@@ -94,6 +94,9 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
     } else if (scalarExpression.isSimpleExtraction() && plannerContext.isUseLegacyInFilter()) {
       scalarColumn = scalarExpression.getSimpleExtraction().getColumn();
       scalarExtractionFn = scalarExpression.getSimpleExtraction().getExtractionFn();
+    } else if (virtualColumnRegistry == null) {
+      // virtual column registry unavailable, fallback to expression filter
+      return null;
     } else {
       scalarColumn = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           scalarExpression,

@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.frame;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
@@ -37,7 +38,7 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
@@ -85,7 +86,7 @@ public class FrameChannelMergerBenchmark
 {
   static {
     NullHandling.initializeForTests();
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private static final String KEY = "key";
@@ -203,6 +204,7 @@ public class FrameChannelMergerBenchmark
   private final List<KeyColumn> sortKey = ImmutableList.of(new KeyColumn(KEY, KeyOrder.ASCENDING));
 
   private List<List<Frame>> channelFrames;
+  private ListeningExecutorService innerExec;
   private FrameProcessorExecutor exec;
   private List<BlockingQueueFrameChannel> channels;
 
@@ -226,7 +228,7 @@ public class FrameChannelMergerBenchmark
     frameReader = FrameReader.create(signature);
 
     exec = new FrameProcessorExecutor(
-        MoreExecutors.listeningDecorator(
+        innerExec = MoreExecutors.listeningDecorator(
             Execs.singleThreaded(StringUtils.encodeForFormat(getClass().getSimpleName()))
         )
     );
@@ -284,7 +286,7 @@ public class FrameChannelMergerBenchmark
               signature
           );
       final Sequence<Frame> frameSequence =
-          FrameSequenceBuilder.fromAdapter(segment.asStorageAdapter())
+          FrameSequenceBuilder.fromCursorFactory(segment.asCursorFactory())
                               .allocator(ArenaMemoryAllocator.createOnHeap(10_000_000))
                               .frameType(FrameType.ROW_BASED)
                               .frames();
@@ -335,8 +337,8 @@ public class FrameChannelMergerBenchmark
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    exec.getExecutorService().shutdownNow();
-    if (!exec.getExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
+    innerExec.shutdownNow();
+    if (!innerExec.awaitTermination(1, TimeUnit.MINUTES)) {
       throw new ISE("Could not terminate executor after 1 minute");
     }
   }
