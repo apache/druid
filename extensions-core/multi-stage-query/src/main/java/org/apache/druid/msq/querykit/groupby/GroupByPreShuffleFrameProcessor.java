@@ -54,7 +54,7 @@ import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
@@ -152,8 +152,8 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (resultYielder == null) {
-      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
-      final SegmentReference mappedSegment = mapSegment(segmentHolder.get());
+      final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
+      final SegmentReference mappedSegment = mapSegment(segmentHolder.get().getSegment());
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
