@@ -22,8 +22,22 @@ package org.apache.druid.segment;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Test;
 
+import java.io.IOException;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+
 public class CompleteSegmentTest
 {
+  @Test
+  public void testCloseSegment() throws IOException
+  {
+    Segment segment = mock(Segment.class);
+    CompleteSegment completeSegment = new CompleteSegment(null, segment);
+    completeSegment.close();
+    verify(segment).close();
+  }
+
   @Test
   public void testEquals()
   {
