@@ -123,8 +123,8 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 
 ### Jetty
 
-|Metric|Description| Normal value                             |
-|------|-----------|------------------------------------------|
+|Metric|Description|Normal value|
+|------|-----------|------------|
 |`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
 |`jetty/threadPool/total`|Number of total workable threads allocated.|The number should equal to `threadPoolNumIdleThreads` + `threadPoolNumBusyThreads`.|
 |`jetty/threadPool/idle`|Number of idle threads.|Less than or equal to `threadPoolNumTotalThreads`. Non zero number means there is less work to do than configured capacity.|
