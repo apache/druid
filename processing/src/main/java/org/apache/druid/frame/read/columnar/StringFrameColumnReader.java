@@ -20,6 +20,7 @@
 package org.apache.druid.frame.read.columnar;
 
 import com.google.common.primitives.Ints;
+import org.apache.commons.lang.ObjectUtils;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -510,17 +511,7 @@ public class StringFrameColumnReader implements FrameColumnReader
     @Override
     public int compareRows(int rowNum1, int rowNum2)
     {
-      ByteBuffer buffer1 = getStringUtf8(rowNum1);
-      ByteBuffer buffer2 = getStringUtf8(rowNum2);
-
-      if (buffer1 == null && buffer2 == null) {
-        return 0;
-      } else if (buffer1 == null) {
-        return -1;
-      } else if (buffer2 == null) {
-        return 1;
-      }
-      return buffer1.compareTo(buffer2);
+      return ObjectUtils.compare(getStringUtf8(rowNum1), getStringUtf8(rowNum2));
     }
 
     /**
