@@ -234,7 +234,7 @@ GROUP BY 1, 2
 ## How to ingest arrays
 
 :::tip
-As a best practice, prefer the ARRAY data type to store your data.
+As a best practice, store data as arrays rather than MVDs.
 :::
 
 You can ingest arrays in Druid as follows:
