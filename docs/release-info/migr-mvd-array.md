@@ -231,7 +231,11 @@ GROUP BY 1, 2
 ```
 
 
-## How to ingest data as arrays
+## How to ingest arrays
+
+:::tip
+As a best practice, always use the ARRAY data type in your input schema.
+:::
 
 You can ingest arrays in Druid as follows:
 
@@ -242,5 +246,12 @@ For an example, see [Ingesting arrays: Native batch and streaming ingestion](../
 * For SQL-based batch ingestion, include the [query context parameter](../multi-stage-query/reference.md#context-parameters) `"arrayIngestMode": "array"` and reference the relevant array type (`VARCHAR ARRAY`, `BIGINT ARRAY`, or `DOUBLE ARRAY`) in the [EXTEND clause](../multi-stage-query/reference.md#extern-function) that lists the column names and data types.
 For examples, see [Ingesting arrays: SQL-based ingestion](../querying/arrays.md#sql-based-ingestion).
 
-   As a best practice, always use the ARRAY data type in your input schema. If you want to ingest MVDs, explicitly wrap the string array in [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv). For an example, see [Multi-value dimensions: SQL-based ingestion](../querying/multi-value-dimensions.md#sql-based-ingestion).
+## How to ingest MVDs
 
+You can't mix arrays and MVDs in the same column.
+If you have an MVD column and want to continue ingesting MVDs, explicitly wrap the string array in [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv).
+For an example, see [Multi-value dimensions: SQL-based ingestion](../querying/multi-value-dimensions.md#sql-based-ingestion).
+
+If you have MVD columns and want to migrate to array columns, [reindex](../data-management/update.md#reindex) your data to update its schema.
+Reindexing overwrites existing data where the source of new data is the existing data itself.
+Follow the same guidance on [How to ingest arrays](#how-to-ingest-arrays).
