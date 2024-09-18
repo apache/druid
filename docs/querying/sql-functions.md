@@ -687,7 +687,7 @@ Converts a value into the specified data type.
 
 <details><summary>Example</summary>
 
-The following example converts the values in the `Distance` colum from the `flight-carriers` datasource from `DOUBLE` into type `VARCHAR`
+The following example converts the values in the `Distance` column from the `flight-carriers` datasource from `DOUBLE` into type `VARCHAR`
 
 ```sql
 SELECT "Distance" AS "original_column",
