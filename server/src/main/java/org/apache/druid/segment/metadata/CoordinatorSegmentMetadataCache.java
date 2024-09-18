@@ -876,7 +876,7 @@ public class CoordinatorSegmentMetadataCache extends AbstractSegmentMetadataCach
   {
     SegmentId id = segment.getId();
 
-    log.debug("SchemaMetadata for segmentId [%s] is absent.", id);
+    log.debug("SchemaMetadata for segment [%s] is absent.", id);
 
     if (segment.isTombstone()) {
       log.debug("Skipping refresh for tombstone segment [%s].", id);
