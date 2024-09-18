@@ -368,20 +368,24 @@ public interface Function extends NamedFunction
 
   /**
    * Base class for a 2 variable input {@link Function} whose first argument is a {@link ExprType#STRING} and second
-   * argument is {@link ExprType#LONG}
+   * argument is {@link ExprType#LONG}. These functions return null if either argument is null.
    */
   abstract class StringLongFunction extends BivariateFunction
   {
     @Override
     protected final ExprEval eval(ExprEval x, ExprEval y)
     {
-      if (!x.type().is(ExprType.STRING) || !y.type().is(ExprType.LONG)) {
-        throw validationFailed("needs a STRING as first argument and a LONG as second argument");
+      final String xString = x.asString();
+      if (xString == null) {
+        return ExprEval.of(null);
       }
-      return eval(x.asString(), y.asInt());
+      if (y.isNumericNull()) {
+        return ExprEval.of(null);
+      }
+      return eval(xString, y.asLong());
     }
 
-    protected abstract ExprEval eval(@Nullable String x, int y);
+    protected abstract ExprEval eval(String x, long y);
   }
 
   /**
@@ -526,11 +530,6 @@ public interface Function extends NamedFunction
    */
   abstract class ArraysMergeFunction extends ArraysFunction
   {
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
 
     @Override
     public boolean hasArrayOutput()
@@ -622,11 +621,10 @@ public interface Function extends NamedFunction
         ExprEval<?> exprEval = expr.eval(bindings);
         ExpressionType exprType = exprEval.type();
 
-        if (isValidType(exprType)) {
-          outputType = ExpressionTypeConversion.function(outputType, exprType);
-        }
-
         if (exprEval.value() != null) {
+          if (isValidType(exprType)) {
+            outputType = ExpressionTypeConversion.function(outputType, exprType);
+          }
           evals.add(exprEval);
         }
       }
@@ -1178,16 +1176,6 @@ public interface Function extends NamedFunction
     public String name()
     {
       return NAME;
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return ExpressionTypeConversion.function(
-          args.get(0).getOutputType(inspector),
-          args.get(1).getOutputType(inspector)
-      );
     }
 
     @Override
@@ -2312,18 +2300,6 @@ public interface Function extends NamedFunction
       return ExprEval.ofLongBoolean(!super.apply(args, bindings).asBoolean());
     }
 
-    @Override
-    public void validateArguments(List<Expr> args)
-    {
-      validationHelperCheckArgumentCount(args, 2);
-    }
-
-    @Nullable
-    @Override
-    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
-    {
-      return ExpressionType.LONG;
-    }
   }
 
   /**
@@ -2825,16 +2801,14 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    protected ExprEval eval(@Nullable String x, int y)
+    protected ExprEval eval(String x, long y)
     {
-      if (y < 0) {
+      int yInt = (int) y;
+      if (y < 0 || yInt != y) {
         throw validationFailed("needs a positive integer as the second argument");
       }
-      if (x == null) {
-        return ExprEval.of(null);
-      }
       int len = x.length();
-      return ExprEval.of(y < len ? x.substring(len - y) : x);
+      return ExprEval.of(y < len ? x.substring(len - yInt) : x);
     }
   }
 
@@ -2854,15 +2828,13 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    protected ExprEval eval(@Nullable String x, int y)
+    protected ExprEval eval(String x, long y)
     {
-      if (y < 0) {
-        throw validationFailed("needs a postive integer as second argument");
+      int yInt = (int) y;
+      if (yInt < 0 || yInt != y) {
+        throw validationFailed("needs a positive integer as the second argument");
       }
-      if (x == null) {
-        return ExprEval.of(null);
-      }
-      return ExprEval.of(y < x.length() ? x.substring(0, y) : x);
+      return ExprEval.of(y < x.length() ? x.substring(0, yInt) : x);
     }
   }
 
@@ -3006,12 +2978,13 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    protected ExprEval eval(String x, int y)
+    protected ExprEval eval(String x, long y)
     {
-      if (x == null) {
-        return ExprEval.of(null);
+      int yInt = (int) y;
+      if (yInt != y) {
+        throw validationFailed("needs an integer as the second argument");
       }
-      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, y));
+      return ExprEval.of(y < 1 ? NullHandling.defaultStringValue() : StringUtils.repeat(x, yInt));
     }
   }
 
@@ -3400,18 +3373,6 @@ public interface Function extends NamedFunction
     }
 
     @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
-    }
-
-    @Override
-    public Set<Expr> getArrayInputs(List<Expr> args)
-    {
-      return Collections.emptySet();
-    }
-
-    @Override
     public boolean hasArrayOutput()
     {
       return true;
@@ -3542,12 +3503,6 @@ public interface Function extends NamedFunction
 
       final String split = args.get(1).eval(bindings).asString();
       return ExprEval.ofStringArray(arrayString.split(split != null ? split : ""));
-    }
-
-    @Override
-    public Set<Expr> getScalarInputs(List<Expr> args)
-    {
-      return ImmutableSet.copyOf(args);
     }
 
     @Override

@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-import type { DateRange } from '@blueprintjs/datetime2';
+import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
+
+export function isNonNullRange(range: DateRange): range is NonNullDateRange {
+  return range[0] != null && range[1] != null;
+}
 
 export function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -36,6 +40,14 @@ export function utcToLocalDate(utcDate: Date): Date {
 export function localToUtcDate(localDate: Date): Date {
   // Function removes the local timezone of the date and displays it in UTC
   return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+}
+
+export function utcToLocalDateRange([start, end]: DateRange): DateRange {
+  return [start ? utcToLocalDate(start) : null, end ? utcToLocalDate(end) : null];
+}
+
+export function localToUtcDateRange([start, end]: DateRange): DateRange {
+  return [start ? localToUtcDate(start) : null, end ? localToUtcDate(end) : null];
 }
 
 export function intervalToLocalDateRange(interval: string): DateRange {

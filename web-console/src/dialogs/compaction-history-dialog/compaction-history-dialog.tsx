@@ -135,8 +135,8 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
         <DiffDialog
           title="Compaction config diff"
           versions={historyData.map(s => ({ label: s.auditTime, value: s.compactionConfig }))}
-          initLeftIndex={diffIndex + 1}
-          initRightIndex={diffIndex}
+          initOldIndex={diffIndex + 1}
+          initNewIndex={diffIndex}
           onClose={() => setDiffIndex(-1)}
         />
       )}

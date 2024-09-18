@@ -52,7 +52,7 @@ import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.NoopDataSegmentMover;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
@@ -94,7 +94,6 @@ public class SingleTaskBackgroundRunnerTest
         .setBaseDir(temporaryFolder.newFile().toString())
         .setDefaultRowFlushBoundary(50000)
         .setRestoreTasksOnRestart(true)
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
     EmittingLogger.registerEmitter(emitter);

@@ -69,6 +69,7 @@ public class CompressedBigDecimalColumn implements ComplexColumn
   }
 
   @Override
+  @Nullable
   public CompressedBigDecimal getRowValue(int rowNum)
   {
     int s = scale.get(rowNum);
@@ -96,7 +97,8 @@ public class CompressedBigDecimalColumn implements ComplexColumn
   {
     return new ObjectColumnSelector<CompressedBigDecimal>()
     {
-      @Override @Nullable
+      @Override
+      @Nullable
       public CompressedBigDecimal getObject()
       {
         return getRowValue(offset.getOffset());

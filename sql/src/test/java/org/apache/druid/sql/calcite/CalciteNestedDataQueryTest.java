@@ -34,8 +34,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -80,6 +80,7 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -195,7 +196,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModule(new NestedDataModule());
     }
 
     @SuppressWarnings("resource")
@@ -206,7 +206,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         final Injector injector
     )
     {
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       final QueryableIndex index =
           IndexBuilder.create()
                       .tmpDir(tempDirProducer.newTempFolder())
@@ -1182,7 +1182,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .columns("v0", "v1", "v2", "v3")
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                      .legacy(false)
                       .build()
             )
         )
@@ -1270,7 +1269,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1330,7 +1328,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1387,7 +1384,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -4858,7 +4854,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -4908,7 +4903,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -4956,7 +4950,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5007,7 +5000,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("string", "v0", "v1", "v2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5103,7 +5095,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1", "v2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5140,7 +5131,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5179,7 +5169,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5308,7 +5297,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .filters(isNull("v0"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5512,7 +5500,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .filters(notNull("v0"))
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         expectedResults,
@@ -6018,7 +6005,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "variantWithArrays"
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         useDefault ?
@@ -6612,7 +6598,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .columns("nest")
                   .filters(notNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         NullHandling.replaceWithDefault()
@@ -6642,7 +6627,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .columns("nest", "nester")
                   .filters(isNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         // selector filter is wrong
@@ -6698,7 +6682,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("j0.unnest", "long", "v0")
                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                    .legacy(false)
                     .context(QUERY_CONTEXT_DEFAULT)
                     .build()
             )
@@ -6746,7 +6729,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("long")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ) :
@@ -6761,7 +6743,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(expressionVirtualColumn("v0", "nvl(\"long\",\"j0.unnest\")", ColumnType.LONG))
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -6847,7 +6828,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -6870,6 +6850,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrays()
   {
+    msqIncompatible();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$') FROM druid.arrays")
         .queryContext(QUERY_CONTEXT_DEFAULT)
@@ -6887,7 +6868,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .columns("v0")
                       .context(QUERY_CONTEXT_DEFAULT)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -6942,7 +6922,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .columns("v0")
                       .limit(1)
                       .context(QUERY_CONTEXT_DEFAULT)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -6982,7 +6961,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -7164,7 +7142,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -7318,6 +7295,33 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$2", ColumnType.LONG)
                     .build()
     );
+  }
+
+  @Test
+  public void testApproxCountDistinctOnUnsupportedComplexColumn()
+  {
+    assertQueryIsUnplannable(
+        "SELECT COUNT(DISTINCT nester) FROM druid.nested",
+        "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
+        + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<json>]. "
+        + "You can disable approximation by setting [useApproximateCountDistinct: false] in the query context."
+    );
+  }
+
+  @Test
+  public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
+  {
+    DruidException druidException = Assert.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT APPROX_COUNT_DISTINCT(nester) FROM druid.nested",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertTrue(druidException.getMessage().contains(
+        "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"
+    ));
   }
 
   @Test

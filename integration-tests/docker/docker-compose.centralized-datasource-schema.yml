@@ -81,7 +81,7 @@ services:
       service: druid-broker
     environment:
       - DRUID_INTEGRATION_TEST_GROUP=${DRUID_INTEGRATION_TEST_GROUP}
-      - druid_sql_planner_metadataRefreshPeriod=PT20S
+      - druid_sql_planner_metadataRefreshPeriod=PT30S
       - druid_sql_planner_disableSegmentMetadataQueries=true
     depends_on:
       - druid-coordinator

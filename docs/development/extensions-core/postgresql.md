@@ -87,7 +87,7 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 | `druid.metadata.postgres.ssl.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
 | `druid.metadata.postgres.dbTableSchema` | druid meta table schema | `public` | no |
 
-### PostgreSQL Firehose
+### PostgreSQL InputSource
 
 The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/input-sources.md) which can be used to ingest data into Druid from a PostgreSQL database.
 

@@ -19,38 +19,27 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.QueryMetrics;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.ValueMatcher;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.Cursor;
+import com.google.common.collect.Iterables;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.filter.ValueMatchers;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Iterator;
 
 /**
+ *
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
@@ -136,9 +125,21 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    for (final String column : Iterables.concat(index.getDimensionNames(true), index.getMetricNames())) {
+      builder.add(column, ColumnType.fromCapabilities(index.getColumnCapabilities(column)));
+    }
+
+    return builder.build();
+  }
+
+  @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<>(index.getDimensionNames());
+    return new ListIndexed<>(index.getDimensionNames(false));
   }
 
   @Override
@@ -166,18 +167,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public int getNumRows()
   {
     return index.size();
-  }
-
-  @Override
-  public DateTime getMinTime()
-  {
-    return index.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return index.getMaxTime();
   }
 
   @Nullable
@@ -250,212 +239,14 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public DateTime getMaxIngestedEventTime()
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return index.getMaxIngestedEventTime();
-  }
-
-  @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable final Filter filter,
-      final Interval interval,
-      final VirtualColumns virtualColumns,
-      final Granularity gran,
-      final boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
-  {
-    if (index.isEmpty()) {
-      return Sequences.empty();
-    }
-
-    if (queryMetrics != null) {
-      queryMetrics.vectorized(false);
-    }
-
-    final Interval dataInterval = new Interval(getMinTime(), gran.bucketEnd(getMaxTime()));
-
-    if (!interval.overlaps(dataInterval)) {
-      return Sequences.empty();
-    }
-    final Interval actualInterval = interval.overlap(dataInterval);
-    Iterable<Interval> intervals = gran.getIterable(actualInterval);
-    if (descending) {
-      intervals = Lists.reverse(ImmutableList.copyOf(intervals));
-    }
-
-    return Sequences
-        .simple(intervals)
-        .map(i -> new IncrementalIndexCursor(virtualColumns, descending, filter, i, actualInterval, gran));
+    return new IncrementalIndexCursorHolder(this, index, spec);
   }
 
   @Override
   public Metadata getMetadata()
   {
     return index.getMetadata();
-  }
-
-  private class IncrementalIndexCursor implements Cursor
-  {
-    private IncrementalIndexRowHolder currEntry;
-    private final ColumnSelectorFactory columnSelectorFactory;
-    private final ValueMatcher filterMatcher;
-    private final int maxRowIndex;
-    private Iterator<IncrementalIndexRow> baseIter;
-    private Iterable<IncrementalIndexRow> cursorIterable;
-    private boolean emptyRange;
-    private final DateTime time;
-    private int numAdvanced;
-    private boolean done;
-
-    IncrementalIndexCursor(
-        VirtualColumns virtualColumns,
-        boolean descending,
-        Filter filter,
-        Interval interval,
-        Interval actualInterval,
-        Granularity gran
-    )
-    {
-      currEntry = new IncrementalIndexRowHolder();
-      columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
-          IncrementalIndexStorageAdapter.this,
-          virtualColumns,
-          descending,
-          currEntry
-      );
-      // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
-      maxRowIndex = index.getLastRowIndex();
-      filterMatcher = filter == null ? ValueMatchers.allTrue() : filter.makeMatcher(columnSelectorFactory);
-      numAdvanced = -1;
-      final long timeStart = Math.max(interval.getStartMillis(), actualInterval.getStartMillis());
-      cursorIterable = index.getFacts().timeRangeIterable(
-          descending,
-          timeStart,
-          Math.min(actualInterval.getEndMillis(), gran.increment(interval.getStartMillis()))
-      );
-      emptyRange = !cursorIterable.iterator().hasNext();
-      time = gran.toDateTime(interval.getStartMillis());
-
-      reset();
-    }
-
-    @Override
-    public ColumnSelectorFactory getColumnSelectorFactory()
-    {
-      return columnSelectorFactory;
-    }
-
-    @Override
-    public DateTime getTime()
-    {
-      return time;
-    }
-
-    @Override
-    public void advance()
-    {
-      if (!baseIter.hasNext()) {
-        done = true;
-        return;
-      }
-
-      while (baseIter.hasNext()) {
-        BaseQuery.checkInterrupted();
-
-        IncrementalIndexRow entry = baseIter.next();
-        if (beyondMaxRowIndex(entry.getRowIndex())) {
-          continue;
-        }
-
-        currEntry.set(entry);
-
-        if (filterMatcher.matches(false)) {
-          return;
-        }
-      }
-
-      done = true;
-    }
-
-    @Override
-    public void advanceUninterruptibly()
-    {
-      if (!baseIter.hasNext()) {
-        done = true;
-        return;
-      }
-
-      while (baseIter.hasNext()) {
-        if (Thread.currentThread().isInterrupted()) {
-          return;
-        }
-
-        IncrementalIndexRow entry = baseIter.next();
-        if (beyondMaxRowIndex(entry.getRowIndex())) {
-          continue;
-        }
-
-        currEntry.set(entry);
-
-        if (filterMatcher.matches(false)) {
-          return;
-        }
-      }
-
-      done = true;
-    }
-
-    @Override
-    public boolean isDone()
-    {
-      return done;
-    }
-
-    @Override
-    public boolean isDoneOrInterrupted()
-    {
-      return isDone() || Thread.currentThread().isInterrupted();
-    }
-
-    @Override
-    public void reset()
-    {
-      baseIter = cursorIterable.iterator();
-
-      if (numAdvanced == -1) {
-        numAdvanced = 0;
-      } else {
-        Iterators.advance(baseIter, numAdvanced);
-      }
-
-      BaseQuery.checkInterrupted();
-
-      boolean foundMatched = false;
-      while (baseIter.hasNext()) {
-        IncrementalIndexRow entry = baseIter.next();
-        if (beyondMaxRowIndex(entry.getRowIndex())) {
-          numAdvanced++;
-          continue;
-        }
-        currEntry.set(entry);
-        if (filterMatcher.matches(false)) {
-          foundMatched = true;
-          break;
-        }
-
-        numAdvanced++;
-      }
-
-      done = !foundMatched && (emptyRange || !baseIter.hasNext());
-    }
-
-    private boolean beyondMaxRowIndex(int rowIndex)
-    {
-      // ignore rows whose rowIndex is beyond the maxRowIndex
-      // rows are order by timestamp, not rowIndex,
-      // so we still need to go through all rows to skip rows added after cursor created
-      return rowIndex > maxRowIndex;
-    }
   }
 }

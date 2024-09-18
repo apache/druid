@@ -101,11 +101,11 @@ select v.*,e.* from v inner join e on (e.cityName = v.cityName);
   },
   "resultFormat" : "compactedList",
   "columns" : [ "a0", "d0", "j0.a0", "j0.d0" ],
-  "legacy" : false,
   "columnTypes" : [ "LONG", "STRING", "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan
 LogicalProject(cityName=[$0], cnt=[$1], cityName0=[$2], cnt0=[$3])

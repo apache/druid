@@ -29,8 +29,8 @@ import org.junit.Test;
 
 public class NestedDataColumnSchemaTest
 {
-  private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null);
-  private static final DefaultColumnFormatConfig DEFAULT_CONFIG_V4 = new DefaultColumnFormatConfig(4);
+  private static final DefaultColumnFormatConfig DEFAULT_CONFIG = new DefaultColumnFormatConfig(null, null);
+  private static final DefaultColumnFormatConfig DEFAULT_CONFIG_V4 = new DefaultColumnFormatConfig(4, null);
   private static final ObjectMapper MAPPER;
   private static final ObjectMapper MAPPER_V4;
 

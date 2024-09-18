@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
@@ -31,10 +32,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
+ *
  */
 public class MetadataTest
 {
@@ -43,7 +47,7 @@ public class MetadataTest
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
-    AggregatorFactory[] aggregators = new AggregatorFactory[] {
+    AggregatorFactory[] aggregators = new AggregatorFactory[]{
         new LongSumAggregatorFactory("out", "in")
     };
 
@@ -52,7 +56,8 @@ public class MetadataTest
         aggregators,
         null,
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     Metadata other = jsonMapper.readValue(
@@ -75,7 +80,7 @@ public class MetadataTest
     Assert.assertNull(Metadata.merge(metadataToBeMerged, null));
 
     //sanity merge check
-    AggregatorFactory[] aggs = new AggregatorFactory[] {
+    AggregatorFactory[] aggs = new AggregatorFactory[]{
         new LongMaxAggregatorFactory("n", "f")
     };
     final Metadata m1 = new Metadata(
@@ -83,7 +88,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     final Metadata m2 = new Metadata(
@@ -91,7 +97,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        null
     );
 
     final Metadata m3 = new Metadata(
@@ -99,7 +106,8 @@ public class MetadataTest
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.TRUE
+        Boolean.TRUE,
+        null
     );
 
     final Metadata merged = new Metadata(
@@ -109,7 +117,8 @@ public class MetadataTest
         },
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        Boolean.FALSE
+        Boolean.FALSE,
+        Cursors.ascendingTimeOrder()
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -119,16 +128,18 @@ public class MetadataTest
     metadataToBeMerged.add(m2);
     metadataToBeMerged.add(null);
 
-    final Metadata merged2 = new Metadata(Collections.singletonMap("k", "v"), null, null, null, null);
+    final Metadata merged2 =
+        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Cursors.ascendingTimeOrder());
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
     //merge check with client explicitly providing merged aggregators
-    AggregatorFactory[] explicitAggs = new AggregatorFactory[] {
+    AggregatorFactory[] explicitAggs = new AggregatorFactory[]{
         new DoubleMaxAggregatorFactory("x", "y")
     };
 
-    final Metadata merged3 = new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null);
+    final Metadata merged3 =
+        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Cursors.ascendingTimeOrder());
 
     Assert.assertEquals(
         merged3,
@@ -140,11 +151,76 @@ public class MetadataTest
         explicitAggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
-        null
+        null,
+        Cursors.ascendingTimeOrder()
     );
     Assert.assertEquals(
         merged4,
         Metadata.merge(ImmutableList.of(m3, m2), explicitAggs)
     );
+  }
+
+  @Test
+  public void testMergeOrderings()
+  {
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> Metadata.mergeOrderings(Collections.emptyList())
+    );
+
+    Assert.assertEquals(
+        Cursors.ascendingTimeOrder(),
+        Metadata.mergeOrderings(Collections.singletonList(null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeOrderings(Arrays.asList(null, makeOrderBy("foo", "bar")))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeOrderings(Arrays.asList(makeOrderBy("foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Cursors.ascendingTimeOrder(),
+        Metadata.mergeOrderings(Arrays.asList(makeOrderBy("__time", "foo", "bar"), null))
+    );
+
+    Assert.assertEquals(
+        Collections.emptyList(),
+        Metadata.mergeOrderings(
+            Arrays.asList(
+                makeOrderBy("foo", "bar"),
+                makeOrderBy("bar", "foo")
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList(OrderBy.ascending("bar")),
+        Metadata.mergeOrderings(
+            Arrays.asList(
+                makeOrderBy("bar", "baz"),
+                makeOrderBy("bar", "foo")
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(OrderBy.ascending("bar"), OrderBy.ascending("foo")),
+        Metadata.mergeOrderings(
+            Arrays.asList(
+                makeOrderBy("bar", "foo"),
+                makeOrderBy("bar", "foo")
+            )
+        )
+    );
+  }
+
+  private static List<OrderBy> makeOrderBy(final String... columnNames)
+  {
+    return Arrays.stream(columnNames).map(OrderBy::ascending).collect(Collectors.toList());
   }
 }

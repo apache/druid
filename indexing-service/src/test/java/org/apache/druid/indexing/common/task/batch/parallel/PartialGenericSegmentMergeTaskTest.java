@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.segment.TestHelper;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -38,7 +38,7 @@ import java.util.Collections;
 public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSupervisorTaskTest
 {
   @Parameterized.Parameters(name = "partitionLocation = {0}")
-  public static Iterable<? extends Object> data()
+  public static Iterable<?> data()
   {
     return Arrays.asList(
         GENERIC_PARTITION_LOCATION,
@@ -71,7 +71,6 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
   private PartialGenericSegmentMergeTask target;
   private PartialSegmentMergeIOConfig ioConfig;
   private HashedPartitionsSpec partitionsSpec;
-  private PartialSegmentMergeIngestionSpec ingestionSpec;
 
   public PartialGenericSegmentMergeTaskTest()
   {
@@ -88,12 +87,13 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         1,
         Collections.emptyList()
     );
-    ingestionSpec = new PartialSegmentMergeIngestionSpec(
+    PartialSegmentMergeIngestionSpec ingestionSpec = new PartialSegmentMergeIngestionSpec(
         ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS),
         ioConfig,
-        new ParallelIndexTestingFactory.TuningConfigBuilder()
-            .partitionsSpec(partitionsSpec)
-            .build()
+        TuningConfigBuilder.forParallelIndexTask()
+                           .withForceGuaranteedRollup(true)
+                           .withPartitionsSpec(partitionsSpec)
+                           .build()
     );
     target = new PartialGenericSegmentMergeTask(
         ParallelIndexTestingFactory.AUTOMATIC_ID,
@@ -117,7 +117,7 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
   public void hasCorrectPrefixForAutomaticId()
   {
     String id = target.getId();
-    Assert.assertThat(id, Matchers.startsWith(PartialGenericSegmentMergeTask.TYPE));
+    Assert.assertTrue(id.startsWith(PartialGenericSegmentMergeTask.TYPE));
   }
 
   @Test
@@ -136,8 +136,9 @@ public class PartialGenericSegmentMergeTaskTest extends AbstractParallelIndexSup
         new PartialSegmentMergeIngestionSpec(
             ParallelIndexTestingFactory.createDataSchema(null),
             ioConfig,
-            new ParallelIndexTestingFactory.TuningConfigBuilder()
-                .partitionsSpec(partitionsSpec)
+            TuningConfigBuilder.forParallelIndexTask()
+                .withForceGuaranteedRollup(true)
+                .withPartitionsSpec(partitionsSpec)
                 .build()
         ),
         ParallelIndexTestingFactory.CONTEXT

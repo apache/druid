@@ -156,32 +156,33 @@ public class MSQTestControllerContext implements ControllerContext
       Worker worker = new WorkerImpl(
           task,
           new MSQTestWorkerContext(
+              task.getId(),
               inMemoryWorkers,
               controller,
               mapper,
               injector,
-              workerMemoryParameters
-          ),
-          workerStorageParameters
+              workerMemoryParameters,
+              workerStorageParameters
+          )
       );
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<TaskStatus> future = executor.submit(() -> {
+      ListenableFuture<?> future = executor.submit(() -> {
         try {
-          return worker.run();
+          worker.run();
         }
         catch (Exception e) {
           throw new RuntimeException(e);
         }
       });
 
-      Futures.addCallback(future, new FutureCallback<TaskStatus>()
+      Futures.addCallback(future, new FutureCallback<Object>()
       {
         @Override
-        public void onSuccess(@Nullable TaskStatus result)
+        public void onSuccess(@Nullable Object result)
         {
-          statusMap.put(task.getId(), result);
+          statusMap.put(task.getId(), TaskStatus.success(task.getId()));
         }
 
         @Override
@@ -261,7 +262,7 @@ public class MSQTestControllerContext implements ControllerContext
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
-        worker.stopGracefully();
+        worker.stop();
       }
       return Futures.immediateFuture(null);
     }

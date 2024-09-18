@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -42,7 +41,7 @@ export const TilePicker = React.memo(function TilePicker(props: TilePickerProps<
   const selectedTileManifest = modules.find(module => module.moduleName === selectedTileName);
   return (
     <ButtonGroup className="tile-picker" fill>
-      <Popover2
+      <Popover
         className="picker-button"
         minimal
         fill
@@ -67,11 +66,11 @@ export const TilePicker = React.memo(function TilePicker(props: TilePickerProps<
           minimal
           rightIcon={IconNames.CARET_DOWN}
         />
-      </Popover2>
+      </Popover>
       {moreMenu && (
-        <Popover2 className="more-button" position={Position.BOTTOM_RIGHT} content={moreMenu}>
+        <Popover className="more-button" position={Position.BOTTOM_RIGHT} content={moreMenu}>
           <Button minimal icon={IconNames.MORE} />
-        </Popover2>
+        </Popover>
       )}
     </ButtonGroup>
   );

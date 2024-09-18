@@ -222,10 +222,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                       QueryRunnerTestHelper.NOOP_QUERYWATCHER
                   ),
                   ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(
-                          new ScanQueryConfig(),
-                          new DefaultGenericQueryMetricsFactory()
-                      ),
+                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                       new ScanQueryEngine(),
                       new ScanQueryConfig()
                   )
@@ -269,10 +266,7 @@ public class StreamAppenderatorTester implements AutoCloseable
                       QueryRunnerTestHelper.NOOP_QUERYWATCHER
                   ),
                   ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(
-                          new ScanQueryConfig(),
-                          new DefaultGenericQueryMetricsFactory()
-                      ),
+                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
                       new ScanQueryEngine(),
                       new ScanQueryConfig()
                   )

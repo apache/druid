@@ -82,4 +82,10 @@ public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingR
   {
     return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);
   }
+
+  @Override
+  public CompressionFactory.LongEncodingStrategy getStrategy()
+  {
+    return CompressionFactory.LongEncodingStrategy.AUTO;
+  }
 }

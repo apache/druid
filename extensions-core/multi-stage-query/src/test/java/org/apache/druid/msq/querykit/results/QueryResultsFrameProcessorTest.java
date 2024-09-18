@@ -20,54 +20,32 @@
 package org.apache.druid.msq.querykit.results;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
-import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.Unit;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
+import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
-import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
-public class QueryResultsFrameProcessorTest extends InitializedNullHandlingTest
+public class QueryResultsFrameProcessorTest extends FrameProcessorTestBase
 {
-  private FrameProcessorExecutor exec;
-
-  @Before
-  public void setUp()
-  {
-    exec = new FrameProcessorExecutor(MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec")));
-  }
-
-  @After
-  public void tearDown() throws Exception
-  {
-    exec.getExecutorService().shutdownNow();
-    exec.getExecutorService().awaitTermination(10, TimeUnit.MINUTES);
-  }
-
-
   @Test
   public void sanityTest() throws ExecutionException, InterruptedException, IOException
   {

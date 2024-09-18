@@ -60,7 +60,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -68,6 +67,8 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexIO;
@@ -75,7 +76,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -93,7 +93,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedStorageAdapter;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -244,7 +244,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -295,7 +294,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -358,7 +356,6 @@ public class IndexTaskTest extends IngestionTestBase
                 null
             ),
             new IndexIOConfig(
-                null,
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
                 false,
@@ -543,71 +540,65 @@ public class IndexTaskTest extends IngestionTestBase
         new QueryableIndexStorageAdapter(indexIO.loadIndex(segmentFile)),
         segment.getInterval()
     );
-    final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-        null,
-        segment.getInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
-    final List<Map<String, Object>> transforms = cursorSequence
-        .map(cursor -> {
-          final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
-          final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec(
-                                                        "dimtarray1",
-                                                        "dimtarray1"
-                                                    ));
-          final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec(
-                                                        "dimtarray2",
-                                                        "dimtarray2"
-                                                    ));
-          final DimensionSelector selector4 = cursor.getColumnSelectorFactory()
-                                                    .makeDimensionSelector(new DefaultDimensionSpec(
-                                                        "dimtnum_array",
-                                                        "dimtnum_array"
-                                                    ));
+    try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      final List<Map<String, Object>> transforms = new ArrayList<>();
+
+      final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec("dimt", "dimt"));
+      final DimensionSelector selector2 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec(
+                                                    "dimtarray1",
+                                                    "dimtarray1"
+                                                ));
+      final DimensionSelector selector3 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec(
+                                                    "dimtarray2",
+                                                    "dimtarray2"
+                                                ));
+      final DimensionSelector selector4 = cursor.getColumnSelectorFactory()
+                                                .makeDimensionSelector(new DefaultDimensionSpec(
+                                                    "dimtnum_array",
+                                                    "dimtnum_array"
+                                                ));
 
 
-          Map<String, Object> row = new HashMap<>();
-          row.put("dimt", selector1.defaultGetObject());
-          row.put("dimtarray1", selector2.defaultGetObject());
-          row.put("dimtarray2", selector3.defaultGetObject());
-          row.put("dimtnum_array", selector4.defaultGetObject());
-          cursor.advance();
-          return row;
-        })
-        .toList();
-    Assert.assertEquals(1, transforms.size());
-    Assert.assertEquals("bb", transforms.get(0).get("dimt"));
-    Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
-    Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
-    Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
+      Map<String, Object> row = new HashMap<>();
+      row.put("dimt", selector1.defaultGetObject());
+      row.put("dimtarray1", selector2.defaultGetObject());
+      row.put("dimtarray2", selector3.defaultGetObject());
+      row.put("dimtnum_array", selector4.defaultGetObject());
+      transforms.add(row);
+      cursor.advance();
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+      Assert.assertEquals(1, transforms.size());
+      Assert.assertEquals("bb", transforms.get(0).get("dimt"));
+      Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
+      Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
+      Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
 
-    verifySchemaAndAggFactory(
-        segmentWithSchemas,
-        RowSignature.builder()
-                    .add("__time", ColumnType.LONG)
-                    .add("ts", ColumnType.STRING)
-                    .add("dim", ColumnType.STRING)
-                    .add("dim_array", ColumnType.STRING)
-                    .add("dim_num_array", ColumnType.STRING)
-                    .add("dimt", ColumnType.STRING)
-                    .add("dimtarray1", ColumnType.STRING)
-                    .add("dimtarray2", ColumnType.STRING)
-                    .add("dimtnum_array", ColumnType.STRING)
-                    .add("val", ColumnType.LONG)
-                    .build(),
-        Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val"))
-    );
+      Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+      Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+      Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+      Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+
+      verifySchemaAndAggFactory(
+          segmentWithSchemas,
+          RowSignature.builder()
+                      .add("__time", ColumnType.LONG)
+                      .add("ts", ColumnType.STRING)
+                      .add("dim", ColumnType.STRING)
+                      .add("dim_array", ColumnType.STRING)
+                      .add("dim_num_array", ColumnType.STRING)
+                      .add("dimt", ColumnType.STRING)
+                      .add("dimtarray1", ColumnType.STRING)
+                      .add("dimtarray2", ColumnType.STRING)
+                      .add("dimtnum_array", ColumnType.STRING)
+                      .add("val", ColumnType.LONG)
+                      .build(),
+          Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val"))
+      );
+    }
   }
 
   @Test
@@ -779,31 +770,26 @@ public class IndexTaskTest extends IngestionTestBase
           segment.getInterval()
       );
 
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-      final List<Integer> hashes = cursorSequence
-          .map(cursor -> {
-            final DimensionSelector selector = cursor.getColumnSelectorFactory()
-                                                     .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-            final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
-                HashBasedNumberedShardSpec.serializeGroupKey(
-                    jsonMapper,
-                    Collections.singletonList(selector.getObject())
-                ),
-                hashBasedNumberedShardSpec.getNumBuckets()
-            );
-            cursor.advance();
-            return hash;
-          })
-          .toList();
+      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        final List<Integer> hashes = new ArrayList<>();
+        final DimensionSelector selector = cursor.getColumnSelectorFactory()
+                                                 .makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+        while (!cursor.isDone()) {
+          final int hash = HashPartitionFunction.MURMUR3_32_ABS.hash(
+              HashBasedNumberedShardSpec.serializeGroupKey(
+                  jsonMapper,
+                  // list of list because partitioning extractKeys uses InputRow.getDimension which always returns a List<String>
+                  Collections.singletonList(Collections.singletonList(selector.getObject()))
+              ),
+              hashBasedNumberedShardSpec.getNumBuckets()
+          );
+          hashes.add(hash);
+          cursor.advance();
+        }
 
-      Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
+        Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
+      }
     }
   }
 
@@ -1499,33 +1485,16 @@ public class IndexTaskTest extends IngestionTestBase
       writer.write("this is not JSON\n"); // invalid JSON
     }
 
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(2, null, null),
-        INDEX_SPEC,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        7,
-        7,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(2, null, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(7)
+        .withMaxSavedParseExceptions(7)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1668,33 +1637,16 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new DynamicPartitionsSpec(2, null),
-        INDEX_SPEC,
-        null,
-        null,
-        false,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new DynamicPartitionsSpec(2, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(false)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(2)
+        .withMaxSavedParseExceptions(5)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -1804,33 +1756,16 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Allow up to 3 parse exceptions, and save up to 2 parse exceptions
-    final IndexTuningConfig tuningConfig = new IndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new HashedPartitionsSpec(2, null, null),
-        INDEX_SPEC,
-        null,
-        null,
-        true,
-        false,
-        null,
-        null,
-        null,
-        true,
-        2,
-        5,
-        null,
-        null,
-        null
-    );
+    final IndexTuningConfig tuningConfig = TuningConfigBuilder
+        .forIndexTask()
+        .withPartitionsSpec(new HashedPartitionsSpec(2, null, null))
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(true)
+        .withReportParseExceptions(false)
+        .withLogParseExceptions(true)
+        .withMaxParseExceptions(2)
+        .withMaxSavedParseExceptions(5)
+        .build();
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(
@@ -2611,33 +2546,17 @@ public class IndexTaskTest extends IngestionTestBase
       boolean reportParseException
   )
   {
-    return new IndexTuningConfig(
-        null,
-        maxRowsPerSegment,
-        null,
-        maxRowsInMemory,
-        null,
-        null,
-        maxTotalRows,
-        null,
-        null,
-        null,
-        partitionsSpec,
-        INDEX_SPEC,
-        null,
-        null,
-        forceGuaranteedRollup,
-        reportParseException,
-        null,
-        null,
-        null,
-        null,
-        null,
-        1,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder
+        .forIndexTask()
+        .withMaxRowsPerSegment(maxRowsPerSegment)
+        .withMaxRowsInMemory(maxRowsInMemory)
+        .withMaxTotalRows(maxTotalRows)
+        .withPartitionsSpec(partitionsSpec)
+        .withIndexSpec(INDEX_SPEC)
+        .withForceGuaranteedRollup(forceGuaranteedRollup)
+        .withReportParseExceptions(reportParseException)
+        .withMaxSavedParseExceptions(1)
+        .build();
   }
 
   @SuppressWarnings("unchecked")
@@ -2794,7 +2713,6 @@ public class IndexTaskTest extends IngestionTestBase
               transformSpec
           ),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
               appendToExisting,
@@ -2822,7 +2740,6 @@ public class IndexTaskTest extends IngestionTestBase
               objectMapper
           ),
           new IndexIOConfig(
-              null,
               new LocalInputSource(baseDir, "druid*"),
               createInputFormatFromParseSpec(parseSpec),
               appendToExisting,

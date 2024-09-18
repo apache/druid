@@ -24,7 +24,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.joda.time.DateTime;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -62,6 +62,7 @@ public class UnnestColumnValueSelectorCursor implements Cursor
   private final String outputName;
   private int index;
   private Object currentVal;
+  @MonotonicNonNull
   private List<Object> unnestListForCurrentRow;
   private boolean needInitialization;
 
@@ -208,12 +209,6 @@ public class UnnestColumnValueSelectorCursor implements Cursor
         return baseColumnSelectorFactory.getColumnCapabilities(column);
       }
     };
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Override

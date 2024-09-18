@@ -32,13 +32,13 @@ public class StorageAdapterRowsAndColumnsTest extends RowsAndColumnsTestBase
     super(StorageAdapterRowsAndColumns.class);
   }
 
-  public static Function<MapOfColumnsRowsAndColumns, StorageAdapterRowsAndColumns> MAKER = input -> {
-    return buildFrame(input);
-  };
+  public static Function<MapOfColumnsRowsAndColumns, StorageAdapterRowsAndColumns> MAKER =
+      StorageAdapterRowsAndColumnsTest::buildFrame;
 
   private static StorageAdapterRowsAndColumns buildFrame(MapOfColumnsRowsAndColumns input)
   {
-    ColumnBasedFrameRowsAndColumns fRAC = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
-    return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
+    try (ColumnBasedFrameRowsAndColumns fRAC = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input)) {
+      return new StorageAdapterRowsAndColumns(fRAC.as(StorageAdapter.class));
+    }
   }
 }

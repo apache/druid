@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.server.compaction.CompactionStatistics;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,17 +31,11 @@ public class AutoCompactionSnapshotTest
     final String expectedDataSource = "data";
     final AutoCompactionSnapshot.Builder builder = AutoCompactionSnapshot.builder(expectedDataSource);
 
-    // Increment every stats twice
+    // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementIntervalCountSkipped(13)
-             .incrementBytesSkipped(13)
-             .incrementSegmentCountSkipped(13)
-             .incrementIntervalCountCompacted(13)
-             .incrementBytesCompacted(13)
-             .incrementSegmentCountCompacted(13)
-             .incrementIntervalCountAwaitingCompaction(13)
-             .incrementBytesAwaitingCompaction(13)
-             .incrementSegmentCountAwaitingCompaction(13);
+      builder.incrementSkippedStats(CompactionStatistics.create(13, 13, 13));
+      builder.incrementWaitingStats(CompactionStatistics.create(13, 13, 13));
+      builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
     }
 
     final AutoCompactionSnapshot actual = builder.build();

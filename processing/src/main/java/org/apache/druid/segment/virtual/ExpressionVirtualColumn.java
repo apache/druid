@@ -35,6 +35,8 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -240,6 +242,28 @@ public class ExpressionVirtualColumn implements VirtualColumn
     }
 
     return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+  }
+
+  @Nullable
+  @Override
+  public GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String columnName,
+      VectorColumnSelectorFactory factory,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    if (isDirectAccess(factory)) {
+      return factory.makeGroupByVectorColumnSelector(
+          parsedExpression.get().getBindingIfIdentifier(),
+          deferExpressionDimensions
+      );
+    }
+
+    return ExpressionVectorSelectors.makeGroupByVectorColumnSelector(
+        factory,
+        parsedExpression.get(),
+        deferExpressionDimensions
+    );
   }
 
   @Nullable

@@ -55,7 +55,7 @@ The installation of a MySQL metadata store is outside the scope of this document
 Use of other databases such as Postgres or Derby are entirely reasonable, but doing so is left as an excercise to the reader.
 
 ## ZooKeeper
-This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latst distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
+This also assumes you have [ZooKeeper](http://zookeeper.apache.org/releases.html) running locally, which usually just involves downloading the latest distribution of ZooKeeper, doing some minor configuration in ZooKeeper's `conf/` directory (most defaults are fine), then running `./bin/zkServer.sh start` in the ZooKeeper directory. 
 
 On macOS, you can also achieve this through the following commands
 

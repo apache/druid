@@ -1008,8 +1008,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     );
   }
 
-  @Override
-  public void poll()
+  @VisibleForTesting
+  void poll()
   {
     // See the comment to the pollLock field, explaining this synchronized block
     synchronized (pollLock) {
@@ -1153,7 +1153,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                   return null;
                 }).list();
 
-          segmentSchemaCache.resetTemporaryPublishedMetadataQueryResultOnDBPoll();
           return null;
         });
 

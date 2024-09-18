@@ -49,6 +49,8 @@ import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Map;
 import java.util.Properties;
@@ -77,7 +79,8 @@ public class PlannerFactory extends PlannerToolbox
       final CalciteRulesManager calciteRuleManager,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      final DruidHookDispatcher hookDispatcher
   )
   {
     super(
@@ -91,7 +94,8 @@ public class PlannerFactory extends PlannerToolbox
         druidSchemaName,
         calciteRuleManager,
         authorizerMapper,
-        authConfig
+        authConfig,
+        hookDispatcher
     );
   }
 
@@ -112,6 +116,7 @@ public class PlannerFactory extends PlannerToolbox
         queryContext,
         hook
     );
+    context.dispatchHook(DruidHook.SQL, sql);
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }

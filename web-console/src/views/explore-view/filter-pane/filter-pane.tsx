@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button } from '@blueprintjs/core';
+import { Button, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { FilterPattern, SqlExpression } from '@druid-toolkit/query';
 import { filterPatternsToExpression, fitFilterPatterns } from '@druid-toolkit/query';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
@@ -78,7 +77,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
         return (
           <div className="filter-pill" key={i}>
             {dataset ? (
-              <Popover2
+              <Popover
                 isOpen={i === menuIndex}
                 onClose={() => setMenuIndex(-1)}
                 content={
@@ -103,7 +102,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                   text={formatPatternWithoutNegation(pattern)}
                   onClick={() => setMenuIndex(i)}
                 />
-              </Popover2>
+              </Popover>
             ) : (
               <Button
                 className={classNames('filter-text-button', { negated: pattern.negated })}
@@ -123,7 +122,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
         );
       })}
       {dataset && (
-        <Popover2
+        <Popover
           className="add-button"
           isOpen={Boolean(menuNew)}
           position="bottom"
@@ -144,7 +143,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
           }
         >
           <Button icon={IconNames.PLUS} onClick={() => setMenuNew({})} minimal />
-        </Popover2>
+        </Popover>
       )}
     </DroppableContainer>
   );

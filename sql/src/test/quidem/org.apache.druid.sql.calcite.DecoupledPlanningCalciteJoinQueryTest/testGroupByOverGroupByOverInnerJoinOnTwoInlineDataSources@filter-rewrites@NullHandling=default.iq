@@ -82,11 +82,11 @@ DruidAggregate(group=[{0}], druid=[logical])
               "value" : "10.1"
             },
             "columns" : [ "__time", "v0" ],
-            "legacy" : false,
             "columnTypes" : [ "LONG", "STRING" ],
             "granularity" : {
               "type" : "all"
-            }
+            },
+            "legacy" : false
           }
         },
         "right" : {
@@ -108,11 +108,11 @@ DruidAggregate(group=[{0}], druid=[logical])
               "value" : "10.1"
             },
             "columns" : [ "dim1" ],
-            "legacy" : false,
             "columnTypes" : [ "STRING" ],
             "granularity" : {
               "type" : "all"
-            }
+            },
+            "legacy" : false
           }
         },
         "rightPrefix" : "j0.",

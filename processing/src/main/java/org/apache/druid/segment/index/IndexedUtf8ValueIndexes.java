@@ -230,7 +230,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
         final Object minValueInColumn = dictionary.get(0);
         final int position = Collections.binarySearch(
             sortedValues,
-            StringUtils.fromUtf8((ByteBuffer) minValueInColumn),
+            StringUtils.fromUtf8Nullable((ByteBuffer) minValueInColumn),
             matchValueType.getNullableStrategy()
         );
         tailSet = baseSet.subList(position >= 0 ? position : -(position + 1), baseSet.size());

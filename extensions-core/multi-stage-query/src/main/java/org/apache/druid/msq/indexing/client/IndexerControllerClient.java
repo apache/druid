@@ -152,7 +152,7 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public List<String> getTaskList() throws IOException
+  public List<String> getWorkerIds() throws IOException
   {
     final BytesFullResponseHolder retVal = doRequest(
         new RequestBuilder(HttpMethod.GET, "/taskList"),

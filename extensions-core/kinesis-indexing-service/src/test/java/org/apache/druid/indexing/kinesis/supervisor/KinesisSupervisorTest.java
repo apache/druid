@@ -27,12 +27,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskInfoProvider;
@@ -5656,7 +5656,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     @Override
-    protected RecordSupplier<String, String, ByteEntity> setupRecordSupplier()
+    protected RecordSupplier<String, String, KinesisRecordEntity> setupRecordSupplier()
     {
       return supervisorRecordSupplier;
     }

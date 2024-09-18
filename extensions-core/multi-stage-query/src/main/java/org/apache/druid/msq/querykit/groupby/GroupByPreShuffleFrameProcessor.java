@@ -55,6 +55,7 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
@@ -147,11 +148,13 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (resultYielder == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
+      final SegmentReference mappedSegment = mapSegment(segmentHolder.get());
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mapSegment(segmentHolder.get()).asStorageAdapter(),
+              mappedSegment.asStorageAdapter(),
+              mappedSegment.as(TimeBoundaryInspector.class),
               null
           );
 
@@ -179,11 +182,13 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("x"));
+        final SegmentReference mappedSegment = mapSegment(frameSegment);
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(
                 query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                mapSegment(frameSegment).asStorageAdapter(),
+                mappedSegment.asStorageAdapter(),
+                mappedSegment.as(TimeBoundaryInspector.class),
                 null
             );
 

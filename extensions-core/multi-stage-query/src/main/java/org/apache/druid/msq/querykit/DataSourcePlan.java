@@ -43,7 +43,6 @@ import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
@@ -424,21 +423,11 @@ public class DataSourcePlan
       @Nullable final QueryContext parentContext
   )
   {
-    // check if parentContext has a window operator
-    final Map<String, Object> windowShuffleMap = new HashMap<>();
-    if (parentContext != null && parentContext.containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-      windowShuffleMap.put(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL, parentContext.get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL));
-    }
     final QueryDefinition subQueryDef = queryKit.makeQueryDefinition(
         queryId,
         // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
         // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
-        windowShuffleMap.isEmpty()
-        ? dataSource.getQuery()
-                    .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
-        : dataSource.getQuery()
-                    .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
-                    .withOverriddenContext(windowShuffleMap),
+        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
         queryKit,
         ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount),
         maxWorkerCount,

@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
@@ -42,6 +43,7 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -65,7 +67,7 @@ import java.util.stream.IntStream;
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
 @RunWith(Parameterized.class)
-public class ScanQueryResultOrderingTest
+public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "datasource";
   private static final String ID_COLUMN = "id";
@@ -190,10 +192,7 @@ public class ScanQueryResultOrderingTest
   public void setUp()
   {
     queryRunnerFactory = new ScanQueryRunnerFactory(
-        new ScanQueryQueryToolChest(
-            new ScanQueryConfig(),
-            new DefaultGenericQueryMetricsFactory()
-        ),
+        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
         new ScanQueryEngine(),
         new ScanQueryConfig()
     );
@@ -209,7 +208,7 @@ public class ScanQueryResultOrderingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.NONE)
+              .order(Order.NONE)
               .build(),
         ImmutableList.of(
             101,
@@ -243,7 +242,7 @@ public class ScanQueryResultOrderingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.ASCENDING)
+              .order(Order.ASCENDING)
               .build(),
         ImmutableList.of(
             101,
@@ -277,7 +276,7 @@ public class ScanQueryResultOrderingTest
               .dataSource("ds")
               .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.of("2000/P1D"))))
               .columns(ColumnHolder.TIME_COLUMN_NAME, ID_COLUMN)
-              .order(ScanQuery.Order.DESCENDING)
+              .order(Order.DESCENDING)
               .build(),
         ImmutableList.of(
             8,

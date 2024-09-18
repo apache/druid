@@ -89,6 +89,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -674,7 +675,8 @@ public class SqlBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         new JoinableFactoryWrapper(QueryFrameworkUtils.createDefaultJoinableFactory(injector)),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     return Pair.of(plannerFactory, engine);

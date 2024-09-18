@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
@@ -48,6 +49,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -462,7 +464,7 @@ public class MSQSelectTest extends MSQTestBase
                            .columns("cnt", "dim1")
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
-                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -624,8 +626,17 @@ public class MSQSelectTest extends MSQTestBase
                                                .add("dim1", ColumnType.STRING)
                                                .build();
 
+    final ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{1L, ""},
+        new Object[]{1L, "10.1"},
+        new Object[]{1L, "2"},
+        new Object[]{1L, "1"},
+        new Object[]{1L, "def"},
+        new Object[]{1L, "abc"}
+    );
+
     testSelectQuery()
-        .setSql("select cnt,dim1 from foo limit 10")
+        .setSql("select cnt, dim1 from foo limit 10")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(
@@ -646,6 +657,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(expectedResults)
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with().totalFiles(1),
@@ -653,22 +665,31 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with().rows(6),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with().rows(6),
             0, 0, "shuffle"
         )
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, ""},
-            new Object[]{1L, "10.1"},
-            new Object[]{1L, "2"},
-            new Object[]{1L, "1"},
-            new Object[]{1L, "def"},
-            new Object[]{1L, "abc"}
-        )).verifyResults();
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
+            1, 0, "shuffle"
+        )
+        .setExpectedResultRows(expectedResults)
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -1701,6 +1722,166 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithLimit(String contextName, Map<String, Object> context)
+  {
+    RowSignature expectedResultSignature = RowSignature.builder()
+                                                       .add("dim1", ColumnType.STRING)
+                                                       .add("cnt", ColumnType.LONG)
+                                                       .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(CalciteTests.DATASOURCE1)
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CountAggregatorFactory(
+                                                 "a0"
+                                             )
+                                         )
+                                     )
+                                     .setDimFilter(not(equality("dim1", "", ColumnType.STRING)))
+                                     .setLimit(1)
+                                     .setContext(context)
+                                     .build();
+
+    testSelectQuery()
+        .setSql("SELECT dim1, cnt FROM (SELECT dim1, COUNT(*) AS cnt FROM foo GROUP BY dim1 HAVING dim1 != '' LIMIT 1) LIMIT 20")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim1"),
+                                       new ColumnMapping("a0", "cnt")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination(contextName, context)
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(expectedResultSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{"1", 1L}
+        )).verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithLimitAndOrdering(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("count", ColumnType.LONG)
+                                            .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(
+                                         new ExternalDataSource(
+                                             new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
+                                             new CsvInputFormat(null, null, null, true, 0),
+                                             RowSignature.builder().add("dim1", ColumnType.STRING).build()
+                                         )
+                                     )
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .addOrderByColumn(new OrderByColumnSpec("a0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
+                                     .addOrderByColumn(new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC))
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CountAggregatorFactory(
+                                                 "a0"
+                                             )
+                                         )
+                                     )
+                                     .setLimit(4)
+                                     .setContext(context)
+                                     .build();
+
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{"xyz", 4L},
+        new Object[]{"abc", 3L},
+        new Object[]{"def", 2L},
+        new Object[]{"aaa", 1L}
+    );
+
+    testSelectQuery()
+        .setSql("WITH \"ext\" AS (\n"
+                + "  SELECT *\n"
+                + "  FROM TABLE(\n"
+                + "    EXTERN(\n"
+                + "      '{\"type\":\"inline\",\"data\":\"dim1\\nabc\\nxyz\\ndef\\nxyz\\nabc\\nxyz\\nabc\\nxyz\\ndef\\nbbb\\naaa\"}',\n"
+                + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":true}'\n"
+                + "    )\n"
+                + "  ) EXTEND (\"dim1\" VARCHAR)\n"
+                + ")\n"
+                + "SELECT\n"
+                + "  \"dim1\",\n"
+                + "  COUNT(*) AS \"count\"\n"
+                + "FROM \"ext\"\n"
+                + "GROUP BY 1\n"
+                + "ORDER BY 2 DESC, 1\n"
+                + "LIMIT 4\n")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim1"),
+                                       new ColumnMapping("a0", "count")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination(contextName, context)
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "shuffle"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            2, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(4),
+            2, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
+            2, 0, "shuffle"
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(expectedRows)
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
   public void testHavingOnApproximateCountDistinct(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
@@ -2414,7 +2595,6 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(defaultScanQueryContext(
                                   context,
                                   resultSignature
@@ -2488,7 +2668,6 @@ public class MSQSelectTest extends MSQTestBase
                                           )
                                           .intervals(querySegmentSpec(Filtration.eternity()))
                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                          .legacy(false)
                                           .filters(equality("dim2", "a", ColumnType.STRING))
                                           .columns("dim3")
                                           .context(defaultScanQueryContext(
@@ -2503,7 +2682,6 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(defaultScanQueryContext(
                                   context,
                                   resultSignature
@@ -2571,7 +2749,6 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .legacy(false)
                               .context(defaultScanQueryContext(
                                   context,
                                   rowSignature

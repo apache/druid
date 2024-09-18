@@ -100,6 +100,7 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
     } else if (maxPartitions > maxNumPartitions) {
       return Either.error((long) maxPartitions);
     } else {
+      collector.logSketches();
       final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithMaxCount(maxPartitions);
       if (generatedPartitions.size() <= maxNumPartitions) {
         return Either.value(generatedPartitions);

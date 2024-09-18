@@ -142,7 +142,7 @@ public final class IncrementalIndexRow
           @Override
           public Object apply(@Nullable Object input)
           {
-            if (input == null || Array.getLength(input) == 0) {
+            if (input == null || (input.getClass().isArray() && Array.getLength(input) == 0)) {
               return Collections.singletonList("null");
             }
             return Collections.singletonList(input);

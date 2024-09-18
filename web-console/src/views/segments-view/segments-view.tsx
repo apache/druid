@@ -886,6 +886,7 @@ END AS "time_span"`,
                     this.onDetail(id, datasource);
                   }}
                   actions={this.getSegmentActions(id, datasource)}
+                  menuTitle={id}
                 />
               );
             },

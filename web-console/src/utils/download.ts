@@ -43,6 +43,8 @@ export function downloadUrl(url: string, filename: string) {
 }
 
 export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
+  if (s == null) return '';
+
   // stringify and remove line break
   const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
 

@@ -188,4 +188,17 @@ public class CoordinatorClientImpl implements CoordinatorClient
   {
     return new CoordinatorClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
   }
+
+  @Override
+  public ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments()
+  {
+    final String path = "/druid/coordinator/v1/metadata/datasources";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Set<String>>() {})
+    );
+  }
 }

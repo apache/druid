@@ -239,6 +239,7 @@ The `ingestionState` shows what step of ingestion the task reached. Possible sta
 - `NOT_STARTED`: The task has not begun reading any rows
 - `DETERMINE_PARTITIONS`: The task is processing rows to determine partitioning
 - `BUILD_SEGMENTS`: The task is processing rows to construct segments
+- `SEGMENT_AVAILABILITY_WAIT`: The task has published its segments and is waiting for them to become available.
 - `COMPLETED`: The task has finished its work.
 
 Only batch tasks have the DETERMINE_PARTITIONS phase. Realtime tasks such as those created by the Kafka Indexing Service do not have a DETERMINE_PARTITIONS phase.

@@ -45,6 +45,7 @@ import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -437,6 +438,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
             .atLeastOnce();
     EasyMock.expect(mockIndex.getColumnCapabilities("x"))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX))
+            .atLeastOnce();
+    EasyMock.expect(mockIndex.getOrdering())
+            .andReturn(Cursors.ascendingTimeOrder())
             .atLeastOnce();
 
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);

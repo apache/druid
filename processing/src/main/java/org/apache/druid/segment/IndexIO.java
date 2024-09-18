@@ -140,8 +140,8 @@ public class IndexIO
       );
     }
     {
-      final Set<String> dimNames1 = Sets.newHashSet(adapter1.getDimensionNames());
-      final Set<String> dimNames2 = Sets.newHashSet(adapter2.getDimensionNames());
+      final Set<String> dimNames1 = Sets.newHashSet(adapter1.getDimensionNames(true));
+      final Set<String> dimNames2 = Sets.newHashSet(adapter2.getDimensionNames(true));
       if (!dimNames1.equals(dimNames2)) {
         throw new SegmentValidationException(
             "Dimension names differ. Expected [%s] found [%s]",
@@ -240,8 +240,8 @@ public class IndexIO
     if (dims1.size() != dims2.size()) {
       throw new SegmentValidationException("Dim lengths not equal %s vs %s", dims1, dims2);
     }
-    final List<String> dim1Names = adapter1.getDimensionNames();
-    final List<String> dim2Names = adapter2.getDimensionNames();
+    final List<String> dim1Names = adapter1.getDimensionNames(false);
+    final List<String> dim2Names = adapter2.getDimensionNames(false);
     int dimCount = dims1.size();
     for (int i = 0; i < dimCount; ++i) {
       final String dim1Name = dim1Names.get(i);
@@ -510,9 +510,15 @@ public class IndexIO
           new ConciseBitmapFactory(),
           columns,
           index.getFileMapper(),
-          null,
           lazy
-      );
+      )
+      {
+        @Override
+        public Metadata getMetadata()
+        {
+          return null;
+        }
+      };
     }
 
     private Supplier<ColumnHolder> getColumnHolderSupplier(ColumnBuilder builder, boolean lazy)
@@ -604,25 +610,6 @@ public class IndexIO
         allDims = null;
       }
 
-      Metadata metadata = null;
-      ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
-      if (metadataBB != null) {
-        try {
-          metadata = mapper.readValue(
-              SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
-              Metadata.class
-          );
-        }
-        catch (JsonParseException | JsonMappingException ex) {
-          // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
-          // is no longer supported then it is OK to not use the metadata instead of failing segment loading
-          log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
-        }
-        catch (IOException ex) {
-          throw new IOException("Failed to read metadata", ex);
-        }
-      }
-
       Map<String, Supplier<ColumnHolder>> columns = new LinkedHashMap<>();
 
       // Register the time column
@@ -663,9 +650,32 @@ public class IndexIO
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
-          metadata,
           lazy
-      );
+      )
+      {
+        @Override
+        public Metadata getMetadata()
+        {
+          try {
+            ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+            if (metadataBB != null) {
+              return mapper.readValue(
+                  SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
+                  Metadata.class
+              );
+            }
+          }
+          catch (JsonParseException | JsonMappingException ex) {
+            // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+            // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+            log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
+          }
+          catch (IOException ex) {
+            log.warn(ex, "Failed to read metadata for segment [%s]", inDir);
+          }
+          return null;
+        }
+      };
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 

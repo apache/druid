@@ -117,9 +117,9 @@ public interface Controller
   );
 
   /**
-   * Returns the current list of task ids, ordered by worker number. The Nth task has worker number N.
+   * Returns the current list of worker IDs, ordered by worker number. The Nth worker has worker number N.
    */
-  List<String> getTaskIds();
+  List<String> getWorkerIds();
 
   @Nullable
   TaskReport.ReportMap liveReports();

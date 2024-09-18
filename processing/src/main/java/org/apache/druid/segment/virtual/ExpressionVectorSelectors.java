@@ -28,8 +28,11 @@ import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -37,6 +40,8 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ExpressionVectorSelectors
@@ -105,6 +110,51 @@ public class ExpressionVectorSelectors
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
     final ExprVectorProcessor<?> processor = plan.getExpression().asVectorProcessor(bindings);
     return new ExpressionVectorObjectSelector(processor, bindings);
+  }
+
+  /**
+   * Creates a {@link ExpressionDeferredGroupByVectorColumnSelector} for the provided expression, if the
+   * provided {@link DeferExpressionDimensions} says we should.
+   *
+   * @param factory                   column selector factory
+   * @param expression                expression
+   * @param deferExpressionDimensions active value of {@link org.apache.druid.query.groupby.GroupByQueryConfig#CTX_KEY_DEFER_EXPRESSION_DIMENSIONS}
+   *
+   * @return selector, or null if the {@link DeferExpressionDimensions} determines we should not defer the expression
+   */
+  @Nullable
+  public static GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      VectorColumnSelectorFactory factory,
+      Expr expression,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
+    Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
+
+    final List<String> requiredBindings = plan.getAnalysis().getRequiredBindingsList();
+
+    if (!deferExpressionDimensions.useDeferredGroupBySelector(plan, requiredBindings, factory)) {
+      return null;
+    }
+
+    final RowSignature.Builder requiredBindingsSignatureBuilder = RowSignature.builder();
+    final List<GroupByVectorColumnSelector> subSelectors = new ArrayList<>();
+
+    for (final String columnName : requiredBindings) {
+      final ColumnCapabilities capabilities = factory.getColumnCapabilities(columnName);
+      final ColumnType columnType = capabilities != null ? capabilities.toColumnType() : ColumnType.STRING;
+      final GroupByVectorColumnSelector subSelector =
+          factory.makeGroupByVectorColumnSelector(columnName, deferExpressionDimensions);
+      requiredBindingsSignatureBuilder.add(columnName, columnType);
+      subSelectors.add(subSelector);
+    }
+
+    return new ExpressionDeferredGroupByVectorColumnSelector(
+        expression.asSingleThreaded(factory),
+        requiredBindingsSignatureBuilder.build(),
+        subSelectors
+    );
   }
 
   public static VectorObjectSelector castValueSelectorToObject(

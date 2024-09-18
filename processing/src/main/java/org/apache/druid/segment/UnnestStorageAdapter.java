@@ -20,13 +20,12 @@
 package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -36,6 +35,8 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
@@ -49,7 +50,7 @@ import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.joda.time.DateTime;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -57,8 +58,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * This class serves as the Storage Adapter for the Unnest Segment and is responsible for creating the cursors
@@ -92,71 +93,98 @@ public class UnnestStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(
-      @Nullable Filter filter,
-      Interval interval,
-      VirtualColumns virtualColumns,
-      Granularity gran,
-      boolean descending,
-      @Nullable QueryMetrics<?> queryMetrics
-  )
+  public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final String inputColumn = getUnnestInputIfDirectAccess(unnestColumn);
+    final String input = getUnnestInputIfDirectAccess(unnestColumn);
     final Pair<Filter, Filter> filterPair = computeBaseAndPostUnnestFilters(
-        filter,
+        spec.getFilter(),
         unnestFilter != null ? unnestFilter.toFilter() : null,
-        virtualColumns,
-        inputColumn,
-        inputColumn == null ? null : virtualColumns.getColumnCapabilitiesWithFallback(baseAdapter, inputColumn)
+        spec.getVirtualColumns(),
+        input,
+        input == null ? null : spec.getVirtualColumns().getColumnCapabilitiesWithFallback(baseAdapter, input)
     );
+    final CursorBuildSpec unnestBuildSpec =
+        CursorBuildSpec.builder(spec)
+                       .setFilter(filterPair.lhs)
+                       .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
+                       .build();
 
-    final Sequence<Cursor> baseCursorSequence = baseAdapter.makeCursors(
-        filterPair.lhs,
-        interval,
-        VirtualColumns.create(Collections.singletonList(unnestColumn)),
-        gran,
-        descending,
-        queryMetrics
-    );
+    return new CursorHolder()
+    {
+      final Closer closer = Closer.create();
+      final Supplier<CursorHolder> cursorHolderSupplier = Suppliers.memoize(
+          () -> closer.register(baseAdapter.makeCursorHolder(unnestBuildSpec))
+      );
 
-    return Sequences.map(
-        baseCursorSequence,
-        cursor -> {
-          Objects.requireNonNull(cursor);
-          final ColumnCapabilities capabilities = unnestColumn.capabilities(
+      @Override
+      public Cursor asCursor()
+      {
+        final Cursor cursor = cursorHolderSupplier.get().asCursor();
+        if (cursor == null) {
+          return null;
+        }
+        final ColumnCapabilities capabilities = unnestColumn.capabilities(
+            cursor.getColumnSelectorFactory(),
+            unnestColumn.getOutputName()
+        );
+        final Cursor unnestCursor;
+
+        if (useDimensionCursor(capabilities)) {
+          unnestCursor = new UnnestDimensionCursor(
+              cursor,
               cursor.getColumnSelectorFactory(),
-              unnestColumn.getOutputName()
+              unnestColumn,
+              outputColumnName
           );
-          final Cursor unnestCursor;
-
-          if (useDimensionCursor(capabilities)) {
-            unnestCursor = new UnnestDimensionCursor(
-                cursor,
-                cursor.getColumnSelectorFactory(),
-                unnestColumn,
-                outputColumnName
-            );
-          } else {
-            unnestCursor = new UnnestColumnValueSelectorCursor(
-                cursor,
-                cursor.getColumnSelectorFactory(),
-                unnestColumn,
-                outputColumnName
-            );
-          }
-          return PostJoinCursor.wrap(
-              unnestCursor,
-              virtualColumns,
-              filterPair.rhs
+        } else {
+          unnestCursor = new UnnestColumnValueSelectorCursor(
+              cursor,
+              cursor.getColumnSelectorFactory(),
+              unnestColumn,
+              outputColumnName
           );
         }
-    );
+        return PostJoinCursor.wrap(
+            unnestCursor,
+            spec.getVirtualColumns(),
+            filterPair.rhs
+        );
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return computeOrdering(cursorHolderSupplier.get().getOrdering());
+      }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
+    };
   }
 
   @Override
   public Interval getInterval()
   {
     return baseAdapter.getInterval();
+  }
+
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final RowSignature.Builder builder = RowSignature.builder();
+
+    final RowSignature baseSignature = baseAdapter.getRowSignature();
+    for (int i = 0; i < baseSignature.size(); i++) {
+      final String column = baseSignature.getColumnName(i);
+      if (!outputColumnName.equals(column)) {
+        builder.add(column, ColumnType.fromCapabilities(getColumnCapabilities(column)));
+      }
+    }
+
+    return builder.add(outputColumnName, ColumnType.fromCapabilities(getColumnCapabilities(outputColumnName))).build();
   }
 
   @Override
@@ -190,18 +218,6 @@ public class UnnestStorageAdapter implements StorageAdapter
       return baseAdapter.getDimensionCardinality(column);
     }
     return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
-  }
-
-  @Override
-  public DateTime getMinTime()
-  {
-    return baseAdapter.getMinTime();
-  }
-
-  @Override
-  public DateTime getMaxTime()
-  {
-    return baseAdapter.getMaxTime();
   }
 
   @Nullable
@@ -243,17 +259,17 @@ public class UnnestStorageAdapter implements StorageAdapter
     return 0;
   }
 
-  @Override
-  public DateTime getMaxIngestedEventTime()
-  {
-    return baseAdapter.getMaxIngestedEventTime();
-  }
-
   @Nullable
   @Override
   public Metadata getMetadata()
   {
     return baseAdapter.getMetadata();
+  }
+
+  @Override
+  public boolean isFromTombstone()
+  {
+    return baseAdapter.isFromTombstone();
   }
 
   public VirtualColumn getUnnestColumn()
@@ -264,9 +280,9 @@ public class UnnestStorageAdapter implements StorageAdapter
   /**
    * Split queryFilter into pre- and post-correlate filters.
    *
-   * @param queryFilter            query filter passed to makeCursors
+   * @param queryFilter            query filter from {@link CursorBuildSpec}
    * @param unnestFilter           filter on unnested column passed to PostUnnestCursor
-   * @param queryVirtualColumns    query virtual columns passed to makeCursors
+   * @param queryVirtualColumns    query virtual columns from {@link CursorBuildSpec}
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    * @return pair of pre- and post-unnest filters
@@ -462,7 +478,7 @@ public class UnnestStorageAdapter implements StorageAdapter
    * while in case B, due to presence of the expression virtual column expressionVirtualColumn("j0.unnest", "array(\"dim1\",\"dim2\")", ColumnType.STRING_ARRAY)
    * the filters on d12 cannot be pushed to the pre filters
    *
-   * @param queryFilter            query filter passed to makeCursors
+   * @param queryFilter            query filter from {@link CursorBuildSpec}
    * @param inputColumn            input column to unnest if it's a direct access; otherwise null
    * @param inputColumnCapabilites input column capabilities if known; otherwise null
    */
@@ -562,6 +578,23 @@ public class UnnestStorageAdapter implements StorageAdapter
   }
 
   /**
+   * Computes ordering of a join {@link CursorHolder} based on the ordering of an underlying {@link CursorHolder}.
+   */
+  private List<OrderBy> computeOrdering(final List<OrderBy> baseOrdering)
+  {
+    // Sorted the same way as the base segment, unless the unnested column shadows one of the base columns.
+    int limit = 0;
+    for (; limit < baseOrdering.size(); limit++) {
+      final String columnName = baseOrdering.get(limit).getColumnName();
+      if (columnName.equals(outputColumnName) || columnName.equals(unnestColumn.getOutputName())) {
+        break;
+      }
+    }
+
+    return limit == baseOrdering.size() ? baseOrdering : baseOrdering.subList(0, limit);
+  }
+
+  /**
    * Computes the capabilities of {@link #outputColumnName}, after unnesting.
    */
   @Nullable
@@ -582,10 +615,12 @@ public class UnnestStorageAdapter implements StorageAdapter
       final TypeSignature<ValueType> outputType =
           capabilities.isArray() ? capabilities.getElementType() : capabilities.toColumnType();
 
+      final boolean useDimensionCursor = useDimensionCursor(capabilities);
       return ColumnCapabilitiesImpl.createDefault()
                                    .setType(outputType)
                                    .setHasMultipleValues(false)
-                                   .setDictionaryEncoded(useDimensionCursor(capabilities));
+                                   .setDictionaryEncoded(useDimensionCursor)
+                                   .setDictionaryValuesUnique(useDimensionCursor);
     }
   }
 

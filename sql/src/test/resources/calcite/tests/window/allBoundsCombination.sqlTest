@@ -1,0 +1,38 @@
+type: "operatorValidation"
+
+sql: |
+  select
+    cityName,
+    count(*) over (partition by cityName order by countryName rows between unbounded preceding and 1 preceding) c1,
+    count(*) over (partition by cityName order by countryName rows between unbounded preceding and current row) c2,
+    count(*) over (partition by cityName order by countryName rows between unbounded preceding and 1 following) c3,
+    count(*) over (partition by cityName order by countryName rows between unbounded preceding and unbounded following) c4,
+    count(*) over (partition by cityName order by countryName rows between 3 preceding and 1 preceding) c5,
+    count(*) over (partition by cityName order by countryName rows between 1 preceding and current row) c6,
+    count(*) over (partition by cityName order by countryName rows between 1 preceding and 1 FOLLOWING) c7,
+    count(*) over (partition by cityName order by countryName rows between 1 preceding and unbounded FOLLOWING) c8,
+    count(*) over (partition by cityName order by countryName rows between 1 FOLLOWING and unbounded FOLLOWING) c9,
+    count(*) over (partition by cityName order by countryName rows between 1 FOLLOWING and 3 FOLLOWING) c10,
+    count(*) over (partition by cityName order by countryName rows between current row and 1 following) c11,
+    count(*) over (partition by cityName order by countryName rows between current row and unbounded following) c12
+  from wikipedia
+  where cityName in ('Vienna', 'Seoul')
+  group by countryName, cityName, added
+
+expectedResults:
+  - ["Seoul",0,1,2,13,0,1,2,13,12,3,2,13]
+  - ["Seoul",1,2,3,13,1,2,3,13,11,3,2,12]
+  - ["Seoul",2,3,4,13,2,2,3,12,10,3,2,11]
+  - ["Seoul",3,4,5,13,3,2,3,11,9,3,2,10]
+  - ["Seoul",4,5,6,13,3,2,3,10,8,3,2,9]
+  - ["Seoul",5,6,7,13,3,2,3,9,7,3,2,8]
+  - ["Seoul",6,7,8,13,3,2,3,8,6,3,2,7]
+  - ["Seoul",7,8,9,13,3,2,3,7,5,3,2,6]
+  - ["Seoul",8,9,10,13,3,2,3,6,4,3,2,5]
+  - ["Seoul",9,10,11,13,3,2,3,5,3,3,2,4]
+  - ["Seoul",10,11,12,13,3,2,3,4,2,2,2,3]
+  - ["Seoul",11,12,13,13,3,2,3,3,1,1,2,2]
+  - ["Seoul",12,13,13,13,3,2,2,2,0,0,1,1]
+  - ["Vienna",0,1,2,3,0,1,2,3,2,2,2,3]
+  - ["Vienna",1,2,3,3,1,2,3,3,1,1,2,2]
+  - ["Vienna",2,3,3,3,2,2,2,2,0,0,1,1]

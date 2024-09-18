@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.kinesis;
 
+import com.amazonaws.services.kinesis.model.Record;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,7 +28,6 @@ import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -37,6 +37,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
@@ -63,6 +64,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -99,7 +101,7 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
 
   private final KinesisRecordSupplier recordSupplier = mock(KinesisRecordSupplier.class);
 
-  private static List<OrderedPartitionableRecord<String, String, ByteEntity>> generateRecords(String stream)
+  private static List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> generateRecords(String stream)
   {
     return ImmutableList.of(
         new OrderedPartitionableRecord<>(stream, "1", "0", jb("2008", "a", "y", "10", "20.0", "1.0")),
@@ -115,9 +117,9 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
             stream,
             "1",
             "6",
-            Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
+            Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("unparseable")))))
         ),
-        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new ByteEntity(StringUtils.toUtf8("{}"))))
+        new OrderedPartitionableRecord<>(stream, "1", "8", Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(StringUtils.toUtf8("{}"))))))
     );
   }
 
@@ -428,19 +430,19 @@ public class KinesisSamplerSpecTest extends EasyMockSupport
     Assert.assertFalse(it.hasNext());
   }
 
-  private static List<ByteEntity> jb(String ts, String dim1, String dim2, String dimLong, String dimFloat, String met1)
+  private static List<KinesisRecordEntity> jb(String ts, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
     try {
-      return Collections.singletonList(new ByteEntity(new ObjectMapper().writeValueAsBytes(
+      return Collections.singletonList(new KinesisRecordEntity(new Record().withData(ByteBuffer.wrap(new ObjectMapper().writeValueAsBytes(
           ImmutableMap.builder()
-                      .put("timestamp", ts)
-                      .put("dim1", dim1)
-                      .put("dim2", dim2)
-                      .put("dimLong", dimLong)
-                      .put("dimFloat", dimFloat)
-                      .put("met1", met1)
-                      .build()
-      )));
+              .put("timestamp", ts)
+              .put("dim1", dim1)
+              .put("dim2", dim2)
+              .put("dimLong", dimLong)
+              .put("dimFloat", dimFloat)
+              .put("met1", met1)
+              .build()
+      )))));
     }
     catch (Exception e) {
       throw new RuntimeException(e);

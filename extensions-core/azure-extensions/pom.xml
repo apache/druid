@@ -204,10 +204,6 @@
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <configuration>
-                    <excludes>
-                        <!-- Ignore firehose code -->
-                        <exclude>org/apache/druid/firehose/azure/**/*</exclude> <!-- integration-tests -->
-                    </excludes>
                     <rules>
                         <rule>
                             <element>BUNDLE</element>

@@ -1,32 +1,31 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`TimedButton matches snapshot 1`] = `
-<Blueprint4.ButtonGroup
+<Blueprint5.ButtonGroup
   className="timed-button"
 >
-  <Blueprint4.Button
+  <Blueprint5.Button
     onClick={[Function]}
   />
-  <Blueprint4.Popover2
+  <Blueprint5.Popover
     boundary="clippingParents"
     captureDismiss={false}
     content={
-      <Blueprint4.Menu>
-        <Blueprint4.MenuDivider
+      <Blueprint5.Menu>
+        <Blueprint5.MenuDivider
           title="Select delay"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="tick-circle"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="timeValue"
         />
-      </Blueprint4.Menu>
+      </Blueprint5.Menu>
     }
     defaultIsOpen={false}
     disabled={false}
@@ -45,9 +44,9 @@ exports[`TimedButton matches snapshot 1`] = `
     transitionDuration={300}
     usePortal={true}
   >
-    <Blueprint4.Button
+    <Blueprint5.Button
       rightIcon="caret-down"
     />
-  </Blueprint4.Popover2>
-</Blueprint4.ButtonGroup>
+  </Blueprint5.Popover>
+</Blueprint5.ButtonGroup>
 `;

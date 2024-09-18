@@ -70,11 +70,11 @@ DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3, $4)], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "__time", "dim3", "m1", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "LONG", "STRING", "FLOAT", "LONG" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {

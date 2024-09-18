@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Classes, Menu, MenuItem, Position, Tag } from '@blueprintjs/core';
+import { Classes, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { OptionValue, ParameterDefinition } from '@druid-toolkit/visuals-core';
 import { getPluginOptionLabel } from '@druid-toolkit/visuals-core';
 import classNames from 'classnames';
@@ -58,7 +57,7 @@ export const OptionsInput = function OptionsInput(props: OptionsInputProps) {
             {getPluginOptionLabel(o, parameter)}
           </Tag>
         ))}
-        <Popover2
+        <Popover
           position={Position.BOTTOM}
           content={
             <Menu>
@@ -75,7 +74,7 @@ export const OptionsInput = function OptionsInput(props: OptionsInputProps) {
           }
         >
           <Tag icon={IconNames.PLUS} interactive />
-        </Popover2>
+        </Popover>
       </div>
     </div>
   );

@@ -393,78 +393,132 @@ public class QueryRunnerTestHelper
   }
 
   /**
-   * Check if a QueryRunner returned by {@link #makeQueryRunners(QueryRunnerFactory)} is vectorizable.
+   * Check if a QueryRunner returned by {@link #makeQueryRunners(QueryRunnerFactory, boolean)} is vectorizable.
    */
   public static boolean isTestRunnerVectorizable(QueryRunner runner)
   {
     final String runnerName = runner.toString();
-    return !("rtIndex".equals(runnerName) || "noRollupRtIndex".equals(runnerName));
+    return !("rtIndex".equals(runnerName)
+             || "noRollupRtIndex".equals(runnerName)
+             || "nonTimeOrderedRtIndex".equals(runnerName)
+             || "nonTimeOrderedNoRollupRtIndex".equals(runnerName));
   }
 
-
-  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
-      QueryRunnerFactory<T, QueryType> factory
+  /**
+   * Create test query runners.
+   *
+   * @param factory query runner factory
+   * @param includeNonTimeOrdered whether to include runners with non-time-ordered segments. Some test suites are not
+   *                              compatible with non-time-ordered segments.
+   */
+  public static <T, QueryType extends Query<T>> List<TestQueryRunner<T>> makeQueryRunners(
+      QueryRunnerFactory<T, QueryType> factory,
+      boolean includeNonTimeOrdered
   )
   {
-    BiFunction<String, Segment, QueryRunner<T>> maker = (name, seg) -> makeQueryRunner(factory, seg, name);
+    BiFunction<String, Segment, TestQueryRunner<T>> maker = (name, seg) -> makeQueryRunner(factory, seg, name);
 
-    return ImmutableList.of(
-        maker.apply(
-            "rtIndex",
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "noRollupRtIndex",
-            new IncrementalIndexSegment(TestIndex.getNoRollupIncrementalTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "mMappedTestIndex",
-            new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "noRollupMMappedTestIndex",
-            new QueryableIndexSegment(TestIndex.getNoRollupMMappedTestIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "mergedRealtimeIndex",
-            new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID)
-        ),
-        maker.apply(
-            "frontCodedMMappedTestIndex",
-            new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
+    final ImmutableList.Builder<TestQueryRunner<T>> retVal = ImmutableList.builder();
+
+    retVal.addAll(
+        Arrays.asList(
+            maker.apply(
+                "rtIndex",
+                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "noRollupRtIndex",
+                new IncrementalIndexSegment(TestIndex.getNoRollupIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mMappedTestIndex",
+                new QueryableIndexSegment(TestIndex.getMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "noRollupMMappedTestIndex",
+                new QueryableIndexSegment(TestIndex.getNoRollupMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mergedRealtimeIndex",
+                new QueryableIndexSegment(TestIndex.mergedRealtimeIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "frontCodedMMappedTestIndex",
+                new QueryableIndexSegment(TestIndex.getFrontCodedMMappedTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "mMappedTestIndexCompressedComplex",
+                new QueryableIndexSegment(TestIndex.getMMappedTestIndexCompressedComplex(), SEGMENT_ID)
+            )
         )
     );
+
+    if (includeNonTimeOrdered) {
+      retVal.addAll(
+          Arrays.asList(
+              maker.apply(
+                  "nonTimeOrderedRtIndex",
+                  new IncrementalIndexSegment(TestIndex.getNonTimeOrderedRealtimeTestIndex(), SEGMENT_ID)
+              ),
+              maker.apply(
+                  "nonTimeOrderedNoRollupRtIndex",
+                  new IncrementalIndexSegment(TestIndex.getNonTimeOrderedNoRollupRealtimeTestIndex(), SEGMENT_ID)
+              ),
+              maker.apply(
+                  "nonTimeOrderedMMappedTestIndex",
+                  new QueryableIndexSegment(TestIndex.getNonTimeOrderedMMappedTestIndex(), SEGMENT_ID)
+              ),
+              maker.apply(
+                  "nonTimeOrderedNoRollupMMappedTestIndex",
+                  new QueryableIndexSegment(TestIndex.getNonTimeOrderedNoRollupMMappedTestIndex(), SEGMENT_ID)
+              )
+          )
+      );
+    }
+
+    return retVal.build();
   }
 
-  public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunnersToMerge(
-      QueryRunnerFactory<T, QueryType> factory
+  /**
+   * Create test query runners.
+   *
+   * @param factory query runner factory
+   * @param includeNonTimeOrdered whether to include runners with non-time-ordered segments. Some test suites are not
+   *                              written to be compatible with non-time-ordered segments.
+   */
+  public static <T, QueryType extends Query<T>> List<TestQueryRunner<T>> makeQueryRunnersToMerge(
+      final QueryRunnerFactory<T, QueryType> factory,
+      final boolean includeNonTimeOrdered
   )
   {
-    return mapQueryRunnersToMerge(factory, makeQueryRunners(factory));
+    return mapQueryRunnersToMerge(factory, makeQueryRunners(factory, includeNonTimeOrdered));
   }
 
-  public static <T, QueryType extends Query<T>> ArrayList<QueryRunner<T>> mapQueryRunnersToMerge(
+  public static <T, QueryType extends Query<T>> ArrayList<TestQueryRunner<T>> mapQueryRunnersToMerge(
       QueryRunnerFactory<T, QueryType> factory,
-      List<QueryRunner<T>> runners
+      List<TestQueryRunner<T>> runners
   )
   {
-    final ArrayList<QueryRunner<T>> retVal = new ArrayList<>(runners.size());
+    final ArrayList<TestQueryRunner<T>> retVal = new ArrayList<>(runners.size());
 
     final QueryToolChest<T, QueryType> toolchest = factory.getToolchest();
-    for (QueryRunner<T> baseRunner : runners) {
+    for (TestQueryRunner<T> baseRunner : runners) {
       retVal.add(
-          FluentQueryRunner.create(baseRunner, toolchest)
-                           .applyPreMergeDecoration()
-                           .mergeResults(true)
-                           .applyPostMergeDecoration()
-                           .setToString(baseRunner.toString())
+          new TestQueryRunner<>(
+              baseRunner.getName(),
+              FluentQueryRunner.create(baseRunner, toolchest)
+                               .applyPreMergeDecoration()
+                               .mergeResults(true)
+                               .applyPostMergeDecoration(),
+              baseRunner.getSegment()
+          )
       );
     }
 
     return retVal;
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String resourceFileName,
       final String runnerName
@@ -478,7 +532,7 @@ public class QueryRunnerTestHelper
     );
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       Segment adapter,
       final String runnerName
@@ -487,32 +541,23 @@ public class QueryRunnerTestHelper
     return makeQueryRunner(factory, SEGMENT_ID, adapter, runnerName);
   }
 
-  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
-      QueryRunnerFactory<T, QueryType> factory,
-      SegmentId segmentId,
-      Segment adapter,
+  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
+      final QueryRunnerFactory<T, QueryType> factory,
+      final SegmentId segmentId,
+      final Segment adapter,
       final String runnerName
   )
   {
-    //noinspection
-    return new BySegmentQueryRunner<T>(
-        segmentId,
-        adapter.getDataInterval().getStart(),
-        factory.createRunner(adapter)
-    )
-    {
-      @Override
-      public String toString()
-      {
-        // Tests that use these QueryRunners directly are parameterized and use the toString of their QueryRunner as
-        // the name of the test.  It would be better if the usages were adjusted to actually parameterize with an extra
-        // name parameter, or use a different object or something like that, but for now, we have to overload toString
-        // to name it so that the parameterization continues to work.
-        return runnerName;
-      }
-    };
+    return new TestQueryRunner<>(
+        runnerName,
+        new BySegmentQueryRunner<>(
+            segmentId,
+            adapter.getDataInterval().getStart(),
+            factory.createRunner(adapter)
+        ),
+        adapter
+    );
   }
-
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunnerWithSegmentMapFn(
       QueryRunnerFactory<T, QueryType> factory,
@@ -524,8 +569,7 @@ public class QueryRunnerTestHelper
     final DataSource base = query.getDataSource();
 
     final SegmentReference segmentReference = base.createSegmentMapFunction(query, new AtomicLong())
-                                                  .apply(ReferenceCountingSegment.wrapRootGenerationSegment(
-                                                      adapter));
+                                                  .apply(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
     return makeQueryRunner(factory, segmentReference, runnerName);
   }
 

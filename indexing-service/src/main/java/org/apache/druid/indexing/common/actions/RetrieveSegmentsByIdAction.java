@@ -75,12 +75,6 @@ public class RetrieveSegmentsByIdAction implements TaskAction<Set<DataSegment>>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

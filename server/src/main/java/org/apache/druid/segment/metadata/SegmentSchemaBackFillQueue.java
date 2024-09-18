@@ -179,7 +179,6 @@ public class SegmentSchemaBackFillQueue
             entry.getValue(),
             CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
         );
-
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
           segmentSchemaCache.markMetadataQueryResultPublished(plus.getSegmentId());

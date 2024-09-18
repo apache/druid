@@ -23,6 +23,8 @@ import it.unimi.dsi.fastutil.Arrays;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntComparator;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.common.semantic.SemanticCreator;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -73,7 +75,7 @@ import java.util.function.Function;
 public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumns
 {
   @SuppressWarnings("rawtypes")
-  private static final Map<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = RowsAndColumns
+  private static final Map<Class<?>, Function<ArrayListRowsAndColumns, ?>> AS_MAP = SemanticUtils
       .makeAsMap(ArrayListRowsAndColumns.class);
 
   private final ArrayList<RowType> rows;
@@ -142,6 +144,9 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   {
     if (!rowSignature.contains(name)) {
       final Column retVal = extraColumns.get(name);
+      if (retVal == null) {
+        return null;
+      }
       if (numRows() == rows.size()) {
         return retVal;
       }
@@ -212,15 +217,14 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   @Override
   public void addColumn(String name, Column column)
   {
-    if (rows.size() == numRows()) {
+    if (rows.size() == numRows() && column.as(ColumnValueSwapper.class) != null) {
       extraColumns.put(name, column);
       columnNames.add(name);
       return;
     }
 
     // When an ArrayListRowsAndColumns is only a partial view, but adds a column, it believes that the same column
-    // will eventually be added for all of the rows so we pre-allocate storage for the entire set of data and
-    // copy.
+    // will eventually be added for all the rows so we pre-allocate storage for the entire set of data and copy.
 
     final ColumnAccessor columnAccessor = column.toAccessor();
     if (columnAccessor.numRows() != numRows()) {
@@ -259,8 +263,8 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
         rowSignature,
         extraColumns,
         columnNames,
-        startOffset,
-        endOffset
+        this.startOffset + startOffset,
+        this.startOffset + endOffset
     );
   }
 

@@ -61,7 +61,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
       case 'general': {
         const ingestDatasource = execution.getIngestDatasource();
         return (
-          <div>
+          <div className="execution-details-pane-general">
             <p>{`General info for ${execution.id}${
               ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
             }`}</p>

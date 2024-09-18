@@ -64,9 +64,9 @@ import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactor
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -96,10 +96,10 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -166,40 +166,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       0
   );
   public static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING =
-      new ParallelIndexTuningConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          2,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          5,
-          null,
-          null,
-          null,
-          null
-      );
+      TuningConfigBuilder.forParallelIndexTask()
+                         .withMaxNumConcurrentSubTasks(2)
+                         .withMaxSavedParseExceptions(5)
+                         .build();
 
   protected static final double DEFAULT_TRANSIENT_TASK_FAILURE_RATE = 0.2;
   protected static final double DEFAULT_TRANSIENT_API_FAILURE_RATE = 0.2;
@@ -255,7 +225,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
@@ -277,40 +246,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       boolean forceGuaranteedRollup
   )
   {
-    return new ParallelIndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new MaxSizeSplitHintSpec(null, 1),
-        partitionsSpec,
-        null,
-        null,
-        null,
-        forceGuaranteedRollup,
-        null,
-        null,
-        null,
-        null,
-        maxNumConcurrentSubTasks,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        5,
-        null,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder.forParallelIndexTask()
+                              .withSplitHintSpec(new MaxSizeSplitHintSpec(null, 1))
+                              .withPartitionsSpec(partitionsSpec)
+                              .withForceGuaranteedRollup(forceGuaranteedRollup)
+                              .withMaxNumConcurrentSubTasks(maxNumConcurrentSubTasks)
+                              .withMaxParseExceptions(5)
+                              .build();
   }
 
   protected LocalOverlordClient getIndexingServiceClient()
@@ -330,12 +272,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     private volatile Future<TaskStatus> statusFuture;
     @MonotonicNonNull
     private volatile TestLocalTaskActionClient actionClient;
-    private final CountDownLatch taskFinishLatch;
 
-    private TaskContainer(Task task, CountDownLatch taskFinishLatch)
+    private TaskContainer(Task task)
     {
       this.task = task;
-      this.taskFinishLatch = taskFinishLatch;
     }
 
     public Task getTask()
@@ -462,7 +402,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       final CountDownLatch taskFinishLatch = useTaskFinishLatches ? new CountDownLatch(1) : new CountDownLatch(0);
       allTaskLatches.add(taskFinishLatch);
 
-      final TaskContainer taskContainer = new TaskContainer(task, taskFinishLatch);
+      final TaskContainer taskContainer = new TaskContainer(task);
       if (tasks.put(task.getId(), taskContainer) != null) {
         throw new ISE("Duplicate task ID[%s]", task.getId());
       }
@@ -675,7 +615,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
     objectMapper.setInjectableValues(
@@ -711,7 +650,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
     TaskConfig config = new TaskConfigBuilder()
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
     return new TaskToolbox.Builder()
@@ -752,25 +690,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .emitter(new StubServiceEmitter())
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
-  }
-
-  static class TestParallelIndexSupervisorTask extends ParallelIndexSupervisorTask
-  {
-    TestParallelIndexSupervisorTask(
-        String id,
-        TaskResource taskResource,
-        ParallelIndexIngestionSpec ingestionSchema,
-        Map<String, Object> context
-    )
-    {
-      super(
-          id,
-          null,
-          taskResource,
-          ingestionSchema,
-          context
-      );
-    }
   }
 
   static class LocalShuffleClient implements ShuffleClient<GenericPartitionLocation>

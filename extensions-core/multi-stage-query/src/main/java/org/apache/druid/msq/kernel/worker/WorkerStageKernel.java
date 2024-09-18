@@ -42,6 +42,8 @@ import java.util.Set;
  * This separation of decision-making from the "real world" allows the decision-making to live in one,
  * easy-to-follow place.
  *
+ * Not thread-safe.
+ *
  * @see org.apache.druid.msq.kernel.controller.ControllerQueryKernel state machine on the controller side
  */
 public class WorkerStageKernel
@@ -51,9 +53,10 @@ public class WorkerStageKernel
 
   private WorkerStagePhase phase = WorkerStagePhase.NEW;
 
-  // We read this variable in the main thread and the netty threads
   @Nullable
-  private volatile ClusterByStatisticsSnapshot resultKeyStatisticsSnapshot;
+  private ClusterByStatisticsSnapshot resultKeyStatisticsSnapshot;
+
+  private boolean doneReadingInput;
 
   @Nullable
   private ClusterByPartitions resultPartitionBoundaries;
@@ -107,31 +110,36 @@ public class WorkerStageKernel
 
   public void startPreshuffleWaitingForResultPartitionBoundaries()
   {
-    assertPreshuffleStatisticsNeeded();
+    assertPreshuffleStatisticsNeeded(true);
     transitionTo(WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES);
   }
 
   public void startPreshuffleWritingOutput()
   {
-    assertPreshuffleStatisticsNeeded();
     transitionTo(WorkerStagePhase.PRESHUFFLE_WRITING_OUTPUT);
   }
 
-  public void setResultKeyStatisticsSnapshot(final ClusterByStatisticsSnapshot resultKeyStatisticsSnapshot)
+  public void setResultKeyStatisticsSnapshot(@Nullable final ClusterByStatisticsSnapshot resultKeyStatisticsSnapshot)
   {
-    assertPreshuffleStatisticsNeeded();
+    assertPreshuffleStatisticsNeeded(resultKeyStatisticsSnapshot != null);
     this.resultKeyStatisticsSnapshot = resultKeyStatisticsSnapshot;
+    this.doneReadingInput = true;
   }
 
   public void setResultPartitionBoundaries(final ClusterByPartitions resultPartitionBoundaries)
   {
-    assertPreshuffleStatisticsNeeded();
+    assertPreshuffleStatisticsNeeded(true);
     this.resultPartitionBoundaries = resultPartitionBoundaries;
   }
 
   public boolean hasResultKeyStatisticsSnapshot()
   {
     return resultKeyStatisticsSnapshot != null;
+  }
+
+  public boolean isDoneReadingInput()
+  {
+    return doneReadingInput;
   }
 
   public boolean hasResultPartitionBoundaries()
@@ -152,10 +160,10 @@ public class WorkerStageKernel
   @Nullable
   public Object getResultObject()
   {
-    if (phase == WorkerStagePhase.RESULTS_READY || phase == WorkerStagePhase.FINISHED) {
+    if (phase == WorkerStagePhase.RESULTS_COMPLETE) {
       return resultObject;
     } else {
-      throw new ISE("Results are not ready yet");
+      throw new ISE("Results are not ready in phase[%s]", phase);
     }
   }
 
@@ -174,7 +182,7 @@ public class WorkerStageKernel
       throw new NullPointerException("resultObject must not be null");
     }
 
-    transitionTo(WorkerStagePhase.RESULTS_READY);
+    transitionTo(WorkerStagePhase.RESULTS_COMPLETE);
     this.resultObject = resultObject;
   }
 
@@ -196,16 +204,18 @@ public class WorkerStageKernel
     }
   }
 
-  public boolean addPostedResultsComplete(Pair<StageId, Integer> stageIdAndWorkerNumber)
+  public boolean addPostedResultsComplete(StageId stageId, int workerNumber)
   {
-    return postedResultsComplete.add(stageIdAndWorkerNumber);
+    return postedResultsComplete.add(Pair.of(stageId, workerNumber));
   }
 
-  private void assertPreshuffleStatisticsNeeded()
+  private void assertPreshuffleStatisticsNeeded(final boolean delivered)
   {
-    if (!workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
+    if (delivered != workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
       throw new ISE(
-          "Result partitioning is not necessary for stage [%s]",
+          "Result key statistics %s, but %s, for stage[%s]",
+          delivered ? "delivered" : "not delivered",
+          workOrder.getStageDefinition().mustGatherResultKeyStatistics() ? "expected" : "not expected",
           workOrder.getStageDefinition().getId()
       );
     }
@@ -222,7 +232,12 @@ public class WorkerStageKernel
       );
       phase = newPhase;
     } else {
-      throw new IAE("Cannot transition from [%s] to [%s]", phase, newPhase);
+      throw new IAE(
+          "Cannot transition stage[%s] from[%s] to[%s]",
+          workOrder.getStageDefinition().getId(),
+          phase,
+          newPhase
+      );
     }
   }
 }

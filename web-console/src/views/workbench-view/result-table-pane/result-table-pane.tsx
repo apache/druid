@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -609,7 +608,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             return {
               Header() {
                 return (
-                  <Popover2 content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                  <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
                       <div className="output-name" title={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
@@ -624,7 +623,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         </div>
                       )}
                     </div>
-                  </Popover2>
+                  </Popover>
                 );
               },
               headerClassName: getHeaderClassName(h),
@@ -633,7 +632,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 const value = row.value;
                 return (
                   <div>
-                    <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -644,7 +643,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover2>
+                    </Popover>
                   </div>
                 );
               },

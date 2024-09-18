@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -27,7 +28,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 
@@ -69,10 +70,13 @@ public class UnnestDimensionCursor implements Cursor
   private final String outputName;
   private final ColumnSelectorFactory baseColumnSelectorFactory;
   private int index;
-  @Nullable
+  @MonotonicNonNull
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
+  @MonotonicNonNull
   private SingleIndexInts indexIntsForRow;
+  private final int nullId;
+  private final int idOffset;
 
   public UnnestDimensionCursor(
       Cursor cursor,
@@ -91,11 +95,22 @@ public class UnnestDimensionCursor implements Cursor
     this.index = 0;
     this.outputName = outputColumnName;
     this.needInitialization = true;
+    // this shouldn't happen, but just in case...
+    final IdLookup lookup = Preconditions.checkNotNull(dimSelector.idLookup());
+    final int nullId = lookup.lookupId(null);
+    if (nullId < 0) {
+      this.idOffset = 1;
+      this.nullId = 0;
+    } else {
+      this.idOffset = 0;
+      this.nullId = nullId;
+    }
   }
 
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
+
     return new ColumnSelectorFactory()
     {
       @Override
@@ -110,15 +125,13 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public IndexedInts getRow()
           {
-            // This object reference has been created
-            // during the call to initialize and referenced henceforth
             return indexIntsForRow;
           }
 
           @Override
           public ValueMatcher makeValueMatcher(@Nullable String value)
           {
-            final int idForLookup = idLookup().lookupId(value);
+            final int idForLookup = dimSelector.idLookup().lookupId(value);
             if (idForLookup < 0) {
               return new ValueMatcher()
               {
@@ -131,7 +144,7 @@ public class UnnestDimensionCursor implements Cursor
                       return true;
                     }
                     final int rowId = indexedIntsForCurrentRow.get(index);
-                    return lookupName(rowId) == null;
+                    return dimSelector.lookupName(rowId) == null;
                   }
                   return false;
                 }
@@ -156,7 +169,7 @@ public class UnnestDimensionCursor implements Cursor
                   return includeUnknown;
                 }
                 final int rowId = indexedIntsForCurrentRow.get(index);
-                return (includeUnknown && lookupName(rowId) == null) || idForLookup == rowId;
+                return (includeUnknown && dimSelector.lookupName(rowId) == null) || idForLookup == rowId;
               }
 
               @Override
@@ -183,10 +196,10 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public Object getObject()
           {
-            if (indexedIntsForCurrentRow == null || indexedIntsForCurrentRow.size() == 0) {
+            if (indexedIntsForCurrentRow.size() == 0) {
               return null;
             }
-            return lookupName(indexedIntsForCurrentRow.get(index));
+            return dimSelector.lookupName(indexedIntsForCurrentRow.get(index));
           }
 
           @Override
@@ -198,14 +211,14 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public int getValueCardinality()
           {
-            return dimSelector.getValueCardinality();
+            return dimSelector.getValueCardinality() + idOffset;
           }
 
           @Nullable
           @Override
           public String lookupName(int id)
           {
-            return dimSelector.lookupName(id);
+            return dimSelector.lookupName(id - idOffset);
           }
 
           @Override
@@ -218,21 +231,19 @@ public class UnnestDimensionCursor implements Cursor
           @Override
           public IdLookup idLookup()
           {
-            return dimSelector.idLookup();
+            return name -> name == null ? nullId : dimSelector.idLookup().lookupId(name) + idOffset;
           }
         };
       }
 
-      /*
-      This ideally should not be called. If called delegate using the makeDimensionSelector
-       */
       @Override
       public ColumnValueSelector makeColumnValueSelector(String columnName)
       {
-        if (!outputName.equals(columnName)) {
-          return baseColumnSelectorFactory.makeColumnValueSelector(columnName);
+        if (outputName.equals(columnName)) {
+          return makeDimensionSelector(DefaultDimensionSpec.of(columnName));
         }
-        return makeDimensionSelector(DefaultDimensionSpec.of(columnName));
+
+        return baseColumnSelectorFactory.makeColumnValueSelector(columnName);
       }
 
       @Nullable
@@ -246,12 +257,6 @@ public class UnnestDimensionCursor implements Cursor
         return baseColumnSelectorFactory.getColumnCapabilities(column);
       }
     };
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Override
@@ -304,11 +309,7 @@ public class UnnestDimensionCursor implements Cursor
   {
     index = 0;
     this.indexIntsForRow = new SingleIndexInts();
-
-    if (dimSelector.getObject() != null) {
-      this.indexedIntsForCurrentRow = dimSelector.getRow();
-    }
-
+    this.indexedIntsForCurrentRow = dimSelector.getRow();
     needInitialization = false;
   }
 
@@ -320,29 +321,18 @@ public class UnnestDimensionCursor implements Cursor
    */
   private void advanceAndUpdate()
   {
-    if (indexedIntsForCurrentRow == null) {
-      index = 0;
+    if (index >= indexedIntsForCurrentRow.size() - 1) {
       if (!baseCursor.isDone()) {
         baseCursor.advanceUninterruptibly();
-        if (!baseCursor.isDone()) {
-          indexedIntsForCurrentRow = dimSelector.getRow();
-        }
       }
+      if (!baseCursor.isDone()) {
+        indexedIntsForCurrentRow = dimSelector.getRow();
+      }
+      index = 0;
     } else {
-      if (index >= indexedIntsForCurrentRow.size() - 1) {
-        if (!baseCursor.isDone()) {
-          baseCursor.advanceUninterruptibly();
-        }
-        if (!baseCursor.isDone()) {
-          indexedIntsForCurrentRow = dimSelector.getRow();
-        }
-        index = 0;
-      } else {
-        ++index;
-      }
+      ++index;
     }
   }
-
 
   // Helper class to help in returning
   // getRow from the dimensionSelector
@@ -366,12 +356,11 @@ public class UnnestDimensionCursor implements Cursor
     @Override
     public int get(int idx)
     {
-      // need to get value from the indexed ints
-      // only if it is non null and has at least 1 value
-      if (indexedIntsForCurrentRow != null && indexedIntsForCurrentRow.size() > 0) {
-        return indexedIntsForCurrentRow.get(index);
+      // everything that calls get also checks size
+      if (indexedIntsForCurrentRow.size() == 0) {
+        return nullId;
       }
-      return 0;
+      return idOffset + indexedIntsForCurrentRow.get(index);
     }
   }
 }

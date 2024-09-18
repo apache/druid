@@ -26,7 +26,7 @@ import com.google.inject.Injector;
 import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskStorageQueryAdapter;
+import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.http.OverlordResource;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
@@ -60,7 +60,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
     return ImmutableList.copyOf(
         Iterables.concat(
             getRequestPaths(OverlordResource.class, ImmutableList.of(
-                TaskStorageQueryAdapter.class,
+                TaskQueryTool.class,
                 AuthorizerMapper.class
                             )
             ),
@@ -84,7 +84,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
 
   private static boolean mockedOnceTsqa;
   private static boolean mockedOnceSM;
-  private TaskStorageQueryAdapter tsqa;
+  private TaskQueryTool tsqa;
   private SupervisorManager supervisorManager;
 
   public OverlordSecurityResourceFilterTest(
@@ -107,7 +107,7 @@ public class OverlordSecurityResourceFilterTest extends ResourceFilterTestHelper
       // Since we are creating the mocked tsqa object only once and getting that object from Guice here therefore
       // if the mockedOnce check is not done then we will call EasyMock.expect and EasyMock.replay on the mocked object
       // multiple times and it will throw exceptions
-      tsqa = injector.getInstance(TaskStorageQueryAdapter.class);
+      tsqa = injector.getInstance(TaskQueryTool.class);
       EasyMock.expect(tsqa.getTask(EasyMock.anyString())).andReturn(Optional.of(noopTask)).anyTimes();
       EasyMock.replay(tsqa);
       mockedOnceTsqa = true;

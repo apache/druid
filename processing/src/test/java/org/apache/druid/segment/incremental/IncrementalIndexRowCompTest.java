@@ -19,9 +19,10 @@
 
 package org.apache.druid.segment.incremental;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.CloserRule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -31,8 +32,10 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,19 +45,14 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
 {
-  public final IncrementalIndexCreator indexCreator;
+  public String indexType;
 
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
-  public IncrementalIndexRowCompTest(String indexType) throws JsonProcessingException
+  public IncrementalIndexRowCompTest(String indexType)
   {
-    indexCreator = closer.closeLater(
-        new IncrementalIndexCreator(indexType, (builder, args) -> builder
-            .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
-            .setMaxRowCount(1_000)
-            .build())
-    );
+    this.indexType = indexType;
   }
 
   @Parameterized.Parameters(name = "{index}: {0}")
@@ -64,9 +62,20 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testBasic()
+  public void testBasic() throws IOException
   {
+    IncrementalIndexCreator indexCreator = closer.closeLater(
+        new IncrementalIndexCreator(indexType, (builder, args) -> builder
+            .setSimpleTestingIndexSchema(new CountAggregatorFactory("cnt"))
+            .setMaxRowCount(1_000)
+            .build())
+    );
     IncrementalIndex index = indexCreator.createIndex();
+
+    // Expected ordering: __time
+    Assert.assertEquals(0, index.timePosition);
+    Assert.assertEquals(ImmutableList.of("__time"), index.getDimensionNames(true));
+    Assert.assertEquals(Collections.emptyList(), index.getDimensionNames(false));
 
     long time = System.currentTimeMillis();
     IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();
@@ -92,6 +101,69 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
 
     Assert.assertTrue(comparator.compare(ir6, ir1) > 0);
     Assert.assertTrue(comparator.compare(ir6, ir2) > 0);
+    Assert.assertTrue(comparator.compare(ir6, ir3) > 0);
+
+    Assert.assertTrue(comparator.compare(ir4, ir6) > 0);
+    Assert.assertTrue(comparator.compare(ir5, ir6) > 0);
+    Assert.assertTrue(comparator.compare(ir5, ir4) < 0);
+    Assert.assertTrue(comparator.compare(ir4, ir5) > 0);
+  }
+
+  @Test
+  public void testSortByDim() throws IOException
+  {
+    IncrementalIndexCreator indexCreator = closer.closeLater(
+        new IncrementalIndexCreator(
+            indexType,
+            (builder, args) -> builder
+                .setIndexSchema(
+                    IncrementalIndexSchema
+                        .builder()
+                        .withDimensionsSpec(
+                            DimensionsSpec.builder()
+                                .setDimensions(DimensionsSpec.getDefaultSchemas(Collections.singletonList("joe")))
+                                .useSchemaDiscovery(true)
+                                .setForceSegmentSortByTime(false)
+                                .build()
+                        )
+                        .withMetrics(new CountAggregatorFactory("cnt"))
+                        .build()
+                )
+                .setMaxRowCount(1_000)
+                .build()
+        )
+    );
+    IncrementalIndex index = indexCreator.createIndex();
+
+    // Expected ordering: [joe, __time]
+    Assert.assertEquals(1, index.timePosition);
+    Assert.assertEquals(ImmutableList.of("joe", "__time"), index.getDimensionNames(true));
+    Assert.assertEquals(ImmutableList.of("joe"), index.getDimensionNames(false));
+
+    long time = System.currentTimeMillis();
+    IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();
+    IncrementalIndexRow ir2 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "A")).getIncrementalIndexRow();
+    IncrementalIndexRow ir3 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A")).getIncrementalIndexRow();
+
+    IncrementalIndexRow ir4 = index.toIncrementalIndexRow(toMapRow(time + 1, "billy", "A", "joe", "B")).getIncrementalIndexRow();
+    IncrementalIndexRow ir5 = index.toIncrementalIndexRow(toMapRow(time + 1, "billy", "A", "joe", Arrays.asList("A", "B"))).getIncrementalIndexRow();
+    IncrementalIndexRow ir6 = index.toIncrementalIndexRow(toMapRow(time + 1)).getIncrementalIndexRow();
+
+    Comparator<IncrementalIndexRow> comparator = index.dimsComparator();
+
+    Assert.assertEquals(0, comparator.compare(ir1, ir1));
+    Assert.assertEquals(0, comparator.compare(ir2, ir2));
+    Assert.assertEquals(0, comparator.compare(ir3, ir3));
+
+    Assert.assertTrue(comparator.compare(ir1, ir2) > 0);
+    Assert.assertTrue(comparator.compare(ir2, ir1) < 0);
+    Assert.assertTrue(comparator.compare(ir2, ir3) > 0);
+    Assert.assertTrue(comparator.compare(ir3, ir2) < 0);
+    Assert.assertTrue(comparator.compare(ir1, ir3) > 0);
+    Assert.assertTrue(comparator.compare(ir3, ir1) < 0);
+
+    Assert.assertTrue(comparator.compare(ir6, ir1) < 0);
+    Assert.assertTrue(comparator.compare(ir6, ir2) < 0);
     Assert.assertTrue(comparator.compare(ir6, ir3) > 0);
 
     Assert.assertTrue(comparator.compare(ir4, ir6) > 0);

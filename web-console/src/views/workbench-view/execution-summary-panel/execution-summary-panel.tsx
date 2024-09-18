@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
@@ -109,7 +108,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           onClick={() => setShowDestinationPages(true)}
         />
       ) : (
-        <Popover2
+        <Popover
           key="download"
           className="download-button"
           content={
@@ -131,7 +130,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           position={Position.BOTTOM_RIGHT}
         >
           <Button icon={IconNames.DOWNLOAD} minimal />
-        </Popover2>
+        </Popover>
       ),
     );
   }

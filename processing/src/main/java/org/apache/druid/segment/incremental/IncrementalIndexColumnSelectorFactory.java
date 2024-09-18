@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -43,20 +44,20 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   private final IncrementalIndexStorageAdapter adapter;
   private final IncrementalIndex index;
   private final VirtualColumns virtualColumns;
-  private final boolean descending;
+  private final Order timeOrder;
   private final IncrementalIndexRowHolder rowHolder;
 
   IncrementalIndexColumnSelectorFactory(
       IncrementalIndexStorageAdapter adapter,
       VirtualColumns virtualColumns,
-      boolean descending,
+      Order timeOrder,
       IncrementalIndexRowHolder rowHolder
   )
   {
     this.adapter = adapter;
     this.index = adapter.index;
     this.virtualColumns = virtualColumns;
-    this.descending = descending;
+    this.timeOrder = timeOrder;
     this.rowHolder = rowHolder;
   }
 
@@ -75,8 +76,12 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrder != Order.NONE) {
+      return new SingleScanTimeDimensionSelector(
+          makeColumnValueSelector(dimension),
+          extractionFn,
+          timeOrder
+      );
     }
 
     final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());

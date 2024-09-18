@@ -29,10 +29,10 @@ jest.useFakeTimers('modern').setSystemTime(Date.parse('2021-06-08T12:34:56Z'));
 describe('SegmentTimeline', () => {
   it('.getSqlQuery', () => {
     expect(
-      SegmentTimeline.getSqlQuery(
+      SegmentTimeline.getSqlQuery([
         new Date('2020-01-01T00:00:00Z'),
         new Date('2021-02-01T00:00:00Z'),
-      ),
+      ]),
     ).toEqual(sane`
       SELECT
         "start", "end", "datasource",

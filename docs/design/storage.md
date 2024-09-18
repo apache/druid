@@ -67,7 +67,7 @@ On the Coordinator / Historical side:
 Segments all have a four-part identifier with the following components:
 
 - Datasource name.
-- Time interval (for the time chunk containing the segment; this corresponds to the `segmentGranularity` specified at ingestion time).
+- Time interval for the time chunk containing the segment; this corresponds to the `segmentGranularity` specified at ingestion time. Uses the same format as [query granularity](../querying/granularities.md).
 - Version number (generally an ISO8601 timestamp corresponding to when the segment set was first started).
 - Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous).
 

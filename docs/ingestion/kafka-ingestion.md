@@ -254,7 +254,6 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 * `json`
 * `kafka`
 * `avro_stream`
-* `avro_ocf`
 * `protobuf`
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
@@ -422,8 +421,6 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`numPersistThreads`|Integer|The number of threads to use to create and persist incremental segments on the disk. Higher ingestion data throughput results in a larger number of incremental segments, causing significant CPU time to be spent on the creation of the incremental segments on the disk. For datasources with number of columns running into hundreds or thousands, creation of the incremental segments may take up significant time, in the order of multiple seconds. In both of these scenarios, ingestion can stall or pause frequently, causing it to fall behind. You can use additional threads to parallelize the segment creation without blocking ingestion as long as there are sufficient CPU resources available.|No|1|
-|`chatAsync`|Boolean|If `true`, use asynchronous communication with indexing tasks, and ignore the `chatThreads` parameter. If `false`, use synchronous communication in a thread pool of size `chatThreads`.|No|`true`|
-|`chatThreads`|Integer|The number of threads to use for communicating with indexing tasks. Ignored if `chatAsync` is `true`.|No|`min(10, taskCount * replicas)`|
 
 ## Deployment notes on Kafka partitions and Druid segments
 

@@ -27,7 +27,7 @@ import org.apache.datasketches.common.Util;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.datasketches.thetacommon.ThetaUtil;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -41,6 +41,7 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -80,10 +81,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && capabilities.isArray()) {
-      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
-    }
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchAggregator(selector, size);
   }
@@ -91,10 +89,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && capabilities.isArray()) {
-      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
-    }
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     final SketchAggregator aggregator = new SketchAggregator(selector, size);
     return new AggregatorAndSize(aggregator, aggregator.getInitialSizeBytes());
@@ -104,10 +99,7 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ColumnCapabilities capabilities = metricFactory.getColumnCapabilities(fieldName);
-    if (capabilities != null && capabilities.isArray()) {
-      throw InvalidInput.exception("ARRAY types are not supported for theta sketch");
-    }
+    validateInputs(metricFactory.getColumnCapabilities(fieldName));
     BaseObjectColumnValueSelector selector = metricFactory.makeColumnValueSelector(fieldName);
     return new SketchBufferAggregator(selector, size, getMaxIntermediateSizeWithNulls());
   }
@@ -115,7 +107,39 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
   {
+    validateInputs(selectorFactory.getColumnCapabilities(fieldName));
     return new SketchVectorAggregator(selectorFactory, fieldName, size, getMaxIntermediateSizeWithNulls());
+  }
+
+  /**
+   * Validates whether the aggregator supports the input column type.
+   * Unsupported column types are:
+   * <ul>
+   *   <li>Arrays</li>
+   *   <li>Complex types of thetaSketch, thetaSketchMerge, thetaSketchBuild.</li>
+   * </ul>
+   * @param capabilities
+   */
+  private void validateInputs(@Nullable ColumnCapabilities capabilities)
+  {
+    if (capabilities != null) {
+      boolean isUnsupportedComplexType = capabilities.is(ValueType.COMPLEX) && !(
+          SketchModule.THETA_SKETCH_TYPE.equals(capabilities.toColumnType()) ||
+          SketchModule.MERGE_TYPE.equals(capabilities.toColumnType()) ||
+          SketchModule.BUILD_TYPE.equals(capabilities.toColumnType())
+      );
+
+      if (capabilities.isArray() || isUnsupportedComplexType) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                "Unsupported input [%s] of type [%s] for aggregator [%s].",
+                                getFieldName(),
+                                capabilities.asTypeString(),
+                                getIntermediateType()
+                            );
+      }
+    }
   }
 
   @Override

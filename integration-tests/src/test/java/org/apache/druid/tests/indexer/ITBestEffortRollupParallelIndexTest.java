@@ -137,7 +137,7 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           new Pair<>(false, false)
       );
 
-      // with DruidInputSource instead of IngestSegmentFirehose
+      // with DruidInputSource
       doReindexTest(
           INDEX_DATASOURCE,
           INDEX_DRUID_INPUT_SOURCE_DATASOURCE,

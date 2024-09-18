@@ -134,11 +134,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
               }}
             />
           ))}
-          {valuesState.loading && (
-            <MenuItem icon={IconNames.BLANK} disabled>
-              Loading...
-            </MenuItem>
-          )}
+          {valuesState.loading && <MenuItem icon={IconNames.BLANK} disabled text="Loading..." />}
         </Menu>
       </FormGroup>
       <div className="button-bar">

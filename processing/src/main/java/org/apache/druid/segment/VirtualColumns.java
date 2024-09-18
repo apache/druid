@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -48,13 +47,12 @@ import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.apache.druid.segment.virtual.VirtualizedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Class allowing lookup and usage of virtual columns.
@@ -86,11 +84,21 @@ public class VirtualColumns implements Cacheable
   }
 
   @JsonCreator
-  public static VirtualColumns create(List<VirtualColumn> virtualColumns)
+  public static VirtualColumns create(@Nullable List<VirtualColumn> virtualColumns)
   {
     if (virtualColumns == null || virtualColumns.isEmpty()) {
       return EMPTY;
     }
+    return fromIterable(virtualColumns);
+  }
+
+  public static VirtualColumns create(VirtualColumn... virtualColumns)
+  {
+    return create(Arrays.asList(virtualColumns));
+  }
+
+  public static VirtualColumns fromIterable(Iterable<VirtualColumn> virtualColumns)
+  {
     Map<String, VirtualColumn> withDotSupport = new HashMap<>();
     Map<String, VirtualColumn> withoutDotSupport = new HashMap<>();
     for (VirtualColumn vc : virtualColumns) {
@@ -115,24 +123,18 @@ public class VirtualColumns implements Cacheable
     return new VirtualColumns(ImmutableList.copyOf(virtualColumns), withDotSupport, withoutDotSupport);
   }
 
-  public static VirtualColumns create(VirtualColumn... virtualColumns)
-  {
-    return create(Arrays.asList(virtualColumns));
-  }
-
   public static VirtualColumns nullToEmpty(@Nullable VirtualColumns virtualColumns)
   {
     return virtualColumns == null ? EMPTY : virtualColumns;
   }
 
-  public static boolean shouldVectorize(Query<?> query, VirtualColumns virtualColumns, ColumnInspector inspector)
-  {
-    if (virtualColumns.getVirtualColumns().length > 0) {
-      return query.context().getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector));
-    } else {
-      return true;
-    }
-  }
+  // For equals, hashCode, toString, and serialization:
+  private final List<VirtualColumn> virtualColumns;
+  private final List<String> virtualColumnNames;
+
+  // For getVirtualColumn:
+  private final Map<String, VirtualColumn> withDotSupport;
+  private final Map<String, VirtualColumn> withoutDotSupport;
 
   private VirtualColumns(
       List<VirtualColumn> virtualColumns,
@@ -143,18 +145,13 @@ public class VirtualColumns implements Cacheable
     this.virtualColumns = virtualColumns;
     this.withDotSupport = withDotSupport;
     this.withoutDotSupport = withoutDotSupport;
+    this.virtualColumnNames = new ArrayList<>(virtualColumns.size());
 
     for (VirtualColumn virtualColumn : virtualColumns) {
       detectCycles(virtualColumn, null);
+      virtualColumnNames.add(virtualColumn.getOutputName());
     }
   }
-
-  // For equals, hashCode, toString, and serialization:
-  private final List<VirtualColumn> virtualColumns;
-
-  // For getVirtualColumn:
-  private final Map<String, VirtualColumn> withDotSupport;
-  private final Map<String, VirtualColumn> withoutDotSupport;
 
   /**
    * Returns true if a virtual column exists with a particular columnName.
@@ -259,7 +256,12 @@ public class VirtualColumns implements Cacheable
   public boolean canVectorize(ColumnInspector columnInspector)
   {
     final ColumnInspector inspector = wrapInspector(columnInspector);
-    return virtualColumns.stream().allMatch(virtualColumn -> virtualColumn.canVectorize(inspector));
+    for (VirtualColumn virtualColumn : virtualColumns) {
+      if (!virtualColumn.canVectorize(inspector)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -468,6 +470,16 @@ public class VirtualColumns implements Cacheable
     return new CacheKeyBuilder((byte) 0).appendCacheablesIgnoringOrder(virtualColumns).build();
   }
 
+  public boolean isEmpty()
+  {
+    return virtualColumns.isEmpty();
+  }
+
+  public List<String> getColumnNames()
+  {
+    return virtualColumnNames;
+  }
+
   private VirtualColumn getVirtualColumnForSelector(String columnName)
   {
     VirtualColumn virtualColumn = getVirtualColumn(columnName);
@@ -537,15 +549,5 @@ public class VirtualColumns implements Cacheable
       return obj instanceof VirtualColumns &&
              ((VirtualColumns) obj).virtualColumns.isEmpty();
     }
-  }
-
-  public boolean isEmpty()
-  {
-    return virtualColumns.isEmpty();
-  }
-
-  public List<String> getColumnNames()
-  {
-    return virtualColumns.stream().map(v -> v.getOutputName()).collect(Collectors.toList());
   }
 }

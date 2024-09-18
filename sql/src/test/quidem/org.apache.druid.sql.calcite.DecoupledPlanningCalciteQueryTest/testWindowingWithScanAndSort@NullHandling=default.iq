@@ -139,11 +139,11 @@ DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
       "resultFormat" : "compactedList",
       "limit" : 10,
       "columns" : [ "a0", "d1", "w0" ],
-      "legacy" : false,
       "columnTypes" : [ "LONG", "DOUBLE", "LONG" ],
       "granularity" : {
         "type" : "all"
-      }
+      },
+      "legacy" : false
     }
   },
   "intervals" : {

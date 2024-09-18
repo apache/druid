@@ -46,7 +46,7 @@ public class TaskAnnouncementTest
   @Test
   public void testBackwardsCompatibleSerde() throws Exception
   {
-    final IndexTask.IndexIOConfig ioConfig = new IndexTask.IndexIOConfig(null, new NoopInputSource(), null, null, null);
+    final IndexTask.IndexIOConfig ioConfig = new IndexTask.IndexIOConfig(new NoopInputSource(), null, null, null);
     final Task task = new IndexTask(
         "theid",
         new TaskResource("rofl", 2),

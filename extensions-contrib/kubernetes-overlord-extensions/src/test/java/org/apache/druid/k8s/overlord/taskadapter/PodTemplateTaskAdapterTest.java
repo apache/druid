@@ -163,7 +163,7 @@ public class PodTemplateTaskAdapterTest
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
-    Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobBase.yaml", Job.class);
 
     assertJobSpecsEqual(actual, expected);
   }
@@ -197,7 +197,7 @@ public class PodTemplateTaskAdapterTest
 
     Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
     Job actual = adapter.fromTask(task);
-    Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabledBase.yaml", Job.class);
 
     assertJobSpecsEqual(actual, expected);
   }

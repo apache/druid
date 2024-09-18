@@ -28,8 +28,8 @@ import type { Filter } from 'react-table';
 
 import type { HeaderActiveTab } from './components';
 import { HeaderBar, Loader } from './components';
-import type { DruidEngine, QueryWithContext } from './druid-models';
-import { Capabilities } from './helpers';
+import type { DruidEngine, QueryContext, QueryWithContext } from './druid-models';
+import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
 import { compact, localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
@@ -51,22 +51,32 @@ import './console-application.scss';
 
 type FiltersRouteMatch = RouteComponentProps<{ filters?: string }>;
 
-function changeHashWithFilter(slug: string, filters: Filter[]) {
+function changeTabWithFilter(tab: HeaderActiveTab, filters: Filter[]) {
   const filterString = tableFiltersToString(filters);
-  location.hash = slug + (filterString ? `/${filterString}` : '');
+  location.hash = tab + (filterString ? `/${filterString}` : '');
 }
 
-function viewFilterChange(slug: string) {
-  return (filters: Filter[]) => changeHashWithFilter(slug, filters);
+function viewFilterChange(tab: HeaderActiveTab) {
+  return (filters: Filter[]) => changeTabWithFilter(tab, filters);
 }
 
-function pathWithFilter(slug: string) {
-  return [`/${slug}/:filters`, `/${slug}`];
+function pathWithFilter(tab: HeaderActiveTab) {
+  return [`/${tab}/:filters`, `/${tab}`];
+}
+
+function switchTab(tab: HeaderActiveTab) {
+  location.hash = tab;
+}
+
+function switchToWorkbenchTab(tabId: string) {
+  location.hash = `workbench/${tabId}`;
 }
 
 export interface ConsoleApplicationProps {
-  defaultQueryContext?: Record<string, any>;
-  mandatoryQueryContext?: Record<string, any>;
+  baseQueryContext?: QueryContext;
+  defaultQueryContext?: QueryContext;
+  mandatoryQueryContext?: QueryContext;
+  serverQueryContext?: QueryContext;
 }
 
 export interface ConsoleApplicationState {
@@ -158,22 +168,22 @@ export class ConsoleApplication extends React.PureComponent<
 
   private readonly goToStreamingDataLoader = (supervisorId?: string) => {
     if (supervisorId) this.supervisorId = supervisorId;
-    location.hash = 'streaming-data-loader';
+    switchTab('streaming-data-loader');
     this.resetInitialsWithDelay();
   };
 
   private readonly goToClassicBatchDataLoader = (taskId?: string) => {
     if (taskId) this.taskId = taskId;
-    location.hash = 'classic-batch-data-loader';
+    switchTab('classic-batch-data-loader');
     this.resetInitialsWithDelay();
   };
 
   private readonly goToDatasources = (datasource: string) => {
-    changeHashWithFilter('datasources', [{ id: 'datasource', value: `=${datasource}` }]);
+    changeTabWithFilter('datasources', [{ id: 'datasource', value: `=${datasource}` }]);
   };
 
   private readonly goToSegments = (datasource: string, onlyUnavailable = false) => {
-    changeHashWithFilter(
+    changeTabWithFilter(
       'segments',
       compact([
         { id: 'datasource', value: `=${datasource}` },
@@ -183,19 +193,19 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly goToSupervisor = (supervisorId: string) => {
-    changeHashWithFilter('supervisors', [{ id: 'supervisor_id', value: `=${supervisorId}` }]);
+    changeTabWithFilter('supervisors', [{ id: 'supervisor_id', value: `=${supervisorId}` }]);
   };
 
   private readonly goToTasksWithTaskId = (taskId: string) => {
-    changeHashWithFilter('tasks', [{ id: 'task_id', value: `=${taskId}` }]);
+    changeTabWithFilter('tasks', [{ id: 'task_id', value: `=${taskId}` }]);
   };
 
   private readonly goToTasksWithTaskGroupId = (taskGroupId: string) => {
-    changeHashWithFilter('tasks', [{ id: 'group_id', value: `=${taskGroupId}` }]);
+    changeTabWithFilter('tasks', [{ id: 'group_id', value: `=${taskGroupId}` }]);
   };
 
   private readonly goToTasksWithDatasource = (datasource: string, type?: string) => {
-    changeHashWithFilter(
+    changeTabWithFilter(
       'tasks',
       compact([
         { id: 'datasource', value: `=${datasource}` },
@@ -206,24 +216,24 @@ export class ConsoleApplication extends React.PureComponent<
 
   private readonly openSupervisorSubmit = () => {
     this.openSupervisorDialog = true;
-    location.hash = 'supervisor';
+    switchTab('supervisors');
     this.resetInitialsWithDelay();
   };
 
   private readonly openTaskSubmit = () => {
     this.openTaskDialog = true;
-    location.hash = 'tasks';
+    switchTab('tasks');
     this.resetInitialsWithDelay();
   };
 
   private readonly goToQuery = (queryWithContext: QueryWithContext) => {
     this.queryWithContext = queryWithContext;
-    location.hash = 'workbench';
+    switchTab('workbench');
     this.resetInitialsWithDelay();
   };
 
   private readonly wrapInViewContainer = (
-    active: HeaderActiveTab,
+    active: HeaderActiveTab | null,
     el: JSX.Element,
     classType: 'normal' | 'narrow-pad' | 'thin' | 'thinner' = 'normal',
   ) => {
@@ -293,7 +303,8 @@ export class ConsoleApplication extends React.PureComponent<
   };
 
   private readonly wrappedWorkbenchView = (p: RouteComponentProps<{ tabId?: string }>) => {
-    const { defaultQueryContext, mandatoryQueryContext } = this.props;
+    const { defaultQueryContext, mandatoryQueryContext, baseQueryContext, serverQueryContext } =
+      this.props;
     const { capabilities } = this.state;
 
     const queryEngines: DruidEngine[] = ['native'];
@@ -309,21 +320,23 @@ export class ConsoleApplication extends React.PureComponent<
       <WorkbenchView
         capabilities={capabilities}
         tabId={p.match.params.tabId}
-        onTabChange={newTabId => {
-          location.hash = `workbench/${newTabId}`;
-        }}
+        onTabChange={switchToWorkbenchTab}
         initQueryWithContext={this.queryWithContext}
         defaultQueryContext={defaultQueryContext}
         mandatoryQueryContext={mandatoryQueryContext}
+        baseQueryContext={baseQueryContext}
+        serverQueryContext={serverQueryContext}
         queryEngines={queryEngines}
         allowExplain
         goToTask={this.goToTasksWithTaskId}
+        getClusterCapacity={maybeGetClusterCapacity}
       />,
       'thin',
     );
   };
 
   private readonly wrappedSqlDataLoaderView = () => {
+    const { serverQueryContext } = this.props;
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'sql-data-loader',
@@ -331,6 +344,9 @@ export class ConsoleApplication extends React.PureComponent<
         capabilities={capabilities}
         goToQuery={this.goToQuery}
         goToTask={this.goToTasksWithTaskId}
+        goToTaskGroup={this.goToTasksWithTaskGroupId}
+        getClusterCapacity={maybeGetClusterCapacity}
+        serverQueryContext={serverQueryContext}
       />,
     );
   };

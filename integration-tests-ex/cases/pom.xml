@@ -302,6 +302,7 @@
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-client</artifactId>
+            <version>5.5.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.cloud</groupId>
@@ -456,6 +457,15 @@
             </activation>
             <properties>
                 <it.category>GcsDeepStorage</it.category>
+            </properties>
+        </profile>
+        <profile>
+            <id>IT-BackwardCompatibilityMain</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>BackwardCompatibilityMain</it.category>
             </properties>
         </profile>
         <profile>

@@ -152,8 +152,7 @@ public interface Task
    * the task does not use any. Users can be given permission to access particular types of
    * input sources but not others, using the
    * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
-   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
-   * would be the case, if the task uses firehose.
+   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security
    */
   @JsonIgnore
   @Nonnull
@@ -161,15 +160,6 @@ public interface Task
   {
     throw new UOE(StringUtils.format(
         "Task type [%s], does not support input source based security",
-        getType()
-    ));
-  }
-
-  default UOE getInputSecurityOnFirehoseUnsupportedError()
-  {
-    throw new UOE(StringUtils.format(
-        "Input source based security cannot be performed '%s' task because it uses firehose."
-        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
         getType()
     ));
   }

@@ -31,6 +31,7 @@ import org.apache.druid.query.aggregation.datasketches.SketchQueryContext;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchMergeAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -40,6 +41,7 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
+import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -115,7 +117,7 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
     if (columnArg.isDirectColumnAccess()
         && inputAccessor.getInputRowSignature()
                         .getColumnType(columnArg.getDirectColumn())
-                        .map(type -> type.is(ValueType.COMPLEX))
+                        .map(this::isValidComplexInputType)
                         .orElse(false)) {
       aggregatorFactory = new HllSketchMergeAggregatorFactory(
           aggregatorName,
@@ -154,6 +156,15 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       }
 
       if (inputType.is(ValueType.COMPLEX)) {
+        if (!isValidComplexInputType(inputType)) {
+          plannerContext.setPlanningError(
+              "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
+              + " column type [%s]. You can disable approximation by setting [%s: false] in the query context.",
+              columnArg.getDruidType(),
+              PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT
+          );
+          return null;
+        }
         aggregatorFactory = new HllSketchMergeAggregatorFactory(
             aggregatorName,
             dimensionSpec.getOutputName(),
@@ -192,4 +203,11 @@ public abstract class HllSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  private boolean isValidComplexInputType(ColumnType columnType)
+  {
+    return HllSketchMergeAggregatorFactory.TYPE.equals(columnType) ||
+           HllSketchModule.TYPE_NAME.equals(columnType.getComplexTypeName()) ||
+           HllSketchModule.BUILD_TYPE_NAME.equals(columnType.getComplexTypeName());
+  }
 }

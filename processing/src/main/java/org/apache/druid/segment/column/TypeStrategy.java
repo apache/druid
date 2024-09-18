@@ -87,9 +87,13 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
   T read(ByteBuffer buffer);
 
   /**
-   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
-   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
-   * is *never* retained.
+   * Whether the {@link #read} methods return an object that may retain a reference to the underlying memory of the
+   * provided {@link ByteBuffer}. If a reference is sometimes retained, this method returns true. It returns false if,
+   * and only if, a reference is *never* retained.
+   * <p>
+   * If this method returns true, and the caller does not control the lifecycle of the underlying memory or cannot
+   * ensure that it will not change over the lifetime of the returned object, callers should copy the memory to a new
+   * location that they do control the lifecycle of and will be available for the duration of the returned object.
    */
   boolean readRetainsBufferReference();
 
@@ -225,6 +229,6 @@ public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
    */
   default Class<?> getClazz()
   {
-    throw DruidException.defensive("Not implemented. It is only implemented for complex dimensions which are groupable()");
+    throw DruidException.defensive("Not implemented. Check groupable() first");
   }
 }
