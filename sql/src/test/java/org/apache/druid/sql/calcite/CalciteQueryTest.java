@@ -15608,6 +15608,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testWindowingErrorWithoutFeatureFlag()
+  {
+    assumeFalse(queryFramework().engine().featureAvailable(EngineFeature.WINDOW_FUNCTIONS));
+    DruidException e = assertThrows(DruidException.class, () -> testBuilder()
+        .sql("SELECT dim1, ROW_NUMBER() OVER () from druid.foo")
+        .run());
+
+    assertThat(e, invalidSqlContains("The query contains window functions; They are not supported"));
+  }
+
+  @Test
   public void testDistinctSumNotSupportedWithApproximation()
   {
     DruidException e = assertThrows(
