@@ -198,7 +198,7 @@ public class VectorProcessors
     if (inputType == null) {
       // nil column, we can be anything, so be a string because it's the most flexible
       // (numbers will be populated with default values in default mode and non-null)
-      return constant((Long) null, inspector.getMaxVectorSize());
+      return constant(null, inspector.getMaxVectorSize(), ExpressionType.STRING);
     }
     switch (inputType.getType()) {
       case LONG:
@@ -288,7 +288,7 @@ public class VectorProcessors
     }
     final long[] outputValues = new long[inspector.getMaxVectorSize()];
 
-    ExprVectorProcessor<?> processor = null;
+    final ExprVectorProcessor<?> processor;
     if (Types.is(type, ExprType.LONG)) {
       final ExprVectorProcessor<long[]> input = expr.asVectorProcessor(inspector);
       processor = new ExprVectorProcessor<long[]>()
@@ -399,7 +399,7 @@ public class VectorProcessors
 
     final long[] outputValues = new long[inspector.getMaxVectorSize()];
 
-    ExprVectorProcessor<?> processor = null;
+    final ExprVectorProcessor<?> processor;
     if (Types.is(type, ExprType.LONG)) {
       final ExprVectorProcessor<long[]> input = expr.asVectorProcessor(inspector);
       processor = new ExprVectorProcessor<long[]>()

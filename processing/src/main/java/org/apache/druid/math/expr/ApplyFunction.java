@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
@@ -150,7 +151,7 @@ public interface ApplyFunction extends NamedFunction
         }
       }
       if (arrayElementType == null) {
-        arrayElementType = ExpressionType.LONG;
+        arrayElementType = NullHandling.sqlCompatible() ? ExpressionType.LONG : ExpressionType.STRING;
       }
       if (computeArrayType) {
         arrayType = ExpressionTypeFactory.getInstance().ofArray(arrayElementType);

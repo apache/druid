@@ -76,7 +76,7 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
   }
 
   /**
-   * Create a processor for a non-vectorizable {@link org.apache.druid.math.expr.ApplyFunction}.
+   * Create a processor for a non-vectorizable {@link ApplyFunction}.
    */
   public static <T> FallbackVectorProcessor<T> create(
       final ApplyFunction function,

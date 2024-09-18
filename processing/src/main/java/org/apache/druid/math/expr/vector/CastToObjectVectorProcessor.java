@@ -48,7 +48,7 @@ public class CastToObjectVectorProcessor extends CastToTypeVectorProcessor<Objec
     final Object[] toCast = delegateOutput.getObjectVector();
     for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
       ExprEval<?> cast = ExprEval.ofType(delegateType, toCast[i]).castTo(outputType);
-      output[i] = cast.valueOrDefault();
+      output[i] = cast.value();
     }
     return new ExprEvalObjectVector(output, outputType);
   }

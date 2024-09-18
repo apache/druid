@@ -3370,7 +3370,7 @@ public interface Function extends NamedFunction
         }
       }
       if (arrayElementType == null) {
-        arrayElementType = ExpressionType.LONG;
+        arrayElementType = NullHandling.sqlCompatible() ? ExpressionType.LONG : ExpressionType.STRING;
       }
       for (int i = 0; i < length; i++) {
         out[i] = outEval[i].castTo(arrayElementType).value();
