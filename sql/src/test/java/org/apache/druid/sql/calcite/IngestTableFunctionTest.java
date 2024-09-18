@@ -87,6 +87,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 @SqlTestFrameworkConfig.ComponentSupplier(IngestTableFunctionTest.ExportComponentSupplier.class)
 public class IngestTableFunctionTest extends CalciteIngestionDmlTest
 {
+  protected static URI toURI(String uri)
+  {
+    try {
+      return new URI(uri);
+    }
+    catch (URISyntaxException e) {
+      throw new ISE("Bad URI: %s", uri);
+    }
+  }
+
   protected final ExternalDataSource httpDataSource = new ExternalDataSource(
       new HttpInputSource(
           Collections.singletonList(toURI("http://foo.com/bar.csv")),
@@ -117,16 +127,6 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                   .add("z", ColumnType.LONG)
                   .build()
   );
-
-  protected static URI toURI(String uri)
-  {
-    try {
-      return new URI(uri);
-    }
-    catch (URISyntaxException e) {
-      throw new ISE("Bad URI: %s", uri);
-    }
-  }
 
   /**
    * Basic use of EXTERN
