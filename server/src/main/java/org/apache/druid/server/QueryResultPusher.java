@@ -56,7 +56,7 @@ import java.util.Map;
 public abstract class QueryResultPusher
 {
   private static final Logger log = new Logger(QueryResultPusher.class);
-  protected static final String RESULT_TRAILER_HEADERS = QueryResource.ERROR_MESSAGE_TRAILER_HEADER + "," + QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER;
+  protected static final String RESULT_TRAILER_HEADERS = QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER;
 
   private final HttpServletRequest request;
   private final String queryId;
