@@ -36,9 +36,9 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -122,30 +122,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
-   * string arrays
-   */
-  @MethodSource("data")
-  @ParameterizedTest(name = "{index}:with context {0}")
-  public void testInsertStringArrayWithArrayIngestModeNone(String contextName, Map<String, Object> context)
-  {
-
-    final Map<String, Object> adjustedContext = new HashMap<>(context);
-    adjustedContext.put(MultiStageQueryContext.CTX_ARRAY_INGEST_MODE, "none");
-
-    testIngestQuery().setSql(
-                         "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
-                     .setQueryContext(adjustedContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "String arrays can not be ingested when 'arrayIngestMode' is set to 'none'"))
-                     ))
-                     .verifyExecutionError();
-  }
-
-  /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -172,7 +149,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -200,7 +177,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -228,7 +205,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -253,7 +230,7 @@ public class MSQArraysTest extends MSQTestBase
         .setQueryContext(adjustedContext)
         .setExpectedDataSource("foo")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
             NullHandling.sqlCompatible()
             ? ImmutableList.of(
@@ -277,7 +254,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to none (default) and the user tries to ingest
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to default and the user tries to ingest
    * string arrays
    */
   @MethodSource("data")
@@ -301,7 +278,7 @@ public class MSQArraysTest extends MSQTestBase
         .setQueryContext(adjustedContext)
         .setExpectedDataSource("foo")
         .setExpectedRowSignature(rowSignature)
-        .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
+        .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
             ImmutableList.of(
                 new Object[]{0L, null},
@@ -316,8 +293,7 @@ public class MSQArraysTest extends MSQTestBase
   }
 
   /**
-   * Tests the behaviour of INSERT query when arrayIngestMode is set to mvd (default) and the only array type to be
-   * ingested is string array
+   * Tests the behaviour of INSERT query when arrayIngestMode is set to array (default)
    */
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
@@ -325,16 +301,32 @@ public class MSQArraysTest extends MSQTestBase
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
-                                            .add("dim3", ColumnType.STRING)
+                                            .add("dim3", ColumnType.STRING_ARRAY)
                                             .build();
+
+    List<Object[]> expectedRows = new ArrayList<>(
+        ImmutableList.of(
+            new Object[]{0L, null},
+            new Object[]{0L, new Object[]{"a", "b"}}
+        )
+    );
+    if (!useDefault) {
+      expectedRows.add(new Object[]{0L, new Object[]{""}});
+    }
+    expectedRows.addAll(
+        ImmutableList.of(
+            new Object[]{0L, new Object[]{"b", "c"}},
+            new Object[]{0L, new Object[]{"d"}}
+        )
+    );
 
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT MV_TO_ARRAY(dim3) AS dim3 FROM foo GROUP BY 1 PARTITIONED BY ALL TIME")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setQueryContext(context)
-                     .setExpectedSegment(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
-                     .setExpectedResultRows(expectedMultiValueFooRowsToArray())
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
+                     .setExpectedResultRows(expectedRows)
                      .verifyResults();
   }
 
@@ -605,13 +597,6 @@ public class MSQArraysTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testSelectOnArraysWithArrayIngestModeAsNone(String contextName, Map<String, Object> context)
-  {
-    testSelectOnArrays(contextName, context, "none");
-  }
-
-  @MethodSource("data")
-  @ParameterizedTest(name = "{index}:with context {0}")
   public void testSelectOnArraysWithArrayIngestModeAsMVD(String contextName, Map<String, Object> context)
   {
     testSelectOnArrays(contextName, context, "mvd");
@@ -877,7 +862,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayString")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayString", ScanQuery.Order.DESCENDING)))
+        .orderBy(Collections.singletonList(OrderBy.descending("arrayString")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -940,7 +925,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayLong")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayLong", ScanQuery.Order.ASCENDING)))
+        .orderBy(Collections.singletonList(OrderBy.ascending("arrayLong")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -1003,7 +988,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayDouble")
-        .orderBy(Collections.singletonList(new ScanQuery.OrderBy("arrayDouble", ScanQuery.Order.ASCENDING)))
+        .orderBy(Collections.singletonList(OrderBy.ascending("arrayDouble")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -1127,21 +1112,5 @@ public class MSQArraysTest extends MSQTestBase
                      .setExpectedRowSignature(scanSignature)
                      .setExpectedResultRows(expectedRows)
                      .verifyResults();
-  }
-
-  private List<Object[]> expectedMultiValueFooRowsToArray()
-  {
-    List<Object[]> expectedRows = new ArrayList<>();
-    expectedRows.add(new Object[]{0L, null});
-    if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
-    }
-
-    expectedRows.addAll(ImmutableList.of(
-        new Object[]{0L, ImmutableList.of("a", "b")},
-        new Object[]{0L, ImmutableList.of("b", "c")},
-        new Object[]{0L, "d"}
-    ));
-    return expectedRows;
   }
 }

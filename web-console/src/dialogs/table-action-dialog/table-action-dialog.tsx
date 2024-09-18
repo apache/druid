@@ -17,9 +17,8 @@
  */
 
 import type { IconName } from '@blueprintjs/core';
-import { Button, Classes, Dialog, Icon, Intent } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Icon, Intent, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -70,9 +69,9 @@ export const TableActionDialog = React.memo(function TableActionDialog(
       <div className={Classes.DIALOG_FOOTER}>
         {actionsMenu && (
           <div className="footer-actions-left">
-            <Popover2 content={actionsMenu}>
+            <Popover content={actionsMenu}>
               <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
-            </Popover2>
+            </Popover>
           </div>
         )}
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

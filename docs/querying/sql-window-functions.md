@@ -246,10 +246,7 @@ Druid has guardrail logic to prevent you from executing window function queries 
 
 For example:
 - You cannot set expressions as bounds for window frames.
-- You cannot use two FOLLOWING expressions in the window frame. For example: `ROWS BETWEEN 2 ROWS FOLLOWING and 3 ROWS FOLLOWING`.
 - You can only use a RANGE frames when both endpoints are unbounded or current row.
-
-If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set `windowingStrictValidation` to false in the query context."
 
 ## Window function reference
 

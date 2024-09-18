@@ -50,16 +50,13 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   {
   };
 
-  private final ScanQueryConfig scanQueryConfig;
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
   @Inject
   public ScanQueryQueryToolChest(
-      final ScanQueryConfig scanQueryConfig,
       final GenericQueryMetricsFactory queryMetricsFactory
   )
   {
-    this.scanQueryConfig = scanQueryConfig;
     this.queryMetricsFactory = queryMetricsFactory;
   }
 
@@ -86,10 +83,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
         newLimit = originalQuery.getScanRowsLimit() + originalQuery.getScanRowsOffset();
       }
 
-      // Ensure "legacy" is a non-null value, such that all other nodes this query is forwarded to will treat it
-      // the same way, even if they have different default legacy values.
-      final ScanQuery queryToRun = originalQuery.withNonNullLegacy(scanQueryConfig)
-                                                .withOffset(0)
+      final ScanQuery queryToRun = originalQuery.withOffset(0)
                                                 .withLimit(newLimit);
 
       final Sequence<ScanResultValue> results;
@@ -154,8 +148,7 @@ public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, Sca
   @Override
   public RowSignature resultArraySignature(final ScanQuery query)
   {
-    boolean defaultIsLegacy = scanQueryConfig.isLegacy();
-    return query.getRowSignature(defaultIsLegacy);
+    return query.getRowSignature();
   }
 
   /**

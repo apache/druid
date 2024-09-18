@@ -69,7 +69,6 @@ import java.util.List;
 public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
 {
   private static final ScanQueryQueryToolChest TOOL_CHEST = new ScanQueryQueryToolChest(
-      new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
@@ -193,7 +192,6 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
                  .intervals(I_0112_0114_SPEC)
                  .batchSize(batchSize)
                  .columns(Collections.emptyList())
-                 .legacy(false)
                  .limit(limit)
                  .offset(offset);
   }

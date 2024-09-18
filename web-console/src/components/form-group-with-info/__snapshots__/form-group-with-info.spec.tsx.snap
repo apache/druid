@@ -2,24 +2,24 @@
 
 exports[`FormGroupWithInfo matches snapshot 1`] = `
 <div
-  class="bp4-form-group form-group-with-info"
+  class="bp5-form-group form-group-with-info"
 >
   <label
-    class="bp4-label"
+    class="bp5-label"
   >
     Goodies
      
     <span
-      class="bp4-text-muted"
+      class="bp5-text-muted"
     >
       <span
-        aria-haspopup="true"
-        class="info-popover bp4-popover2-target"
+        class="info-popover bp5-popover-target"
       >
         <span
+          aria-expanded="false"
+          aria-haspopup="menu"
           aria-hidden="true"
-          class="bp4-icon bp4-icon-info-sign"
-          icon="info-sign"
+          class="bp5-icon bp5-icon-info-sign"
         >
           <svg
             data-icon="info-sign"
@@ -38,7 +38,7 @@ exports[`FormGroupWithInfo matches snapshot 1`] = `
     </span>
   </label>
   <div
-    class="bp4-form-content"
+    class="bp5-form-content"
   >
     Some buttons and stuff
   </div>

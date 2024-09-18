@@ -46,8 +46,8 @@ import {
 } from '../druid-models';
 import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
-export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string {
-  return deepGet(spec, 'spec.dataSchema.dataSource') || 'unknown_datasource';
+export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string | undefined {
+  return deepGet(spec, 'spec.dataSchema.dataSource');
 }
 
 function convertFilter(filter: any): SqlExpression {
@@ -84,6 +84,14 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
   if (getArrayMode(spec, 'multi-values') === 'arrays') {
     context.arrayIngestMode = 'array';
+  }
+
+  const forceSegmentSortByTime = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
+  );
+  if (typeof forceSegmentSortByTime !== 'undefined') {
+    context.forceSegmentSortByTime = forceSegmentSortByTime;
   }
 
   const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');

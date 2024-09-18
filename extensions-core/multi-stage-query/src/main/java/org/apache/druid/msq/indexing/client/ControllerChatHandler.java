@@ -22,7 +22,7 @@ package org.apache.druid.msq.indexing.client;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.indexing.IndexerResourcePermissionMapper;
 import org.apache.druid.msq.rpc.ControllerResource;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
+import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 public class ControllerChatHandler extends ControllerResource implements ChatHandler

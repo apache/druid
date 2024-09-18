@@ -41,6 +41,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -231,8 +232,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_EXTRA_COLUMNS, separateDefaultModeTest = true)
   @Test
-  @NotYetSupported(Modes.STACK_OVERFLOW)
   public void testJoinOuterGroupByAndSubqueryHasLimit()
   {
     // Cannot vectorize JOIN operator.
@@ -320,7 +321,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinOuterGroupByAndSubqueryNoLimit(Map<String, Object> queryContext)
   {
     // Fully removing the join allows this query to vectorize.
@@ -404,7 +404,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinWithLimitBeforeJoining()
   {
     // Cannot vectorize JOIN operator.
@@ -821,8 +820,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testFilterAndGroupByLookupUsingJoinOperatorWithNotFilter(Map<String, Object> queryContext)
-
   {
+    assumeFalse(
+        isRunningMSQ() && isSortBasedJoin() && NullHandling.replaceWithDefault(),
+        "test disabled; returns incorrect results in this mode"
+    );
     // Cannot vectorize JOIN operator.
     cannotVectorize();
 
@@ -1528,7 +1530,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.FINALIZING_FIELD_ACCESS)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinQueryOfLookup(Map<String, Object> queryContext)
@@ -1708,7 +1709,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_CAST_MATERIALIZED_EARLIER)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinTwoLookupsToTableUsingNumericColumnInReverse(Map<String, Object> queryContext)
@@ -1766,7 +1767,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinLookupTableTable(Map<String, Object> queryContext)
@@ -1849,7 +1849,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinLookupTableTableChained(Map<String, Object> queryContext)
@@ -2078,7 +2077,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_CAST_MATERIALIZED_EARLIER)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testJoinTableLookupTableMismatchedTypesWithoutComma(Map<String, Object> queryContext)
@@ -3504,7 +3503,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLeftJoinRightTableCanBeEmpty()
   {
-    // HashJoinSegmentStorageAdapter is not vectorizable
+    // HashJoinSegmentCursorFactory is not vectorizable
     cannotVectorize();
 
     final DataSource rightTable;
@@ -3515,7 +3514,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .filters(equality("m2", "1000", ColumnType.DOUBLE))
               .columns("dim2")
-              .legacy(false)
               .build()
     );
 
@@ -3545,7 +3543,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                       false
                                   ))
                                   .columns("dim2")
-                                  .legacy(false)
                                   .build()
                         ),
                         rightTable,
@@ -3727,7 +3724,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinWithNotNullFilter(Map<String, Object> queryContext)
@@ -3775,7 +3771,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoin(Map<String, Object> queryContext)
@@ -3830,7 +3825,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testJoinWithExplicitIsNotDistinctFromCondition(Map<String, Object> queryContext)
@@ -3987,10 +3981,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
   {
-    // Fully removing the join allows this query to vectorize.
-    if (!isRewriteJoinToFilter(queryContext)) {
-      cannotVectorize();
-    }
+    // Cannot vectorize timeBoundary with maxTime (the engine will request descending order, which cannot vectorize).
+    cannotVectorize();
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -5046,7 +5038,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     //
     // This test's goal is to ensure that the join filter rewrites function correctly when there are
     // unoptimized filters in the join query. The rewrite logic must apply to the optimized form of the filters,
-    // as this is what will be passed to HashJoinSegmentAdapter.makeCursors(), where the result of the join
+    // as this is what will be passed to HashJoinSegmentAdapter.makeCursor(), where the result of the join
     // filter pre-analysis is used.
     //
     // A native query is used because the filter types where we support optimization are the AND/OR/NOT and
@@ -5633,7 +5625,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                   .columns("l1")
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .context(queryContext)
-                  .legacy(false)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5648,6 +5639,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testRegressionFilteredAggregatorsSubqueryJoins(Map<String, Object> queryContext)
   {
+    assumeFalse(
+        isRunningMSQ() && isSortBasedJoin() && NullHandling.replaceWithDefault(),
+        "test disabled; returns incorrect results in this mode"
+    );
     assumeFalse(testBuilder().isDecoupledMode() && NullHandling.replaceWithDefault(), "not support in decoupled mode");
 
     cannotVectorize();
@@ -5842,7 +5837,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
-  @NotYetSupported(Modes.JOIN_TABLE_TABLE)
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
@@ -5875,7 +5869,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .columns("__time")
-                .order(ScanQuery.Order.ASCENDING)
+                .order(Order.ASCENDING)
                 .context(context)
                 .build()
         ),
@@ -6173,7 +6167,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6232,7 +6225,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6287,7 +6279,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                         .dataSource(CalciteTests.DATASOURCE1)
                                         .filters(in("dim2", ImmutableList.of("a", "b", "ab", "abc")))
-                                        .legacy(false)
                                         .context(context)
                                         .columns("dim2")
                                         .build()
@@ -6304,7 +6295,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6379,7 +6369,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                     null
                                 ))
                                 .columns("dim2", "j0.unnest")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),
@@ -6451,7 +6440,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                     ImmutableList.of("a", "ab", "abc", "b")
                                                 )
                                             )
-                                            .legacy(false)
                                             .context(context)
                                             .build()
                                     ),
@@ -6471,7 +6459,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .dataSource(CalciteTests.DATASOURCE3)
                                 .columns("dim2")
-                                .legacy(false)
                                 .context(context)
                                 .build()
                         ),

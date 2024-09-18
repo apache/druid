@@ -97,7 +97,7 @@ export type InputSourceDesc =
       dataSource: string;
       interval: string;
       filter?: any;
-      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/input-sources.html
+      dimensions?: string[]; // ToDo: these are not in the docs https://druid.apache.org/docs/latest/ingestion/input-sources
       metrics?: string[];
       maxInputSegmentBytesPerTask?: number;
     }
@@ -264,9 +264,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     required: true,
     info: (
       <>
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#input-sources`}>
-          baseDir
-        </ExternalLink>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources`}>baseDir</ExternalLink>
         <p>Specifies the directory to search recursively for files to be ingested.</p>
       </>
     ),
@@ -280,12 +278,12 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     suggestions: FILTER_SUGGESTIONS,
     info: (
       <>
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch.html#local-input-source`}>
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/native-batch#local-input-source`}>
           filter
         </ExternalLink>
         <p>
           A wildcard filter for files. See{' '}
-          <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter.html">
+          <ExternalLink href="https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/filefilter/WildcardFileFilter">
             here
           </ExternalLink>{' '}
           for format information.
@@ -344,7 +342,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       <>
         <p>
           JSON array of{' '}
-          <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/s3.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#s3-input-source`}>
             S3 Objects
           </ExternalLink>
           .
@@ -406,7 +404,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       <>
         <p>
           JSON array of{' '}
-          <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/azure.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources#azure-input-source`}>
             S3 Objects
           </ExternalLink>
           .
@@ -480,7 +478,9 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
       <>
         <p>
           JSON array of{' '}
-          <ExternalLink href={`${getLink('DOCS')}/development/extensions-core/google.html`}>
+          <ExternalLink
+            href={`${getLink('DOCS')}/ingestion/input-sources#google-cloud-storage-input-source`}
+          >
             Google Cloud Storage Objects
           </ExternalLink>
           .
@@ -508,7 +508,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
         </p>
         <p>
           For more information, refer to the documentation for{' '}
-          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem.html#getPathMatcher-java.lang.String-">
+          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem#getPathMatcher-java.lang.String-">
             FileSystem#getPathMatcher
           </ExternalLink>
           .
@@ -652,7 +652,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Delta filter',
     type: 'json',
     placeholder: '{"type": "=", "column": "name", "value": "foo"}',
-    defined: inputSource => inputSource.type === 'delta' && deepGet(inputSource, 'filter'),
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: false,
     info: (
       <>
@@ -660,6 +660,19 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
           filter
         </ExternalLink>
         <p>A Delta filter json object to filter Delta Lake scan files.</p>
+      </>
+    ),
+  },
+  {
+    name: 'snapshotVersion',
+    label: 'Delta snapshot version',
+    type: 'number',
+    placeholder: '(latest)',
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
+    required: false,
+    info: (
+      <>
+        The snapshot version to read from the Delta table. By default, the latest snapshot is read.
       </>
     ),
   },

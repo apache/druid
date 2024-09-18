@@ -2,31 +2,31 @@
 
 exports[`ArrayModeSwitch matches snapshot 1`] = `
 <div
-  class="bp4-form-group form-group-with-info"
+  class="bp5-form-group form-group-with-info"
 >
   <div
-    class="bp4-form-content"
+    class="bp5-form-content"
   >
     <label
-      class="bp4-control bp4-switch legacy-switch"
+      class="bp5-control bp5-switch legacy-switch"
     >
       <input
         checked=""
         type="checkbox"
       />
       <span
-        class="bp4-control-indicator"
+        class="bp5-control-indicator"
       />
       Store ARRAYs as MVDs
     </label>
     <span
-      aria-haspopup="true"
-      class="info-popover bp4-popover2-target"
+      class="info-popover bp5-popover-target"
     >
       <span
+        aria-expanded="false"
+        aria-haspopup="menu"
         aria-hidden="true"
-        class="bp4-icon bp4-icon-info-sign"
-        icon="info-sign"
+        class="bp5-icon bp5-icon-info-sign"
       >
         <svg
           data-icon="info-sign"

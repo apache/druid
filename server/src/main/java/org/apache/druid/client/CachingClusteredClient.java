@@ -275,7 +275,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.responseContext = responseContext;
       this.query = queryPlus.getQuery();
       this.toolChest = warehouse.getToolChest(query);
-      this.strategy = toolChest.getCacheStrategy(query);
+      this.strategy = toolChest.getCacheStrategy(query, objectMapper);
       this.dataSourceAnalysis = query.getDataSource().getAnalysis();
 
       this.useCache = CacheUtil.isUseSegmentCache(query, strategy, cacheConfig, CacheUtil.ServerType.BROKER);
@@ -384,7 +384,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       BinaryOperator<T> mergeFn = toolChest.createMergeFn(query);
       final QueryContext queryContext = query.context();
       if (parallelMergeConfig.useParallelMergePool() && queryContext.getEnableParallelMerges() && mergeFn != null) {
-        return new ParallelMergeCombiningSequence<>(
+        final ParallelMergeCombiningSequence<T> parallelSequence = new ParallelMergeCombiningSequence<>(
             pool,
             sequencesByInterval,
             query.getResultOrdering(),
@@ -414,6 +414,8 @@ public class CachingClusteredClient implements QuerySegmentWalker
               }
             }
         );
+        scheduler.registerQueryFuture(query, parallelSequence.getCancellationFuture());
+        return parallelSequence;
       } else {
         return Sequences
             .simple(sequencesByInterval)

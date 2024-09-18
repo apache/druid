@@ -18,7 +18,7 @@
 
 import { C } from '@druid-toolkit/query';
 
-import type { StageDefinition } from '../stages/stages';
+import type { Counters, StageDefinition } from '../stages/stages';
 
 export type TaskStatus = 'WAITING' | 'PENDING' | 'RUNNING' | 'FAILED' | 'SUCCESS';
 export type TaskStatusWithCanceled = TaskStatus | 'CANCELED';
@@ -112,7 +112,7 @@ export interface MsqTaskReportResponse {
         segmentLoadWaiterStatus?: SegmentLoadWaiterStatus;
       };
       stages: StageDefinition[];
-      counters: Record<string, Record<string, any>>;
+      counters: Counters;
     };
   };
   error?: any;

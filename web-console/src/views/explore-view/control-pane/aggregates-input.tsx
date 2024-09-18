@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Classes, Position, Tag } from '@blueprintjs/core';
+import { Classes, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 import classNames from 'classnames';
 import React from 'react';
@@ -53,7 +52,7 @@ export const AggregatesInput = function AggregatesInput(props: AggregatesInputPr
             {c.name}
           </Tag>
         ))}
-        <Popover2
+        <Popover
           position={Position.BOTTOM}
           content={
             <AggregateMenu
@@ -63,7 +62,7 @@ export const AggregatesInput = function AggregatesInput(props: AggregatesInputPr
           }
         >
           <Tag icon={IconNames.PLUS} interactive />
-        </Popover2>
+        </Popover>
       </div>
     </div>
   );

@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import { Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Tooltip2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
@@ -89,7 +89,7 @@ export const StatusCard = React.memo(function StatusCard(props: StatusCardProps)
           </>
         )}
         {nullModeDetection && (
-          <Tooltip2
+          <Tooltip
             content={
               <div>
                 <p>
@@ -102,7 +102,7 @@ export const StatusCard = React.memo(function StatusCard(props: StatusCardProps)
             }
           >
             <p>{summarizeNullModeDetection(nullModeDetection)}</p>
-          </Tooltip2>
+          </Tooltip>
         )}
       </HomeViewCard>
       {showStatusDialog && (

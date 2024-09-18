@@ -138,19 +138,21 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       podTemplateSelectStrategy = dynamicConfig.getPodTemplateSelectStrategy();
     }
 
-    PodTemplate podTemplate = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
+    PodTemplateWithName podTemplateWithName = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
 
     return new JobBuilder()
         .withNewMetadata()
         .withName(new K8sTaskId(task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
+        .addToAnnotations(DruidK8sConstants.TASK_JOB_TEMPLATE, podTemplateWithName.getName())
         .endMetadata()
         .withNewSpec()
-        .withTemplate(podTemplate.getTemplate())
+        .withTemplate(podTemplateWithName.getPodTemplate().getTemplate())
         .editTemplate()
         .editOrNewMetadata()
         .addToAnnotations(getPodTemplateAnnotations(task))
+        .addToAnnotations(DruidK8sConstants.TASK_JOB_TEMPLATE, podTemplateWithName.getName())
         .addToLabels(getPodLabels(taskRunnerConfig, task))
         .endMetadata()
         .editSpec()
@@ -277,6 +279,10 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         new EnvVarBuilder()
             .withName(DruidK8sConstants.TASK_ID_ENV)
             .withValue(task.getId())
+            .build(),
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.LOAD_BROADCAST_DATASOURCE_MODE_ENV)
+            .withValue(task.getBroadcastDatasourceLoadingSpec().getMode().toString())
             .build(),
         new EnvVarBuilder()
             .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)

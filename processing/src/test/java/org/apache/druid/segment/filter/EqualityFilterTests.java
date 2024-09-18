@@ -30,7 +30,7 @@ import com.google.common.collect.TreeRangeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprEval;
@@ -40,8 +40,8 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.IsFalseDimFilter;
 import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -62,7 +62,7 @@ public class EqualityFilterTests
     public EqualityFilterTest(
         String testName,
         IndexBuilder indexBuilder,
-        Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+        Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
         boolean cnf,
         boolean optimize
     )
@@ -106,6 +106,12 @@ public class EqualityFilterTests
       assertFilterMatches(new EqualityFilter("dim0", ColumnType.LONG, 1L, null), ImmutableList.of("1"));
       assertFilterMatches(
           NotDimFilter.of(new EqualityFilter("dim0", ColumnType.LONG, 1L, null)),
+          ImmutableList.of("0", "2", "3", "4", "5")
+      );
+
+      assertFilterMatches(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null), ImmutableList.of("1"));
+      assertFilterMatches(
+          NotDimFilter.of(new EqualityFilter("dim0", ColumnType.DOUBLE, 1, null)),
           ImmutableList.of("0", "2", "3", "4", "5")
       );
     }
@@ -1754,7 +1760,7 @@ public class EqualityFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       f1 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
       f1_2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3)), null);
       f2 = new EqualityFilter("x", ColumnType.NESTED_DATA, ImmutableMap.of("x", ImmutableList.of(1, 2, 3, 4)), null);

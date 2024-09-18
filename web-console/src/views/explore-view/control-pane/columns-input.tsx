@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Classes, Position, Tag } from '@blueprintjs/core';
+import { Classes, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
 import classNames from 'classnames';
 import type { JSX } from 'react';
@@ -121,7 +120,7 @@ export const ColumnsInput = function ColumnsInput(props: ColumnsInputProps) {
             {c.name}
           </Tag>
         ))}
-        <Popover2
+        <Popover
           position={Position.BOTTOM}
           content={
             pickerMenu ? (
@@ -135,7 +134,7 @@ export const ColumnsInput = function ColumnsInput(props: ColumnsInputProps) {
           }
         >
           <Tag icon={IconNames.PLUS} interactive />
-        </Popover2>
+        </Popover>
       </div>
     </div>
   );

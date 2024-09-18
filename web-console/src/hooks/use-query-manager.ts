@@ -58,7 +58,7 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
     // will be compatible with future React versions that may mount/unmount/remount
     // the same component multiple times while.
     //
-    // See https://reactjs.org/docs/strict-mode.html#ensuring-reusable-state
+    // See https://reactjs.org/docs/strict-mode#ensuring-reusable-state
     // and https://github.com/reactwg/react-18/discussions/18
     let myQueryManager = queryManager;
     if (queryManager.isTerminated()) {

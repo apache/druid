@@ -21,7 +21,9 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
@@ -59,22 +61,22 @@ public class AutoCompactionSnapshot
 
   public static Builder builder(String dataSource)
   {
-    return new Builder(dataSource, AutoCompactionScheduleStatus.RUNNING);
+    return new Builder(dataSource).withStatus(AutoCompactionScheduleStatus.RUNNING);
   }
 
   @JsonCreator
   public AutoCompactionSnapshot(
-      @JsonProperty @NotNull String dataSource,
-      @JsonProperty @NotNull AutoCompactionScheduleStatus scheduleStatus,
-      @JsonProperty long bytesAwaitingCompaction,
-      @JsonProperty long bytesCompacted,
-      @JsonProperty long bytesSkipped,
-      @JsonProperty long segmentCountAwaitingCompaction,
-      @JsonProperty long segmentCountCompacted,
-      @JsonProperty long segmentCountSkipped,
-      @JsonProperty long intervalCountAwaitingCompaction,
-      @JsonProperty long intervalCountCompacted,
-      @JsonProperty long intervalCountSkipped
+      @JsonProperty("dataSource") @NotNull String dataSource,
+      @JsonProperty("scheduleStatus") @NotNull AutoCompactionScheduleStatus scheduleStatus,
+      @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
+      @JsonProperty("bytesCompacted") long bytesCompacted,
+      @JsonProperty("bytesSkipped") long bytesSkipped,
+      @JsonProperty("segmentCountAwaitingCompaction") long segmentCountAwaitingCompaction,
+      @JsonProperty("segmentCountCompacted") long segmentCountCompacted,
+      @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
+      @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
+      @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
+      @JsonProperty("intervalCountSkipped") long intervalCountSkipped
   )
   {
     this.dataSource = dataSource;
@@ -191,95 +193,41 @@ public class AutoCompactionSnapshot
   public static class Builder
   {
     private final String dataSource;
-    private final AutoCompactionScheduleStatus scheduleStatus;
+    private AutoCompactionScheduleStatus scheduleStatus;
 
-    private long bytesAwaitingCompaction;
-    private long bytesCompacted;
-    private long bytesSkipped;
-    private long segmentCountAwaitingCompaction;
-    private long segmentCountCompacted;
-    private long segmentCountSkipped;
-    private long intervalCountAwaitingCompaction;
-    private long intervalCountCompacted;
-    private long intervalCountSkipped;
+    private final CompactionStatistics compactedStats = new CompactionStatistics();
+    private final CompactionStatistics skippedStats = new CompactionStatistics();
+    private final CompactionStatistics waitingStats = new CompactionStatistics();
 
     private Builder(
-        @NotNull String dataSource,
-        @NotNull AutoCompactionScheduleStatus scheduleStatus
+        @NotNull String dataSource
     )
     {
       if (dataSource == null || dataSource.isEmpty()) {
         throw new ISE("Invalid dataSource name");
       }
-      if (scheduleStatus == null) {
-        throw new ISE("scheduleStatus cannot be null");
-      }
-
       this.dataSource = dataSource;
-      this.scheduleStatus = scheduleStatus;
-      this.bytesAwaitingCompaction = 0;
-      this.bytesCompacted = 0;
-      this.bytesSkipped = 0;
-      this.segmentCountAwaitingCompaction = 0;
-      this.segmentCountCompacted = 0;
-      this.segmentCountSkipped = 0;
-      this.intervalCountAwaitingCompaction = 0;
-      this.intervalCountCompacted = 0;
-      this.intervalCountSkipped = 0;
     }
 
-    public Builder incrementBytesAwaitingCompaction(long incrementValue)
+    public Builder withStatus(AutoCompactionScheduleStatus status)
     {
-      this.bytesAwaitingCompaction = this.bytesAwaitingCompaction + incrementValue;
+      this.scheduleStatus = Preconditions.checkNotNull(status, "scheduleStatus cannot be null");
       return this;
     }
 
-    public Builder incrementBytesCompacted(long incrementValue)
+    public void incrementWaitingStats(CompactionStatistics entry)
     {
-      this.bytesCompacted = this.bytesCompacted + incrementValue;
-      return this;
+      waitingStats.increment(entry);
     }
 
-    public Builder incrementSegmentCountAwaitingCompaction(long incrementValue)
+    public void incrementCompactedStats(CompactionStatistics entry)
     {
-      this.segmentCountAwaitingCompaction = this.segmentCountAwaitingCompaction + incrementValue;
-      return this;
+      compactedStats.increment(entry);
     }
 
-    public Builder incrementSegmentCountCompacted(long incrementValue)
+    public void incrementSkippedStats(CompactionStatistics entry)
     {
-      this.segmentCountCompacted = this.segmentCountCompacted + incrementValue;
-      return this;
-    }
-
-    public Builder incrementIntervalCountAwaitingCompaction(long incrementValue)
-    {
-      this.intervalCountAwaitingCompaction = this.intervalCountAwaitingCompaction + incrementValue;
-      return this;
-    }
-
-    public Builder incrementIntervalCountCompacted(long incrementValue)
-    {
-      this.intervalCountCompacted = this.intervalCountCompacted + incrementValue;
-      return this;
-    }
-
-    public Builder incrementBytesSkipped(long incrementValue)
-    {
-      this.bytesSkipped = this.bytesSkipped + incrementValue;
-      return this;
-    }
-
-    public Builder incrementSegmentCountSkipped(long incrementValue)
-    {
-      this.segmentCountSkipped = this.segmentCountSkipped + incrementValue;
-      return this;
-    }
-
-    public Builder incrementIntervalCountSkipped(long incrementValue)
-    {
-      this.intervalCountSkipped = this.intervalCountSkipped + incrementValue;
-      return this;
+      skippedStats.increment(entry);
     }
 
     public AutoCompactionSnapshot build()
@@ -287,15 +235,15 @@ public class AutoCompactionSnapshot
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,
-          bytesAwaitingCompaction,
-          bytesCompacted,
-          bytesSkipped,
-          segmentCountAwaitingCompaction,
-          segmentCountCompacted,
-          segmentCountSkipped,
-          intervalCountAwaitingCompaction,
-          intervalCountCompacted,
-          intervalCountSkipped
+          waitingStats.getTotalBytes(),
+          compactedStats.getTotalBytes(),
+          skippedStats.getTotalBytes(),
+          waitingStats.getNumSegments(),
+          compactedStats.getNumSegments(),
+          skippedStats.getNumSegments(),
+          waitingStats.getNumIntervals(),
+          compactedStats.getNumIntervals(),
+          skippedStats.getNumIntervals()
       );
     }
   }

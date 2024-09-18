@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -59,23 +60,27 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
-  private final boolean isEmptyOver;
   private final int maxRowsMaterializedInWindow;
+  private final List<String> partitionColumnNames;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
-      @JsonProperty("emptyOver") boolean emptyOver,
-      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow
+      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow,
+      @JsonProperty("partitionColumnNames") List<String> partitionColumnNames
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
-    this.isEmptyOver = emptyOver;
     this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
+
+    if (partitionColumnNames == null) {
+      throw DruidException.defensive("List of partition column names encountered as null.");
+    }
+    this.partitionColumnNames = partitionColumnNames;
   }
 
   @JsonProperty("query")
@@ -90,16 +95,16 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     return operatorList;
   }
 
+  @JsonProperty("partitionColumnNames")
+  public List<String> getPartitionColumnNames()
+  {
+    return partitionColumnNames;
+  }
+
   @JsonProperty("stageRowSignature")
   public RowSignature getSignature()
   {
     return stageRowSignature;
-  }
-
-  @JsonProperty("emptyOver")
-  public boolean isEmptyOverFound()
-  {
-    return isEmptyOver;
   }
 
   @JsonProperty("maxRowsMaterializedInWindow")
@@ -148,7 +153,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
         readableInput -> {
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
-
           return new WindowOperatorQueryFrameProcessor(
               query,
               readableInput.getChannel(),
@@ -158,8 +162,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               frameContext.jsonMapper(),
               operatorList,
               stageRowSignature,
-              isEmptyOver,
-              maxRowsMaterializedInWindow
+              maxRowsMaterializedInWindow,
+              partitionColumnNames
           );
         }
     );
@@ -170,6 +174,11 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     );
   }
 
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -181,16 +190,16 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       return false;
     }
     WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return isEmptyOver == that.isEmptyOver
-           && maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
+    return maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
            && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
+           && Objects.equals(partitionColumnNames, that.partitionColumnNames)
            && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature, isEmptyOver, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, partitionColumnNames, stageRowSignature, maxRowsMaterializedInWindow);
   }
 }

@@ -186,9 +186,7 @@ public class CompressedLongsSerdeTest
     );
     serializer.open();
 
-    for (long value : values) {
-      serializer.add(value);
-    }
+    serializer.addAll(values, 0, values.length);
     Assert.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -20,13 +20,10 @@
 package org.apache.druid.frame.segment.columnar;
 
 import org.apache.druid.frame.Frame;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
-
-import java.io.IOException;
 
 /**
  * A {@link VectorCursor} that is based on a {@link Frame}.
@@ -37,17 +34,14 @@ public class FrameVectorCursor implements VectorCursor
 {
   private final VectorOffset offset;
   private final VectorColumnSelectorFactory columnSelectorFactory;
-  private final Closer closer;
 
   FrameVectorCursor(
       final VectorOffset offset,
-      final VectorColumnSelectorFactory columnSelectorFactory,
-      final Closer closer
+      final VectorColumnSelectorFactory columnSelectorFactory
   )
   {
     this.offset = offset;
     this.columnSelectorFactory = columnSelectorFactory;
-    this.closer = closer;
   }
 
   @Override
@@ -73,17 +67,6 @@ public class FrameVectorCursor implements VectorCursor
   public void reset()
   {
     offset.reset();
-  }
-
-  @Override
-  public void close()
-  {
-    try {
-      closer.close();
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   @Override

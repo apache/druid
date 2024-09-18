@@ -40,7 +40,7 @@ public class MSQTestDelegateDataSegmentPusher implements DataSegmentPusher
       MSQTestSegmentManager segmentManager
   )
   {
-    delegate = dataSegmentPusher;
+    this.delegate = dataSegmentPusher;
     this.segmentManager = segmentManager;
   }
 

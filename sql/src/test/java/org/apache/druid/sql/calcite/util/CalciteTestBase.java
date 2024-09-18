@@ -93,24 +93,6 @@ public abstract class CalciteTestBase
     }
   }
 
-  // FIXME remove
-  public TempFolderOverTempDir temXMEXAXISporaryFolder = new TempFolderOverTempDir();
-
-  public class TempFolderOverTempDir
-  {
-
-    public File newFolder()
-    {
-      return newTempFolder("unknown");
-    }
-
-    public File newFolder(String string)
-    {
-      return newTempFolder(string);
-    }
-  }
-
-
   /**
    * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full
    * expression structure, this method is just to have a convenient way to fix a very large number of existing tests

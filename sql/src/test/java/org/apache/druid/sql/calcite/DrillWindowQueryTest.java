@@ -34,6 +34,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
@@ -69,8 +70,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -316,30 +319,35 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       for (int i = 0; i < cc.size(); i++) {
         ColumnType type = rs.getColumnType(i).get();
         assertNull(type.getComplexTypeName());
-        final String val = row[i];
-        Object newVal;
-        if ("null".equals(val)) {
-          newVal = null;
-        } else {
-          switch (type.getType()) {
-            case STRING:
-              newVal = val;
-              break;
-            case LONG:
-              newVal = parseLongValue(val);
-              break;
-            case DOUBLE:
-              newVal = Numbers.parseDoubleObject(val);
-              break;
-            default:
-              throw new RuntimeException("unimplemented");
-          }
-        }
-        newRow[i] = newVal;
+        newRow[i] = parseElement(row[i], type.getType());
       }
       ret.add(newRow);
     }
     return ret;
+  }
+
+  private static Object parseElement(String element, ValueType elementType)
+  {
+    if ("null".equals(element)) {
+      return null;
+    }
+    switch (elementType) {
+      case STRING:
+        return element;
+      case LONG:
+        return parseLongValue(element);
+      case DOUBLE:
+        return Numbers.parseDoubleObject(element);
+      case ARRAY:
+        String[] elements = element.substring(1, element.length() - 1).split(",");
+        List<String> arrayElements = new ArrayList<>();
+        for (String s : elements) {
+          arrayElements.add(parseElement(s.trim(), ValueType.STRING).toString());
+        }
+        return "[" + String.join(",", arrayElements) + "]";
+      default:
+        throw new RuntimeException("unimplemented type: " + elementType);
+    }
   }
 
   private static Object parseLongValue(final String val)
@@ -385,14 +393,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
       DrillTestCase testCase = drillTestCaseRule.testCase;
       thread.setName("drillWindowQuery-" + testCase.filename);
 
+      final Map<String, Object> queryContext = new HashMap<>(testBuilder().getQueryContext());
+      queryContext.putAll(getQueryContext());
+
       testBuilder()
           .skipVectorize(true)
-          .queryContext(ImmutableMap.of(
-                            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-                            PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
-                            QueryContexts.ENABLE_DEBUG, true
-                        )
-          )
+          .queryContext(queryContext)
           .sql(testCase.getQueryString())
           .expectedResults(new TextualResultsVerifier(testCase.getExpectedResults(), null))
           .run();
@@ -404,6 +410,14 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  protected Map<String, Object> getQueryContext()
+  {
+    return ImmutableMap.of(
+        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
+        PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
+        QueryContexts.ENABLE_DEBUG, true
+    );
+  }
 
   // testcases_start
   @DrillTest("aggregates/aggOWnFn_11")
@@ -4236,7 +4250,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.COLUMN_NOT_FOUND)
+  @NotYetSupported(Modes.AGGREGATION_NOT_SUPPORT_TYPE)
   @DrillTest("frameclause/subQueries/frmInSubQry_25")
   @Test
   public void test_frameclause_subQueries_frmInSubQry_25()
@@ -4244,7 +4258,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.INCORRECT_SYNTAX)
+  @NotYetSupported(Modes.VIEWS_NOT_SUPPORTED)
   @DrillTest("nestedAggs/nstdWinView01")
   @Test
   public void test_nestedAggs_nstdWinView01()
@@ -4264,7 +4278,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_83()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -4426,7 +4439,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.NOT_ENOUGH_RULES)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_7")
   @Test
   public void test_nestedAggs_emtyOvrCls_7()
@@ -5083,7 +5096,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.COLUMN_NOT_FOUND)
   @DrillTest("aggregates/testW_Nulls_5")
   @Test
   public void test_aggregates_testW_Nulls_5()
@@ -5091,7 +5103,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.COLUMN_NOT_FOUND)
   @DrillTest("aggregates/testW_Nulls_6")
   @Test
   public void test_aggregates_testW_Nulls_6()
@@ -6157,7 +6168,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_84()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6165,7 +6175,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_aggregates_winFnQry_85()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6551,7 +6560,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_avg_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6559,7 +6567,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_count_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6567,7 +6574,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_fval_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6575,7 +6581,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_lval_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6583,7 +6588,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_08()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6591,7 +6595,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_mulwind_09()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -6599,7 +6602,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_sum_mulwds()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7276,7 +7278,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH)
+  @NotYetSupported(Modes.DISTINCT_AGGREGATE_NOT_SUPPORTED)
   @DrillTest("nestedAggs/emtyOvrCls_8")
   @Test
   public void test_nestedAggs_emtyOvrCls_8()
@@ -7372,7 +7374,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm01()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7380,7 +7381,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm02()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7388,7 +7388,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm03()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7396,7 +7395,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm04()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7404,7 +7402,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm05()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7412,7 +7409,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_frameclause_multipl_wnwds_rnkNoFrm06()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
@@ -7525,13 +7521,296 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void test_nestedAggs_multiWin_6()
   {
-    msqIncompatible();
     windowQueryTest();
   }
 
   @DrillTest("nestedAggs/multiWin_8")
   @Test
   public void test_nestedAggs_multiWin_8()
+  {
+    windowQueryTest();
+  }
+
+  /*
+  Druid query tests
+   */
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1")
+  @Test
+  public void test_same_window_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/same_window_across_columns/wikipedia_query_1_named_window")
+  @Test
+  public void test_same_window_wikipedia_query_1_named_window()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/multiple_windows/wikipedia_query_1_named_windows")
+  @Test
+  public void test_multiple_windows_wikipedia_query_1_named_windows()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_1_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_1_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/shuffle_columns/wikipedia_query_2_shuffle_1")
+  @Test
+  public void test_shuffle_columns_wikipedia_query_2_shuffle_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_1")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_multiple_columns/wikipedia_query_2")
+  @Test
+  public void test_partition_by_multiple_columns_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_1")
+  @Test
+  public void test_empty_over_single_empty_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_2")
+  @Test
+  public void test_empty_over_single_empty_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/single_empty_over_3")
+  @Test
+  public void test_empty_over_single_empty_over_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_over_clause/multiple_empty_over_1")
+  @Test
+  public void test_empty_over_multiple_empty_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_1")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_2")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/single_over_multiple_sort_columns")
+  @Test
+  public void test_over_clause_with_only_sorting_single_over_multiple_sort_columns()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_same_sort_column")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_same_sort_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_different_sort_column")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_different_sort_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_multiple_sort_columns_1")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_multiple_sort_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_sorting/multiple_over_multiple_sort_columns_2")
+  @Test
+  public void test_over_clause_with_only_sorting_multiple_over_multiple_sort_columns_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_1")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_2")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/single_over_multiple_partition_columns")
+  @Test
+  public void test_over_clause_with_only_partitioning_single_over_multiple_partition_columns()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_same_partition_column")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_same_partition_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_different_partition_column")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_different_partition_column()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_multiple_partition_columns_1")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_multiple_partition_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_multiple_partition_columns_2")
+  @Test
+  public void test_over_clause_with_only_partitioning_multiple_over_multiple_partition_columns_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_1")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_2")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_3")
+  @Test
+  public void test_empty_and_non_empty_over_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_1")
+  @Test
+  public void test_partition_by_array_wikipedia_query_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_2")
+  @Test
+  public void test_partition_by_array_wikipedia_query_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/partition_by_array/wikipedia_query_3")
+  @Test
+  public void test_partition_by_array_wikipedia_query_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_1")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_2")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_2()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/single_partition_column_3")
+  @Test
+  public void test_array_concat_agg_with_single_partition_column_3()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/multiple_partition_columns_1")
+  @Test
+  public void test_array_concat_agg_with_multiple_partition_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/only_sorting_column_1")
+  @Test
+  public void test_array_concat_agg_with_only_sorting_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/empty_over_1")
+  @Test
+  public void test_array_concat_agg_with_empty_over_1()
   {
     windowQueryTest();
   }

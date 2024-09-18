@@ -74,12 +74,6 @@ public class SurrogateAction<ReturnType, ActionType extends TaskAction<ReturnTyp
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return taskAction.isAudited();
-  }
-
-  @Override
   public String toString()
   {
     return "SurrogateAction{" +

@@ -19,6 +19,7 @@
 
 package org.apache.druid.delta.input;
 
+import io.delta.kernel.exceptions.KernelException;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -68,22 +69,62 @@ public class DeltaInputSourceTest
           {
               NonPartitionedDeltaTable.DELTA_TABLE_PATH,
               NonPartitionedDeltaTable.FULL_SCHEMA,
+              null,
               NonPartitionedDeltaTable.EXPECTED_ROWS
           },
           {
               NonPartitionedDeltaTable.DELTA_TABLE_PATH,
               NonPartitionedDeltaTable.SCHEMA_1,
+              null,
               NonPartitionedDeltaTable.EXPECTED_ROWS
           },
           {
               NonPartitionedDeltaTable.DELTA_TABLE_PATH,
               NonPartitionedDeltaTable.SCHEMA_2,
+              null,
               NonPartitionedDeltaTable.EXPECTED_ROWS
           },
           {
               PartitionedDeltaTable.DELTA_TABLE_PATH,
               PartitionedDeltaTable.FULL_SCHEMA,
+              null,
               PartitionedDeltaTable.EXPECTED_ROWS
+          },
+          {
+              ComplexTypesDeltaTable.DELTA_TABLE_PATH,
+              ComplexTypesDeltaTable.FULL_SCHEMA,
+              null,
+              ComplexTypesDeltaTable.EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              0L,
+              SnapshotDeltaTable.V0_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              1L,
+              SnapshotDeltaTable.V1_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              2L,
+              SnapshotDeltaTable.V2_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              3L,
+              SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
+          },
+          {
+              SnapshotDeltaTable.DELTA_TABLE_PATH,
+              SnapshotDeltaTable.FULL_SCHEMA,
+              null,
+              SnapshotDeltaTable.LATEST_SNAPSHOT_EXPECTED_ROWS
           }
       };
     }
@@ -93,12 +134,14 @@ public class DeltaInputSourceTest
     @Parameterized.Parameter(1)
     public InputRowSchema schema;
     @Parameterized.Parameter(2)
+    public Long snapshotVersion;
+    @Parameterized.Parameter(3)
     public List<Map<String, Object>> expectedRows;
 
     @Test
     public void testSampleDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshotVersion);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
 
       List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
@@ -132,7 +175,7 @@ public class DeltaInputSourceTest
     @Test
     public void testReadDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshotVersion);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
       final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
       validateRows(expectedRows, actualReadRows, schema);
@@ -264,7 +307,7 @@ public class DeltaInputSourceTest
     @Test
     public void testSampleDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, filter);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, filter, null);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
 
       List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
@@ -306,7 +349,7 @@ public class DeltaInputSourceTest
     @Test
     public void testReadDeltaTable() throws IOException
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, filter);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, filter, null);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
       final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
       validateRows(expectedRows, actualReadRows, schema);
@@ -321,7 +364,7 @@ public class DeltaInputSourceTest
       MatcherAssert.assertThat(
           Assert.assertThrows(
               DruidException.class,
-              () -> new DeltaInputSource(null, null, null)
+              () -> new DeltaInputSource(null, null, null, null)
           ),
           DruidExceptionMatcher.invalidInput().expectMessageIs(
               "tablePath cannot be null."
@@ -332,7 +375,7 @@ public class DeltaInputSourceTest
     @Test
     public void testSplitNonExistentTable()
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
       MatcherAssert.assertThat(
           Assert.assertThrows(
@@ -348,7 +391,7 @@ public class DeltaInputSourceTest
     @Test
     public void testReadNonExistentTable()
     {
-      final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null);
+      final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
       MatcherAssert.assertThat(
           Assert.assertThrows(
@@ -358,6 +401,22 @@ public class DeltaInputSourceTest
           DruidExceptionMatcher.invalidInput().expectMessageIs(
               "tablePath[non-existent-table] not found."
           )
+      );
+    }
+
+    @Test
+    public void testReadNonExistentSnapshot()
+    {
+      final DeltaInputSource deltaInputSource = new DeltaInputSource(
+          SnapshotDeltaTable.DELTA_TABLE_PATH,
+          null,
+          null,
+          100L
+      );
+
+      Assert.assertThrows(
+          KernelException.class,
+          () -> deltaInputSource.reader(null, null, null)
       );
     }
   }

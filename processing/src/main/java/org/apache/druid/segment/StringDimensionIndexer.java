@@ -66,7 +66,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   private volatile boolean hasMultipleValues = false;
 
   public StringDimensionIndexer(
-      MultiValueHandling multiValueHandling,
+      @Nullable MultiValueHandling multiValueHandling,
       boolean hasBitmapIndexes,
       boolean hasSpatialIndexes,
       boolean useMaxMemoryEstimates

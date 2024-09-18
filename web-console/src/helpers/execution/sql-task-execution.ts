@@ -23,10 +23,6 @@ import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
 import { deepGet, DruidError, IntermediateQueryState, QueryManager } from '../../utils';
-import { maybeGetClusterCapacity } from '../capacity';
-
-const USE_TASK_PAYLOAD = true;
-const USE_TASK_REPORTS = true;
 
 // some executionMode has to be set on the /druid/v2/sql/statements API
 function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
@@ -40,6 +36,7 @@ function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryConte
 export interface SubmitTaskQueryOptions {
   query: string | Record<string, any>;
   context?: QueryContext;
+  baseQueryContext?: QueryContext;
   prefixLines?: number;
   cancelToken?: CancelToken;
   preserveOnTermination?: boolean;
@@ -49,7 +46,15 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+  const {
+    query,
+    context,
+    baseQueryContext,
+    prefixLines,
+    cancelToken,
+    preserveOnTermination,
+    onSubmitted,
+  } = options;
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -57,7 +62,7 @@ export async function submitTaskQuery(
     sqlQuery = query;
     jsonQuery = {
       query: sqlQuery,
-      context: ensureExecutionModeIsSet(context),
+      context: ensureExecutionModeIsSet({ ...baseQueryContext, ...context }),
       resultFormat: 'array',
       header: true,
       typesHeader: true,
@@ -69,6 +74,7 @@ export async function submitTaskQuery(
     jsonQuery = {
       ...query,
       context: ensureExecutionModeIsSet({
+        ...baseQueryContext,
         ...query.context,
         ...context,
       }),
@@ -100,7 +106,7 @@ export async function submitTaskQuery(
     );
   }
 
-  const execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, context);
+  const execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, jsonQuery.context);
 
   if (onSubmitted) {
     onSubmitted(execution.id);
@@ -161,7 +167,7 @@ export async function getTaskExecution(
 
   let execution: Execution | undefined;
 
-  if (USE_TASK_REPORTS) {
+  if (Execution.USE_TASK_REPORTS) {
     let taskReport: any;
     try {
       taskReport = (
@@ -188,7 +194,7 @@ export async function getTaskExecution(
 
   if (!execution) {
     const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
+      `/druid/v2/sql/statements/${encodedId}?detail=true`,
       {
         cancelToken,
       },
@@ -198,7 +204,7 @@ export async function getTaskExecution(
   }
 
   let taskPayload = taskPayloadOverride;
-  if (USE_TASK_PAYLOAD && !taskPayload) {
+  if (Execution.USE_TASK_PAYLOAD && !taskPayload) {
     try {
       taskPayload = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
@@ -229,8 +235,8 @@ export async function getTaskExecution(
     }
   }
 
-  if (execution.hasPotentiallyStuckStage()) {
-    const capacityInfo = await maybeGetClusterCapacity();
+  if (Execution.getClusterCapacity && execution.hasPotentiallyStuckStage()) {
+    const capacityInfo = await Execution.getClusterCapacity();
     if (capacityInfo) {
       execution = execution.changeCapacityInfo(capacityInfo);
     }

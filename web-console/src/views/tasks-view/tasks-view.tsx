@@ -505,6 +505,7 @@ ORDER BY
                 <ActionCell
                   onDetail={() => this.onTaskDetail(row.original)}
                   actions={this.getTaskActions(id, datasource, status, type, true)}
+                  menuTitle={id}
                 />
               );
             },

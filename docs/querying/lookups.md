@@ -50,6 +50,10 @@ Other lookup types are available as extensions, including:
 - Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](./lookups-cached-global.md).
 - Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](./kafka-extraction-namespace.md).
 
+:::info
+[Multi-value dimensions](multi-value-dimensions.md) (MVDs) are not supported as keys in lookups. For example, to map the MVD `["A", "B", "C"]` to the value `x` in your lookup, flatten the MVD and map each element of the MVD to the value. Your lookup will have separate key-value pairs for each element of the MVD: `"A": "x"`, `"B": "x"`, and `"C": "x"`.
+:::
+
 Query Syntax
 ------------
 

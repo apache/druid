@@ -43,6 +43,7 @@ import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -75,7 +76,8 @@ public class ResultsContextSerdeTest
         "druid",
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        AuthConfig.newBuilder().build()
+        AuthConfig.newBuilder().build(),
+        new DruidHookDispatcher()
     );
     final NativeSqlEngine engine = CalciteTests.createMockSqlEngine(
         EasyMock.createMock(QuerySegmentWalker.class),

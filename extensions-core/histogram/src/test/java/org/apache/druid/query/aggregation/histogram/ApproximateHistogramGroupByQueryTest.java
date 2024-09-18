@@ -97,7 +97,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
 
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
-      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory)) {
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory, false)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),

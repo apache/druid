@@ -19,23 +19,14 @@
 
 package org.apache.druid.query.groupby;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -51,7 +42,6 @@ import org.apache.druid.java.util.common.guava.MappedSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
@@ -77,10 +67,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.nested.StructuredData;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -106,6 +97,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   };
 
   private final GroupingEngine groupingEngine;
+  private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
   private final GroupByResourcesReservationPool groupByResourcesReservationPool;
 
@@ -117,6 +109,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   {
     this(
         groupingEngine,
+        GroupByQueryConfig::new,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool
     );
@@ -125,11 +118,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Inject
   public GroupByQueryQueryToolChest(
       GroupingEngine groupingEngine,
+      Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
   )
   {
     this.groupingEngine = groupingEngine;
+    this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
   }
@@ -448,120 +443,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Override
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final GroupByQuery query)
   {
-    final boolean resultAsArray = query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false);
-
-    // Serializer that writes array- or map-based rows as appropriate, based on the "resultAsArray" setting.
-    final JsonSerializer<ResultRow> serializer = new JsonSerializer<ResultRow>()
-    {
-      @Override
-      public void serialize(
-          final ResultRow resultRow,
-          final JsonGenerator jg,
-          final SerializerProvider serializers
-      ) throws IOException
-      {
-        if (resultAsArray) {
-          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.getArray());
-        } else {
-          JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, resultRow.toMapBasedRow(query));
-        }
-      }
-    };
-
-    // Deserializer that can deserialize either array- or map-based rows.
-    final JsonDeserializer<ResultRow> deserializer = new JsonDeserializer<ResultRow>()
-    {
-      final Class<?>[] dimensionClasses = createDimensionClasses();
-      boolean containsComplexDimensions = query.getDimensions()
-                                               .stream()
-                                               .anyMatch(
-                                                   dimensionSpec -> dimensionSpec.getOutputType().is(ValueType.COMPLEX)
-                                               );
-
-      @Override
-      public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
-      {
-        if (jp.isExpectedStartObjectToken()) {
-          final Row row = jp.readValueAs(Row.class);
-          final ResultRow resultRow = ResultRow.fromLegacyRow(row, query);
-          if (containsComplexDimensions) {
-            final List<DimensionSpec> queryDimensions = query.getDimensions();
-            for (int i = 0; i < queryDimensions.size(); ++i) {
-              if (queryDimensions.get(i).getOutputType().is(ValueType.COMPLEX)) {
-                final int dimensionIndexInResultRow = query.getResultRowDimensionStart() + i;
-                resultRow.set(
-                    dimensionIndexInResultRow,
-                    objectMapper.convertValue(
-                        resultRow.get(dimensionIndexInResultRow),
-                        dimensionClasses[i]
-                    )
-                );
-              }
-            }
-          }
-          return resultRow;
-        } else {
-          Object[] objectArray = new Object[query.getResultRowSizeWithPostAggregators()];
-
-          if (!jp.isExpectedStartArrayToken()) {
-            throw DruidException.defensive("Expected start token, received [%s]", jp.currentToken());
-          }
-
-          ObjectCodec codec = jp.getCodec();
-
-          jp.nextToken();
-
-          int numObjects = 0;
-          while (jp.currentToken() != JsonToken.END_ARRAY) {
-            if (numObjects >= query.getResultRowDimensionStart() && numObjects < query.getResultRowAggregatorStart()) {
-              objectArray[numObjects] = codec.readValue(jp, dimensionClasses[numObjects - query.getResultRowDimensionStart()]);
-            } else {
-              objectArray[numObjects] = codec.readValue(jp, Object.class);
-            }
-            jp.nextToken();
-            ++numObjects;
-          }
-          return ResultRow.of(objectArray);
-        }
-      }
-
-      private Class<?>[] createDimensionClasses()
-      {
-        final List<DimensionSpec> queryDimensions = query.getDimensions();
-        final Class<?>[] classes = new Class[queryDimensions.size()];
-        for (int i = 0; i < queryDimensions.size(); ++i) {
-          final ColumnType dimensionOutputType = queryDimensions.get(i).getOutputType();
-          if (dimensionOutputType.is(ValueType.COMPLEX)) {
-            NullableTypeStrategy nullableTypeStrategy = dimensionOutputType.getNullableStrategy();
-            if (!nullableTypeStrategy.groupable()) {
-              throw DruidException.defensive(
-                  "Ungroupable dimension [%s] with type [%s] found in the query.",
-                  queryDimensions.get(i).getDimension(),
-                  dimensionOutputType
-              );
-            }
-            classes[i] = nullableTypeStrategy.getClazz();
-          } else {
-            classes[i] = Object.class;
-          }
-        }
-        return classes;
-      }
-
-    };
-
-    class GroupByResultRowModule extends SimpleModule
-    {
-      private GroupByResultRowModule()
-      {
-        addSerializer(ResultRow.class, serializer);
-        addDeserializer(ResultRow.class, deserializer);
-      }
-    }
-
-    final ObjectMapper newObjectMapper = objectMapper.copy();
-    newObjectMapper.registerModule(new GroupByResultRowModule());
-    return newObjectMapper;
+    return ResultRowObjectMapperDecoratorUtil.decorateObjectMapper(objectMapper, query, queryConfig);
   }
 
   @Override
@@ -597,9 +479,32 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     );
   }
 
+  @Nullable
   @Override
-  public CacheStrategy<ResultRow, Object, GroupByQuery> getCacheStrategy(final GroupByQuery query)
+  public CacheStrategy<ResultRow, Object, GroupByQuery> getCacheStrategy(GroupByQuery query)
   {
+    return getCacheStrategy(query, null);
+  }
+
+  @Override
+  public CacheStrategy<ResultRow, Object, GroupByQuery> getCacheStrategy(
+      final GroupByQuery query,
+      @Nullable final ObjectMapper mapper
+  )
+  {
+
+    for (DimensionSpec dimension : query.getDimensions()) {
+      if (dimension.getOutputType().is(ValueType.COMPLEX) && !dimension.getOutputType().equals(ColumnType.NESTED_DATA)) {
+        if (mapper == null) {
+          throw DruidException.defensive(
+              "Cannot deserialize complex dimension of type[%s] from result cache if object mapper is not provided",
+              dimension.getOutputType().getComplexTypeName()
+          );
+        }
+      }
+    }
+    final Class<?>[] dimensionClasses = createDimensionClasses(query);
+
     return new CacheStrategy<ResultRow, Object, GroupByQuery>()
     {
       private static final byte CACHE_STRATEGY_VERSION = 0x1;
@@ -726,13 +631,29 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             int dimPos = 0;
             while (dimsIter.hasNext() && results.hasNext()) {
               final DimensionSpec dimensionSpec = dimsIter.next();
+              final Object dimensionObject = results.next();
+              final Object dimensionObjectCasted;
 
-              // Must convert generic Jackson-deserialized type into the proper type.
-              resultRow.set(
-                  dimensionStart + dimPos,
-                  DimensionHandlerUtils.convertObjectToType(results.next(), dimensionSpec.getOutputType())
-              );
+              final ColumnType outputType = dimensionSpec.getOutputType();
 
+              // Must convert generic Jackson-deserialized type into the proper type. The downstream functions expect the
+              // dimensions to be of appropriate types for further processing like merging and comparing.
+              if (outputType.is(ValueType.COMPLEX)) {
+                // Json columns can interpret generic data objects appropriately, hence they are wrapped as is in StructuredData.
+                // They don't need to converted them from Object.class to StructuredData.class using object mapper as that is an
+                // expensive operation that will be wasteful.
+                if (outputType.equals(ColumnType.NESTED_DATA)) {
+                  dimensionObjectCasted = StructuredData.wrap(dimensionObject);
+                } else {
+                  dimensionObjectCasted = mapper.convertValue(dimensionObject, dimensionClasses[dimPos]);
+                }
+              } else {
+                dimensionObjectCasted = DimensionHandlerUtils.convertObjectToType(
+                    dimensionObject,
+                    dimensionSpec.getOutputType()
+                );
+              }
+              resultRow.set(dimensionStart + dimPos, dimensionObjectCasted);
               dimPos++;
             }
 
@@ -811,10 +732,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       boolean useNestedForUnknownTypes
   )
   {
-    RowSignature rowSignature = resultArraySignature(query);
+    RowSignature rowSignature = query.getResultRowSignature(
+        query.context().isFinalize(true)
+        ? RowSignature.Finalization.YES
+        : RowSignature.Finalization.NO
+    );
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
+
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
 
     FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
         memoryAllocatorFactory,
@@ -858,5 +785,28 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     }
 
     return retVal;
+  }
+
+  private static Class<?>[] createDimensionClasses(final GroupByQuery query)
+  {
+    final List<DimensionSpec> queryDimensions = query.getDimensions();
+    final Class<?>[] classes = new Class[queryDimensions.size()];
+    for (int i = 0; i < queryDimensions.size(); ++i) {
+      final ColumnType dimensionOutputType = queryDimensions.get(i).getOutputType();
+      if (dimensionOutputType.is(ValueType.COMPLEX)) {
+        NullableTypeStrategy nullableTypeStrategy = dimensionOutputType.getNullableStrategy();
+        if (!nullableTypeStrategy.groupable()) {
+          throw DruidException.defensive(
+              "Ungroupable dimension [%s] with type [%s] found in the query.",
+              queryDimensions.get(i).getDimension(),
+              dimensionOutputType
+          );
+        }
+        classes[i] = nullableTypeStrategy.getClazz();
+      } else {
+        classes[i] = Object.class;
+      }
+    }
+    return classes;
   }
 }

@@ -35,6 +35,7 @@ import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
@@ -58,11 +59,12 @@ public class MSQControllerTaskTest
           "target",
           Granularities.DAY,
           null,
-          INTERVALS
+          INTERVALS,
+          null,
+          null
       ))
       .query(new Druids.ScanQueryBuilder()
                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                 .legacy(false)
                  .intervals(new MultipleIntervalSegmentSpec(INTERVALS))
                  .dataSource("target")
                  .build()
@@ -101,6 +103,22 @@ public class MSQControllerTaskTest
         null
     );
     Assert.assertEquals(LookupLoadingSpec.NONE, controllerTask.getLookupLoadingSpec());
+  }
+
+  @Test
+  public void testGetDefaultBroadcastDatasourceLoadingSpec()
+  {
+    MSQControllerTask controllerTask = new MSQControllerTask(
+        null,
+        MSQ_SPEC,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+    Assert.assertEquals(BroadcastDatasourceLoadingSpec.NONE, controllerTask.getBroadcastDatasourceLoadingSpec());
   }
 
   @Test

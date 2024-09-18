@@ -934,7 +934,7 @@ public class StreamAppenderator implements Appenderator
       try {
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);
@@ -1234,7 +1234,7 @@ public class StreamAppenderator implements Appenderator
     }
 
     if (pushExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      // use a blocking single threaded executor to throttle the input source when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-merge", 1)
       );

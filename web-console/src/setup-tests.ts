@@ -19,6 +19,12 @@
 import 'core-js/stable';
 import './bootstrap/ace';
 
+import { Icons } from '@blueprintjs/icons';
+
 import { UrlBaser } from './singletons';
 
 UrlBaser.baseUrl = '/some/base_url';
+
+beforeAll(async () => {
+  await Icons.loadAll();
+});

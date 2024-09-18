@@ -93,7 +93,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       {activeTab === 'spec' && (
         <ShowJson
           endpoint={supervisorEndpointBase}
-          transform={x => cleanSpec(x, true)}
+          transform={cleanSpec}
           downloadFilename={`supervisor-payload-${supervisorId}.json`}
         />
       )}

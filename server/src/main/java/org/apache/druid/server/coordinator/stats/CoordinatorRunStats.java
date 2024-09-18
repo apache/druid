@@ -87,7 +87,7 @@ public class CoordinatorRunStats
 
   public long get(CoordinatorStat stat)
   {
-    return get(stat, RowKey.EMPTY);
+    return get(stat, RowKey.empty());
   }
 
   public long get(CoordinatorStat stat, RowKey rowKey)
@@ -196,7 +196,7 @@ public class CoordinatorRunStats
 
   public void add(CoordinatorStat stat, long value)
   {
-    add(stat, RowKey.EMPTY, value);
+    add(stat, RowKey.empty(), value);
   }
 
   public void add(CoordinatorStat stat, RowKey rowKey, long value)

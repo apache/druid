@@ -52,9 +52,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
       );
-      return resp.data.map((vs: SupervisorHistoryEntry) =>
-        deepSet(vs, 'spec', cleanSpec(vs.spec, true)),
-      );
+      return resp.data.map((vs: SupervisorHistoryEntry) => deepSet(vs, 'spec', cleanSpec(vs.spec)));
     },
   });
 
@@ -87,8 +85,8 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
         <DiffDialog
           title="Supervisor spec diff"
           versions={historyData.map(s => ({ label: s.version, value: s.spec }))}
-          initLeftIndex={diffIndex + 1}
-          initRightIndex={diffIndex}
+          initOldIndex={diffIndex + 1}
+          initNewIndex={diffIndex}
           onClose={() => setDiffIndex(-1)}
         />
       )}

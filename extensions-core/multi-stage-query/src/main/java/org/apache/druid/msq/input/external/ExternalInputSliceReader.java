@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -53,6 +53,7 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -94,7 +95,7 @@ public class ExternalInputSliceReader implements InputSliceReader
                 externalInputSlice.getInputSources(),
                 externalInputSlice.getInputFormat(),
                 externalInputSlice.getSignature(),
-                temporaryDirectory,
+                new File(temporaryDirectory, String.valueOf(inputNumber)),
                 counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount()),
                 counters.warnings(),
                 warningPublisher
@@ -128,9 +129,13 @@ public class ExternalInputSliceReader implements InputSliceReader
         ColumnsFilter.all()
     );
 
-    if (!temporaryDirectory.exists() && !temporaryDirectory.mkdir()) {
-      throw new ISE("Cannot create temporary directory at [%s]", temporaryDirectory);
+    try {
+      FileUtils.mkdirp(temporaryDirectory);
     }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     return Iterators.transform(
         inputSources.iterator(),
         inputSource -> {

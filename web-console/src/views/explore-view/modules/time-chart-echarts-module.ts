@@ -169,6 +169,8 @@ export default typedVisualModule({
       async update({ table, where, parameterValues, context }) {
         const { splitColumn, metric, numberToStack, showOthers, snappyHighlight } = parameterValues;
 
+        if (String(table).includes('select source')) return;
+
         // this should probably be a parameter
         const timeColumnName = '__time';
 
@@ -203,10 +205,11 @@ export default typedVisualModule({
                 direction: 'ASC',
               })
               .applyIf(splitColumn, q => {
-                const splitEx = splitColumn!.expression;
+                if (!splitColumn || !vs) return q; // Should never get here, doing this to make peace between eslint and TS
+                const splitEx = splitColumn.expression;
                 return q.addSelect(
                   (showOthers
-                    ? SqlCase.ifThenElse(splitEx.in(vs!), splitEx, L(OTHERS_VALUE))
+                    ? SqlCase.ifThenElse(splitEx.in(vs), splitEx, L(OTHERS_VALUE))
                     : splitEx
                   ).as(STACK_NAME),
                   { addToGroupBy: 'end' },
@@ -258,7 +261,7 @@ export default typedVisualModule({
                       timeColumnName,
                     )}, '${start.toISOString()}/${end.toISOString()}')`,
                   ),
-                ) as SqlExpression,
+                ),
               );
               highlightStore.getState().dropHighlight();
               myChart.dispatchAction({

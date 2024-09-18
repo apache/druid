@@ -187,7 +187,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
   @Test
   public void testIncorrectURI() throws IOException, URISyntaxException
   {
-    final InputEntityIteratingReader firehose = new InputEntityIteratingReader(
+    final InputEntityIteratingReader inputReader = new InputEntityIteratingReader(
         new InputRowSchema(
             new TimestampSpec(null, null, null),
             new DimensionsSpec(
@@ -204,7 +204,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
         ),
         CloseableIterators.withEmptyBaggage(
             ImmutableList.of(
-                new HttpEntity(new URI("testscheme://some/path"), null, null)
+                new HttpEntity(new URI("testscheme://some/path"), null, null, null)
                 {
                   @Override
                   protected int getMaxRetries()
@@ -220,7 +220,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder()
     );
 
-    try (CloseableIterator<InputRow> readIterator = firehose.read()) {
+    try (CloseableIterator<InputRow> readIterator = inputReader.read()) {
       String expectedMessage = "Error occurred while trying to read uri: testscheme://some/path";
       Exception exception = Assert.assertThrows(RuntimeException.class, readIterator::hasNext);
       Assert.assertTrue(exception.getMessage().contains(expectedMessage));

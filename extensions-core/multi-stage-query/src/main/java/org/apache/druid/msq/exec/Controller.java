@@ -84,7 +84,7 @@ public interface Controller
    * taskId, not by query/stage/worker, because system errors are associated
    * with a task rather than a specific query/stage/worker execution context.
    *
-   * @see ControllerClient#postWorkerError(String, MSQErrorReport)
+   * @see ControllerClient#postWorkerError(MSQErrorReport)
    */
   void workerError(MSQErrorReport errorReport);
 
@@ -117,9 +117,9 @@ public interface Controller
   );
 
   /**
-   * Returns the current list of task ids, ordered by worker number. The Nth task has worker number N.
+   * Returns the current list of worker IDs, ordered by worker number. The Nth worker has worker number N.
    */
-  List<String> getTaskIds();
+  List<String> getWorkerIds();
 
   @Nullable
   TaskReport.ReportMap liveReports();

@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
@@ -174,7 +173,7 @@ LIMIT 100`,
                     }
 
                     onNewTab(
-                      WorkbenchQuery.fromEffectiveQueryAndContext(
+                      WorkbenchQuery.fromTaskQueryAndContext(
                         execution.sqlQuery,
                         execution.queryContext,
                       ).changeLastExecution({ engine: 'sql-msq-task', id: w.taskId }),
@@ -227,7 +226,7 @@ LIMIT 100`,
 
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
-              <Popover2 className="work-entry" key={w.taskId} position="left" content={menu}>
+              <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
                 <div title={formatDetail(w)} onDoubleClick={() => onExecutionDetails(w.taskId)}>
                   <div className="line1">
                     <Icon
@@ -260,7 +259,7 @@ LIMIT 100`,
                     </div>
                   </div>
                 </div>
-              </Popover2>
+              </Popover>
             );
           })}
         </div>

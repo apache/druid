@@ -39,6 +39,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
@@ -334,13 +335,13 @@ public class OverlordResourceTestClient
     }
   }
 
-  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  public Map<String, List<Interval>> getLockedIntervals(List<LockFilterPolicy> lockFilterPolicies)
   {
     try {
-      String jsonBody = jsonMapper.writeValueAsString(minTaskPriority);
+      String jsonBody = jsonMapper.writeValueAsString(lockFilterPolicies);
 
       StatusResponseHolder response = httpClient.go(
-          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals"))
+          new Request(HttpMethod.POST, new URL(getIndexerURL() + "lockedIntervals/v2"))
               .setContent(
                   "application/json",
                   StringUtils.toUtf8(jsonBody)

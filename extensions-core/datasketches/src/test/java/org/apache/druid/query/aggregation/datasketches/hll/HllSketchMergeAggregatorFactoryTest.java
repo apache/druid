@@ -22,10 +22,17 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.TgtHllType;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.vector.TestVectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,6 +51,9 @@ public class HllSketchMergeAggregatorFactoryTest
 
   private HllSketchMergeAggregatorFactory targetRound;
   private HllSketchMergeAggregatorFactory targetNoRound;
+
+  private ColumnSelectorFactory metricFactory;
+  private VectorColumnSelectorFactory vectorFactory;
 
   @Before
   public void setUp()
@@ -66,6 +76,10 @@ public class HllSketchMergeAggregatorFactoryTest
         SHOULD_FINALIZE,
         !ROUND
     );
+
+    final ColumnCapabilitiesImpl columnCapabilities = ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
+    metricFactory = new TestColumnSelectorFactory().addCapabilities(FIELD_NAME, columnCapabilities);
+    vectorFactory = new TestVectorColumnSelectorFactory().addCapabilities(FIELD_NAME, columnCapabilities);
   }
 
   @Test(expected = AggregatorFactoryNotMergeableException.class)
@@ -290,5 +304,40 @@ public class HllSketchMergeAggregatorFactoryTest
     HllSketchAggregatorFactory factory = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
     Assert.assertEquals(factory, factory.withName(targetRound.getName()));
     Assert.assertEquals("newTest", factory.withName("newTest").getName());
+  }
+
+  @Test
+  public void testFactorizeOnUnsupportedComplexColumn()
+  {
+    final ColumnSelectorFactory metricFactory = new TestColumnSelectorFactory()
+        .addCapabilities(
+            FIELD_NAME,
+            ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA)
+        );
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorize(metricFactory));
+    Assert.assertEquals(
+        "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
+        exception.getMessage()
+    );
+  }
+
+  @Test
+  public void testFactorizeBufferedOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorizeBuffered(metricFactory));
+    Assert.assertEquals(
+        "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
+        exception.getMessage()
+    );
+  }
+
+  @Test
+  public void testFactorizeVectorOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorizeVector(vectorFactory));
+    Assert.assertEquals(
+        "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
+        exception.getMessage()
+    );
   }
 }

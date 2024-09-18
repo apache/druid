@@ -28,20 +28,18 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
-import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DimensionComparisonUtils;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
@@ -68,26 +66,22 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
   @Override
   public QueryDefinition makeQueryDefinition(
-      final String queryId,
+      final QueryKitSpec queryKitSpec,
       final GroupByQuery originalQuery,
-      final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
-      final int maxWorkerCount,
       final int minStageNumber
   )
   {
     validateQuery(originalQuery);
 
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
-        queryKit,
-        queryId,
+        queryKitSpec,
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
         null,
-        maxWorkerCount,
         minStageNumber,
         false
     );
@@ -114,13 +108,25 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
     final ShuffleSpecFactory shuffleSpecFactoryPostAggregation;
     boolean partitionBoost;
 
+    // limitHint to use for the shuffle after the post-aggregation stage.
+    // Don't apply limitHint pre-aggregation, because results from pre-aggregation may not be fully grouped.
+    final long postAggregationLimitHint;
+
+    if (doLimitOrOffset) {
+      final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
+      postAggregationLimitHint =
+          limitSpec.isLimited() ? limitSpec.getOffset() + limitSpec.getLimit() : ShuffleSpec.UNLIMITED;
+    } else {
+      postAggregationLimitHint = ShuffleSpec.UNLIMITED;
+    }
+
     if (intermediateClusterBy.isEmpty() && resultClusterByWithoutPartitionBoost.isEmpty()) {
       // Ignore shuffleSpecFactory, since we know only a single partition will come out, and we can save some effort.
       // This condition will be triggered when we don't have a grouping dimension, no partitioning granularity
       // (PARTITIONED BY ALL) and no ordering/clustering dimensions
       // For example: INSERT INTO foo SELECT COUNT(*) FROM bar PARTITIONED BY ALL
       shuffleSpecFactoryPreAggregation = ShuffleSpecFactories.singlePartition();
-      shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartition();
+      shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
       partitionBoost = false;
     } else if (doOrderBy) {
       // There can be a situation where intermediateClusterBy is empty, while the resultClusterBy is non-empty
@@ -129,12 +135,17 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
       // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
       // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
-      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
-      shuffleSpecFactoryPostAggregation = doLimitOrOffset
-                                          ? ShuffleSpecFactories.singlePartition()
-                                          : resultShuffleSpecFactory;
+      shuffleSpecFactoryPreAggregation =
+          intermediateClusterBy.isEmpty()
+          ? ShuffleSpecFactories.singlePartition()
+          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle());
+
+      if (doLimitOrOffset) {
+        shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
+      } else {
+        shuffleSpecFactoryPostAggregation = resultShuffleSpecFactory;
+      }
+
       partitionBoost = true;
     } else {
       shuffleSpecFactoryPreAggregation = doLimitOrOffset
@@ -152,7 +163,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .signature(intermediateSignature)
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
-                       .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
+                       .maxWorkerCount(
+                           dataSourcePlan.isSingleWorker()
+                           ? 1
+                           : queryKitSpec.getMaxWorkerCount(dataSourcePlan.getInputSpecs()))
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
@@ -168,100 +182,38 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         partitionBoost
     );
 
-    final ShuffleSpec nextShuffleWindowSpec = getShuffleSpecForNextWindow(originalQuery, maxWorkerCount);
+    queryDefBuilder.add(
+        StageDefinition.builder(firstStageNumber + 1)
+                       .inputs(new StageInputSpec(firstStageNumber))
+                       .signature(resultSignature)
+                       .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
+                       .shuffleSpec(
+                           shuffleSpecFactoryPostAggregation != null
+                           ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
+                           : null
+                       )
+                       .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
+    );
 
-    if (nextShuffleWindowSpec == null) {
+    if (doLimitOrOffset) {
+      final ShuffleSpec finalShuffleSpec = resultShuffleSpecFactory.build(resultClusterBy, false);
+      final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
       queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber + 1)
-                         .inputs(new StageInputSpec(firstStageNumber))
+          StageDefinition.builder(firstStageNumber + 2)
+                         .inputs(new StageInputSpec(firstStageNumber + 1))
                          .signature(resultSignature)
-                         .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(
-                             shuffleSpecFactoryPostAggregation != null
-                             ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
-                             : null
+                         .maxWorkerCount(1)
+                         .shuffleSpec(finalShuffleSpec)
+                         .processorFactory(
+                             new OffsetLimitFrameProcessorFactory(
+                                 limitSpec.getOffset(),
+                                 limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
+                             )
                          )
-                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
       );
-
-      if (doLimitOrOffset) {
-        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-        queryDefBuilder.add(
-            StageDefinition.builder(firstStageNumber + 2)
-                           .inputs(new StageInputSpec(firstStageNumber + 1))
-                           .signature(resultSignature)
-                           .maxWorkerCount(1)
-                           .shuffleSpec(null) // no shuffling should be required after a limit processor.
-                           .processorFactory(
-                               new OffsetLimitFrameProcessorFactory(
-                                   limitSpec.getOffset(),
-                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
-                               )
-                           )
-        );
-      }
-    } else {
-      final RowSignature stageSignature;
-      // sort the signature to make sure the prefix is aligned
-      stageSignature = QueryKitUtils.sortableSignature(
-          resultSignature,
-          nextShuffleWindowSpec.clusterBy().getColumns()
-      );
-
-
-      queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber + 1)
-                         .inputs(new StageInputSpec(firstStageNumber))
-                         .signature(stageSignature)
-                         .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(doLimitOrOffset ? (shuffleSpecFactoryPostAggregation != null
-                                                         ? shuffleSpecFactoryPostAggregation.build(
-                             resultClusterBy,
-                             false
-                         )
-                                                         : null) : nextShuffleWindowSpec)
-                         .processorFactory(new GroupByPostShuffleFrameProcessorFactory(queryToRun))
-      );
-      if (doLimitOrOffset) {
-        final DefaultLimitSpec limitSpec = (DefaultLimitSpec) queryToRun.getLimitSpec();
-        queryDefBuilder.add(
-            StageDefinition.builder(firstStageNumber + 2)
-                           .inputs(new StageInputSpec(firstStageNumber + 1))
-                           .signature(resultSignature)
-                           .maxWorkerCount(1)
-                           .shuffleSpec(null)
-                           .processorFactory(
-                               new OffsetLimitFrameProcessorFactory(
-                                   limitSpec.getOffset(),
-                                   limitSpec.isLimited() ? (long) limitSpec.getLimit() : null
-                               )
-                           )
-        );
-      }
     }
 
     return queryDefBuilder.build();
-  }
-
-  /**
-   * @param originalQuery  which has the context for the next shuffle if that's present in the next window
-   * @param maxWorkerCount max worker count
-   * @return shuffle spec without partition boosting for next stage, null if there is no partition by for next window
-   */
-  private ShuffleSpec getShuffleSpecForNextWindow(GroupByQuery originalQuery, int maxWorkerCount)
-  {
-    final ShuffleSpec nextShuffleWindowSpec;
-    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
-                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
-      nextShuffleWindowSpec = new HashShuffleSpec(
-          windowClusterBy,
-          maxWorkerCount
-      );
-    } else {
-      nextShuffleWindowSpec = null;
-    }
-    return nextShuffleWindowSpec;
   }
 
   /**
@@ -435,7 +387,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       for (final OrderByColumnSpec column : defaultLimitSpec.getColumns()) {
         final Optional<ColumnType> type = resultSignature.getColumnType(column.getDimension());
 
-        if (!type.isPresent() || !DimensionComparisonUtils.isNaturalComparator(type.get().getType(), column.getDimensionComparator())) {
+        if (!type.isPresent() || !DimensionComparisonUtils.isNaturalComparator(
+            type.get().getType(),
+            column.getDimensionComparator()
+        )) {
           throw new ISE(
               "Must use natural comparator for column [%s] of type [%s]",
               column.getDimension(),

@@ -31,6 +31,9 @@ apache.org
 AvroStorage
 ARN
 ASC
+arcsine
+arccosine
+arctangent
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -55,6 +58,7 @@ CPUs
 CSVs
 CentralizedDatasourceSchema
 Ceph
+circledR
 CloudWatch
 ColumnDescriptor
 Corretto
@@ -97,7 +101,6 @@ EMRFS
 ETL
 Elasticsearch
 Enums
-FirehoseFactory
 FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
@@ -112,7 +115,6 @@ GUIs
 GroupBy
 Guice
 HDFS
-HDFSFirehose
 HLL
 HashSet
 Homebrew
@@ -228,7 +230,6 @@ SSDs
 SSL
 Samza
 Splunk
-SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
@@ -275,6 +276,7 @@ averager
 averagers
 backend
 backfills
+backfilled
 backpressure
 base64
 big-endian
@@ -297,6 +299,7 @@ colocation
 colocating
 compactable
 compactionTask
+complexMetricCompression
 config
 configs
 consumerProperties
@@ -323,6 +326,7 @@ deserializes
 downtimes
 druid
 druid–kubernetes-extensions
+druid.table
 e.g.
 encodings
 endian
@@ -380,7 +384,9 @@ json_paths
 json_query
 json_query_array
 json_value
+json_merge
 karlkfi
+kbps
 kerberos
 keystore
 keytool
@@ -509,6 +515,7 @@ schemas
 schemaless
 searchable
 secondaryPartitionPruning
+seekable
 seekable-stream
 servlet
 setProcessingThreadNames
@@ -879,8 +886,6 @@ hadoop3
 ambari-metrics
 metricName
 trustStore
-StaticAzureBlobStoreFirehose
-StaticS3Firehose
 fetchTimeout
 gz
 maxCacheCapacityBytes
@@ -889,11 +894,9 @@ maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
 sharedAccessStorageToken
-StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
-StaticAzureBlobStoreFirehose
 gz
 shardSpecs
 maxCacheCapacityBytes
@@ -1095,7 +1098,6 @@ POD_NAMESPACE
 ConfigMap
 PT17S
 GCS
-StaticGoogleBlobStoreFirehose
 gcs-connector
 hdfs
 Aotearoa
@@ -1295,7 +1297,6 @@ QueryRunnerFactory
 segmentmetadataquery
 SegmentMetadataQuery
 SegmentMetadataQueryQueryToolChest
-StaticS3FirehoseFactory
 loadSpec
 multibind
 pom.xml
@@ -1336,10 +1337,8 @@ valueFormat
 IOConfig
 compactionTask
 compactionTasks
-ingestSegmentFirehose
 numShards
 IngestSegment
-IngestSegmentFirehose
 maxSizes
 snapshotTime
 windowPeriod
@@ -1401,14 +1400,10 @@ useYarnRMJobStatusFallback
 workingPath
 z.example.com
 150MB
-CombiningFirehose
 DataSchema
 DefaultPassword
 EnvironmentVariablePasswordProvider
-HttpFirehose
 IOConfig
-InlineFirehose
-LocalFirehose
 PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
@@ -1445,12 +1440,9 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
-StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
-LocalFirehose
 baseDir
-HttpFirehose
 httpAuthenticationUsername
 DefaultPassword
 PasswordProviders
@@ -1461,8 +1453,6 @@ maxInputSegmentBytesPerTask
 foldCase
 sqls
 connectorConfig
-InlineFirehose
-CombiningFirehose
 httpAuthenticationPassword
 accessKeyId
 secretAccessKey
@@ -1659,8 +1649,6 @@ Temurin
 0.14.x
 1s
 Bufferpool
-EventReceiverFirehose
-EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
 jvmVersion
@@ -1983,7 +1971,6 @@ GiB
 Autoscaler
 APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
-EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
@@ -2431,3 +2418,4 @@ percentilesSpectatorHistogram
 quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
+snapshotVersion

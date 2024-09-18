@@ -17,8 +17,15 @@
  */
 
 .destination-pages-pane {
+  display: flex;
+  flex-direction: column;
+
   .download-button {
     margin-top: 4px;
     margin-left: 2px;
+  }
+
+  & > .ReactTable {
+    flex: 1;
   }
 }

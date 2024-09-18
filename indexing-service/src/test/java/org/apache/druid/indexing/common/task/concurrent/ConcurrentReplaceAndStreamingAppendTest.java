@@ -57,6 +57,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
@@ -108,8 +109,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   private static final Interval JAN_23 = Intervals.of("2023-01/2023-02");
   private static final Interval FIRST_OF_JAN_23 = Intervals.of("2023-01-01/2023-01-02");
 
-  private static final String WIKI = "wiki";
-
   private TaskQueue taskQueue;
   private TaskActionClientFactory taskActionClientFactory;
   private TaskActionClient dummyTaskActionClient;
@@ -130,8 +129,8 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   public void setUpIngestionTestBase() throws IOException
   {
     EasyMock.reset(supervisorManager);
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(WIKI))
-            .andReturn(Optional.of(WIKI)).anyTimes();
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(TestDataSource.WIKI))
+            .andReturn(Optional.of(TestDataSource.WIKI)).anyTimes();
     super.setUpIngestionTestBase();
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
     taskActionClientFactory = createActionClientFactory();
@@ -708,7 +707,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     try {
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
-              WIKI,
+              TestDataSource.WIKI,
               ImmutableList.of(interval),
               visibility
           )
@@ -741,9 +740,9 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
 
   private DataSegment createSegment(Interval interval, String version)
   {
-    SegmentId id = SegmentId.of(WIKI, interval, version, null);
+    SegmentId id = SegmentId.of(TestDataSource.WIKI, interval, version, null);
     return DataSegment.builder()
-                      .dataSource(WIKI)
+                      .dataSource(TestDataSource.WIKI)
                       .interval(interval)
                       .version(version)
                       .loadSpec(Collections.singletonMap(id.toString(), id.toString()))
@@ -753,7 +752,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
 
   private ActionsTestTask createAndStartTask()
   {
-    ActionsTestTask task = new ActionsTestTask(WIKI, "test_" + groupId.incrementAndGet(), taskActionClientFactory);
+    ActionsTestTask task = new ActionsTestTask(TestDataSource.WIKI, "test_" + groupId.incrementAndGet(), taskActionClientFactory);
     taskQueue.add(task);
     runningTasks.add(task);
     return task;
@@ -827,7 +826,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     try {
       return dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
-              WIKI,
+              TestDataSource.WIKI,
               ImmutableList.of(Intervals.ETERNITY),
               Segments.INCLUDING_OVERSHADOWED
           )

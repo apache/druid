@@ -464,6 +464,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                     this.onDetail(original);
                   }}
                   actions={lookupActions}
+                  menuTitle={lookupId}
                 />
               );
             },

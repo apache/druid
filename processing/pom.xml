@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>32.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -203,7 +203,7 @@
       <artifactId>airline</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.hibernate</groupId>
+      <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
       <scope>runtime</scope>
     </dependency>

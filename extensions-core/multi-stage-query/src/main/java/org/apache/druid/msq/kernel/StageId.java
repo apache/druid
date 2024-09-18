@@ -31,6 +31,9 @@ import java.util.Objects;
 
 /**
  * Globally unique stage identifier: query ID plus stage number.
+ *
+ * Note: Versions till Druid 30 had a bug in the QueryKits which populated the {@link #queryId} field with random
+ * UUIDs. Therefore, all usage of the field must be vetted instead of assuming that it will be the expected query id
  */
 public class StageId implements Comparable<StageId>
 {

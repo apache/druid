@@ -236,7 +236,7 @@ public class BatchAppenderator implements Appenderator
     }
 
     if (pushExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      // use a blocking single threaded executor to throttle the input source when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded(
               "[" + StringUtils.encodeForFormat(myId) + "]-batch-appenderator-push",
@@ -816,7 +816,7 @@ public class BatchAppenderator implements Appenderator
       try {
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
           if (queryableIndex != null) {
             rowsinMergedSegment += queryableIndex.getNumRows();
           }

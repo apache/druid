@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit.groupby;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
@@ -55,10 +56,12 @@ import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Function;
 
@@ -71,6 +74,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   private static final Logger log = new Logger(GroupByPreShuffleFrameProcessor.class);
   private final GroupByQuery query;
   private final GroupingEngine groupingEngine;
+  private final NonBlockingPool<ByteBuffer> bufferPool;
   private final ColumnSelectorFactory frameWriterColumnSelectorFactory;
   private final Closer closer = Closer.create();
 
@@ -83,6 +87,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   public GroupByPreShuffleFrameProcessor(
       final GroupByQuery query,
       final GroupingEngine groupingEngine,
+      final NonBlockingPool<ByteBuffer> bufferPool,
       final ReadableInput baseInput,
       final Function<SegmentReference, SegmentReference> segmentMapFn,
       final ResourceHolder<WritableFrameChannel> outputChannelHolder,
@@ -97,6 +102,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     );
     this.query = query;
     this.groupingEngine = groupingEngine;
+    this.bufferPool = bufferPool;
     this.frameWriterColumnSelectorFactory = RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
         query,
         () -> resultYielder.get(),
@@ -147,11 +153,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
   {
     if (resultYielder == null) {
       final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
+      final SegmentReference mappedSegment = mapSegment(segmentHolder.get());
 
       final Sequence<ResultRow> rowSequence =
           groupingEngine.process(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
-              mapSegment(segmentHolder.get()).asStorageAdapter(),
+              mappedSegment.asCursorFactory(),
+              mappedSegment.as(TimeBoundaryInspector.class),
+              bufferPool,
               null
           );
 
@@ -179,11 +188,14 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
       if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("x"));
+        final SegmentReference mappedSegment = mapSegment(frameSegment);
 
         final Sequence<ResultRow> rowSequence =
             groupingEngine.process(
                 query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                mapSegment(frameSegment).asStorageAdapter(),
+                mappedSegment.asCursorFactory(),
+                mappedSegment.as(TimeBoundaryInspector.class),
+                bufferPool,
                 null
             );
 

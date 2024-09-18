@@ -197,7 +197,7 @@ export default typedVisualModule({
                       '__time',
                     )}, '${start.toISOString()}/${end.toISOString()}')`,
                   ),
-                ) as SqlExpression,
+                ),
               );
               highlightStore.getState().dropHighlight();
               myChart.dispatchAction({

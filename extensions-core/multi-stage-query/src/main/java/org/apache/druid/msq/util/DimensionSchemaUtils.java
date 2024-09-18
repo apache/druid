@@ -131,19 +131,9 @@ public class DimensionSchemaUtils
     } else if (queryType.getType() == ValueType.ARRAY) {
       ValueType elementType = queryType.getElementType().getType();
       if (elementType == ValueType.STRING) {
-        if (arrayIngestMode == ArrayIngestMode.NONE) {
-          throw InvalidInput.exception(
-              "String arrays can not be ingested when '%s' is set to '%s'. Set '%s' in query context "
-              + "to 'array' to ingest the string array as an array, or ingest it as an MVD by explicitly casting the "
-              + "array to an MVD with the ARRAY_TO_MV function.",
-              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-              StringUtils.toLowerCase(arrayIngestMode.name()),
-              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
-          );
-        } else if (arrayIngestMode == ArrayIngestMode.MVD) {
+        if (arrayIngestMode == ArrayIngestMode.MVD) {
           return ColumnType.STRING;
         } else {
-          assert arrayIngestMode == ArrayIngestMode.ARRAY;
           return queryType;
         }
       } else if (elementType.isNumeric()) {

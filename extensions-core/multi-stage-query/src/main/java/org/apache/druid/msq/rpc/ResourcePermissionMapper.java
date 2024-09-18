@@ -23,11 +23,9 @@ import org.apache.druid.server.security.ResourceAction;
 
 import java.util.List;
 
-/**
- * Provides HTTP resources such as {@link ControllerResource} with information about which permissions are needed
- * for requests.
- */
 public interface ResourcePermissionMapper
 {
   List<ResourceAction> getAdminPermissions();
+
+  List<ResourceAction> getQueryPermissions(String queryId);
 }

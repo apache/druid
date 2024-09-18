@@ -47,7 +47,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       CompressionStrategy strategy
   )
   {
-    baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
+    this.baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;
@@ -157,6 +157,12 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     @Override
     public void get(final long[] out, final int start, final int length)
     {
+      get(out, 0, start, length);
+    }
+
+    @Override
+    public void get(long[] out, int offset, int start, int length)
+    {
       // division + remainder is optimized by the compiler so keep those together
       int bufferNum = start / sizePer;
       int bufferIndex = start % sizePer;
@@ -169,7 +175,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
         }
 
         final int limit = Math.min(length - p, sizePer - bufferIndex);
-        reader.read(out, p, bufferIndex, limit);
+        reader.read(out, offset + p, bufferIndex, limit);
         p += limit;
         bufferNum++;
         bufferIndex = 0;

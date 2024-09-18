@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>32.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -75,7 +75,7 @@
         <java.version>8</java.version>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
-        <apache.curator.version>5.3.0</apache.curator.version>
+        <apache.curator.version>5.5.0</apache.curator.version>
         <apache.kafka.version>3.6.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-core/druid-ranger-security/pm.xml  -->
@@ -242,6 +242,7 @@
         <module>integration-tests-ex/tools</module>
         <module>integration-tests-ex/image</module>
         <module>integration-tests-ex/cases</module>
+        <module>quidem-ut</module>
     </modules>
 
     <repositories>
@@ -608,7 +609,7 @@
                 <type>pom</type>
             </dependency>
             <dependency>
-                <groupId>org.hibernate</groupId>
+                <groupId>org.hibernate.validator</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${hibernate-validator.version}</version>
             </dependency>
@@ -1362,6 +1363,11 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <dependency>
+              <groupId>org.jruby.joni</groupId>
+              <artifactId>joni</artifactId>
+              <version>2.1.34</version>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1764,8 +1770,6 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            <!-- Bump up memory from 1.5 GB to 2 GB. This is particularly needed for JDK 17 where
-                            we have jfr profiler enabled which adds additional memory pressure. -->
                             -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1777,6 +1781,8 @@
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             -Ddruid.test.stupidPool.poison=true
+                            -XX:OnOutOfMemoryError=${project.parent.basedir}/dev/chmod-heap-dumps.sh
+                            -XX:HeapDumpPath=${project.parent.basedir}/target
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                             ${jfrProfilerArgLine}
