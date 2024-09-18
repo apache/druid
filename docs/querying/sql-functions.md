@@ -625,19 +625,86 @@ Returns the following:
 
 ## CASE
 
-`CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
+Returns a result based on given conditions.
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+* **Syntax:** `CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
+* **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
+* **Function type:** Scalar, other
 
-Returns a result based on a given condition.
+<details><summary>Examples</summary>
+
+The following example returns a string representing the UI type based on the value of `agent_category` from the `kttm` datasource.
+
+```sql
+SELECT "agent_category" AS "device_type",
+CASE "agent_category"
+    WHEN 'Personal computer' THEN 'Large UI'
+    WHEN 'Smartphone' THEN 'Mobile UI'
+    ELSE 'other'
+END AS "UI_type"
+FROM "kttm"
+LIMIT 2
+```
+
+Returns the following:
+
+| `device_type` | `UI_type` |
+| -- | -- |
+| `Personal computer` | `Large UI` |
+| `Smartphone` | `Mobile UI` |
+
+The following example returns a string based on the value of the `OriginStateName` column from the `flight-carriers` datasource.
+
+```sql
+SELECT "OriginStateName" AS "flight_origin",
+CASE
+    WHEN "OriginStateName" = 'Puerto Rico' THEN 'U.S. Territory'
+    WHEN "OriginStateName" = 'U.S. Virgin Islands' THEN 'U.S. Territory'
+    ELSE 'U.S. State'
+END AS "state_status"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `flight_origin` | `departure_location` |
+| -- | -- |
+| `Puerto Rico` | `U.S. Territory` |
+| `Massachusetts` | `U.S. State` |
+
+</details>
+
+[Lean more](sql-scalar.md#other-scalar-functions)
+
 
 ## CAST
 
-`CAST(value AS TYPE)`
-
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
-
 Converts a value into the specified data type.
+
+* **Syntax:** `CAST(value AS TYPE)`
+* **Function type:** Scalar, other
+
+<details><summary>Example</summary>
+
+The following example converts the values in the `Distance` colum from the `flight-carriers` datasource from `DOUBLE` into type `VARCHAR`
+
+```sql
+SELECT "Distance" AS "original_column",
+      CAST("Distance" AS VARCHAR) "cast_to_string" 
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_column` | `cast_to_string` |
+| -- | -- | 
+| `1571` | `1571.0` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## CEIL (date and time)
 
@@ -715,11 +782,27 @@ Alias for [`LENGTH`](#length).
 
 ## COALESCE
 
-`COALESCE(expr, expr, ...)`
-
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
-
 Returns the first non-null value.
+* **Syntax:** `COALESCE(expr, expr, ...)`
+* **Function type:** Scalar, other
+
+<details><summary>Example</summary>
+
+The following example returns the first non-null value from `null`, `null`, `5`, and `abc`.
+
+```sql
+SELECT COALESCE(null, null, 5, 'abc') AS "first_non_null"
+```
+
+Returns the following:
+
+| `first_non_null` |
+| -- |
+| `5` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## CONCAT
 
@@ -2105,19 +2188,62 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 
 ## NULLIF
 
-`NULLIF(value1, value2)`
+Returns null if two values are equal, else returns the first value.
+* **Syntax:** `NULLIF(value1, value2)`
+* **Function type:** Scalar, other
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+<details><summary>Example</summary>
 
-Returns NULL if two values are equal, else returns the first value.
+The following example returns null if the `OriginState` column from the `flight-carriers` datasource is `PR`.
+
+```sql
+SELECT "OriginState" AS "origin_state",
+  NULLIF("OriginState", 'PR') AS "remove_pr"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_state` | `remove_pr` |
+| -- | -- |
+| `PR` | `null` |
+| `MA` | `MA` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
+
 
 ## NVL
 
-`NVL(e1, e2)`
+Returns `value1` if `value1` is not null, otherwise returns `value2`.
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+* **Syntax:** `NVL(value1, value1)`
+* **Function type:** Scalar, other
 
-Returns `e2` if `e1` is null, else returns `e1`.
+<details><summary>Example</summary>
+
+The following example returns "No tail number" if the `Tail_Number` column from the `flight-carriers` datasource is null.
+
+```sql
+SELECT "Tail_Number" AS "original_column",
+  NVL("Tail_Number", 'No tail number') AS "remove_null"
+FROM "flight-carriers"
+WHERE "OriginState" = 'CT'
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_column` | `remove_null`
+| -- | -- |
+| `N951DL` | `N951DL` |
+| `null` | `No tail number` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## PARSE_JSON
 
