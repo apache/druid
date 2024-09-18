@@ -170,9 +170,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         ImmutableList.of(
             new WindowOperatorFactory(new WindowRowNumberProcessor("w0"))
         ),
-        inputSignature,
-        maxRowsMaterialized,
-        ImmutableList.of("added")
+        maxRowsMaterialized
     );
 
     exec.runFully(processor, null);

@@ -21,12 +21,15 @@ package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.function.BiFunction;
 
 public class GlueingPartitioningOperatorTest
@@ -44,8 +47,8 @@ public class GlueingPartitioningOperatorTest
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
-        ImmutableList.of("sorted"),
-        inlineScanOperator
+        inlineScanOperator,
+        ImmutableList.of("sorted")
     );
 
     new OperatorTestHelper()
@@ -91,8 +94,8 @@ public class GlueingPartitioningOperatorTest
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2, rac3);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
-        ImmutableList.of("sorted"),
-        inlineScanOperator
+        inlineScanOperator,
+        ImmutableList.of("sorted")
     );
 
     new OperatorTestHelper()
@@ -130,6 +133,221 @@ public class GlueingPartitioningOperatorTest
   }
 
   @Test
+  public void testDefaultImplementationWithMultipleConcatenationBetweenRACs()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10})
+        )
+    );
+    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1}),
+            "unsorted", new IntArrayColumn(new int[]{20, 20})
+        )
+    );
+    RowsAndColumns rac3 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 2}),
+            "unsorted", new IntArrayColumn(new int[]{30, 40})
+        )
+    );
+
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2, rac3);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        ImmutableList.of("sorted")
+    );
+
+    new OperatorTestHelper()
+        .expectRowsAndColumns(
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1, 1, 1, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 20, 20, 30})
+                .allColumnsRegistered(),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{2})
+                .expectColumn("unsorted", new int[]{40})
+                .allColumnsRegistered()
+        )
+        .runToCompletion(op);
+  }
+
+  @Test
+  public void testDefaultImplementationWithNoPartitionColumns()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
+        )
+    );
+
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        Collections.emptyList()
+    );
+
+    new OperatorTestHelper()
+        .expectRowsAndColumns(
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1, 1, 2, 2, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 10, 20, 20, 11})
+                .allColumnsRegistered()
+        )
+        .runToCompletion(op);
+  }
+
+  @Test
+  public void testDefaultImplementationWithMultipleRACsAndNoPartitionColumns()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
+        )
+    );
+    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
+            "unsorted", new IntArrayColumn(new int[]{50, 51, 52, 53, 54, 55})
+        )
+    );
+
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        Collections.emptyList()
+    );
+
+    new OperatorTestHelper()
+        .expectRowsAndColumns(
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 10, 20, 20, 11, 50, 51, 52, 53, 54, 55})
+                .allColumnsRegistered()
+        )
+        .runToCompletion(op);
+  }
+
+  @Test
+  public void testMaxRowsConstraintViolation()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
+        )
+    );
+
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        ImmutableList.of("sorted"),
+        2
+    );
+
+    boolean exceptionThrown = false;
+    try {
+      new OperatorTestHelper()
+          .expectRowsAndColumns()
+          .runToCompletion(op);
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(
+          e.getMessage(),
+          "Too many rows to process (requested = 3, max = 2)."
+      );
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
+  }
+
+  @Test
+  public void testMaxRowsConstraintViolationWhenGlueing()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
+        )
+    );
+    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 2, 3}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
+        )
+    );
+
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        ImmutableList.of("sorted"),
+        3
+    );
+
+    boolean exceptionThrown = false;
+    try {
+      new OperatorTestHelper()
+          .expectRowsAndColumns()
+          .runToCompletion(op);
+    }
+    catch (DruidException e) {
+      Assert.assertEquals(
+          e.getMessage(),
+          "Too many rows to process (requested = 4, max = 3)."
+      );
+      exceptionThrown = true;
+    }
+    Assert.assertTrue(exceptionThrown);
+  }
+
+  @Test
+  public void testMaxRowsConstraintWhenGlueing()
+  {
+    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{1, 1, 1}),
+            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
+        )
+    );
+    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "sorted", new IntArrayColumn(new int[]{2, 2, 2}),
+            "unsorted", new IntArrayColumn(new int[]{20, 20, 20})
+        )
+    );
+
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2);
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        ImmutableList.of("sorted"),
+        3
+    );
+
+    new OperatorTestHelper()
+        .expectRowsAndColumns(
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{1, 1, 1})
+                .expectColumn("unsorted", new int[]{10, 10, 10})
+                .allColumnsRegistered(),
+            new RowsAndColumnsHelper()
+                .expectColumn("sorted", new int[]{2, 2, 2})
+                .expectColumn("unsorted", new int[]{20, 20, 20})
+                .allColumnsRegistered()
+        )
+        .runToCompletion(op);
+  }
+
+  @Test
   public void testStopMidStream()
   {
     RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
@@ -142,8 +360,8 @@ public class GlueingPartitioningOperatorTest
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
-        ImmutableList.of("sorted"),
-        inlineScanOperator
+        inlineScanOperator,
+        ImmutableList.of("sorted")
     );
 
     new OperatorTestHelper()
@@ -178,8 +396,8 @@ public class GlueingPartitioningOperatorTest
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
-        ImmutableList.of("unsorted"),
-        InlineScanOperator.make(rac)
+        InlineScanOperator.make(rac),
+        ImmutableList.of("unsorted")
     );
 
     new OperatorTestHelper()

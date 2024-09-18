@@ -1,0 +1,121 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.query.operator;
+
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+
+public abstract class BasePartitioningOperator implements Operator
+{
+  protected final List<String> partitionColumns;
+  protected final Operator child;
+
+  public BasePartitioningOperator(
+      List<String> partitionColumns,
+      Operator child
+  )
+  {
+    this.partitionColumns = partitionColumns;
+    this.child = child;
+  }
+
+  protected static class Continuation implements Closeable
+  {
+    Iterator<RowsAndColumns> iter;
+    Closeable subContinuation;
+
+    public Continuation(Iterator<RowsAndColumns> iter, Closeable subContinuation)
+    {
+      this.iter = iter;
+      this.subContinuation = subContinuation;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      if (subContinuation != null) {
+        subContinuation.close();
+      }
+    }
+  }
+
+  protected Signal handlePush(RowsAndColumns rac, Receiver receiver, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
+  {
+    if (rac == null) {
+      throw DruidException.defensive("Should never get a null rac here.");
+    }
+
+    Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
+
+    AtomicReference<Signal> keepItGoing = new AtomicReference<>(Signal.GO);
+    while (keepItGoing.get() == Signal.GO && partitionsIter.hasNext()) {
+      handleKeepItGoing(keepItGoing, partitionsIter, receiver);
+    }
+
+    if (keepItGoing.get() == Signal.PAUSE && partitionsIter.hasNext()) {
+      iterHolder.set(partitionsIter);
+      return Signal.PAUSE;
+    }
+
+    return keepItGoing.get();
+  }
+
+  protected abstract Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac);
+
+  protected abstract void handleKeepItGoing(AtomicReference<Signal> signalRef, Iterator<RowsAndColumns> iterator, Receiver receiver);
+
+  protected Closeable handleNonGoCases(Signal signal, Iterator<RowsAndColumns> iter, Receiver receiver, Continuation cont)
+  {
+    switch (signal) {
+      case PAUSE:
+        if (iter.hasNext()) {
+          return cont;
+        }
+
+        if (cont.subContinuation == null) {
+          // We were finished anyway
+          receiver.completed();
+          return null;
+        }
+
+        return new Continuation(null, cont.subContinuation);
+
+      case STOP:
+        receiver.completed();
+        try {
+          cont.close();
+        }
+        catch (IOException e) {
+          throw new RE(e, "Unable to close continuation");
+        }
+        return null;
+
+      default:
+        throw new RE("Unknown signal[%s]", signal);
+    }
+  }
+}

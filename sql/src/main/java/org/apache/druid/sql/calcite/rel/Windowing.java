@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
 import org.apache.druid.query.operator.NaiveSortOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
@@ -64,7 +63,6 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
-import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -289,21 +287,12 @@ public class Windowing
       if (!sortMatches(priorSortColumns, sortColumns)) {
         // Sort order needs to change. Resort and repartition.
         ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
-        if (sqlEngine instanceof NativeSqlEngine) {
-          ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
-        } else {
-          ops.add(new GlueingPartitioningOperatorFactory(group.getPartitionColumns()));
-        }
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
         priorSortColumns = sortColumns;
         priorPartitionColumns = group.getPartitionColumns();
       } else if (!group.getPartitionColumns().equals(priorPartitionColumns)) {
         // Sort order doesn't need to change, but partitioning does. Only repartition.
-        if (sqlEngine instanceof NativeSqlEngine) {
-          ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
-        } else {
-          ops.add(new GlueingPartitioningOperatorFactory(group.getPartitionColumns()));
-        }
-
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
         priorPartitionColumns = group.getPartitionColumns();
       }
 

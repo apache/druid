@@ -24,19 +24,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-public class NaivePartitioningOperatorFactory extends BasePartitioningOperatorFactory
+public class PartitionSortOperatorFactory extends BaseSortOperatorFactory
 {
   @JsonCreator
-  public NaivePartitioningOperatorFactory(
-      @JsonProperty("partitionColumns") List<String> partitionColumns
+  public PartitionSortOperatorFactory(
+      @JsonProperty("columns") List<ColumnWithDirection> sortColumns
   )
   {
-    super(partitionColumns);
+    super(sortColumns);
   }
 
   @Override
   public Operator wrap(Operator op)
   {
-    return new NaivePartitioningOperator(partitionColumns, op);
+    return new PartitionSortOperator(op, sortColumns);
   }
 }

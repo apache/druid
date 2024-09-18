@@ -27,13 +27,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A naive sort operator is an operation that sorts a stream of data in-place.  Generally speaking this means
- * that it has to accumulate all of the data of its child operator first before it can sort.  This limitation
- * means that hopefully this operator is only planned in a very small number of circumstances.
+ * This operator sorts rows inside partitioned RACs, on the sort columns.
+ * This operator expects to receive a "complete" partition of data. Each input RAC is expected to be a separate partition.
  */
-public class NaiveSortOperator extends BaseSortOperator
+public class PartitionSortOperator extends BaseSortOperator
 {
-  public NaiveSortOperator(
+  public PartitionSortOperator(
       Operator child,
       List<ColumnWithDirection> sortColumns
   )
@@ -48,25 +47,17 @@ public class NaiveSortOperator extends BaseSortOperator
         continuation,
         new Receiver()
         {
-          NaiveSortMaker.NaiveSorter sorter = null;
-
           @Override
           public Signal push(RowsAndColumns rac)
           {
-            if (sorter == null) {
-              sorter = NaiveSortMaker.fromRAC(rac).make(new ArrayList<>(sortColumns));
-            } else {
-              sorter.moreData(rac);
-            }
+            NaiveSortMaker.NaiveSorter sorter = NaiveSortMaker.fromRAC(rac).make(new ArrayList<>(sortColumns));
+            receiver.push(sorter.complete());
             return Signal.GO;
           }
 
           @Override
           public void completed()
           {
-            if (sorter != null) {
-              receiver.push(sorter.complete());
-            }
             receiver.completed();
           }
         }

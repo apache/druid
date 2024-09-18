@@ -22,41 +22,40 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class GlueingPartitioningOperatorFactory implements OperatorFactory
+public class GlueingPartitioningOperatorFactory extends BasePartitioningOperatorFactory
 {
-  private final List<String> partitionColumns;
+  private final int maxRowsMaterialized;
 
   @JsonCreator
   public GlueingPartitioningOperatorFactory(
-      @JsonProperty("partitionColumns") List<String> partitionColumns
+      @JsonProperty("partitionColumns") List<String> partitionColumns,
+      @JsonProperty("maxRowsMaterialized") int maxRowsMaterialized
   )
   {
-    this.partitionColumns = partitionColumns == null ? new ArrayList<>() : partitionColumns;
+    super(partitionColumns);
+    this.maxRowsMaterialized = maxRowsMaterialized;
   }
 
-  @JsonProperty("partitionColumns")
-  public List<String> getPartitionColumns()
+  @JsonProperty("maxRowsMaterialized")
+  public int getMaxRowsMaterialized()
   {
-    return partitionColumns;
+    return maxRowsMaterialized;
   }
 
   @Override
   public Operator wrap(Operator op)
   {
-    return new GlueingPartitioningOperator(partitionColumns, op);
+    return new GlueingPartitioningOperator(op, partitionColumns, maxRowsMaterialized);
   }
 
   @Override
   public boolean validateEquivalent(OperatorFactory other)
   {
-    if (other instanceof GlueingPartitioningOperatorFactory) {
-      return partitionColumns.equals(((GlueingPartitioningOperatorFactory) other).getPartitionColumns());
-    }
-    return false;
+    return super.validateEquivalent(other) &&
+           maxRowsMaterialized == ((GlueingPartitioningOperatorFactory) other).getMaxRowsMaterialized();
   }
 
   @Override
@@ -64,25 +63,20 @@ public class GlueingPartitioningOperatorFactory implements OperatorFactory
   {
     return "GlueingPartitioningOperatorFactory{" +
            "partitionColumns=" + partitionColumns +
+           "maxRowsMaterialized=" + maxRowsMaterialized +
            '}';
   }
 
   @Override
   public final int hashCode()
   {
-    return Objects.hash(partitionColumns);
+    return Objects.hash(partitionColumns, maxRowsMaterialized);
   }
 
   @Override
   public final boolean equals(Object obj)
   {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null || obj.getClass() != getClass()) {
-      return false;
-    }
-    GlueingPartitioningOperatorFactory other = (GlueingPartitioningOperatorFactory) obj;
-    return Objects.equals(partitionColumns, other.partitionColumns);
+    return super.equals(obj) &&
+           Objects.equals(maxRowsMaterialized, ((GlueingPartitioningOperatorFactory) obj).getMaxRowsMaterialized());
   }
 }

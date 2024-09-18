@@ -19,8 +19,7 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.RE;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.LimitedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -30,7 +29,6 @@ import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -39,21 +37,35 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * todo: write detailed javadoc for the class, all the methods, etc.
+ * This glueing partitioning operator is supposed to continuously receive data, and output batches of partitioned RACs.
+ * It maintains a last-partitioning-boundary of the last-pushed-RAC, and attempts to glue it with the next RAC it receives,
+ * ensuring that partitions are handled correctly, even across multiple RACs.
+ * <p>
+ * Additionally, this assumes that data has been pre-sorted according to the partitioning columns.
  */
-public class GlueingPartitioningOperator implements Operator
+public class GlueingPartitioningOperator extends BasePartitioningOperator
 {
-  private final List<String> partitionColumns;
-  private final Operator child;
+  private final int maxRowsMaterialized;
   private RowsAndColumns previousRac;
 
+  private static final int MAX_ROWS_MATERIALIZED_NO_LIMIT = -1;
+
   public GlueingPartitioningOperator(
-      List<String> partitionColumns,
-      Operator child
+      Operator child,
+      List<String> partitionColumns
   )
   {
-    this.partitionColumns = partitionColumns;
-    this.child = child;
+    this(child, partitionColumns, MAX_ROWS_MATERIALIZED_NO_LIMIT);
+  }
+
+  public GlueingPartitioningOperator(
+      Operator child,
+      List<String> partitionColumns,
+      int maxRowsMaterialized
+  )
+  {
+    super(partitionColumns, child);
+    this.maxRowsMaterialized = maxRowsMaterialized;
   }
 
   @Override
@@ -79,32 +91,8 @@ public class GlueingPartitioningOperator implements Operator
           }
 
           final Signal signal = receiver.push(next);
-          switch (signal) {
-            case GO:
-              break;
-            case PAUSE:
-              if (cont.iter.hasNext()) {
-                return cont;
-              }
-
-              if (cont.subContinuation == null) {
-                // We were finished anyway
-                receiver.completed();
-                return null;
-              }
-
-              return new Continuation(null, cont.subContinuation);
-            case STOP:
-              receiver.completed();
-              try {
-                cont.close();
-              }
-              catch (IOException e) {
-                throw new RE(e, "Unable to close continuation");
-              }
-              return null;
-            default:
-              throw new RE("Unknown signal[%s]", signal);
+          if (signal != Signal.GO) {
+            return handleNonGoCases(signal, cont.iter, receiver, cont);
           }
         }
 
@@ -126,29 +114,8 @@ public class GlueingPartitioningOperator implements Operator
           @Override
           public Signal push(RowsAndColumns rac)
           {
-            if (rac == null) {
-              throw DruidException.defensive("Should never get a null rac here.");
-            }
-
-            Iterator<RowsAndColumns> partitionsIter = new GluedRACsIterator(rac);
-
-            Signal keepItGoing = Signal.GO;
-            while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
-              RowsAndColumns rowsAndColumns = partitionsIter.next();
-              if (partitionsIter.hasNext()) {
-                keepItGoing = receiver.push(rowsAndColumns);
-              } else {
-                // If it's the last element, save it in previousRac instead of pushing to receiver.
-                previousRac = rowsAndColumns;
-              }
-            }
-
-            if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
-              iterHolder.set(partitionsIter);
-              return Signal.PAUSE;
-            }
-
-            return keepItGoing;
+            ensureMaxRowsMaterializedConstraint(rac.numRows());
+            return handlePush(rac, receiver, iterHolder);
           }
 
           @Override
@@ -175,26 +142,11 @@ public class GlueingPartitioningOperator implements Operator
     }
   }
 
-  private static class Continuation implements Closeable
-  {
-    Iterator<RowsAndColumns> iter;
-    Closeable subContinuation;
-
-    public Continuation(Iterator<RowsAndColumns> iter, Closeable subContinuation)
-    {
-      this.iter = iter;
-      this.subContinuation = subContinuation;
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      if (subContinuation != null) {
-        subContinuation.close();
-      }
-    }
-  }
-
+  /**
+   * Iterator implementation for gluing partitioned RowsAndColumns.
+   * It handles the boundaries of partitions within a single RAC and potentially glues
+   * the first partition of the current RAC with the previous RAC if needed.
+   */
   private class GluedRACsIterator implements Iterator<RowsAndColumns>
   {
     private final RowsAndColumns rac;
@@ -218,6 +170,13 @@ public class GlueingPartitioningOperator implements Operator
       return currentIndex < boundaries.length - 1;
     }
 
+    /**
+     * Retrieves the next partition in the RowsAndColumns. If the first partition has not been handled yet,
+     * it may be glued with the previous RowsAndColumns if the partition columns match.
+     *
+     * @return The next RowsAndColumns partition, potentially glued with the previous one.
+     * @throws NoSuchElementException if there are no more partitions.
+     */
     @Override
     public RowsAndColumns next()
     {
@@ -233,6 +192,7 @@ public class GlueingPartitioningOperator implements Operator
 
         if (isGlueingNeeded(previousRac, limitedRAC)) {
           RowsAndColumns gluedRAC = getConcatRacForFirstPartition(previousRac, limitedRAC);
+          ensureMaxRowsMaterializedConstraint(gluedRAC.numRows());
           previousRac = null;
           currentIndex++;
           return gluedRAC;
@@ -251,6 +211,15 @@ public class GlueingPartitioningOperator implements Operator
       return new LimitedRowsAndColumns(rac, start, end);
     }
 
+    /**
+     * Determines whether gluing is needed between the previous RowsAndColumns and the first partition
+     * of the current RowsAndColumns based on the partition columns. If the columns match, the two RACs
+     * will be glued together.
+     *
+     * @param previousRac The previous RowsAndColumns.
+     * @param firstPartitionOfCurrentRac The first partition of the current RowsAndColumns.
+     * @return true if gluing is needed, false otherwise.
+     */
     private boolean isGlueingNeeded(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
     {
       if (previousRac == null) {
@@ -276,6 +245,35 @@ public class GlueingPartitioningOperator implements Operator
     private ConcatRowsAndColumns getConcatRacForFirstPartition(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
     {
       return new ConcatRowsAndColumns(new ArrayList<>(Arrays.asList(previousRac, firstPartitionOfCurrentRac)));
+    }
+  }
+
+  private void ensureMaxRowsMaterializedConstraint(int numRows)
+  {
+    if (maxRowsMaterialized != MAX_ROWS_MATERIALIZED_NO_LIMIT && numRows > maxRowsMaterialized) {
+      throw InvalidInput.exception(
+          "Too many rows to process (requested = %d, max = %d).",
+          numRows,
+          maxRowsMaterialized
+      );
+    }
+  }
+
+  @Override
+  protected Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac)
+  {
+    return new GluedRACsIterator(rac);
+  }
+
+  @Override
+  protected void handleKeepItGoing(AtomicReference<Signal> signalRef, Iterator<RowsAndColumns> iterator, Receiver receiver)
+  {
+    RowsAndColumns rowsAndColumns = iterator.next();
+    if (iterator.hasNext()) {
+      signalRef.set(receiver.push(rowsAndColumns));
+    } else {
+      // If it's the last element, save it in previousRac instead of pushing to receiver.
+      previousRac = rowsAndColumns;
     }
   }
 }
