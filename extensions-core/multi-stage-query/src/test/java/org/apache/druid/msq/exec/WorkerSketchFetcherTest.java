@@ -108,7 +108,7 @@ public class WorkerSketchFetcherTest
     doAnswer(invocation -> {
       ClusterByStatisticsSnapshot snapshot = mock(ClusterByStatisticsSnapshot.class);
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), SketchEncoding.OCTET_STREAM);
+    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), any());
 
     target.inMemoryFullSketchMerging((kernelConsumer) -> {
       kernelConsumer.accept(kernel);
@@ -131,7 +131,7 @@ public class WorkerSketchFetcherTest
     doAnswer(invocation -> {
       ClusterByStatisticsSnapshot snapshot = mock(ClusterByStatisticsSnapshot.class);
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), SketchEncoding.OCTET_STREAM);
+    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any());
 
     target.sequentialTimeChunkMerging(
         (kernelConsumer) -> {
@@ -353,7 +353,7 @@ public class WorkerSketchFetcherTest
         return Futures.immediateFailedFuture(new Exception("Task fetch failed :" + invocation.getArgument(0)));
       }
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), SketchEncoding.OCTET_STREAM);
+    }).when(workerClient).fetchClusterByStatisticsSnapshotForTimeChunk(any(), any(), anyLong(), any());
   }
 
   private void workersWithFailedFetchParallel(Set<String> failedTasks)
@@ -364,7 +364,7 @@ public class WorkerSketchFetcherTest
         return Futures.immediateFailedFuture(new Exception("Task fetch failed :" + invocation.getArgument(0)));
       }
       return Futures.immediateFuture(snapshot);
-    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), SketchEncoding.OCTET_STREAM);
+    }).when(workerClient).fetchClusterByStatisticsSnapshot(any(), any(), any());
   }
 
 }
