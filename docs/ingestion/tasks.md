@@ -37,7 +37,7 @@ Task APIs are available in two main places:
 review logs and reports, and more. Refer to the [Tasks API reference](../api-reference/tasks-api.md) for a
 full list.
 - Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about active
-and recently-completed tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
+and recently completed tasks. This table is read-only and has a subset of the full task report available through
 the Overlord APIs.
 
 <a name="reports"></a>
