@@ -19,17 +19,11 @@
 
 package org.apache.druid.msq.indexing.error;
 
-import java.io.Closeable;
-import java.io.IOException;
-
 /**
  * Provides an interface for a worker to publish warnings to an external source.
  * For example, the worker uses this interface to send warnings to the controller.
  */
-public interface MSQWarningReportPublisher extends Closeable
+public interface MSQWarningReportPublisher
 {
   void publishException(int stageNumber, Throwable e);
-
-  @Override
-  void close() throws IOException;
 }

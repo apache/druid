@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -147,20 +146,19 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
     final int numTotalSubTasks = inputSource.estimateNumSplits(new NoopInputFormat(), null);
     // set up ingestion spec
     final ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            "dataSource",
-            DEFAULT_TIMESTAMP_SPEC,
-            DEFAULT_DIMENSIONS_SPEC,
-            new AggregatorFactory[]{
-                new LongSumAggregatorFactory("val", "val")
-            },
-            new UniformGranularitySpec(
-                Granularities.DAY,
-                Granularities.MINUTE,
-                interval == null ? null : Collections.singletonList(interval)
-            ),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("dataSource")
+                  .withTimestamp(DEFAULT_TIMESTAMP_SPEC)
+                  .withDimensions(DEFAULT_DIMENSIONS_SPEC)
+                  .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.MINUTE,
+                          interval == null ? null : Collections.singletonList(interval)
+                      )
+                  )
+                  .build(),
         ioConfig,
         TuningConfigBuilder.forParallelIndexTask().withMaxNumConcurrentSubTasks(numTotalSubTasks).build()
     );

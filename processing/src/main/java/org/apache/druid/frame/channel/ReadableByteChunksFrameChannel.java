@@ -132,13 +132,15 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
    * chunks. (This is not enforced; addChunk will continue to accept new chunks even if the channel is over its limit.)
    *
    * When done adding chunks call {@code doneWriting}.
+   *
+   * @throws ChannelClosedForWritesException if the channel is closed
    */
   @Nullable
   public ListenableFuture<?> addChunk(final byte[] chunk)
   {
     synchronized (lock) {
       if (noMoreWrites) {
-        throw new ISE("Channel is no longer accepting writes");
+        throw new ChannelClosedForWritesException();
       }
 
       try {

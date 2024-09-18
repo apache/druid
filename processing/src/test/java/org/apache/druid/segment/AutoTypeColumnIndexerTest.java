@@ -26,8 +26,6 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -494,18 +492,17 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
     long minTimestamp = System.currentTimeMillis();
     IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
-            new IncrementalIndexSchema(
-                minTimestamp,
-                new TimestampSpec(TIME_COL, "millis", null),
-                Granularities.NONE,
-                VirtualColumns.EMPTY,
-                DimensionsSpec.builder()
-                              .setDimensions(ImmutableList.of(new AutoTypeColumnSchema(NESTED_COL, ColumnType.STRING)))
-                              .useSchemaDiscovery(true)
-                              .build(),
-                new AggregatorFactory[0],
-                false
-            )
+            IncrementalIndexSchema.builder()
+                                  .withMinTimestamp(minTimestamp)
+                                  .withTimestampSpec(new TimestampSpec(TIME_COL, "millis", null))
+                                  .withDimensionsSpec(
+                                      DimensionsSpec.builder()
+                                                    .setDimensions(ImmutableList.of(new AutoTypeColumnSchema(NESTED_COL, ColumnType.STRING)))
+                                                    .useSchemaDiscovery(true)
+                                                    .build()
+                                  )
+                                  .withRollup(false)
+                                  .build()
         )
         .setMaxRowCount(1000)
         .build();
@@ -699,15 +696,16 @@ public class AutoTypeColumnIndexerTest extends InitializedNullHandlingTest
   {
     IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
-            new IncrementalIndexSchema(
-                minTimestamp,
-                new TimestampSpec(TIME_COL, "millis", null),
-                Granularities.NONE,
-                VirtualColumns.EMPTY,
-                DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-                new AggregatorFactory[0],
-                false
-            )
+            IncrementalIndexSchema.builder()
+                                  .withMinTimestamp(minTimestamp)
+                                  .withTimestampSpec(new TimestampSpec(TIME_COL, "millis", null))
+                                  .withDimensionsSpec(
+                                      DimensionsSpec.builder()
+                                                    .useSchemaDiscovery(true)
+                                                    .build()
+                                  )
+                                  .withRollup(false)
+                                  .build()
         )
         .setMaxRowCount(1000)
         .build();

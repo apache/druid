@@ -41,11 +41,9 @@ public class MultiQueryKit implements QueryKit<Query<?>>
 
   @Override
   public QueryDefinition makeQueryDefinition(
-      String queryId,
+      QueryKitSpec queryKitSpec,
       Query<?> query,
-      QueryKit<Query<?>> toolKitForSubQueries,
       ShuffleSpecFactory resultShuffleSpecFactory,
-      int maxWorkerCount,
       int minStageNumber
   )
   {
@@ -54,11 +52,9 @@ public class MultiQueryKit implements QueryKit<Query<?>>
     if (specificToolKit != null) {
       //noinspection unchecked
       return specificToolKit.makeQueryDefinition(
-          queryId,
+          queryKitSpec,
           query,
-          this,
           resultShuffleSpecFactory,
-          maxWorkerCount,
           minStageNumber
       );
     } else {

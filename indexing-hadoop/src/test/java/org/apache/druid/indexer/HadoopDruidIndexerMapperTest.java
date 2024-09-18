@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.TestHelper;
@@ -58,27 +57,29 @@ import java.util.stream.Collectors;
 public class HadoopDruidIndexerMapperTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
-  private static final DataSchema DATA_SCHEMA = new DataSchema(
-      "test_ds",
-      JSON_MAPPER.convertValue(
-          new HadoopyStringInputRowParser(
-              new JSONParseSpec(
-                  new TimestampSpec("t", "auto", null),
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2"))
-                  ),
-                  new JSONPathSpec(true, ImmutableList.of()),
-                  ImmutableMap.of(),
-                  null
-              )
-          ),
-          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-      ),
-      new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null,
-      JSON_MAPPER
-  );
+  private static final DataSchema DATA_SCHEMA =
+      DataSchema.builder()
+                .withDataSource("test_ds")
+                .withParserMap(
+                    JSON_MAPPER.convertValue(
+                        new HadoopyStringInputRowParser(
+                            new JSONParseSpec(
+                                new TimestampSpec("t", "auto", null),
+                                new DimensionsSpec(
+                                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2"))
+                                ),
+                                new JSONPathSpec(true, ImmutableList.of()),
+                                ImmutableMap.of(),
+                                null
+                            )
+                        ),
+                        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+                    )
+                )
+                .withAggregators(new CountAggregatorFactory("rows"))
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+                .withObjectMapper(JSON_MAPPER)
+                .build();
 
   private static final HadoopIOConfig IO_CONFIG = new HadoopIOConfig(
       JSON_MAPPER.convertValue(

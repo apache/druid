@@ -28,7 +28,6 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
@@ -60,35 +59,66 @@ public class DruidQueryGenerator
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
 
-  static class DruidNodeStack extends Stack<DruidLogicalNode>
+  /**
+   * Tracks the upstream nodes during traversal.
+   *
+   * Its main purpose is to provide access to parent nodes;
+   * so that context sensitive logics can be formalized with it.
+   */
+  static class DruidNodeStack
   {
-    private static final long serialVersionUID = 1L;
-
-    Stack<Integer> operandIndexStack = new Stack<Integer>();
-
-    @Override
-    public DruidLogicalNode push(DruidLogicalNode item)
+    static class Entry
     {
-      return push(item, 0);
+      public final DruidLogicalNode node;
+      public final int operandIndex;
+
+      public Entry(DruidLogicalNode node, int operandIndex)
+      {
+        this.node = node;
+        this.operandIndex = operandIndex;
+      }
     }
 
-    public DruidLogicalNode push(DruidLogicalNode item, int operandIndex)
+    Stack<Entry> stack = new Stack<>();
+
+    public void push(DruidLogicalNode item)
     {
-      operandIndexStack.push(operandIndex);
-      return super.push(item);
+      push(item, 0);
     }
 
-    @Override
-    public synchronized DruidLogicalNode pop()
+    public void push(DruidLogicalNode item, int operandIndex)
     {
-      operandIndexStack.pop();
-      return super.pop();
+      stack.push(new Entry(item, operandIndex));
     }
 
-    @Override
-    public synchronized Object clone()
+    public void pop()
     {
-      throw new IAE("Not cloneable!");
+      stack.pop();
+    }
+
+    public int size()
+    {
+      return stack.size();
+    }
+
+    public DruidLogicalNode peekNode()
+    {
+      return stack.peek().node;
+    }
+
+    public DruidLogicalNode parentNode()
+    {
+      return getNode(1).node;
+    }
+
+    public Entry getNode(int i)
+    {
+      return stack.get(stack.size() - 1 - i);
+    }
+
+    public int peekOperandIndex()
+    {
+      return stack.peek().operandIndex;
     }
   }
 
@@ -104,7 +134,7 @@ public class DruidQueryGenerator
   {
     List<Vertex> newInputs = new ArrayList<>();
 
-    for (RelNode input : stack.peek().getInputs()) {
+    for (RelNode input : stack.peekNode().getInputs()) {
       stack.push((DruidLogicalNode) input, newInputs.size());
       newInputs.add(buildVertexFor(stack));
       stack.pop();
@@ -115,7 +145,7 @@ public class DruidQueryGenerator
 
   private Vertex processNodeWithInputs(DruidNodeStack stack, List<Vertex> newInputs)
   {
-    DruidLogicalNode node = stack.peek();
+    DruidLogicalNode node = stack.peekNode();
     if (node instanceof SourceDescProducer) {
       return vertexFactory.createVertex(stack, PartialDruidQuery.create(node), newInputs);
     }
@@ -179,14 +209,14 @@ public class DruidQueryGenerator
       if (stack.size() < 2) {
         return NONE;
       }
-      DruidLogicalNode possibleJoin = stack.get(stack.size() - 2);
+      DruidLogicalNode possibleJoin = stack.parentNode();
       if (!(possibleJoin instanceof DruidJoin)) {
         return NONE;
       }
-      if (stack.operandIndexStack.get(stack.size() - 1) == 1) {
-        return RIGHT;
-      } else {
+      if (stack.peekOperandIndex() == 0) {
         return LEFT;
+      } else {
+        return RIGHT;
       }
     }
 
@@ -294,9 +324,9 @@ public class DruidQueryGenerator
       /**
        * Merges the given {@link RelNode} into the current {@link PartialDruidQuery}.
        */
-      private Optional<PartialDruidQuery> extendPartialDruidQuery(Stack<DruidLogicalNode> stack)
+      private Optional<PartialDruidQuery> extendPartialDruidQuery(DruidNodeStack stack)
       {
-        DruidLogicalNode parentNode = stack.peek();
+        DruidLogicalNode parentNode = stack.peekNode();
         if (accepts(stack, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
@@ -336,12 +366,12 @@ public class DruidQueryGenerator
         return Optional.empty();
       }
 
-      private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> clazz)
+      private boolean accepts(DruidNodeStack stack, Stage stage, Class<? extends RelNode> clazz)
       {
-        DruidLogicalNode currentNode = stack.peek();
+        DruidLogicalNode currentNode = stack.peekNode();
         if (Project.class == clazz && stack.size() >= 2) {
           // peek at parent and postpone project for next query stage
-          DruidLogicalNode parentNode = stack.get(stack.size() - 2);
+          DruidLogicalNode parentNode = stack.parentNode();
           if (stage.ordinal() > Stage.AGGREGATE.ordinal()
               && parentNode instanceof DruidAggregate
               && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {

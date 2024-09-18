@@ -43,29 +43,29 @@ import javax.annotation.Nullable;
 class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
   private final ColumnInspector snapshotColumnInspector;
-  private final IncrementalIndex index;
   private final VirtualColumns virtualColumns;
   private final Order timeOrder;
   private final IncrementalIndexRowHolder rowHolder;
+  private final IncrementalIndexRowSelector rowSelector;
 
   IncrementalIndexColumnSelectorFactory(
-      IncrementalIndex index,
+      IncrementalIndexRowSelector rowSelector,
       VirtualColumns virtualColumns,
       Order timeOrder,
       IncrementalIndexRowHolder rowHolder
   )
   {
-    this.index = index;
     this.virtualColumns = virtualColumns;
     this.timeOrder = timeOrder;
     this.rowHolder = rowHolder;
+    this.rowSelector = rowSelector;
     this.snapshotColumnInspector = new ColumnInspector()
     {
       @Nullable
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        return IncrementalIndexCursorFactory.snapshotColumnCapabilities(index, column);
+        return IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column);
       }
     };
   }
@@ -87,13 +87,13 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
 
     if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrder != Order.NONE) {
       return new SingleScanTimeDimensionSelector(
-          makeColumnValueSelector(dimension),
+          makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
           extractionFn,
           timeOrder
       );
     }
 
-    final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
+    final IncrementalIndex.DimensionDesc dimensionDesc = rowSelector.getDimension(dimensionSpec.getDimension());
     if (dimensionDesc == null) {
       // not a dimension, column may be a metric
       ColumnCapabilities capabilities = getColumnCapabilities(dimension);
@@ -122,19 +122,17 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     if (virtualColumns.exists(columnName)) {
       return virtualColumns.makeColumnValueSelector(columnName, this);
     }
-
-    if (columnName.equals(ColumnHolder.TIME_COLUMN_NAME)) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
       return rowHolder;
     }
 
-    final Integer dimIndex = index.getDimensionIndex(columnName);
-    if (dimIndex != null) {
-      final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(columnName);
+    final IncrementalIndex.DimensionDesc dimensionDesc = rowSelector.getDimension(columnName);
+    if (dimensionDesc != null) {
       final DimensionIndexer indexer = dimensionDesc.getIndexer();
       return indexer.makeColumnValueSelector(rowHolder, dimensionDesc);
     }
 
-    return index.makeMetricColumnValueSelector(columnName, rowHolder);
+    return IncrementalIndex.makeMetricColumnValueSelector(rowSelector, rowHolder, columnName);
   }
 
   @Override

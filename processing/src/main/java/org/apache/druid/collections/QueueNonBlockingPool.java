@@ -17,21 +17,32 @@
  * under the License.
  */
 
-package org.apache.druid.msq.guice;
+package org.apache.druid.collections;
 
-import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
-import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
+import java.util.NoSuchElementException;
+import java.util.concurrent.BlockingQueue;
 
 /**
- * Configures ingestion queries to create new segments with the results in all cases.
+ * Implementation of {@link NonBlockingPool} based on a pre-created {@link BlockingQueue} that never actually blocks.
+ * If the pool is empty when {@link #take()} is called, it throws {@link NoSuchElementException}.
  */
-public class SegmentGenerationTerminalStageSpecFactory implements MSQTerminalStageSpecFactory
+public class QueueNonBlockingPool<T> implements NonBlockingPool<T>
 {
-  @Override
-  public TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext)
+  private final BlockingQueue<T> queue;
+
+  public QueueNonBlockingPool(final BlockingQueue<T> queue)
   {
-    return SegmentGenerationStageSpec.instance();
+    this.queue = queue;
+  }
+
+  @Override
+  public ResourceHolder<T> take()
+  {
+    final T item = queue.poll();
+    if (item == null) {
+      throw new NoSuchElementException("No items available");
+    }
+
+    return new ReferenceCountingResourceHolder<>(item, () -> queue.add(item));
   }
 }
