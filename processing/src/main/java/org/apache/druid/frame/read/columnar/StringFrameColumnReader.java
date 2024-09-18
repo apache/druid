@@ -513,7 +513,9 @@ public class StringFrameColumnReader implements FrameColumnReader
       ByteBuffer buffer1 = getStringUtf8(rowNum1);
       ByteBuffer buffer2 = getStringUtf8(rowNum2);
 
-      if (buffer1 == null) {
+      if (buffer1 == null && buffer2 == null) {
+        return 0;
+      } else if (buffer1 == null) {
         return -1;
       } else if (buffer2 == null) {
         return 1;
