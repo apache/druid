@@ -197,8 +197,11 @@ public class VectorProcessors
 
     if (inputType == null) {
       // nil column, we can be anything, so be a string because it's the most flexible
-      // (numbers will be populated with default values in default mode and non-null)
-      return constant(null, inspector.getMaxVectorSize(), ExpressionType.STRING);
+      if (NullHandling.sqlCompatible()) {
+        return constant((Long) null, inspector.getMaxVectorSize());
+      } else {
+        return constant(null, inspector.getMaxVectorSize(), ExpressionType.STRING);
+      }
     }
     switch (inputType.getType()) {
       case LONG:
