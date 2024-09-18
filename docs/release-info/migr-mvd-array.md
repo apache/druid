@@ -249,9 +249,9 @@ For examples, see [Ingesting arrays: SQL-based ingestion](../querying/arrays.md#
 ## How to ingest MVDs
 
 You can't mix arrays and MVDs in the same column.
-If you need to continue to use MVDs, modify your ingestion to include the [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) function.
+If you need to continue to use MVDs, use the [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) function when you ingest data.
 This ensures that VARCHAR ARRAYS are stored as MVDs rather than arrays of strings.
-Ingest MVDs explicitly so that you can continue to use existing queries that involve MVDs without incompatible behavior from arrays.
+To continue using MVDs in your existing queries, you need to ingest MVDs explicitly since arrays and MVDs behave differently.
 
 For an example using ARRAY_TO_MV, see [Multi-value dimensions: SQL-based ingestion](../querying/multi-value-dimensions.md#sql-based-ingestion).
 
