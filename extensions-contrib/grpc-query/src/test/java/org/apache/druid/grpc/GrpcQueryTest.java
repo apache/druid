@@ -38,7 +38,6 @@ import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,7 +72,6 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
         new AuthConfig()
     );
 
-    //frameworkFixture = new QueryFrameworkFixture(temporaryFolder.newFolder());
     QueryDriver driver = new QueryDriver(
         sqlTestFramework.queryJsonMapper(),
         plannerFixture.statementFactory(),
@@ -95,14 +93,6 @@ public class GrpcQueryTest extends BaseCalciteQueryTest
       throw e;
     }
     client = new TestClient(TestClient.DEFAULT_HOST);
-  }
-
-  public static class XComponentSupplier extends SqlTestFramework.StandardComponentSupplier
-  {
-    public XComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
   }
 
   @AfterEach
