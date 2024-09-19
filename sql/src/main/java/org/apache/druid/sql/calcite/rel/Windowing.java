@@ -63,7 +63,6 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.GroupByRules;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import javax.annotation.Nonnull;
@@ -209,12 +208,7 @@ public class Windowing
       )));
     }
 
-    List<OperatorFactory> ops = computeWindowOperations(
-        partialQuery,
-        sourceRowSignature,
-        windowGroupProcessors,
-        plannerContext.getEngine()
-    );
+    List<OperatorFactory> ops = computeWindowOperations(partialQuery, sourceRowSignature, windowGroupProcessors);
 
     // Apply windowProject, if present.
     if (partialQuery.getWindowProject() != null) {
@@ -254,8 +248,7 @@ public class Windowing
   private static List<OperatorFactory> computeWindowOperations(
       final PartialDruidQuery partialQuery,
       final RowSignature sourceRowSignature,
-      List<WindowComputationProcessor> windowGroupProcessors,
-      SqlEngine sqlEngine
+      List<WindowComputationProcessor> windowGroupProcessors
   )
   {
     final List<OperatorFactory> ops = new ArrayList<>();
