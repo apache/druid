@@ -970,7 +970,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             "|",
             null,
             false,
-            0
+            0,
+            null
         ),
         appendToExisting,
         null

@@ -116,7 +116,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected final ExternalDataSource externalDataSource = new ExternalDataSource(
       new InlineInputSource("a,b,1\nc,d,2\n"),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
       RowSignature.builder()
                   .add("x", ColumnType.STRING)
                   .add("y", ColumnType.STRING)
