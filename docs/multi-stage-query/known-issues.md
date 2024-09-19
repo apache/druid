@@ -75,10 +75,8 @@ where native engine has a non-empty `leafOperator`.
 
 The following known issues and limitations affect automatic compaction with the MSQ task engine:
 
-- Only range-based partitioning is supported
-- You cannot group or roll up metrics for dimensions 
+- The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](../data-management/automatic-compaction.md#idempotent-aggregators).
+- Only dynamic and range-based partitioning are supported
+- Set `rollup`  to `true` if `metricSpec` is not empty or null. If `metricSpec` is empty or null, set `rollup` to `false`.
 - You cannot group on multi-value dimensions
-- The `maxTotalRows` config is not supported. Use `maxRowsPerSegment` instead.
-- `queryGranularity` cannot be set to `all`
-
-
+- The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
