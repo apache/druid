@@ -56,12 +56,13 @@ public class ParserUtils
   }
 
   /**
-   * @return a function that processes a given string input by splitting it into multiple values
-   * using the {@code listSplitter} if thge {@code list delimiter} is present in the input. If {@code shouldParseNumbers}
-   * is enabled, the function will also try to parse any numeric values present in the input -- integers as {@code Long}
-   * and floating-point numbers as {@code Double}.
+   * @return a transformation function on an input value. The function does the following transformations on the input
+   * string:
+   * <li> Split it into multiple values using the {@code listSplitter} if the {@code list delimiter} is present in the input. </li>
+   * <li> If {@code shouldParseNumbers} is true, the function will also try to parse any numeric values present in the input
+   * -- integers as {@code Long} and floating-point numbers as {@code Double}. </li>
    */
-  public static Function<String, Object> getMultiValueAndParseNumbersFunction(
+  public static Function<String, Object> getTransformationFunction(
       final String listDelimiter,
       final Splitter listSplitter,
       final boolean shouldParseNumbers

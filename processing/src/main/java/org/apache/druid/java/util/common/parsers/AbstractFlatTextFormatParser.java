@@ -52,7 +52,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   }
 
   private final String listDelimiter;
-  private final Function<String, Object> multiValueParseFunction;
+  private final Function<String, Object> transformationFunction;
   private final boolean hasHeaderRow;
   private final int maxSkipHeaderRows;
 
@@ -69,7 +69,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
   )
   {
     this.listDelimiter = listDelimiter != null ? listDelimiter : Parsers.DEFAULT_LIST_DELIMITER;
-    this.multiValueParseFunction = ParserUtils.getMultiValueAndParseNumbersFunction(
+    this.transformationFunction = ParserUtils.getTransformationFunction(
         this.listDelimiter,
         Splitter.on(this.listDelimiter),
         shouldParseNumbers
@@ -147,7 +147,7 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
         setFieldNames(ParserUtils.generateFieldNames(values.size()));
       }
 
-      return Utils.zipMapPartial(fieldNames, Iterables.transform(values, multiValueParseFunction));
+      return Utils.zipMapPartial(fieldNames, Iterables.transform(values, transformationFunction));
     }
     catch (Exception e) {
       throw new ParseException(input, e, "Unable to parse row [%s]", input);

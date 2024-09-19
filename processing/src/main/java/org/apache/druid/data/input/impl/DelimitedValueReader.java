@@ -51,7 +51,7 @@ public class DelimitedValueReader extends TextReader.Bytes
 {
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final Function<String, Object> multiValueParseFunction;
+  private final Function<String, Object> transformationFunction;
   private final DelimitedValueParser parser;
 
   /**
@@ -90,7 +90,7 @@ public class DelimitedValueReader extends TextReader.Bytes
     this.findColumnsFromHeader = findColumnsFromHeader;
     this.skipHeaderRows = skipHeaderRows;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
-    this.multiValueParseFunction = ParserUtils.getMultiValueAndParseNumbersFunction(
+    this.transformationFunction = ParserUtils.getTransformationFunction(
         finalListDelimeter,
         Splitter.on(finalListDelimeter),
         shouldParseNumbers
@@ -139,7 +139,7 @@ public class DelimitedValueReader extends TextReader.Bytes
   private List<Object> readLineAsList(byte[] line) throws IOException
   {
     final List<String> parsed = parser.parseLine(line);
-    return new ArrayList<>(Lists.transform(parsed, multiValueParseFunction));
+    return new ArrayList<>(Lists.transform(parsed, transformationFunction));
   }
 
   private Map<String, Object> readLineAsMap(byte[] line) throws IOException
@@ -147,7 +147,7 @@ public class DelimitedValueReader extends TextReader.Bytes
     final List<String> parsed = parser.parseLine(line);
     return Utils.zipMapPartial(
         Preconditions.checkNotNull(inputRowSignature, "inputRowSignature").getColumnNames(),
-        Iterables.transform(parsed, multiValueParseFunction)
+        Iterables.transform(parsed, transformationFunction)
     );
   }
 
