@@ -38,7 +38,7 @@ If you want to append data to a datasource while compaction is running, you need
 
 In the **Compaction config** for a datasource, enable  **Use concurrent locks (experimental)**.
 
-For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](../data-management/automatic-compaction.md#web-console).
+For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](../data-management/automatic-compaction.md#ui-for-coordinator-based-compaction).
 
 ### Update the compaction settings with the API
  

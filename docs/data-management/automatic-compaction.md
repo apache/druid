@@ -23,18 +23,8 @@ title: "Automatic compaction"
   -->
 
 In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
-This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
 
-## How Druid manages automatic compaction
-
-The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
-The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
-This time period affects other Coordinator duties including merge and conversion tasks.
-To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#set-frequency-of-compaction-runs).
-
-At every invocation of auto-compaction, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
-When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
-If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
+When you configure automatic compaction, you can specify whether Druid uses the Coordinator and native engine or the multi-stage query (MSQ) task engine or native engine on the Overlord. Using the Overlord and MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage. Both methods use the same syntax, but you use different methods to submit the automatic compaction.
 
 :::info
  Auto-compaction skips datasources that have a segment granularity of `ALL`.
@@ -42,55 +32,35 @@ If a compaction task takes longer than the indexing period, the Coordinator wait
 
 As a best practice, you should set up auto-compaction for all Druid datasources. You can run compaction tasks manually for cases where you want to allocate more system resources. For example, you may choose to run multiple compaction tasks in parallel to compact an existing datasource for the first time. See [Compaction](compaction.md) for additional details and use cases.
 
-## Enable automatic compaction
+This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
 
-You can enable automatic compaction for a datasource using the web console or programmatically via an API.
-This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
+## Coordinator-based
 
-### Web console
+The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
+The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
+This time period affects other Coordinator duties including merge and conversion tasks.
+To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#compaction-frequency).
 
-Use the web console to enable automatic compaction for a datasource as follows.
+At every invocation of auto-compaction, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
+When there are eligible segments to compact, the Coordinator issues compaction tasks based on available worker capacity.
+If a compaction task takes longer than the indexing period, the Coordinator waits for it to finish before resuming the period for segment search.
 
-1. Click **Datasources** in the top-level navigation.
-2. In the **Compaction** column, click the edit icon for the datasource to compact.
-3. In the **Compaction config** dialog, configure the auto-compaction settings. The dialog offers a form view as well as a JSON view. Editing the form updates the JSON specification, and editing the JSON updates the form field, if present. Form fields not present in the JSON indicate default values. You may add additional properties to the JSON for auto-compaction settings not displayed in the form. See [Configure automatic compaction](#configure-automatic-compaction) for supported settings for auto-compaction.
-4. Click **Submit**.
-5. Refresh the **Datasources** view. The **Compaction** column for the datasource changes from “Not enabled” to “Awaiting first run.”
+No additional configuration is needed to run automatic compaction tasks using the Coordinator and native engine. This is the default behavior for Druid.
 
-The following screenshot shows the compaction config dialog for a datasource with auto-compaction enabled.
-![Compaction config in web console](../assets/compaction-config.png)
+## Overlord-based
 
-To disable auto-compaction for a datasource, click **Delete** from the **Compaction config** dialog. Druid does not retain your auto-compaction configuration.
+You can run automatic compaction using the Overlord rather than the Coordinator. Running compaction tasks on the Overlord means that polling the task status and running compaction at a higher frequency is more efficient than a comparable compaction task that runs on the Coordinator. When running compaction tasks using the Overlord, Druid checks to see if there is data to compact in a datasource every 5 seconds.
 
-### Compaction configuration API
+* In your Overlord runtime properties, set the following properties:
+  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
+  *  `druid.supervisor.compaction.defaultEngine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native`.
 
-Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#manage-automatic-compaction) to configure automatic compaction.
-To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
-See [Configure automatic compaction](#configure-automatic-compaction) for the syntax of an auto-compaction spec.
-Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#create-or-update-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
-The following example configures auto-compaction for the `wikipedia` datasource:
+After making these changes, you can submit automatic compaction tasks as supervisors.
 
-```sh
-curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "dataSource": "wikipedia",
-    "granularitySpec": {
-        "segmentGranularity": "DAY"
-    }
-}'
-```
-
-To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#remove-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
-
-```sh
-curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
-```
-
-## Configure automatic compaction
+## Automatic compaction syntax
 
 You can configure automatic compaction dynamically without restarting Druid.
-The automatic compaction system uses the following syntax:
+Both the native and MSQ task engine automatic compaction engines use the following syntax:
 
 ```json
 {
@@ -107,6 +77,10 @@ The automatic compaction system uses the following syntax:
     "engine": <native|msq>
 }
 ```
+
+For Coordinator-based automatic compaction, you submit the spec to the [Compaction config UI](#ui-for-coordinator-based-compaction) or the [Compaction configuration API](#api-for-coordinator-based-compaction).
+
+For Overlord-based automatic compaction, you submit a supervisor spec with the `type` set to `autocompact`.
 
 Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
@@ -131,53 +105,54 @@ maximize performance and minimize disk usage of the `compact` tasks launched by 
 
 For more details on each of the specs in an auto-compaction configuration, see [Automatic compaction dynamic configuration](../configuration/index.md#automatic-compaction-dynamic-configuration).
 
-### Compaction engine
+## Use Coordinator-based compaction
 
-When you configure automatic compaction, you can specify whether Druid uses the native engine or the multi-stage query (MSQ) task engine to perform the compaction.  The native engine was the only engine available for compaction prior to the introduction of the MSQ task engine and the corresponding `engine` context parameter. 
+The default engine for compaction is the native engine running on the Coordinator. Prior to the availability of the Overlord  for automatic compaction, the native engine was the only compaction engine available. 
 
-Using the MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage. For more information about the MSQ task engine, see [MSQ task engine concepts](../multi-stage-query/concepts.md).
+You can use Coordinator-based automatic compaction for a datasource through the web console or programmatically via an API.
+This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
 
-To use the native compaction engine, either omit the `engine` config when submitting your compaction task spec or set it to `native`.
+### UI for Coordinator-based compaction
 
-To use the MSQ task engine for automatic compaction, do the following:
+Use the web console to enable automatic compaction for a datasource as follows:
 
-* Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension).
-* In the compaction task spec for a datasource, set `compactionConfigs.engine` to `msq`. The default is `native`.
-* Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
+1. Click **Datasources** in the top-level navigation.
+2. In the **Compaction** column, click the edit icon for the datasource to compact.
+3. In the **Compaction config** dialog, configure the auto-compaction settings. The dialog offers a form view as well as a JSON view. Editing the form updates the JSON specification, and editing the JSON updates the form field, if present. Form fields not present in the JSON indicate default values. You may add additional properties to the JSON for auto-compaction settings not displayed in the form. See [Configure automatic compaction](#automatic-compaction-syntax) for supported settings for auto-compaction.
+4. Click **Submit**.
+5. Refresh the **Datasources** view. The **Compaction** column for the datasource changes from “Not enabled” to “Awaiting first run.”
 
-Keep the following limitations in mind MSQ task engine for auto-compaction:
+The following screenshot shows the compaction config dialog for a datasource with auto-compaction enabled.
+![Compaction config in web console](../assets/compaction-config.png)
 
-<!--Duplicated in multi-stage-query/known-issues.md-->
+To disable auto-compaction for a datasource, click **Delete** from the **Compaction config** dialog. Druid does not retain your auto-compaction configuration.
 
-- Only range-based partitioning is supported
-- You cannot group or roll up metrics for dimensions 
-- You cannot group on multi-value dimensions
-- The `maxTotalRows` config is not supported. Use `maxRowsPerSegment` instead.
-- `queryGranularity` cannot be set to `all`
+### API for Coordinator-based compaction
 
-#### MSQ task engine context parameters
+Use the [Automatic compaction API](../api-reference/automatic-compaction-api.md#manage-automatic-compaction) to configure automatic compaction.
+To enable auto-compaction for a datasource, create a JSON object with the desired auto-compaction settings.
+See [Configure automatic compaction](#automatic-compaction-syntax) for the syntax of an auto-compaction spec.
+Send the JSON object as a payload in a [`POST` request](../api-reference/automatic-compaction-api.md#create-or-update-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction`.
+The following example configures auto-compaction for the `wikipedia` datasource:
 
-You can use [MSQ task engine context parameters](../multi-stage-query/) in `compactionConfig.taskContext` when configuring your datasource for automatic compaction, such as setting the maximum number of tasks using the `compactionConfig.taskContext.maxNumTasks` parameter. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
+```sh
+curl --location --request POST 'http://localhost:8081/druid/coordinator/v1/config/compaction' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "dataSource": "wikipedia",
+    "granularitySpec": {
+        "segmentGranularity": "DAY"
+    }
+}'
+```
 
-The following table has the MSQ task engine context parameter first with the native context parameter in parenthesis:
+To disable auto-compaction for a datasource, send a [`DELETE` request](../api-reference/automatic-compaction-api.md#remove-automatic-compaction-configuration) to `/druid/coordinator/v1/config/compaction/{dataSource}`. Replace `{dataSource}` with the name of the datasource for which to disable auto-compaction. For example:
 
-| MSQ task engine context parameter | Automatic compaction config |
-|--------------------------------------------|---------------------------------------------|
-| `context.priority`                         | `taskPriority`                              |
-| `context.rowsPerSegment`                   | `tuningConfig.targetRowsPerSegment`         |
-| `context.priority`                         | `taskContext.priority`                      |
-| `context.storeCompactionState`             | `taskContext.storeCompactionState`          |
-| `sqlQueryContext.sqlInsertSegmentGranularity` | `granularitySpec.segmentGranularity`      |
-| `spec.query.dataSource` or `dataSource`    | `dataSource`                                |
-| `spec.tuningConfig.indexSpec`              | `tuningConfig.indexSpec`                    |
-| `spec.query.orederBy`                      | `tuningConfig.indexSpec`                    |
-| `spec.query.granularity`                   | `granularitySpec.queryGranularity`          |
-| `spec.query.dimensions`                    | `dimensionsSpec`                            |
-| `spec.query.filter`                        | `transformSpec.filter`                      |
-| `spec.query.aggregations`                  | `metricsSpec`                               |
+```sh
+curl --location --request DELETE 'http://localhost:8081/druid/coordinator/v1/config/compaction/wikipedia'
+```
 
-
-### Set frequency of compaction runs
+### Compaction frequency
 
 If you want the Coordinator to check for compaction more frequently than its indexing period, create a separate group to handle compaction duties.
 Set the time period of the duty group in the `coordinator/runtime.properties` file.
@@ -187,6 +162,108 @@ druid.coordinator.dutyGroups=["compaction"]
 druid.coordinator.compaction.duties=["compactSegments"]
 druid.coordinator.compaction.period=PT60S
 ```
+
+## Use Overlord-based automatic compaction
+
+When you use the Overlord for automatic compaction, Druid uses a supervisor task on the Overlord to perform the compaction. Since it's a supervisor task, automatic compaction using the Overlord can run frequently while providing faster compaction times as well as better memory tuning and usage. 
+
+When you use Overlord-based automatic compaction, you can use either the native engine like Coordinator-based automatic compaction or the [MSQ task engine](#use-msq-for-automatic-compaction). 
+
+By default, Druid checks every 5 seconds to see whether or not compaction is required. 
+
+### Use MSQ for automatic compaction
+
+The MSQ task engine is available as a compaction engine if you configure compaction tasks to run on the Overlord as a supervisor. To use the MSQ task engine for automatic compaction, make sure the following requirements are met:
+
+* Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension).
+* In your Overlord runtime properties, set the following properties:
+  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
+  *  `druid.supervisor.compaction.defaultEngine` to `msq` to specify the MSQ task engine as the compaction engine
+* Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
+
+You can use [MSQ task engine context parameters](../multi-stage-query/) in `compactionConfig.taskContext` when configuring your datasource for automatic compaction, such as setting the maximum number of tasks using the `compactionConfig.taskContext.maxNumTasks` parameter. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
+
+To submit an automatic compaction task, you submit a supervisor spec through the UI or API with the type `autocompact` and the `spec` where you define the compaction behavior using the [automatic compaction syntax](#automatic-compaction-syntax). You can use the [web console](#ui-for-overlord-based-compaction)
+
+### UI for Overlord-based compaction
+
+To submit a supervisor spec for MSQ task engine autocompaction, perform the following steps:
+
+1. In the web console, go to the **Supervisors** tab.
+1. Click **...** > **Submit JSON supervisor**.
+1. In the dialog, include the following:
+     - The type of supervisor spec by setting `"type": "autocompact"`
+     - The compaction configuration by adding it to the `spec` field
+    ```json
+    {
+   "type": "autocompact",
+   "spec": {
+      "dataSource": YOUR_DATASOURCE,
+    ...
+    ...
+   }
+    ```
+1. Submit the supervisor.
+
+To stop the automatic compaction task, suspend or terminate the supervisor through the UI or API.
+
+### API for Overlord-based compaction
+
+Submitting an automatic compaction as a supervisor task uses the same endpoint as supervisor tasks for streaming ingestion.
+
+The following example configures auto-compaction for the `wikipedia` datasource:
+
+```sh
+curl --location --request POST 'http://localhost:8081/druid/indexer/v1/supervisor' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+   "type": "autocompact",    // required
+   "suspended": false,         // optional
+   "spec": {                           // required
+       "dataSource": "wikipedia",          // required
+       "tuningConfig": {...},                    // optional
+       "granularitySpec": {...},               // optional
+       ...
+   }
+}'
+```
+
+To stop the automatic compaction task, suspend or terminate the supervisor through the UI or API.
+
+### MSQ task engine limitations
+
+When using the MSQ task engine for auto-compaction, keep the following limitations in mind:
+
+- The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](#idempotent-aggregators).
+- Only dynamic and range-based partitioning are supported
+- Set `rollup`  to `true` if `metricSpec` is not empty or null. If `metricSpec` is empty or null, set `rollup` to `false`.
+- You cannot group on multi-value dimensions
+- The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
+
+#### Idempotent aggregators
+
+Idempotent aggregators are aggregators that can be applied repeatedly on a column and each run produces the same results, such as the following `longSum` aggregator:
+
+```
+{"name": "added", "type": "longSum", "fieldName": "added"}
+```
+
+where the input and output column are both `added`.
+
+The following are some examples of non-idempotent aggregators where each run of the aggregator produces different results:
+
+*  `longSum` aggregator where the `added` column rolls up into the `sum_added` column:
+    ```
+    {"name": "sum_added", "type": "longSum", "fieldName": "added" }
+    ```
+* Partial sketches:
+    ```
+    {"name": added, "type":"", fieldName: added}
+    ```
+* Count aggregators since it rolls up into a different count column
+    ```
+    { "type" : "count", "name" : "count" }
+    ```
 
 ## Avoid conflicts with ingestion
 
@@ -266,6 +343,9 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
   }
 }
 ```
+
+
+
 
 ## Learn more
 
