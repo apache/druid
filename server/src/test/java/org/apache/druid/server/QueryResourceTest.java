@@ -479,47 +479,7 @@ public class QueryResourceTest
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
             WAREHOUSE,
-            new QuerySegmentWalker()
-            {
-              @Override
-              public <T> QueryRunner<T> getQueryRunnerForIntervals(
-                  Query<T> query,
-                  Iterable<Interval> intervals
-              )
-              {
-                return (queryPlus, responseContext) -> new Sequence<T>()
-                {
-                  @Override
-                  public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
-                  {
-                    if (accumulator instanceof QueryResultPusher.StreamingHttpResponseAccumulator) {
-                      try {
-                        ((QueryResultPusher.StreamingHttpResponseAccumulator) accumulator).flush(); // initialized
-                      }
-                      catch (IOException ignore) {
-                      }
-                    }
-
-                    return initValue;
-                  }
-
-                  @Override
-                  public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)
-                  {
-                    return Yielders.done(initValue, null);
-                  }
-                };
-              }
-
-              @Override
-              public <T> QueryRunner<T> getQueryRunnerForSegments(
-                  Query<T> query,
-                  Iterable<SegmentDescriptor> specs
-              )
-              {
-                throw new UnsupportedOperationException();
-              }
-            },
+            TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
             testRequestLogger,
