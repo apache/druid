@@ -23,7 +23,7 @@ This extension provides a gRPC API for SQL and Native queries.
 
 Druid uses REST as its RPC protocol. Druid has a large variety of REST operations
 including query, ingest jobs, monitoring, configuration and many more. Although
-REST is a universally supported RPC format, is not the only one in use. This
+REST is a universally supported RPC format, it is not the only one in use. This
 extension allows gRPC-based clients to issue SQL queries.
 
 Druid is optimized for high-concurrency, low-complexity queries that return a
