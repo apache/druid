@@ -133,6 +133,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |`fetchDelayMillis`|Integer|Time in milliseconds to wait between subsequent calls to fetch records from Kinesis. See [Determine fetch settings](#determine-fetch-settings).|No|0|
 |`awsAssumedRoleArn`|String|The AWS assumed role to use for additional permissions.|No||
 |`awsExternalId`|String|The AWS external ID to use for additional permissions.|No||
+|`compressionFormat`|String|The compression format of the Kinesis data. Supported values are `bz2`, `gz`, `snappy`, `xz`, `zip`, and `zstd`.|No||
 
 #### Data format
 
