@@ -56,11 +56,11 @@ public class ParserUtils
   }
 
   /**
-   * @return a transformation function on an input value. The function does the following transformations on the input
-   * string:
-   * <li> Split it into multiple values using the {@code listSplitter} if the {@code list delimiter} is present in the input. </li>
-   * <li> If {@code tryParseNumbers} is true, the function will also try to parse any numeric values present in the input
-   * -- integers as {@code Long} and floating-point numbers as {@code Double}. </li>
+   * @return a transformation function on an input value. The function performs the following transformations on the input string:
+   * <li> Splits it into multiple values using the {@code listSplitter} if the {@code list delimiter} is present in the input. </li>
+   * <li> If {@code tryParseNumbers} is true, the function will also attempt to parse any numeric values present in the input:
+   * integers as {@code Long} and floating-point numbers as {@code Double}. If the input is not a number or parsing fails, the input
+   * is returned as-is as a string. </li>
    */
   public static Function<String, Object> getTransformationFunction(
       final String listDelimiter,
