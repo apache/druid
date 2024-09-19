@@ -2329,11 +2329,31 @@ public class MSQWindowTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testFailurePartitionByMVD(String contextName, Map<String, Object> context)
+  public void testFailurePartitionByMVD_1(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("select cityName, countryName, array_to_mv(array[1,length(cityName)]), "
                 + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName)\n"
+                + "from wikipedia\n"
+                + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
+                + "order by 1, 2, 3")
+        .setQueryContext(context)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(ISE.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+                "Encountered a multi value column [v0]. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+        ))
+        .verifyExecutionError();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testFailurePartitionByMVD_2(String contextName, Map<String, Object> context)
+  {
+    testSelectQuery()
+        .setSql("  select cityName, countryName, array_to_mv(array[1,length(cityName)]),"
+                + "row_number() over (partition by countryName order by countryName, cityName) as c1,\n"
+                + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName) as c2\n"
                 + "from wikipedia\n"
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
