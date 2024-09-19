@@ -147,8 +147,9 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.basedir}/bin/generate-binary-license.py</executable>
+                                  <executable>${python.exec}</executable>
                                     <arguments>
+                                        <argument>${project.basedir}/bin/generate-binary-license.py</argument>
                                         <argument>${project.parent.basedir}/licenses/APACHE2</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
@@ -162,8 +163,9 @@
                                     <goal>exec</goal>
                                 </goals>
                                 <configuration>
-                                    <executable>${project.basedir}/bin/generate-binary-notice.py</executable>
+                                  <executable>${python.exec}</executable>
                                     <arguments>
+                                        <argument>${project.basedir}/bin/generate-binary-notice.py</argument>
                                         <argument>${project.parent.basedir}/NOTICE</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
