@@ -132,10 +132,10 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     final ObjectMapper mapper = new ObjectMapper();
     final CsvInputFormat inputFormat = (CsvInputFormat) mapper.readValue(
-        "{\"type\":\"csv\",\"hasHeaderRow\":true,\"shouldParseNumbers\":true}",
+        "{\"type\":\"csv\",\"hasHeaderRow\":true,\"tryParseNumbers\":true}",
         InputFormat.class
     );
-    Assert.assertTrue(inputFormat.shouldParseNumbers());
+    Assert.assertTrue(inputFormat.tryParseNumbers());
   }
 
   @Test

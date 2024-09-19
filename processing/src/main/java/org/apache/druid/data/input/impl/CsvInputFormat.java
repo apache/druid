@@ -48,10 +48,10 @@ public class CsvInputFormat extends FlatTextInputFormat
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
       @JsonProperty("skipHeaderRows") int skipHeaderRows,
-      @JsonProperty("shouldParseNumbers") @Nullable Boolean shouldParseNumbers
+      @JsonProperty("tryParseNumbers") @Nullable Boolean tryParseNumbers
   )
   {
-    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows, shouldParseNumbers);
+    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows, tryParseNumbers);
   }
 
   @Override
@@ -82,7 +82,7 @@ public class CsvInputFormat extends FlatTextInputFormat
         getSkipHeaderRows(),
         line -> Arrays.asList(parser.parseLine(StringUtils.fromUtf8(line))),
         useListBasedInputRows(),
-        shouldParseNumbers()
+        shouldTryParseNumbers()
     );
   }
 

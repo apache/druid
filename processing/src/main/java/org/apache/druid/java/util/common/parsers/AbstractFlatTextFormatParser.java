@@ -65,14 +65,14 @@ public abstract class AbstractFlatTextFormatParser implements Parser<String, Obj
       @Nullable final String listDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows,
-      final boolean shouldParseNumbers
+      final boolean tryParseNumbers
   )
   {
     this.listDelimiter = listDelimiter != null ? listDelimiter : Parsers.DEFAULT_LIST_DELIMITER;
     this.transformationFunction = ParserUtils.getTransformationFunction(
         this.listDelimiter,
         Splitter.on(this.listDelimiter),
-        shouldParseNumbers
+        tryParseNumbers
     );
 
     this.hasHeaderRow = hasHeaderRow;

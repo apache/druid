@@ -59,13 +59,13 @@ public class ParserUtils
    * @return a transformation function on an input value. The function does the following transformations on the input
    * string:
    * <li> Split it into multiple values using the {@code listSplitter} if the {@code list delimiter} is present in the input. </li>
-   * <li> If {@code shouldParseNumbers} is true, the function will also try to parse any numeric values present in the input
+   * <li> If {@code tryParseNumbers} is true, the function will also try to parse any numeric values present in the input
    * -- integers as {@code Long} and floating-point numbers as {@code Double}. </li>
    */
   public static Function<String, Object> getTransformationFunction(
       final String listDelimiter,
       final Splitter listSplitter,
-      final boolean shouldParseNumbers
+      final boolean tryParseNumbers
   )
   {
     return (input) -> {
@@ -76,10 +76,10 @@ public class ParserUtils
       if (input.contains(listDelimiter)) {
         return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
             .map(NullHandling::emptyToNullIfNeeded)
-            .map(value -> shouldParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
+            .map(value -> tryParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
             .collect(Collectors.toList());
       } else {
-        return shouldParseNumbers ?
+        return tryParseNumbers ?
             tryParseStringAsNumber(input) :
             NullHandling.emptyToNullIfNeeded(input);
 

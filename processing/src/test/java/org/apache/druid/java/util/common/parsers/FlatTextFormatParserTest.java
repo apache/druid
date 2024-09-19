@@ -237,13 +237,13 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
       return get(format, false, 0, false);
     }
 
-    public Parser<String, Object> get(FlatTextFormat format, boolean hasHeaderRow, int maxSkipHeaderRows, boolean shouldParseNumbers)
+    public Parser<String, Object> get(FlatTextFormat format, boolean hasHeaderRow, int maxSkipHeaderRows, boolean tryParseNumbers)
     {
       switch (format) {
         case CSV:
-          return new CSVParser(null, hasHeaderRow, maxSkipHeaderRows, shouldParseNumbers);
+          return new CSVParser(null, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
         case DELIMITED:
-          return new DelimitedParser("\t", null, hasHeaderRow, maxSkipHeaderRows, shouldParseNumbers);
+          return new DelimitedParser("\t", null, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
         default:
           throw new IAE("Unknown format[%s]", format);
       }

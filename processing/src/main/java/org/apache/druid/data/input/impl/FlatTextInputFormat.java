@@ -46,7 +46,7 @@ public abstract class FlatTextInputFormat implements InputFormat
   private final String delimiter;
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
-  private final boolean shouldParseNumbers;
+  private final boolean tryParseNumbers;
 
   FlatTextInputFormat(
       @Nullable List<String> columns,
@@ -55,7 +55,7 @@ public abstract class FlatTextInputFormat implements InputFormat
       @Nullable Boolean hasHeaderRow,
       @Nullable Boolean findColumnsFromHeader,
       int skipHeaderRows,
-      @Nullable Boolean shouldParseNumbers
+      @Nullable Boolean tryParseNumbers
   )
   {
     this.columns = columns == null ? Collections.emptyList() : columns;
@@ -81,7 +81,7 @@ public abstract class FlatTextInputFormat implements InputFormat
         "Cannot have same delimiter and list delimiter of [%s]",
         delimiter
     );
-    this.shouldParseNumbers = shouldParseNumbers == null ? false : shouldParseNumbers;
+    this.tryParseNumbers = tryParseNumbers == null ? false : tryParseNumbers;
 
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
@@ -137,9 +137,9 @@ public abstract class FlatTextInputFormat implements InputFormat
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public boolean shouldParseNumbers()
+  public boolean shouldTryParseNumbers()
   {
-    return shouldParseNumbers;
+    return tryParseNumbers;
   }
 
   @Override

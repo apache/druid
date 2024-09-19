@@ -401,7 +401,7 @@ public class DelimitedReaderTest
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
-        if (format.shouldParseNumbers()) {
+        if (format.tryParseNumbers()) {
           Assert.assertEquals(((numResults + 1) * 5L), row.getRaw("score"));
           if (format.getColumns().contains("rating_dbl")) {
             Assert.assertEquals(numResults * 1.0, row.getRaw("rating_dbl"));

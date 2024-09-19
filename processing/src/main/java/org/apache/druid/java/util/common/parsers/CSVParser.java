@@ -36,10 +36,10 @@ public class CSVParser extends AbstractFlatTextFormatParser
       @Nullable final String listDelimiter,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows,
-      final boolean shouldParseNumbers
+      final boolean tryParseNumbers
   )
   {
-    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows, shouldParseNumbers);
+    super(listDelimiter, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
   }
 
   public CSVParser(
@@ -47,10 +47,10 @@ public class CSVParser extends AbstractFlatTextFormatParser
       final Iterable<String> fieldNames,
       final boolean hasHeaderRow,
       final int maxSkipHeaderRows,
-      final boolean shouldParseNumbers
+      final boolean tryParseNumbers
   )
   {
-    this(listDelimiter, hasHeaderRow, maxSkipHeaderRows, shouldParseNumbers);
+    this(listDelimiter, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
 
     setFieldNames(fieldNames);
   }

@@ -83,7 +83,7 @@ public class DelimitedValueReader extends TextReader.Bytes
       int skipHeaderRows,
       DelimitedValueParser parser,
       boolean useListBasedInputRows,
-      boolean shouldParseNumbers
+      boolean tryParseNumbers
   )
   {
     super(inputRowSchema, source);
@@ -93,7 +93,7 @@ public class DelimitedValueReader extends TextReader.Bytes
     this.transformationFunction = ParserUtils.getTransformationFunction(
         finalListDelimeter,
         Splitter.on(finalListDelimeter),
-        shouldParseNumbers
+        tryParseNumbers
     );
 
     if (!findColumnsFromHeader && columns != null) {

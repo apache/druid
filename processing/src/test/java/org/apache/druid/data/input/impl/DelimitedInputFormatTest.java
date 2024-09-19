@@ -119,7 +119,7 @@ public class DelimitedInputFormatTest
         0,
         true
     );
-    Assert.assertTrue(format.shouldParseNumbers());
+    Assert.assertTrue(format.tryParseNumbers());
   }
 
   @Test
@@ -127,10 +127,10 @@ public class DelimitedInputFormatTest
   {
     final ObjectMapper mapper = new ObjectMapper();
     final DelimitedInputFormat inputFormat = (DelimitedInputFormat) mapper.readValue(
-        "{\"type\":\"tsv\",\"hasHeaderRow\":true,\"shouldParseNumbers\":true}",
+        "{\"type\":\"tsv\",\"hasHeaderRow\":true,\"tryParseNumbers\":true}",
         InputFormat.class
     );
-    Assert.assertTrue(inputFormat.shouldParseNumbers());
+    Assert.assertTrue(inputFormat.tryParseNumbers());
   }
 
   @Test
