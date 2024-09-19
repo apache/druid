@@ -158,8 +158,8 @@ public class DruidQuidemCommandHandler implements CommandHandler
       ObjectMapper objectMapper = connectionExtras.getObjectMapper();
       DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
       List<Query<?>> logged = new ArrayList<>();
-      try (Closeable unhook = dhp.withHook(DruidHook.NATIVE_PLAN, (key, relNode) -> {
-        logged.add(relNode);
+      try (Closeable unhook = dhp.withHook(DruidHook.NATIVE_PLAN, (key, query) -> {
+        logged.add(query);
       })) {
         executeExplainQuery(x);
       }

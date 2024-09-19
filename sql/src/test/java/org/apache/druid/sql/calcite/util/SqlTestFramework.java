@@ -198,6 +198,11 @@ public class SqlTestFramework
       configureGuice(injectorBuilder);
     }
 
+    /**
+     * Communicates if explain are supported.
+     *
+     * MSQ right now needs a full query run.
+     */
     Boolean isExplainSupported();
   }
 
