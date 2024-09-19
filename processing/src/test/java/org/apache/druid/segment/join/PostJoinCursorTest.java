@@ -201,6 +201,17 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
   @Test
   public void testAdvanceWithInterruption() throws IOException, InterruptedException
   {
+    testAdvance(true);
+  }
+
+  @Test
+  public void testAdvanceWithoutInterruption() throws IOException, InterruptedException
+  {
+    testAdvance(false);
+  }
+
+  private void testAdvance(boolean withInterruption) throws IOException, InterruptedException
+  {
 
     final int rowsBeforeInterrupt = 1000;
 
@@ -214,7 +225,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
 
     countriesTable = JoinTestHelper.createCountriesIndexedTable();
 
-    Thread joinCursorThread = new Thread(() -> makeCursorAndAdvance());
+    Thread joinCursorThread = new Thread(() -> makeCursorAndAdvance(withInterruption));
     ExceptionHandler exceptionHandler = new ExceptionHandler();
     joinCursorThread.setUncaughtExceptionHandler(exceptionHandler);
     joinCursorThread.start();
@@ -234,7 +245,7 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
     fail();
   }
 
-  public void makeCursorAndAdvance()
+  public void makeCursorAndAdvance(boolean withInterruption)
   {
 
     List<JoinableClause> joinableClauses = ImmutableList.of(
@@ -272,7 +283,11 @@ public class PostJoinCursorTest extends BaseHashJoinSegmentCursorFactoryTest
         }
       });
 
-      cursor.advance();
+      if (withInterruption) {
+        cursor.advance();
+      } else {
+        cursor.advanceUninterruptibly();
+      }
     }
   }
 }
