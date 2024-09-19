@@ -38,6 +38,8 @@ import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
+import org.apache.druid.frame.processor.test.AlwaysAsyncPartitionedReadableFrameChannel;
+import org.apache.druid.frame.processor.test.AlwaysAsyncReadableFrameChannel;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
@@ -434,8 +436,8 @@ public class SuperSorterTest
           clusterByPartitionsFuture,
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null),
-          outputChannelFactory,
+          makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null)),
+          makeOutputChannelFactory(outputChannelFactory),
           maxActiveProcessors,
           maxChannelsPerProcessor,
           limitHint,
@@ -839,9 +841,48 @@ public class SuperSorterTest
 
     for (final BlockingQueueFrameChannel channel : channels) {
       channel.writable().close();
-      retVal.add(channel.readable());
+      retVal.add(new AlwaysAsyncReadableFrameChannel(channel.readable()));
     }
 
     return retVal;
+  }
+
+  /**
+   * Wraps an underlying {@link OutputChannelFactory} in one that uses {@link AlwaysAsyncReadableFrameChannel}
+   * for all of its readable channels. This helps catch bugs due to improper usage of {@link ReadableFrameChannel}
+   * methods that enable async reads.
+   */
+  private static OutputChannelFactory makeOutputChannelFactory(final OutputChannelFactory baseFactory)
+  {
+    return new OutputChannelFactory() {
+      @Override
+      public OutputChannel openChannel(int partitionNumber) throws IOException
+      {
+        final OutputChannel channel = baseFactory.openChannel(partitionNumber);
+        return OutputChannel.pair(
+            channel.getWritableChannel(),
+            channel.getFrameMemoryAllocator(),
+            () -> new AlwaysAsyncReadableFrameChannel(channel.getReadableChannelSupplier().get()),
+            channel.getPartitionNumber()
+        );
+      }
+
+      @Override
+      public PartitionedOutputChannel openPartitionedChannel(String name, boolean deleteAfterRead) throws IOException
+      {
+        final PartitionedOutputChannel channel = baseFactory.openPartitionedChannel(name, deleteAfterRead);
+        return PartitionedOutputChannel.pair(
+            channel.getWritableChannel(),
+            channel.getFrameMemoryAllocator(),
+            () -> new AlwaysAsyncPartitionedReadableFrameChannel(channel.getReadableChannelSupplier().get())
+        );
+      }
+
+      @Override
+      public OutputChannel openNilChannel(int partitionNumber)
+      {
+        return baseFactory.openNilChannel(partitionNumber);
+      }
+    };
   }
 }
