@@ -229,7 +229,6 @@ SSD
 SSDs
 SSL
 Samza
-tryParseNumbers
 Splunk
 SqlParameter
 SslContextFactory
@@ -243,6 +242,7 @@ TLS
 tls
 TopN
 TopNs
+tryParseNumbers
 UI
 UIs
 UPSERT

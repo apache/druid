@@ -128,14 +128,14 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testDeserializeWithShouldParseNumbers() throws IOException
+  public void testDeserializeWithTryParseNumbers() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
     final CsvInputFormat inputFormat = (CsvInputFormat) mapper.readValue(
         "{\"type\":\"csv\",\"hasHeaderRow\":true,\"tryParseNumbers\":true}",
         InputFormat.class
     );
-    Assert.assertTrue(inputFormat.tryParseNumbers());
+    Assert.assertTrue(inputFormat.shouldTryParseNumbers());
   }
 
   @Test

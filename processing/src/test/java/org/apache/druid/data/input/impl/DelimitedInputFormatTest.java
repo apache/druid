@@ -108,7 +108,7 @@ public class DelimitedInputFormatTest
   }
 
   @Test
-  public void testShouldParseNumbers()
+  public void testTryParseNumbers()
   {
     final DelimitedInputFormat format = new DelimitedInputFormat(
         null,
@@ -119,18 +119,18 @@ public class DelimitedInputFormatTest
         0,
         true
     );
-    Assert.assertTrue(format.tryParseNumbers());
+    Assert.assertTrue(format.shouldTryParseNumbers());
   }
 
   @Test
-  public void testDeserializeWithShouldParseNumbers() throws IOException
+  public void testDeserializeWithTryParseNumbers() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
     final DelimitedInputFormat inputFormat = (DelimitedInputFormat) mapper.readValue(
         "{\"type\":\"tsv\",\"hasHeaderRow\":true,\"tryParseNumbers\":true}",
         InputFormat.class
     );
-    Assert.assertTrue(inputFormat.tryParseNumbers());
+    Assert.assertTrue(inputFormat.shouldTryParseNumbers());
   }
 
   @Test

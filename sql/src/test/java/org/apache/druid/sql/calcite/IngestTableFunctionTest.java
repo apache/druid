@@ -146,7 +146,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
@@ -158,11 +158,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   public void testHttpFunction()
   {
     String extern = "TABLE(http("
-                    + "userName => 'bob',"
-                    + "password => 'secret',"
-                    + "uris => ARRAY['http://foo.com/bar.csv'],"
-                    + "format => 'csv'))"
-                    + "  (x VARCHAR, y VARCHAR, z BIGINT)";
+             + "userName => 'bob',"
+             + "password => 'secret',"
+             + "uris => ARRAY['http://foo.com/bar.csv'],"
+             + "format => 'csv'))"
+             + "  (x VARCHAR, y VARCHAR, z BIGINT)";
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", extern)
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
@@ -247,7 +247,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
@@ -277,7 +277,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
@@ -301,9 +301,9 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                     .build()
     );
     RowSignature expectedSig = RowSignature.builder()
-                                           .add("__time", ColumnType.LONG)
-                                           .add("isRobot", ColumnType.STRING)
-                                           .build();
+        .add("__time", ColumnType.LONG)
+        .add("isRobot", ColumnType.STRING)
+        .build();
     testIngestionQuery()
         .sql("INSERT INTO w000\n" +
              "SELECT\n" +
@@ -328,7 +328,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "timestamp_parse(\"timestamp\",null,'UTC')", ColumnType.LONG))
                 .columns("isRobot", "v0")
                 .build()
-        )
+         )
         .verify();
   }
 
@@ -394,7 +394,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
              "FROM TABLE(http(userName => 'bob',\n" +
-             "                 password => 'secret',\n" +
+            "                 password => 'secret',\n" +
              "                uris => ?,\n" +
              "                format => 'csv'))\n" +
              "     EXTEND (x VARCHAR, y VARCHAR, z BIGINT)\n" +
@@ -410,7 +410,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("httpExtern")
         .verify();
   }
@@ -437,11 +437,11 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                     .add("c", ColumnType.FLOAT_ARRAY)
                     .add("d", ColumnType.DOUBLE_ARRAY)
                     .build()
-    );
+        );
     testIngestionQuery()
         .sql("INSERT INTO dst SELECT *\n" +
              "FROM TABLE(http(userName => 'bob',\n" +
-             "                 password => 'secret',\n" +
+            "                 password => 'secret',\n" +
              "                uris => ARRAY['http://foo.com/bar.json'],\n" +
              "                format => 'json'))\n" +
              "     EXTEND (x VARCHAR, y VARCHAR, z TYPE('COMPLEX<json>'), a VARCHAR ARRAY, b BIGINT ARRAY, c FLOAT ARRAY, d DOUBLE ARRAY)\n" +
@@ -456,7 +456,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("a", "b", "c", "d", "x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .verify();
   }
 
@@ -478,7 +478,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("insertFromExternal")
         .verify();
   }
@@ -546,7 +546,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("insertFromExternal")
         .verify();
   }
@@ -574,7 +574,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("insertFromExternal")
         .verify();
   }
@@ -597,7 +597,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("localExtern")
         .verify();
   }
@@ -625,7 +625,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("localExtern")
         .verify();
   }
@@ -653,7 +653,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("localExtern")
         .verify();
   }
@@ -672,7 +672,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "     (x VARCHAR, y VARCHAR, z BIGINT)\n" +
              "     As myTable\n" +
              "PARTITIONED BY ALL TIME"
-        )
+         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -683,7 +683,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("localExtern")
         .verify();
   }
@@ -702,7 +702,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "     (x VARCHAR NOT NULL, y VARCHAR NOT NULL, z BIGINT NOT NULL)\n" +
              "     As myTable\n" +
              "PARTITIONED BY ALL TIME"
-        )
+         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
         .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
@@ -713,7 +713,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .columns("x", "y", "z")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
-        )
+         )
         .expectLogicalPlanFrom("localExtern")
         .verify();
   }
