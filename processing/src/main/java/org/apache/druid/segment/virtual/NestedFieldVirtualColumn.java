@@ -1290,6 +1290,12 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean requiresColumn(String columnName)
+  {
+    return fieldSpec.columnName.equals(columnName);
+  }
+
+  @Override
   public boolean usesDotNotation()
   {
     return false;

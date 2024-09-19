@@ -26,6 +26,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -77,7 +78,20 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return new IncrementalIndexCursorHolder(index, spec);
+    final IncrementalIndexRowSelector rowSelector;
+    final CursorBuildSpec buildSpec;
+    final String timeColumnName;
+    final IncrementalIndex.ProjectionRowSelector projection = index.getProjection(spec);
+    if (projection == null) {
+      rowSelector = index;
+      buildSpec = spec;
+      timeColumnName = ColumnHolder.TIME_COLUMN_NAME;
+    } else {
+      rowSelector = projection.getRowSelector();
+      buildSpec = projection.getRewrittenBuildSpec();
+      timeColumnName = projection.getTimeColumnName();
+    }
+    return new IncrementalIndexCursorHolder(rowSelector, buildSpec, timeColumnName, projection != null);
   }
 
   @Override

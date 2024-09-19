@@ -26,6 +26,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -164,6 +165,11 @@ public class CursorBuildSpec
   public QueryMetrics<?> getQueryMetrics()
   {
     return queryMetrics;
+  }
+
+  public boolean isAggregate()
+  {
+    return !CollectionUtils.isNullOrEmpty(groupingColumns) || !CollectionUtils.isNullOrEmpty(aggregators);
   }
 
   public static class CursorBuildSpecBuilder

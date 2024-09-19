@@ -21,29 +21,50 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.ProjectionSpec;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.EncodedKeyComponent;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -54,10 +75,13 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
@@ -135,6 +159,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Nullable
   private String outOfRowsReason = null;
 
+  private SortedSet<OnHeapAggregateProjection> aggregateProjections;
+
+
   OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       int maxRowCount,
@@ -158,6 +185,82 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     this.maxBytesPerRowForAggregators =
         useMaxMemoryEstimates ? getMaxBytesPerRowForAggregators(incrementalIndexSchema) : 0;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+
+    initializeProjections(incrementalIndexSchema, useMaxMemoryEstimates);
+  }
+
+  private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema, boolean useMaxMemoryEstimates)
+  {
+    this.aggregateProjections = new ObjectAVLTreeSet<>(OnHeapAggregateProjection.COMPARATOR);
+    for (ProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
+      if (projectionSpec instanceof AggregateProjectionSpec) {
+        AggregateProjectionSpec schema = (AggregateProjectionSpec) projectionSpec;
+        final List<DimensionDesc> descs = new ArrayList<>();
+        final int[] parentDimIndex = new int[schema.getGroupingColumns().size()];
+        int i = 0;
+        int foundTimePosition = -1;
+        String timeColumnName = null;
+        for (DimensionSchema dimension : schema.getGroupingColumns()) {
+          if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
+            timeColumnName = dimension.getName();
+            foundTimePosition = i;
+            parentDimIndex[i] = -1;
+          } else {
+            VirtualColumn vc = schema.getVirtualColumns().getVirtualColumn(dimension.getName());
+            Granularity granularity = Granularities.fromVirtualColumn(vc);
+            if (granularity != null) {
+              timeColumnName = dimension.getName();
+              foundTimePosition = i;
+              parentDimIndex[i] = -1;
+            } else {
+              final DimensionDesc parent = getDimension(dimension.getName());
+              if (parent == null) {
+                final DimensionDesc childOnly = new DimensionDesc(
+                    i++,
+                    dimension.getName(),
+                    dimension.getDimensionHandler(),
+                    useMaxMemoryEstimates
+                );
+                descs.add(childOnly);
+                parentDimIndex[childOnly.getIndex()] = -1;
+              } else {
+
+                if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
+                  throw InvalidInput.exception(
+                      "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
+                      schema.getName(),
+                      dimension.getName(),
+                      dimension.getColumnType(),
+                      parent.getCapabilities().toColumnType()
+                  );
+                }
+                final DimensionDesc rewrite = new DimensionDesc(
+                    i++,
+                    parent.getName(),
+                    parent.getHandler(),
+                    parent.getIndexer()
+                );
+                descs.add(rewrite);
+                parentDimIndex[rewrite.getIndex()] = parent.getIndex();
+              }
+            }
+          }
+        }
+        aggregateProjections.add(
+            new OnHeapAggregateProjection(
+                schema,
+                descs,
+                parentDimIndex,
+                this,
+                timeColumnName,
+                foundTimePosition,
+                incrementalIndexSchema.getMinTimestamp(),
+                this.useMaxMemoryEstimates,
+                this.maxBytesPerRowForAggregators
+            )
+        );
+      }
+    }
   }
 
   /**
@@ -253,6 +356,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     final List<String> parseExceptionMessages = new ArrayList<>();
     final AtomicLong totalSizeInBytes = getBytesInMemory();
+
+    for (OnHeapAggregateProjection projection : aggregateProjections) {
+      projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
+    }
 
     final int priorIndex = facts.getPriorIndex(key);
 
@@ -429,6 +536,43 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  @Nullable
+  @Override
+  public ProjectionRowSelector getProjection(CursorBuildSpec buildSpec)
+  {
+    if (buildSpec.getQueryContext().getBoolean(QueryContexts.CTX_NO_PROJECTION, false)) {
+      return null;
+    }
+    final String name = buildSpec.getQueryContext().getString(QueryContexts.CTX_USE_PROJECTION);
+
+    if (buildSpec.isAggregate()) {
+      for (OnHeapAggregateProjection projection : aggregateProjections) {
+        if (name != null && !name.equals(projection.schema.getName())) {
+          continue;
+        }
+        final Map<String, String> rewriteColumns = new HashMap<>();
+        final Set<VirtualColumn> referenced = new HashSet<>();
+        if (projection.matches(buildSpec, referenced, rewriteColumns)) {
+          log.debug("Using projection[%s]", projection.schema.getName());
+          final CursorBuildSpec rewrittenBuildSpec =
+              CursorBuildSpec.builder(buildSpec)
+                             .setVirtualColumns(VirtualColumns.fromIterable(referenced))
+                             .build();
+          return new ProjectionRowSelector(
+              projection,
+              rewrittenBuildSpec,
+              rewriteColumns,
+              projection.timeColumnName
+          );
+        }
+      }
+    }
+    if (name != null) {
+      throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
+    }
+    return null;
   }
 
   @Override
@@ -1036,6 +1180,400 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     public void clear()
     {
       facts.clear();
+    }
+  }
+
+  public static class OnHeapAggregateProjection implements IncrementalIndexRowSelector
+  {
+    static Comparator<OnHeapAggregateProjection> COMPARATOR = (o1, o2) -> {
+      // coarsest granularity first
+      if (o1.projectionGranularity.isFinerThan(o2.projectionGranularity)) {
+        return 1;
+      }
+      if (o2.projectionGranularity.isFinerThan(o1.projectionGranularity)) {
+        return -1;
+      }
+      // fewer dimensions first
+      final int dimsCompare = Integer.compare(
+          o1.schema.getGroupingColumns().size(),
+          o2.schema.getGroupingColumns().size()
+      );
+      if (dimsCompare != 0) {
+        return dimsCompare;
+      }
+      // more metrics first
+      int metCompare = Integer.compare(o2.schema.getAggregators().length, o1.schema.getAggregators().length);
+      if (metCompare != 0) {
+        return metCompare;
+      }
+      // more virtual columns first
+      final int virtCompare = Integer.compare(
+          o2.schema.getVirtualColumns().getVirtualColumns().length,
+          o1.schema.getVirtualColumns().getVirtualColumns().length
+      );
+      if (virtCompare != 0) {
+        return virtCompare;
+      }
+      return o1.schema.getName().compareTo(o2.schema.getName());
+    };
+
+    private final AggregateProjectionSpec schema;
+    private final Granularity projectionGranularity;
+    private final boolean hasTimeColumn;
+    @Nullable
+    private final String timeColumnName;
+    private final long minTimestamp;
+    private final List<DimensionDesc> dimensions;
+    private final int[] parentDimensionIndex;
+    private final Map<String, DimensionDesc> dimensionsMap;
+    private final Map<String, MetricDesc> aggregatorsMap;
+    private final List<OrderBy> ordering;
+    private final FactsHolder factsHolder;
+    private final InputRowHolder inputRowHolder = new InputRowHolder();
+    private final Map<String, ColumnSelectorFactory> aggSelectors;
+    private final ColumnSelectorFactory virtualSelectorFactory;
+    private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+    private final ColumnInspector baseTableInspector;
+    private final AtomicInteger rowCounter = new AtomicInteger(0);
+    private final boolean useMaxMemoryEstimates;
+    private final long maxBytesPerRowForAggregators;
+
+
+    public OnHeapAggregateProjection(
+        AggregateProjectionSpec schema,
+        List<DimensionDesc> dimensions,
+        int[] parentDimensionIndex,
+        ColumnInspector baseTableInspector,
+        @Nullable String timeColumnName,
+        int foundTimePosition,
+        long minTimestamp,
+        boolean useMaxMemoryEstimates,
+        long maxBytesPerRowForAggregators
+    )
+    {
+      this.schema = schema;
+      this.dimensions = dimensions;
+      this.parentDimensionIndex = parentDimensionIndex;
+      this.dimensionsMap = new HashMap<>();
+      for (DimensionDesc desc : dimensions) {
+        dimensionsMap.put(desc.getName(), desc);
+      }
+      this.baseTableInspector = baseTableInspector;
+      this.timeColumnName = timeColumnName;
+      Granularity virtualGranularity = null;
+      for (VirtualColumn vc : schema.getVirtualColumns().getVirtualColumns()) {
+        if (vc.requiresColumn(ColumnHolder.TIME_COLUMN_NAME) && vc.requiredColumns().size() == 1) {
+          virtualGranularity = Granularities.fromVirtualColumn(vc);
+          break;
+        }
+      }
+      this.projectionGranularity = virtualGranularity == null ? Granularities.ALL : virtualGranularity;
+      this.hasTimeColumn = foundTimePosition >= 0;
+      this.minTimestamp = minTimestamp;
+      final IncrementalIndexRowComparator rowComparator = new IncrementalIndexRowComparator(
+          foundTimePosition < 0 ? dimensions.size() : foundTimePosition,
+          dimensions
+      );
+      this.factsHolder = new RollupFactsHolder(rowComparator, dimensions, foundTimePosition == 0);
+      this.useMaxMemoryEstimates = useMaxMemoryEstimates;
+      this.maxBytesPerRowForAggregators = maxBytesPerRowForAggregators;
+
+      this.virtualSelectorFactory = new CachingColumnSelectorFactory(
+          IncrementalIndex.makeColumnSelectorFactory(schema.getVirtualColumns(), inputRowHolder, null)
+      );
+      this.aggSelectors = new HashMap<>();
+      this.aggregatorsMap = new HashMap<>();
+      for (AggregatorFactory agg : schema.getAggregators()) {
+        MetricDesc metricDesc = new MetricDesc(aggregatorsMap.size(), agg.getCombiningFactory());
+        aggregatorsMap.put(metricDesc.getName(), metricDesc);
+        final ColumnSelectorFactory factory;
+        if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
+          factory = new CachingColumnSelectorFactory(
+              IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, inputRowHolder, agg)
+          );
+        } else {
+          factory = virtualSelectorFactory;
+        }
+        aggSelectors.put(agg.getName(), factory);
+      }
+      this.ordering = getOrder(dimensions, foundTimePosition);
+    }
+
+    private List<OrderBy> getOrder(List<DimensionDesc> dimensions, int foundTimePosition)
+    {
+      final ImmutableList.Builder<OrderBy> listBuilder =
+          ImmutableList.builderWithExpectedSize(dimensions.size() + 1);
+      int i = 0;
+      if (i == foundTimePosition) {
+        listBuilder.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
+      }
+      for (String dimName : dimensionsMap.keySet()) {
+        listBuilder.add(OrderBy.ascending(dimName));
+        i++;
+        if (i == foundTimePosition) {
+          listBuilder.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
+        }
+      }
+      if (foundTimePosition < 0) {
+        listBuilder.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
+      }
+      return listBuilder.build();
+    }
+
+    public void addToFacts(
+        IncrementalIndexRow key,
+        InputRow inputRow,
+        List<String> parseExceptionMessages,
+        AtomicLong totalSizeInBytes
+    )
+    {
+      inputRowHolder.set(inputRow);
+      final Object[] projectionDims = new Object[dimensions.size()];
+      for (int i = 0; i < projectionDims.length; i++) {
+        int parentDimIndex = parentDimensionIndex[i];
+        if (parentDimIndex < 0) {
+          DimensionDesc desc = dimensions.get(i);
+          final ColumnValueSelector<?> virtualSelector = virtualSelectorFactory.makeColumnValueSelector(desc.getName());
+          EncodedKeyComponent<?> k = desc.getIndexer().processRowValsToUnsortedEncodedKeyComponent(
+              virtualSelector.getObject(),
+              false
+          );
+          projectionDims[i] = k.getComponent();
+          totalSizeInBytes.addAndGet(k.getEffectiveSizeBytes());
+        } else {
+          projectionDims[i] = key.dims[parentDimensionIndex[i]];
+        }
+      }
+      final IncrementalIndexRow subKey = new IncrementalIndexRow(
+          hasTimeColumn ? projectionGranularity.bucketStart(DateTimes.utc(key.getTimestamp())).getMillis() : minTimestamp,
+          projectionDims,
+          dimensions
+      );
+
+      final int priorIndex = factsHolder.getPriorIndex(subKey);
+
+      final Aggregator[] aggs;
+      final AggregatorFactory[] metrics = schema.getAggregators();
+      if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
+        aggs = aggregators.get(priorIndex);
+        long aggForProjectionSizeDelta = doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages, useMaxMemoryEstimates, false);
+        totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggForProjectionSizeDelta);
+      } else {
+        aggs = new Aggregator[metrics.length];
+        long aggSizeForProjectionRow = factorizeProjectionAggs(metrics, aggs);
+        aggSizeForProjectionRow += doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages, useMaxMemoryEstimates, false);
+        final long estimatedSizeOfAggregators =
+            useMaxMemoryEstimates ? maxBytesPerRowForAggregators : aggSizeForProjectionRow;
+        final long projectionRowSize = key.estimateBytesInMemory()
+                                       + estimatedSizeOfAggregators
+                                       + ROUGH_OVERHEAD_PER_MAP_ENTRY;
+        totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : projectionRowSize);
+      }
+      final int rowIndex = rowCounter.getAndIncrement();
+      aggregators.put(rowIndex, aggs);
+      factsHolder.putIfAbsent(subKey, rowIndex);
+    }
+
+    public boolean matches(
+        CursorBuildSpec buildSpec,
+        Set<VirtualColumn> referencedVirtualColumns,
+        Map<String, String> rewriteColumns
+    )
+    {
+      if (!Cursors.compatibleOrdering(buildSpec, schema.getOrdering())) {
+        return false;
+      }
+      if (CollectionUtils.isNullOrEmpty(buildSpec.getGroupingColumns()) && CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
+        return false;
+      }
+      final List<String> grouping = buildSpec.getGroupingColumns();
+      if (grouping != null) {
+        for (String column : grouping) {
+          if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns)) {
+            if (schema.getVirtualColumns().getVirtualColumn(column) == null && buildSpec.getVirtualColumns().getVirtualColumn(column) == null && baseTableInspector.getColumnCapabilities(column) == null) {
+              continue;
+            }
+            return false;
+          }
+        }
+      }
+      if (buildSpec.getFilter() != null) {
+        for (String column : buildSpec.getFilter().getRequiredColumns()) {
+          if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns)) {
+            return false;
+          }
+        }
+      }
+      if (!CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
+        if (schema.getAggregators().length != buildSpec.getAggregators().size()) {
+          return false;
+        }
+        boolean allMatch = true;
+        for (AggregatorFactory factory : buildSpec.getAggregators()) {
+          boolean foundMatch = false;
+          for (AggregatorFactory schemaFactory : schema.getAggregators()) {
+            if (schemaFactory.withName(factory.getName()).equals(factory)) {
+              rewriteColumns.put(factory.getName(), schemaFactory.getName());
+              foundMatch = true;
+            }
+          }
+          allMatch = allMatch && foundMatch;
+        }
+        if (!allMatch) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public FactsHolder getFacts()
+    {
+      return factsHolder;
+    }
+
+    @Override
+    public DimensionDesc getDimension(String columnName)
+    {
+      return dimensionsMap.get(columnName);
+    }
+
+    @Override
+    public MetricDesc getMetric(String columnName)
+    {
+      return aggregatorsMap.get(columnName);
+    }
+
+    @Override
+    public List<OrderBy> getOrdering()
+    {
+      return ordering;
+    }
+
+    @Override
+    public boolean isEmpty()
+    {
+      return rowCounter.get() == 0;
+    }
+
+    @Override
+    public int getLastRowIndex()
+    {
+      return rowCounter.get();
+    }
+
+    @Override
+    public float getMetricFloatValue(int rowOffset, int aggOffset)
+    {
+      return aggregators.get(rowOffset)[aggOffset].getFloat();
+    }
+
+    @Override
+    public long getMetricLongValue(int rowOffset, int aggOffset)
+    {
+      return aggregators.get(rowOffset)[aggOffset].getLong();
+    }
+
+    @Override
+    public double getMetricDoubleValue(int rowOffset, int aggOffset)
+    {
+      return aggregators.get(rowOffset)[aggOffset].getDouble();
+    }
+
+    @Nullable
+    @Override
+    public Object getMetricObjectValue(int rowOffset, int aggOffset)
+    {
+      return aggregators.get(rowOffset)[aggOffset].get();
+    }
+
+    @Override
+    public boolean isNull(int rowOffset, int aggOffset)
+    {
+      return aggregators.get(rowOffset)[aggOffset].isNull();
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String column)
+    {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(column) || Objects.equals(column, timeColumnName)) {
+        return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG).setHasNulls(false);
+      }
+      if (dimensionsMap.containsKey(column)) {
+        return dimensionsMap.get(column).getCapabilities();
+      }
+      if (aggregatorsMap.containsKey(column)) {
+        return aggregatorsMap.get(column).getCapabilities();
+      }
+      return null;
+    }
+
+    private boolean hasRequiredColumn(
+        String column,
+        VirtualColumns virtualColumns,
+        Set<VirtualColumn> referencedVirtualColumns,
+        Map<String, String> rewriteVirtualColumns
+    )
+    {
+      VirtualColumn vc = virtualColumns.getVirtualColumn(column);
+      if (vc != null) {
+        final VirtualColumn equivalent = schema.getVirtualColumns().findEquivalent(vc);
+        if (equivalent != null) {
+          if (!vc.getOutputName().equals(equivalent.getOutputName())) {
+            rewriteVirtualColumns.put(vc.getOutputName(), equivalent.getOutputName());
+          }
+          return true;
+        }
+
+        referencedVirtualColumns.add(vc);
+        final List<String> requiredInputs = vc.requiredColumns();
+        if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
+          // special handle time granularity
+          final Granularity virtualGranularity = Granularities.fromVirtualColumn(vc);
+          if (virtualGranularity != null) {
+            if (virtualGranularity.isFinerThan(projectionGranularity)) {
+              return false;
+            }
+          } else {
+            // anything else with __time requires none granularity
+            if (!Granularities.NONE.equals(projectionGranularity)) {
+              return false;
+            }
+          }
+        } else {
+          for (String required : requiredInputs) {
+            if (!dimensionsMap.containsKey(required)) {
+              return false;
+            }
+          }
+        }
+      } else {
+        return dimensionsMap.containsKey(column);
+      }
+      return true;
+    }
+
+    private long factorizeProjectionAggs(
+        AggregatorFactory[] metrics,
+        Aggregator[] aggs
+    )
+    {
+      long totalInitialSizeBytes = 0L;
+      final long aggReferenceSize = Long.BYTES;
+      for (int i = 0; i < metrics.length; i++) {
+        final AggregatorFactory agg = metrics[i];
+        // Creates aggregators to aggregate from input into output fields
+        if (useMaxMemoryEstimates) {
+          aggs[i] = agg.factorize(aggSelectors.get(agg.getName()));
+        } else {
+          AggregatorAndSize aggregatorAndSize = agg.factorizeWithSize(aggSelectors.get(agg.getName()));
+          aggs[i] = aggregatorAndSize.getAggregator();
+          totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
+          totalInitialSizeBytes += aggReferenceSize;
+        }
+      }
+      return totalInitialSizeBytes;
     }
   }
 }

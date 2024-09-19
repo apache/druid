@@ -327,6 +327,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .withDimensionsSpec(schema.getDimensionsSpec())
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
+        .withProjections(schema.getProjections())
         .build();
 
     // Build the incremental-index according to the spec that was chosen by the user

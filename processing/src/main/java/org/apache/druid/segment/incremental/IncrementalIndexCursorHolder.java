@@ -39,14 +39,20 @@ public class IncrementalIndexCursorHolder implements CursorHolder
   private final IncrementalIndexRowSelector rowSelector;
   private final CursorBuildSpec spec;
   private final List<OrderBy> ordering;
+  private final String timeColumnName;
+  private final boolean isPreaggregated;
 
   public IncrementalIndexCursorHolder(
       IncrementalIndexRowSelector rowSelector,
-      CursorBuildSpec spec
+      CursorBuildSpec spec,
+      String timeColumnName,
+      boolean isPreAggregated
   )
   {
     this.rowSelector = rowSelector;
     this.spec = spec;
+    this.timeColumnName = timeColumnName;
+    this.isPreaggregated = isPreAggregated;
     List<OrderBy> ordering = rowSelector.getOrdering();
     if (Cursors.getTimeOrdering(ordering) != Order.NONE) {
       if (Cursors.preferDescendingTimeOrdering(spec)) {
@@ -73,8 +79,15 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     return new IncrementalIndexCursor(
         rowSelector,
         spec,
-        Cursors.getTimeOrdering(ordering)
+        timeColumnName,
+        getTimeOrder(ordering, timeColumnName)
     );
+  }
+
+  @Override
+  public boolean isPreAggregated()
+  {
+    return isPreaggregated;
   }
 
   @Override
@@ -99,6 +112,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     IncrementalIndexCursor(
         IncrementalIndexRowSelector index,
         CursorBuildSpec buildSpec,
+        String timeColumn,
         Order timeOrder
     )
     {
@@ -116,6 +130,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
           rowSelector,
           buildSpec.getVirtualColumns(),
+          timeColumn,
           timeOrder,
           currEntry
       );
@@ -237,6 +252,15 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       // rows are order by timestamp, not rowIndex,
       // so we still need to go through all rows to skip rows added after cursor created
       return rowIndex > maxRowIndex;
+    }
+  }
+
+  private static Order getTimeOrder(List<OrderBy> ordering, String timeColumnName)
+  {
+    if (!ordering.isEmpty() && timeColumnName.equals(ordering.get(0).getColumnName())) {
+      return ordering.get(0).getOrder();
+    } else {
+      return Order.NONE;
     }
   }
 }

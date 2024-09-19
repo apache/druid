@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
@@ -159,5 +160,21 @@ public class Granularities
         ColumnType.LONG,
         ExprMacroTable.granularity()
     );
+  }
+
+  @Nullable
+  public static Granularity fromVirtualColumn(VirtualColumn virtualColumn)
+  {
+    if (virtualColumn instanceof ExpressionVirtualColumn) {
+      final ExpressionVirtualColumn expressionVirtualColumn = (ExpressionVirtualColumn) virtualColumn;
+      final Expr expr = expressionVirtualColumn.getParsedExpression().get();
+      if (expr instanceof TimestampFloorExprMacro.TimestampFloorExpr) {
+        final TimestampFloorExprMacro.TimestampFloorExpr gran = (TimestampFloorExprMacro.TimestampFloorExpr) expr;
+        if (gran.getArg().getBindingIfIdentifier() != null) {
+          return gran.getGranularity();
+        }
+      }
+    }
+    return null;
   }
 }

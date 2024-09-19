@@ -29,6 +29,7 @@ import org.apache.druid.segment.RowPointer;
 import org.apache.druid.segment.TimeAndDimsPointer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.Iterator;
 import java.util.List;
@@ -68,6 +69,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
         new IncrementalIndexColumnSelectorFactory(
             incrementalIndex,
             VirtualColumns.EMPTY,
+            ColumnHolder.TIME_COLUMN_NAME,
             incrementalIndex.timePosition == 0 ? Order.ASCENDING : Order.NONE,
             rowHolder
         );

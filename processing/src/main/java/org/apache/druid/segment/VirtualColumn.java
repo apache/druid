@@ -312,6 +312,10 @@ public interface VirtualColumn extends Cacheable
    */
   List<String> requiredColumns();
 
+  default boolean requiresColumn(String columnName)
+  {
+    return requiredColumns().contains(columnName);
+  }
   /**
    * Indicates that this virtual column can be referenced with dot notation. For example,
    * a virtual column named "foo" could be referred to as "foo.bar" with the Cursor it is

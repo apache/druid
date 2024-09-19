@@ -52,6 +52,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
@@ -366,6 +367,9 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList())
     );
   }
+
+  @Nullable
+  public abstract ProjectionRowSelector getProjection(CursorBuildSpec buildSpec);
 
   public abstract boolean canAppendRow();
 
@@ -985,6 +989,14 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
       this.indexer = handler.makeIndexer(useMaxMemoryEstimates);
     }
 
+    public DimensionDesc(int index, String name, DimensionHandler<?, ?, ?> handler, DimensionIndexer<?, ?, ?> indexer)
+    {
+      this.index = index;
+      this.name = name;
+      this.handler = handler;
+      this.indexer = indexer;
+    }
+
     public int getIndex()
     {
       return index;
@@ -1365,6 +1377,122 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("index", rowSelector);
+    }
+  }
+
+  public static final class ProjectionRowSelector
+  {
+    private final IncrementalIndexRowSelector rowSelector;
+    private final CursorBuildSpec rewrittenBuildSpec;
+    private final Map<String, String> rewriteColumns;
+    private final String timeColumnName;
+
+    ProjectionRowSelector(
+        IncrementalIndexRowSelector rowSelector,
+        CursorBuildSpec rewrittenBuildSpec,
+        Map<String, String> rewriteColumns,
+        @Nullable String timeColumnName
+    )
+    {
+      this.rowSelector = rowSelector;
+      this.rewrittenBuildSpec = rewrittenBuildSpec;
+      this.rewriteColumns = rewriteColumns;
+      this.timeColumnName = timeColumnName == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumnName;
+    }
+
+    public IncrementalIndexRowSelector getRowSelector()
+    {
+      if (rewriteColumns.isEmpty()) {
+        return rowSelector;
+      }
+      return new IncrementalIndexRowSelector()
+      {
+        @Nullable
+        @Override
+        public ColumnCapabilities getColumnCapabilities(String column)
+        {
+          return rowSelector.getColumnCapabilities(column);
+        }
+
+        @Override
+        public DimensionDesc getDimension(String columnName)
+        {
+          final String columnToUse = rewriteColumns.getOrDefault(columnName, columnName);
+          return rowSelector.getDimension(columnToUse);
+        }
+
+        @Override
+        public MetricDesc getMetric(String s)
+        {
+          final String columnToUse = rewriteColumns.getOrDefault(s, s);
+          return rowSelector.getMetric(columnToUse);
+        }
+
+        @Override
+        public List<OrderBy> getOrdering()
+        {
+          return rowSelector.getOrdering();
+        }
+
+        @Override
+        public boolean isEmpty()
+        {
+          return rowSelector.isEmpty();
+        }
+
+        @Override
+        public FactsHolder getFacts()
+        {
+          return rowSelector.getFacts();
+        }
+
+        @Override
+        public int getLastRowIndex()
+        {
+          return rowSelector.getLastRowIndex();
+        }
+
+        @Override
+        public float getMetricFloatValue(int rowOffset, int aggOffset)
+        {
+          return rowSelector.getMetricFloatValue(rowOffset, aggOffset);
+        }
+
+        @Override
+        public long getMetricLongValue(int rowOffset, int aggOffset)
+        {
+          return rowSelector.getMetricLongValue(rowOffset, aggOffset);
+        }
+
+        @Override
+        public double getMetricDoubleValue(int rowOffset, int aggOffset)
+        {
+          return rowSelector.getMetricDoubleValue(rowOffset, aggOffset);
+        }
+
+        @Nullable
+        @Override
+        public Object getMetricObjectValue(int rowOffset, int aggOffset)
+        {
+          return rowSelector.getMetricObjectValue(rowOffset, aggOffset);
+        }
+
+        @Override
+        public boolean isNull(int rowOffset, int aggOffset)
+        {
+          return rowSelector.isNull(rowOffset, aggOffset);
+        }
+      };
+    }
+
+    public CursorBuildSpec getRewrittenBuildSpec()
+    {
+      return rewrittenBuildSpec;
+    }
+
+    public String getTimeColumnName()
+    {
+      return timeColumnName;
     }
   }
 }

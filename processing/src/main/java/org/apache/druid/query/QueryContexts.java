@@ -98,6 +98,8 @@ public class QueryContexts
 
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
+  public static final String CTX_NO_PROJECTION = "noProject";
+  public static final String CTX_USE_PROJECTION = "useProjection";
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;

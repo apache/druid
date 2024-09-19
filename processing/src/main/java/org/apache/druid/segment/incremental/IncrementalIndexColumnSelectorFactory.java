@@ -47,18 +47,22 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   private final Order timeOrder;
   private final IncrementalIndexRowHolder rowHolder;
   private final IncrementalIndexRowSelector rowSelector;
+  @Nullable
+  private final String timeColumnName;
 
   IncrementalIndexColumnSelectorFactory(
       IncrementalIndexRowSelector rowSelector,
       VirtualColumns virtualColumns,
+      @Nullable String timeColumnName,
       Order timeOrder,
       IncrementalIndexRowHolder rowHolder
   )
   {
+    this.rowSelector = rowSelector;
     this.virtualColumns = virtualColumns;
+    this.timeColumnName = timeColumnName == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumnName;
     this.timeOrder = timeOrder;
     this.rowHolder = rowHolder;
-    this.rowSelector = rowSelector;
     this.snapshotColumnInspector = new ColumnInspector()
     {
       @Nullable
@@ -85,7 +89,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrder != Order.NONE) {
+    if ((dimension.equals(timeColumnName) || dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) && timeOrder != Order.NONE) {
       return new SingleScanTimeDimensionSelector(
           makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
           extractionFn,
@@ -122,7 +126,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     if (virtualColumns.exists(columnName)) {
       return virtualColumns.makeColumnValueSelector(columnName, this);
     }
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName) || timeColumnName.equals(columnName)) {
       return rowHolder;
     }
 
@@ -140,6 +144,9 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     // Use snapshotColumnInspector instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
+    if (columnName.equals(timeColumnName)) {
+      return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, ColumnHolder.TIME_COLUMN_NAME);
+    }
     return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, columnName);
   }
 
