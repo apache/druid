@@ -991,8 +991,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           final ColumnHolder columnHolder = index.getColumnHolder(dimension);
           if (columnHolder != null) {
             DimensionSchema schema = columnHolder.getColumnFormat().getColumnSchema(dimension);
+            // rewrite string dimensions to always use MultiValueHandling.ARRAY since it preserves the exact order of
+            // the row regardless of the mode the initial ingest was using
             if (schema instanceof StringDimensionSchema) {
-              schema = new StringDimensionSchema(schema.getName(), DimensionSchema.MultiValueHandling.ARRAY, schema.hasBitmapIndex());
+              schema = new StringDimensionSchema(
+                  schema.getName(),
+                  DimensionSchema.MultiValueHandling.ARRAY,
+                  schema.hasBitmapIndex()
+              );
             }
             dimensionSchemaMap.put(
                 dimension,
