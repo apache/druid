@@ -32,6 +32,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -2220,74 +2221,109 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   }
 
   @Test
-  public void testTombstoneSegmentIsNotAdded() throws InterruptedException
+  public void testTombstoneSegmentIsNotRefreshed() throws IOException
   {
-    String datasource = "newSegmentAddTest";
-    CountDownLatch addSegmentLatch = new CountDownLatch(1);
+    String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
+
+    TestHelper.makeJsonMapper();
+    InternalQueryConfig internalQueryConfig = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(brokerInternalQueryConfigJson, InternalQueryConfig.class)
+        ),
+        InternalQueryConfig.class
+    );
+
+    QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
+    QueryLifecycle lifecycleMock = EasyMock.createMock(QueryLifecycle.class);
 
     CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
-        getQueryLifecycleFactory(walker),
+        factoryMock,
         serverView,
         SEGMENT_CACHE_CONFIG_DEFAULT,
         new NoopEscalator(),
-        new InternalQueryConfig(),
+        internalQueryConfig,
         new NoopServiceEmitter(),
         segmentSchemaCache,
         backFillQueue,
         sqlSegmentsMetadataManager,
         segmentsMetadataManagerConfigSupplier
-    )
-    {
-      @Override
-      public void addSegment(final DruidServerMetadata server, final DataSegment segment)
-      {
-        super.addSegment(server, segment);
-        if (datasource.equals(segment.getDataSource())) {
-          addSegmentLatch.countDown();
-        }
-      }
-    };
-
-    schema.onLeaderStart();
-    schema.awaitInitialization();
-
-    DataSegment segment = new DataSegment(
-        datasource,
-        Intervals.of("2001/2002"),
-        "1",
-        Collections.emptyMap(),
-        Collections.emptyList(),
-        Collections.emptyList(),
-        TombstoneShardSpec.INSTANCE,
-        null,
-        null,
-        0
     );
 
-    Assert.assertEquals(6, schema.getTotalSegments());
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    );
 
-    serverView.addSegment(segment, ServerType.HISTORICAL);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
-    Assert.assertEquals(0, addSegmentLatch.getCount());
+    DataSegment segment = newSegment("test", 0);
+    DataSegment tombstone = DataSegment.builder()
+                                       .dataSource("test")
+                                       .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                       .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                       .shardSpec(new TombstoneShardSpec())
+                                       .loadSpec(Collections.singletonMap(
+                                           "type",
+                                           DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                       ))
+                                       .size(0)
+                                       .build();
 
-    Assert.assertEquals(6, schema.getTotalSegments());
-    List<AvailableSegmentMetadata> metadatas = schema
-        .getSegmentMetadataSnapshot()
-        .values()
-        .stream()
-        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
-        .collect(Collectors.toList());
-    Assert.assertEquals(0, metadatas.size());
+    final DruidServer historicalServer = druidServers.stream()
+                                                     .filter(s -> s.getType().equals(ServerType.HISTORICAL))
+                                                     .findAny()
+                                                     .orElse(null);
 
-    serverView.removeSegment(segment, ServerType.HISTORICAL);
-    Assert.assertEquals(6, schema.getTotalSegments());
-    metadatas = schema
-        .getSegmentMetadataSnapshot()
-        .values()
-        .stream()
-        .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
-        .collect(Collectors.toList());
-    Assert.assertEquals(0, metadatas.size());
+    Assert.assertNotNull(historicalServer);
+    final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
+
+    schema.addSegment(historicalServerMetadata, segment);
+    schema.addSegment(historicalServerMetadata, tombstone);
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    List<SegmentId> segmentIterable = ImmutableList.of(segment.getId(), tombstone.getId());
+
+    SegmentMetadataQuery expectedMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(segment.getDataSource()),
+        new MultipleSpecificSegmentSpec(
+            segmentIterable.stream()
+                           .filter(id -> !id.equals(tombstone.getId()))
+                           .map(SegmentId::toDescriptor)
+                           .collect(Collectors.toList())
+        ),
+        new AllColumnIncluderator(),
+        false,
+        queryContext,
+        EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS),
+        false,
+        null,
+        null
+    );
+
+    EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+            .andReturn(QueryResponse.withEmptyContext(Sequences.empty())).once();
+
+    EasyMock.replay(factoryMock, lifecycleMock);
+
+    schema.refresh(Collections.singleton(segment.getId()), Collections.singleton("test"));
+
+    // verify that metadata query is not issued for tombstone segment
+    EasyMock.verify(factoryMock, lifecycleMock);
+
+    // Verify that datasource schema building logic doesn't mark the tombstone segment for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata("test", tombstone.getId());
+    Assert.assertNotNull(availableSegmentMetadata);
+    // fetching metadata for tombstone segment shouldn't mark it for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
+    schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
+
+    Assert.assertEquals(1, metadatas.stream().filter(metadata -> metadata.getSegment().isTombstone()).count());
+
+    // iterating over entire metadata doesn't cause tombstone to be marked for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
   }
 
   @Test
@@ -2384,6 +2420,27 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(segments.get(1).getId()));
     Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(2).getId()));
+
+    AvailableSegmentMetadata availableSegmentMetadata =
+        schema.getAvailableSegmentMetadata(dataSource, segments.get(0).getId());
+
+    Assert.assertNotNull(availableSegmentMetadata);
+    // fetching metadata for unused segment shouldn't mark it for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
+
+    Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
+    schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
+
+    Assert.assertEquals(
+        1,
+        metadatas.stream()
+                 .filter(
+                     metadata ->
+                         metadata.getSegment().getId().equals(segments.get(0).getId())).count()
+    );
+
+    // iterating over entire metadata doesn't cause unsed segment to be marked for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
