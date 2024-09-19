@@ -98,14 +98,11 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     EasyMock.replay(appenderatorConfig);
     appenderator = manager.createBatchAppenderatorForTask(
         "taskId",
-        new DataSchema(
-            "myDataSource",
-            new TimestampSpec("__time", "millis", null),
-            null,
-            null,
-            new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("myDataSource")
+                  .withTimestamp(new TimestampSpec("__time", "millis", null))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()))
+                  .build(),
         appenderatorConfig,
         new SegmentGenerationMetrics(),
         new NoopDataSegmentPusher(),

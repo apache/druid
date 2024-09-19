@@ -26,10 +26,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -48,15 +45,11 @@ public final class TestFrameProcessorUtils
   {
     final IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
-            new IncrementalIndexSchema(
-                0,
-                new TimestampSpec("__time", "millis", null),
-                Granularities.NONE,
-                VirtualColumns.EMPTY,
-                DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-                new AggregatorFactory[0],
-                false
-            )
+            IncrementalIndexSchema.builder()
+                                  .withTimestampSpec(new TimestampSpec("__time", "millis", null))
+                                  .withDimensionsSpec(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                                  .withRollup(false)
+                                  .build()
         )
         .setMaxRowCount(1000)
         .build();

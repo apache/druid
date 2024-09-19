@@ -33,10 +33,8 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -107,16 +105,13 @@ public class SeekableStreamIndexTaskRunnerAuthTest
       }
     };
 
-    DataSchema dataSchema = new DataSchema(
-        "datasource",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(Collections.emptyList()),
-        new AggregatorFactory[]{},
-        new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()),
-        TransformSpec.NONE,
-        null,
-        null
-    );
+    DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("datasource")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(new DimensionsSpec(Collections.emptyList()))
+                  .withGranularity(new ArbitraryGranularitySpec(new AllGranularity(), Collections.emptyList()))
+                  .build();
     SeekableStreamIndexTaskTuningConfig tuningConfig = mock(SeekableStreamIndexTaskTuningConfig.class);
     SeekableStreamIndexTaskIOConfig<String, String> ioConfig = new TestSeekableStreamIndexTaskIOConfig();
 

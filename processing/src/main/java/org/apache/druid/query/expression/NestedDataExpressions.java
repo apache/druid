@@ -22,6 +22,7 @@ package org.apache.druid.query.expression;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -96,6 +97,117 @@ public class NestedDataExpressions
         }
       }
       return new StructExpr(args);
+    }
+  }
+
+  public static class JsonMergeExprMacro implements ExprMacroTable.ExprMacro
+  {
+    public static final String NAME = "json_merge";
+
+    private final ObjectMapper jsonMapper;
+
+    @Inject
+    public JsonMergeExprMacro(
+        @Json ObjectMapper jsonMapper
+    )
+    {
+      this.jsonMapper = jsonMapper;
+    }
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      if (args.size() < 2) {
+        throw validationFailed("must have at least two arguments");
+      }
+
+      final class ParseJsonExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
+      {
+        public ParseJsonExpr(List<Expr> args)
+        {
+          super(JsonMergeExprMacro.this, args);
+        }
+
+        @Override
+        public ExprEval eval(ObjectBinding bindings)
+        {
+          ExprEval arg = args.get(0).eval(bindings);
+          Object obj;
+
+          if (arg.value() == null) {
+            throw JsonMergeExprMacro.this.validationFailed(
+              "invalid input expected %s but got %s instead",
+                ExpressionType.STRING,
+                arg.type()
+            );
+          }
+
+          try {
+            obj = jsonMapper.readValue(getArgAsJson(arg), Object.class);
+          }
+          catch (JsonProcessingException e) {
+            throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", arg.asString());
+          }
+
+          ObjectReader updater = jsonMapper.readerForUpdating(obj);
+
+          for (int i = 1; i < args.size(); i++) {
+            ExprEval argSub = args.get(i).eval(bindings);
+            
+            try {
+              String str = getArgAsJson(argSub);
+              if (str != null) {
+                obj = updater.readValue(str);
+              }
+            }
+            catch (JsonProcessingException e) {
+              throw JsonMergeExprMacro.this.processingFailed(e, "bad string input [%s]", argSub.asString());
+            }
+          }
+
+          return ExprEval.ofComplex(ExpressionType.NESTED_DATA, obj);
+        }
+
+        @Nullable
+        @Override
+        public ExpressionType getOutputType(InputBindingInspector inspector)
+        {
+          return ExpressionType.NESTED_DATA;
+        }
+
+        private String getArgAsJson(ExprEval arg)
+        {
+          if (arg.value() == null) {
+            return null;
+          }
+
+          if (arg.type().is(ExprType.STRING)) {
+            return arg.asString();
+          } 
+          
+          if (arg.type().is(ExprType.COMPLEX)) {
+            try {
+              return jsonMapper.writeValueAsString(unwrap(arg));
+            }
+            catch (JsonProcessingException e) {
+              throw JsonMergeExprMacro.this.processingFailed(e, "bad complex input [%s]", arg.asString());
+            } 
+          } 
+          
+          throw JsonMergeExprMacro.this.validationFailed(
+            "invalid input expected %s but got %s instead",
+            ExpressionType.STRING,
+            arg.type()
+          );
+        }
+      }
+      return new ParseJsonExpr(args);
     }
   }
 

@@ -43,7 +43,12 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
+@RunWith(Parameterized.class)
 public class FilterBundleTest extends InitializedNullHandlingTest
 {
   private Closer closer;
@@ -52,6 +57,15 @@ public class FilterBundleTest extends InitializedNullHandlingTest
 
   @Rule
   public TemporaryFolder tmpDir = new TemporaryFolder();
+
+  @Parameters
+  public static Object[] flags()
+  {
+    return new Object[]{false, true};
+  }
+
+  @Parameter
+  public boolean cursorAutoArrangeFilters;
 
   @Before
   public void setUp()
@@ -317,8 +331,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
 
   protected FilterBundle makeFilterBundle(final Filter filter)
   {
-    return filter.makeFilterBundle(
-        indexSelector,
+    return new FilterBundle.Builder(filter, indexSelector, cursorAutoArrangeFilters).build(
         new DefaultBitmapResultFactory(bitmapFactory),
         indexSelector.getNumRows(),
         indexSelector.getNumRows(),

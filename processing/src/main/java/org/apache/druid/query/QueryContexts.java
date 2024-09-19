@@ -63,6 +63,7 @@ public class QueryContexts
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.

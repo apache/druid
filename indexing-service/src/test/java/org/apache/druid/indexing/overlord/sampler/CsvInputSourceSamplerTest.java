@@ -47,14 +47,11 @@ public class CsvInputSourceSamplerTest extends InitializedNullHandlingTest
   {
     final TimestampSpec timestampSpec = new TimestampSpec(null, null, DateTimes.of("1970"));
     final DimensionsSpec dimensionsSpec = new DimensionsSpec(null);
-    final DataSchema dataSchema = new DataSchema(
-        "sampler",
-        timestampSpec,
-        dimensionsSpec,
-        null,
-        null,
-        null
-    );
+    final DataSchema dataSchema = DataSchema.builder()
+                                            .withDataSource("sampler")
+                                            .withTimestamp(timestampSpec)
+                                            .withDimensions(dimensionsSpec)
+                                            .build();
 
     final List<String> strCsvRows = ImmutableList.of(
         "FirstName,LastName,Number,Gender",
