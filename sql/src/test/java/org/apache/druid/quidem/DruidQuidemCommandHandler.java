@@ -80,50 +80,50 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    public final String describe(Context x)
+    public final String describe(Context ctx)
     {
-      return commandName() + " [sql: " + x.previousSqlCommand().sql + "]";
+      return commandName() + " [sql: " + ctx.previousSqlCommand().sql + "]";
     }
 
     @Override
-    public final void execute(Context x, boolean execute)
+    public final void execute(Context ctx, boolean execute)
     {
       if (execute) {
         try {
-          executeExplain(x);
+          executeExplain(ctx);
         }
         catch (Exception e) {
           throw new Error(e);
         }
       } else {
-        x.echo(content);
+        ctx.echo(content);
       }
-      x.echo(lines);
+      ctx.echo(lines);
     }
 
-    protected final void executeQuery(Context x)
+    protected final void executeQuery(Context ctx)
     {
-      final SqlCommand sqlCommand = x.previousSqlCommand();
-      executeQuery(x, sqlCommand.sql);
+      final SqlCommand sqlCommand = ctx.previousSqlCommand();
+      executeQuery(ctx, sqlCommand.sql);
     }
 
-    protected final void executeExplainQuery(Context x)
+    protected final void executeExplainQuery(Context ctx)
     {
-      boolean isExplainSupported = DruidConnectionExtras.unwrapOrThrow(x.connection()).isExplainSupported();
+      boolean isExplainSupported = DruidConnectionExtras.unwrapOrThrow(ctx.connection()).isExplainSupported();
 
-      final SqlCommand sqlCommand = x.previousSqlCommand();
+      final SqlCommand sqlCommand = ctx.previousSqlCommand();
 
       if (isExplainSupported) {
-        executeQuery(x, "explain plan for " + sqlCommand.sql);
+        executeQuery(ctx, "explain plan for " + sqlCommand.sql);
       } else {
-        executeQuery(x, sqlCommand.sql);
+        executeQuery(ctx, sqlCommand.sql);
       }
     }
 
-    protected final void executeQuery(Context x, String sql)
+    protected final void executeQuery(Context ctx, String sql)
     {
       try (
-          final Statement statement = x.connection().createStatement();
+          final Statement statement = ctx.connection().createStatement();
           final ResultSet resultSet = statement.executeQuery(sql)) {
         // throw away all results
         while (resultSet.next()) {
@@ -135,12 +135,12 @@ public class DruidQuidemCommandHandler implements CommandHandler
       }
     }
 
-    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context ctx)
     {
-      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
+      return DruidConnectionExtras.unwrapOrThrow(ctx.connection()).getDruidHookDispatcher();
     }
 
-    protected abstract void executeExplain(Context x) throws Exception;
+    protected abstract void executeExplain(Context ctx) throws Exception;
   }
 
   /** Command that prints the plan for the current query. */
@@ -152,22 +152,22 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected void executeExplain(Context x) throws Exception
+    protected void executeExplain(Context ctx) throws Exception
     {
-      DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();
+      DruidConnectionExtras connectionExtras = (DruidConnectionExtras) ctx.connection();
       ObjectMapper objectMapper = connectionExtras.getObjectMapper();
-      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(ctx);
       List<Query<?>> logged = new ArrayList<>();
       try (Closeable unhook = dhp.withHook(DruidHook.NATIVE_PLAN, (key, query) -> {
         logged.add(query);
       })) {
-        executeExplainQuery(x);
+        executeExplainQuery(ctx);
       }
 
       for (Query<?> query : logged) {
         query = BaseCalciteQueryTest.recursivelyClearContext(query, objectMapper);
         String str = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
-        x.echo(ImmutableList.of(str));
+        ctx.echo(ImmutableList.of(str));
       }
     }
 
@@ -187,14 +187,14 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected final void executeExplain(Context x) throws IOException
+    protected final void executeExplain(Context ctx) throws IOException
     {
-      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(ctx);
       List<RelNode> logged = new ArrayList<>();
       try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
         logged.add(relNode);
       })) {
-        executeExplainQuery(x);
+        executeExplainQuery(ctx);
       }
 
       for (RelNode node : logged) {
@@ -202,7 +202,7 @@ public class DruidQuidemCommandHandler implements CommandHandler
           node = ((DruidRel) node).unwrapLogicalPlan();
         }
         String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
-        x.echo(ImmutableList.of(str));
+        ctx.echo(ImmutableList.of(str));
       }
     }
   }
@@ -221,17 +221,17 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected final void executeExplain(Context x) throws IOException
+    protected final void executeExplain(Context ctx) throws IOException
     {
-      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(ctx);
       List<String> logged = new ArrayList<>();
       try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
         logged.add(relNode);
       })) {
-        executeQuery(x);
+        executeQuery(ctx);
       }
 
-      x.echo(logged);
+      ctx.echo(logged);
     }
   }
 
