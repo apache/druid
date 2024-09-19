@@ -19,11 +19,11 @@
 
 package org.apache.druid.frame.allocation;
 
-public class HeapMemoryAllocatorTest extends BaseMemoryAllocatorTest
+public class ArenaMemoryAllocatorTest extends BaseMemoryAllocatorTest
 {
   @Override
   protected MemoryAllocator makeAllocator(int capacity)
   {
-    return new HeapMemoryAllocator(capacity);
+    return ArenaMemoryAllocator.createOnHeap(capacity);
   }
 }
