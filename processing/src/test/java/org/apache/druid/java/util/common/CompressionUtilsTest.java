@@ -940,7 +940,7 @@ public class CompressionUtilsTest
    */
   @ParameterizedTest
   @EnumSource(CompressionUtils.Format.class)
-  void testCompressAndDecompressForAllFormats(CompressionUtils.Format format) throws IOException
+  public void testCompressAndDecompressForAllFormats(CompressionUtils.Format format) throws IOException
   {
     String originalString = "This is a test string for compression in format: " + format;
 
@@ -949,7 +949,7 @@ public class CompressionUtilsTest
     String decompressedString = decompressString(compressedData, format);
 
     // Verify the original and decompressed strings match
-    Assert.assertEquals(decompressedString, "Decompressed string does not match the original for format: " + format, originalString);
+    Assert.assertEquals("Decompressed string does not match the original for format: " + format, decompressedString, originalString);
   }
 
   /**
@@ -958,7 +958,7 @@ public class CompressionUtilsTest
    */
   @ParameterizedTest
   @EnumSource(CompressionUtils.Format.class)
-  void testChaosCompressionDecompression(CompressionUtils.Format format) throws IOException
+  public void testChaosCompressionDecompression(CompressionUtils.Format format) throws IOException
   {
     String originalString = "This is a chaos test string for compression in format: " + format;
 
@@ -969,12 +969,11 @@ public class CompressionUtilsTest
     for (CompressionUtils.Format wrongFormat : CompressionUtils.Format.values()) {
       if (wrongFormat != format) {
         try {
-          decompressString(compressedData, wrongFormat);
-          Assert.fail("Expected decompression failure for mismatched formats. Compressed with: " + format + ", decompressed with: " + wrongFormat);
-        } 
+          final String decompressedValue = decompressString(compressedData, wrongFormat);
+          Assert.fail("Expected decompression failure for mismatched formats. Compressed with: " + format + ", decompressed with: " + wrongFormat + ", Decompressed value: " + decompressedValue);
+        }
         catch (IOException e) {
           // Expected exception, continue
-          Assert.assertNotNull(e.getMessage(), "Exception message should exist on decompression failure.");
         }
       }
     }
@@ -984,7 +983,7 @@ public class CompressionUtilsTest
    * Test for compressing with an unsupported or invalid input.
    */
   @Test
-  void testCompressWithInvalidInput()
+  public void testCompressWithInvalidInput()
   {
     CompressionUtils.Format format = CompressionUtils.Format.GZ;
     // Attempting to compress a null input should throw an exception

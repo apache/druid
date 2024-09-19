@@ -69,8 +69,10 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+import java.util.zip.InflaterInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -657,7 +659,7 @@ public class CompressionUtils
       case XZ: return new XZCompressorOutputStream(in);
       case SNAPPY: return new FramedSnappyCompressorOutputStream(in);
       case ZSTD: return new ZstdCompressorOutputStream(in);
-      case ZIP: return new ZipOutputStream(in, StandardCharsets.UTF_8);
+      case ZIP: return new DeflaterOutputStream(in);
       default: return in;
     }
   }
@@ -702,7 +704,7 @@ public class CompressionUtils
       case XZ: return new XZCompressorInputStream(in, true);
       case SNAPPY: return new FramedSnappyCompressorInputStream(in);
       case ZSTD: return new ZstdCompressorInputStream(in);
-      case ZIP: return new ZipInputStream(in, StandardCharsets.UTF_8);
+      case ZIP: return new InflaterInputStream(in);
       default: return in;
     }
   }
