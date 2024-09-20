@@ -30,7 +30,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -41,8 +40,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.EnumSet;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.HashSet;
 
 public class HttpInputSourceTest
 {
@@ -152,12 +150,17 @@ public class HttpInputSourceTest
   }
 
   @Test
-  public void testAllowedHeaders()
+  public void testEmptyAllowedHeaders()
   {
     HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(
         null,
-        Sets.newHashSet("R-cookie", "Content-type")
+        new HashSet<>()
     );
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage(
+        "Got forbidden header [r-Cookie], allowed headers are only [[]]. "
+        + "You can control the allowed headers by updating druid.ingestion.http.allowedHeaders");
+
     final HttpInputSource inputSource = new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
         "myName",
@@ -166,12 +169,6 @@ public class HttpInputSourceTest
         ImmutableMap.of("r-Cookie", "test", "Content-Type", "application/json"),
         httpInputSourceConfig
     );
-    Set<String> expectedSet = inputSource.getRequestHeaders()
-                                         .keySet()
-                                         .stream()
-                                         .map(StringUtils::toLowerCase)
-                                         .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSet, httpInputSourceConfig.getAllowedHeaders());
   }
 
   @Test
@@ -183,7 +180,7 @@ public class HttpInputSourceTest
     );
     expectedException.expect(DruidException.class);
     expectedException.expectMessage(
-        "Got forbidden header G-Cookie, allowed headers are only [r-cookie, content-type]");
+        "Got forbidden header [G-Cookie], allowed headers are only [[r-cookie, content-type]]");
     new HttpInputSource(
         ImmutableList.of(URI.create("http://test.com/http-test")),
         "myName",

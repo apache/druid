@@ -60,7 +60,7 @@ public class MSQTestDelegateDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
   {
     final DataSegment dataSegment = delegate.push(file, segment, useUniquePath);
-    segmentManager.addDataSegment(dataSegment);
+    segmentManager.addTestGeneratedDataSegment(dataSegment);
     return dataSegment;
   }
 

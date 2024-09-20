@@ -327,7 +327,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
           this.valueColumn,
           Arrays.toString(columns.toArray())
       );
-      CSVParser csvParser = new CSVParser(null, columns, hasHeaderRow, skipHeaderRows);
+      CSVParser csvParser = new CSVParser(null, columns, hasHeaderRow, skipHeaderRows, false);
       csvParser.startFileFromBeginning();
       this.parser = new DelegateParser(
           csvParser,
@@ -355,13 +355,13 @@ public class UriExtractionNamespace implements ExtractionNamespace
     @JsonProperty
     public String getKeyColumn()
     {
-      return this.keyColumn;
+      return keyColumn;
     }
 
     @JsonProperty
     public String getValueColumn()
     {
-      return this.valueColumn;
+      return valueColumn;
     }
 
     @Override
@@ -431,7 +431,8 @@ public class UriExtractionNamespace implements ExtractionNamespace
           StringUtils.emptyToNullNonDruidDataString(delimiter),
           StringUtils.emptyToNullNonDruidDataString(listDelimiter),
           hasHeaderRow,
-          skipHeaderRows
+          skipHeaderRows,
+          false
       );
       delegate.startFileFromBeginning();
       Preconditions.checkArgument(

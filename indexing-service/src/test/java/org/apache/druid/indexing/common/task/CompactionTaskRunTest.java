@@ -34,6 +34,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
@@ -227,7 +228,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         segmentGranularity,
         queryGranularity,
         intervals,
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         expectedLongSumMetric
     );
   }
@@ -386,7 +392,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         expectedLongSumMetric.put("fieldName", "val");
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                    new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                )
+            ),
             ImmutableList.of(expectedLongSumMetric),
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -801,7 +812,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
@@ -866,7 +882,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
@@ -1676,8 +1697,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
               ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1)),
               DimensionsSpec.builder()
                             .setDimensions(Arrays.asList(
-                                new StringDimensionSchema("ts"),
-                                new StringDimensionSchema("dim"),
+                                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
                                 new NewSpatialDimensionSchema("spatial", Collections.singletonList("spatial"))
                             ))
                             .build(),
