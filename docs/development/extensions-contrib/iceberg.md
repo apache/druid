@@ -31,7 +31,7 @@ Iceberg refers to these metastores as catalogs. The Iceberg extension lets you c
 * Hive metastore catalog
 * Local catalog
 
-Druid does not support AWS Glue and REST based catalogs yet.
+Druid does not support AWS Glue catalog yet.
 
 For a given catalog, Iceberg input source reads the table name from the catalog, applies the filters, and extracts all the underlying live data files up to the latest snapshot.
 The data files can be in Parquet, ORC, or Avro formats. The data files typically reside in a warehouse location, which can be in HDFS, S3, or the local filesystem.
@@ -106,6 +106,11 @@ Since the Hadoop AWS connector uses the `s3a` filesystem client, specify the war
 
 The local catalog type can be used for catalogs configured on the local filesystem. Set the `icebergCatalog` type to `local`. You can use this catalog for demos or localized tests. It is not recommended for production use cases.
 The `warehouseSource` is set to `local` because this catalog only supports reading from a local filesystem.
+
+## REST catalog
+
+To connect to an Iceberg REST Catalog server, configure the `icebergCatalog` type as `rest`. The Iceberg REST Open API spec gives catalogs greater control over the implementation and in most cases, the `warehousePath` does not have to be provided by the client.
+Security credentials may be provided in the `catalogProperties` object.
 
 ## Downloading Iceberg extension
 
