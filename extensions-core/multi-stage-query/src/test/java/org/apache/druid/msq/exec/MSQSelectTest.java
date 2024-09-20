@@ -1779,7 +1779,7 @@ public class MSQSelectTest extends MSQTestBase
                                      .setDataSource(
                                          new ExternalDataSource(
                                              new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
-                                             new CsvInputFormat(null, null, null, true, 0),
+                                             new CsvInputFormat(null, null, null, true, 0, null),
                                              RowSignature.builder().add("dim1", ColumnType.STRING).build()
                                          )
                                      )
@@ -2324,7 +2324,7 @@ public class MSQSelectTest extends MSQTestBase
     if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
       new File(
           localFileStorageDir,
-          DurableStorageUtils.getWorkerOutputSuccessFilePath("query-test-query", 0, 0)
+          DurableStorageUtils.getWorkerOutputSuccessFilePath(TEST_CONTROLLER_TASK_ID, 0, 0)
       );
 
       Mockito.verify(localFileStorageConnector, Mockito.times(2))
@@ -2376,7 +2376,7 @@ public class MSQSelectTest extends MSQTestBase
                                    Collections.nCopies(numFiles, toRead),
                                    SystemFields.none()
                                ),
-                               new CsvInputFormat(null, null, null, true, 0),
+                               new CsvInputFormat(null, null, null, true, 0, null),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
                            .intervals(querySegmentSpec(Filtration.eternity()))

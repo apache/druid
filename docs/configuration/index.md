@@ -616,9 +616,10 @@ the [HDFS input source](../ingestion/input-sources.md#hdfs-input-source).
 You can set the following property to specify permissible protocols for
 the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
-|Property|Possible values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source.|`["http", "https"]`|
+|Property| Possible values                                                                                                                                                  | Description                                                                                                                               |Default|
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.ingestion.http.allowedProtocols`| List of protocols                                                                                                                                                | Allowed protocols for the HTTP input source.                                                                                              |`["http", "https"]`|
+|`druid.ingestion.http.allowedHeaders`| A list of permitted request headers for the HTTP input source. By default, the list is empty, which means no headers are allowed in the ingestion specification. |`[]`|
 
 ### External data access security configuration
 
@@ -1795,6 +1796,7 @@ This strategy can be enabled by setting `druid.query.scheduler.prioritization.st
 |`druid.query.scheduler.prioritization.periodThreshold`|ISO duration threshold for how old data can be queried before automatically adjusting query priority.|none|
 |`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|none|
+|`druid.query.scheduler.prioritization.segmentRangeThreshold`|ISO duration threshold for maximum segment range a query can span before the priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|none|
 
 ##### Laning strategies

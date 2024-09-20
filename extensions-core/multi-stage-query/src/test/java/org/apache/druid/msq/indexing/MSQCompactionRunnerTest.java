@@ -93,6 +93,7 @@ public class MSQCompactionRunnerTest
 
   private static final String TIMESTAMP_COLUMN = ColumnHolder.TIME_COLUMN_NAME;
   private static final int TARGET_ROWS_PER_SEGMENT = 100000;
+  private static final int MAX_ROWS_PER_SEGMENT = 150000;
   private static final GranularityType SEGMENT_GRANULARITY = GranularityType.HOUR;
   private static final GranularityType QUERY_GRANULARITY = GranularityType.HOUR;
   private static List<String> PARTITION_DIMENSIONS;
@@ -258,19 +259,21 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    DataSchema dataSchema = new DataSchema(
-        DATA_SOURCE,
-        new TimestampSpec(TIMESTAMP_COLUMN, null, null),
-        new DimensionsSpec(DIMENSIONS),
-        new AggregatorFactory[]{},
-        new UniformGranularitySpec(
-            SEGMENT_GRANULARITY.getDefaultGranularity(),
-            null,
-            false,
-            Collections.singletonList(COMPACTION_INTERVAL)
-        ),
-        new TransformSpec(dimFilter, Collections.emptyList())
-    );
+    DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource(DATA_SOURCE)
+                  .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+                  .withDimensions(DIMENSIONS)
+                  .withGranularity(
+                      new UniformGranularitySpec(
+                          SEGMENT_GRANULARITY.getDefaultGranularity(),
+                          null,
+                          false,
+                          Collections.singletonList(COMPACTION_INTERVAL)
+                      )
+                  )
+                  .withTransform(new TransformSpec(dimFilter, Collections.emptyList()))
+                  .build();
 
 
     List<MSQControllerTask> msqControllerTasks = MSQ_COMPACTION_RUNNER.createMsqControllerTasks(
@@ -286,7 +289,7 @@ public class MSQCompactionRunnerTest
         new MSQTuningConfig(
             1,
             MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
-            TARGET_ROWS_PER_SEGMENT,
+            MAX_ROWS_PER_SEGMENT,
             null,
             createIndexSpec()
         ),
@@ -326,7 +329,7 @@ public class MSQCompactionRunnerTest
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
 
     CompactionTask taskCreatedWithTransformSpec = createCompactionTask(
-        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
+        new DimensionRangePartitionsSpec(null, MAX_ROWS_PER_SEGMENT, PARTITION_DIMENSIONS, false),
         dimFilter,
         Collections.emptyMap(),
         null,
@@ -364,7 +367,7 @@ public class MSQCompactionRunnerTest
         new MSQTuningConfig(
             1,
             MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,
-            TARGET_ROWS_PER_SEGMENT,
+            MAX_ROWS_PER_SEGMENT,
             null,
             createIndexSpec()
         ),

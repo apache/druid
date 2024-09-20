@@ -19,6 +19,7 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -80,12 +81,14 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
+import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -98,6 +101,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -424,7 +428,8 @@ public class QueryResourceTest
                 overrideConfig,
                 new AuthConfig(),
                 System.currentTimeMillis(),
-                System.nanoTime())
+                System.nanoTime()
+            )
             {
               @Override
               public void emitLogsAndMetrics(@Nullable Throwable e, @Nullable String remoteAddress, long bytesWritten)
@@ -453,7 +458,8 @@ public class QueryResourceTest
         entity.getUnderlyingException(),
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,
-            DruidException.Category.RUNTIME_FAILURE, "legacyQueryException")
+            DruidException.Category.RUNTIME_FAILURE, "legacyQueryException"
+        )
             .expectMessageIs("something")
     );
   }
@@ -1190,7 +1196,7 @@ public class QueryResourceTest
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
-        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null),
+        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null, null),
         new HiLoQueryLaningStrategy(1),
         new ServerConfig()
     );
@@ -1248,6 +1254,46 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+  }
+
+  @Test
+  public void testNativeQueryWriter_goodResponse() throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final QueryResultPusher.Writer writer = new QueryResource.NativeQueryWriter(jsonMapper, baos);
+    writer.writeResponseStart();
+    writer.writeRow(Arrays.asList("foo", "bar"));
+    writer.writeRow(Collections.singletonList("baz"));
+    writer.writeResponseEnd();
+    writer.close();
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            ImmutableList.of("foo", "bar"),
+            ImmutableList.of("baz")
+        ),
+        jsonMapper.readValue(baos.toByteArray(), Object.class)
+    );
+  }
+
+  @Test
+  public void testNativeQueryWriter_truncatedResponse() throws IOException
+  {
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final QueryResultPusher.Writer writer = new QueryResource.NativeQueryWriter(jsonMapper, baos);
+    writer.writeResponseStart();
+    writer.writeRow(Arrays.asList("foo", "bar"));
+    writer.close(); // Simulate an error that occurs midstream; close writer without calling writeResponseEnd.
+
+    final JsonProcessingException e = Assert.assertThrows(
+        JsonProcessingException.class,
+        () -> jsonMapper.readValue(baos.toByteArray(), Object.class)
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("expected close marker for Array"))
+    );
   }
 
   private void createScheduledQueryResource(

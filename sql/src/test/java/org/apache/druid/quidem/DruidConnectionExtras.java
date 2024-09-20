@@ -30,15 +30,19 @@ public interface DruidConnectionExtras
 
   DruidHookDispatcher getDruidHookDispatcher();
 
+  boolean isExplainSupported();
+
   class DruidConnectionExtrasImpl implements DruidConnectionExtras
   {
     private final ObjectMapper objectMapper;
     private final DruidHookDispatcher druidHookDispatcher;
+    private final boolean isExplainSupported;
 
-    public DruidConnectionExtrasImpl(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher)
+    public DruidConnectionExtrasImpl(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher, boolean isExplainSupported)
     {
       this.objectMapper = objectMapper;
       this.druidHookDispatcher = druidHookDispatcher;
+      this.isExplainSupported = isExplainSupported;
     }
 
     @Override
@@ -52,6 +56,12 @@ public interface DruidConnectionExtras
     {
       return druidHookDispatcher;
     }
+
+    @Override
+    public boolean isExplainSupported()
+    {
+      return isExplainSupported;
+    }
   }
 
   static DruidConnectionExtras unwrapOrThrow(Connection connection)
@@ -61,4 +71,5 @@ public interface DruidConnectionExtras
     }
     throw new UnsupportedOperationException("Expected DruidConnectionExtras to be implemented by connection!");
   }
+
 }

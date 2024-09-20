@@ -480,9 +480,8 @@ public class StringFieldReader implements FieldReader
         public boolean isNull(int rowNum)
         {
           final long fieldPosition = coach.computeFieldPosition(rowNum);
-          byte[] nullBytes = new byte[3];
-          dataRegion.getByteArray(fieldPosition, nullBytes, 0, 3);
-          return Arrays.equals(nullBytes, EXPECTED_BYTES_FOR_NULL);
+          return dataRegion.getByte(fieldPosition) == StringFieldWriter.NULL_ROW
+                 && dataRegion.getByte(fieldPosition + 1) == StringFieldWriter.ROW_TERMINATOR;
         }
 
         @Override

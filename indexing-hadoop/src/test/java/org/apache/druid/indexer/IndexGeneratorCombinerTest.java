@@ -64,30 +64,33 @@ public class IndexGeneratorCombinerTest
   {
     HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new TimeAndDimsParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "keywords")))
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited"),
-                    new HyperUniquesAggregatorFactory("unique_hosts", "host")
-                },
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.NONE,
-                    ImmutableList.of(Intervals.of("2010/2011"))
-                ),
-                null,
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource("website")
+                      .withParserMap(
+                          HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                              new StringInputRowParser(
+                                  new TimeAndDimsParseSpec(
+                                      new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "keywords")))
+                                  ),
+                                  null
+                              ),
+                              Map.class
+                          )
+                      )
+                      .withAggregators(
+                          new LongSumAggregatorFactory("visited_sum", "visited"),
+                          new HyperUniquesAggregatorFactory("unique_hosts", "host")
+                      )
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              Granularities.NONE,
+                              ImmutableList.of(Intervals.of("2010/2011"))
+                          )
+                      )
+                      .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 ImmutableMap.of(
                     "paths",

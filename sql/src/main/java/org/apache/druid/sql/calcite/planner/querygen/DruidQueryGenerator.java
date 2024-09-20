@@ -36,6 +36,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery;
 import org.apache.druid.sql.calcite.rel.PartialDruidQuery.Stage;
 import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
+import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidSort;
 
@@ -58,20 +59,83 @@ public class DruidQueryGenerator
     this.vertexFactory = new PDQVertexFactory(plannerContext, rexBuilder);
   }
 
+  /**
+   * Tracks the upstream nodes during traversal.
+   *
+   * Its main purpose is to provide access to parent nodes;
+   * so that context sensitive logics can be formalized with it.
+   */
+  static class DruidNodeStack
+  {
+    static class Entry
+    {
+      public final DruidLogicalNode node;
+      public final int operandIndex;
+
+      public Entry(DruidLogicalNode node, int operandIndex)
+      {
+        this.node = node;
+        this.operandIndex = operandIndex;
+      }
+    }
+
+    Stack<Entry> stack = new Stack<>();
+
+    public void push(DruidLogicalNode item)
+    {
+      push(item, 0);
+    }
+
+    public void push(DruidLogicalNode item, int operandIndex)
+    {
+      stack.push(new Entry(item, operandIndex));
+    }
+
+    public void pop()
+    {
+      stack.pop();
+    }
+
+    public int size()
+    {
+      return stack.size();
+    }
+
+    public DruidLogicalNode peekNode()
+    {
+      return stack.peek().node;
+    }
+
+    public DruidLogicalNode parentNode()
+    {
+      return getNode(1).node;
+    }
+
+    public Entry getNode(int i)
+    {
+      return stack.get(stack.size() - 1 - i);
+    }
+
+    public int peekOperandIndex()
+    {
+      return stack.peek().operandIndex;
+    }
+  }
+
   public DruidQuery buildQuery()
   {
-    Stack<DruidLogicalNode> stack = new Stack<>();
+    DruidNodeStack stack = new DruidNodeStack();
     stack.push(relRoot);
     Vertex vertex = buildVertexFor(stack);
     return vertex.buildQuery(true);
   }
 
-  private Vertex buildVertexFor(Stack<DruidLogicalNode> stack)
+  private Vertex buildVertexFor(DruidNodeStack stack)
   {
     List<Vertex> newInputs = new ArrayList<>();
 
-    for (RelNode input : stack.peek().getInputs()) {
-      stack.push((DruidLogicalNode) input);
+    for (RelNode input : stack.peekNode().getInputs()) {
+      stack.push((DruidLogicalNode) input, newInputs.size());
       newInputs.add(buildVertexFor(stack));
       stack.pop();
     }
@@ -79,11 +143,11 @@ public class DruidQueryGenerator
     return vertex;
   }
 
-  private Vertex processNodeWithInputs(Stack<DruidLogicalNode> stack, List<Vertex> newInputs)
+  private Vertex processNodeWithInputs(DruidNodeStack stack, List<Vertex> newInputs)
   {
-    DruidLogicalNode node = stack.peek();
+    DruidLogicalNode node = stack.peekNode();
     if (node instanceof SourceDescProducer) {
-      return vertexFactory.createVertex(PartialDruidQuery.create(node), newInputs);
+      return vertexFactory.createVertex(stack, PartialDruidQuery.create(node), newInputs);
     }
     if (newInputs.size() == 1) {
       Vertex inputVertex = newInputs.get(0);
@@ -92,6 +156,7 @@ public class DruidQueryGenerator
         return newVertex.get();
       }
       inputVertex = vertexFactory.createVertex(
+          stack,
           PartialDruidQuery.createOuterQuery(((PDQVertex) inputVertex).partialDruidQuery, vertexFactory.plannerContext),
           ImmutableList.of(inputVertex)
       );
@@ -116,7 +181,7 @@ public class DruidQueryGenerator
     /**
      * Extends the current vertex to include the specified parent.
      */
-    Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack);
+    Optional<Vertex> extendWith(DruidNodeStack stack);
 
     /**
      * Decides wether this {@link Vertex} can be unwrapped into an {@link SourceDesc}.
@@ -133,6 +198,42 @@ public class DruidQueryGenerator
     SourceDesc unwrapSourceDesc();
   }
 
+  enum JoinSupportTweaks
+  {
+    NONE,
+    LEFT,
+    RIGHT;
+
+    static JoinSupportTweaks analyze(DruidNodeStack stack)
+    {
+      if (stack.size() < 2) {
+        return NONE;
+      }
+      DruidLogicalNode possibleJoin = stack.parentNode();
+      if (!(possibleJoin instanceof DruidJoin)) {
+        return NONE;
+      }
+      if (stack.peekOperandIndex() == 0) {
+        return LEFT;
+      } else {
+        return RIGHT;
+      }
+    }
+
+    boolean finalizeSubQuery()
+    {
+      return this == NONE;
+    }
+
+    boolean forceSubQuery(SourceDesc sourceDesc)
+    {
+      if (sourceDesc.dataSource.isGlobal()) {
+        return false;
+      }
+      return this == RIGHT;
+    }
+  }
+
   /**
    * {@link PartialDruidQuery} based {@link Vertex} factory.
    */
@@ -147,20 +248,23 @@ public class DruidQueryGenerator
       this.rexBuilder = rexBuilder;
     }
 
-    Vertex createVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+    Vertex createVertex(DruidNodeStack stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      return new PDQVertex(partialDruidQuery, inputs);
+      JoinSupportTweaks jst = JoinSupportTweaks.analyze(stack);
+      return new PDQVertex(partialDruidQuery, inputs, jst);
     }
 
     public class PDQVertex implements Vertex
     {
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
+      final JoinSupportTweaks jst;
 
-      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, JoinSupportTweaks jst)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
+        this.jst = jst;
       }
 
       @Override
@@ -172,7 +276,7 @@ public class DruidQueryGenerator
             source.rowSignature,
             plannerContext,
             rexBuilder,
-            !topLevel
+            !(topLevel) && jst.finalizeSubQuery()
         );
       }
 
@@ -207,21 +311,22 @@ public class DruidQueryGenerator
        * Extends the the current partial query with the new parent if possible.
        */
       @Override
-      public Optional<Vertex> extendWith(Stack<DruidLogicalNode> stack)
+      public Optional<Vertex> extendWith(DruidNodeStack stack)
       {
         Optional<PartialDruidQuery> newPartialQuery = extendPartialDruidQuery(stack);
         if (!newPartialQuery.isPresent()) {
           return Optional.empty();
+
         }
-        return Optional.of(createVertex(newPartialQuery.get(), inputs));
+        return Optional.of(createVertex(stack, newPartialQuery.get(), inputs));
       }
 
       /**
        * Merges the given {@link RelNode} into the current {@link PartialDruidQuery}.
        */
-      private Optional<PartialDruidQuery> extendPartialDruidQuery(Stack<DruidLogicalNode> stack)
+      private Optional<PartialDruidQuery> extendPartialDruidQuery(DruidNodeStack stack)
       {
-        DruidLogicalNode parentNode = stack.peek();
+        DruidLogicalNode parentNode = stack.peekNode();
         if (accepts(stack, Stage.WHERE_FILTER, Filter.class)) {
           PartialDruidQuery newPartialQuery = partialDruidQuery.withWhereFilter((Filter) parentNode);
           return Optional.of(newPartialQuery);
@@ -261,12 +366,12 @@ public class DruidQueryGenerator
         return Optional.empty();
       }
 
-      private boolean accepts(Stack<DruidLogicalNode> stack, Stage stage, Class<? extends RelNode> clazz)
+      private boolean accepts(DruidNodeStack stack, Stage stage, Class<? extends RelNode> clazz)
       {
-        DruidLogicalNode currentNode = stack.peek();
+        DruidLogicalNode currentNode = stack.peekNode();
         if (Project.class == clazz && stack.size() >= 2) {
           // peek at parent and postpone project for next query stage
-          DruidLogicalNode parentNode = stack.get(stack.size() - 2);
+          DruidLogicalNode parentNode = stack.parentNode();
           if (stage.ordinal() > Stage.AGGREGATE.ordinal()
               && parentNode instanceof DruidAggregate
               && !partialDruidQuery.canAccept(Stage.AGGREGATE)) {
@@ -295,6 +400,9 @@ public class DruidQueryGenerator
       @Override
       public boolean canUnwrapSourceDesc()
       {
+        if (jst.forceSubQuery(getSource())) {
+          return false;
+        }
         if (partialDruidQuery.stage() == Stage.SCAN) {
           return true;
         }

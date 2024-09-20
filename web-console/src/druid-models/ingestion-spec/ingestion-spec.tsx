@@ -1060,6 +1060,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'inputSource.filter',
           label: 'Delta filter',
           type: 'json',
+          placeholder: '{"type": "=", "column": "name", "value": "foo"}',
           defaultValue: {},
           info: (
             <>
@@ -1069,6 +1070,19 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
                 filter
               </ExternalLink>
               <p>A Delta filter json object to filter Delta Lake scan files.</p>
+            </>
+          ),
+        },
+        {
+          name: 'inputSource.snapshotVersion',
+          label: 'Delta snapshot version',
+          type: 'number',
+          placeholder: '(latest)',
+          defaultValue: {},
+          info: (
+            <>
+              The snapshot version to read from the Delta table. By default, the latest snapshot is
+              read.
             </>
           ),
         },
@@ -2031,7 +2045,7 @@ const TUNING_FORM_FIELDS: Field<IngestionSpec>[] = [
   {
     name: 'spec.tuningConfig.maxRowsInMemory',
     type: 'number',
-    defaultValue: 1000000,
+    defaultValue: (spec: IngestionSpec) => (isStreamingSpec(spec) ? 150000 : 1000000),
     info: <>Used in determining when intermediate persists to disk should occur.</>,
   },
   {

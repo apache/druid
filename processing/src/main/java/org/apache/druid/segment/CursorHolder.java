@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 
@@ -54,6 +55,22 @@ public interface CursorHolder extends Closeable
    * Returns true if this {@link CursorHolder} supports calling {@link #asVectorCursor()}.
    */
   default boolean canVectorize()
+  {
+    return false;
+  }
+
+  /**
+   * Returns true if the {@link Cursor} or {@link VectorCursor} contains pre-aggregated columns for all
+   * {@link AggregatorFactory} specified in {@link CursorBuildSpec#getAggregators()}.
+   * <p>
+   * If this method returns true, {@link ColumnSelectorFactory} and
+   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} created from {@link Cursor} and
+   * {@link VectorCursor} respectively will provide selectors for {@link AggregatorFactory#getName()}, and engines
+   * should rewrite the query using {@link AggregatorFactory#getCombiningFactory()}, since the values returned from
+   * these selectors will be of type {@link AggregatorFactory#getIntermediateType()}, so the cursor becomes a "fold"
+   * operation rather than a "build" operation.
+   */
+  default boolean isPreAggregated()
   {
     return false;
   }
