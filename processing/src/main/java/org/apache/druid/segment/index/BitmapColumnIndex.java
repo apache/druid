@@ -38,10 +38,7 @@ public interface BitmapColumnIndex
   /**
    * Returns an estimated cost for computing the bitmap result.
    */
-  default int estimatedComputeCost()
-  {
-    return Integer.MAX_VALUE;
-  }
+  int estimatedComputeCost();
 
   /**
    * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index.

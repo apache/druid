@@ -63,8 +63,8 @@ public interface ValueSetIndexes
    * @param sortedValues   values to match, sorted in matchValueType order
    * @param matchValueType type of the value to match, used to assist conversion from the match value type to the column
    *                       value type
-   * @return               {@link ImmutableBitmap} corresponding to the rows which match the values, or null if an index
-   *                       connot be computed for the supplied value type
+   * @return {@link ImmutableBitmap} corresponding to the rows which match the values, or null if an index
+   * connot be computed for the supplied value type
    */
   @Nullable
   BitmapColumnIndex forSortedValues(@Nonnull List<?> sortedValues, TypeSignature<ValueType> matchValueType);
@@ -78,17 +78,17 @@ public interface ValueSetIndexes
    * {@link Indexed<T>} value dictionary. Uses a strategy that does zipping similar to the merge step of a sort-merge,
    * where we step forward on both the iterator and the dictionary to find matches to build a
    * {@link Iterable<ImmutableBitmap>}.
-   * <p> 
+   * <p>
    * If sorted match value iterator size is greater than (dictionary size * {@link #SORTED_SCAN_RATIO_THRESHOLD}),
    * consider using this method instead of {@link #buildBitmapColumnIndexFromSortedIteratorBinarySearch}.
-   * <p> 
+   * <p>
    * If the values in the iterator are NOT sorted the same as the dictionary, do NOT use this method, use
    * {@link #buildBitmapColumnIndexFromIteratorBinarySearch} instead.
    */
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorScan(
       BitmapFactory bitmapFactory,
       Comparator<T> comparator,
-      Iterable<T> values,
+      List<? extends T> values,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       Supplier<ImmutableBitmap> unknownsBitmap
@@ -96,6 +96,13 @@ public interface ValueSetIndexes
   {
     return new BaseValueSetIndexesFromIterable(bitmapFactory, bitmaps, unknownsBitmap)
     {
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        return Integer.max(values.size(), dictionary.size());
+      }
+
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
@@ -163,13 +170,13 @@ public interface ValueSetIndexes
    * <p>
    * If sorted match value iterator size is less than (dictionary size * {@link #SORTED_SCAN_RATIO_THRESHOLD}),
    * consider using this method instead of {@link #buildBitmapColumnIndexFromSortedIteratorScan}.
-   * <p> 
+   * <p>
    * If the values in the iterator are not sorted the same as the dictionary, do not use this method, use
    * {@link #buildBitmapColumnIndexFromIteratorBinarySearch} instead.
    */
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorBinarySearch(
       BitmapFactory bitmapFactory,
-      Iterable<T> values,
+      List<T> values,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       Supplier<ImmutableBitmap> getUnknownsIndex
@@ -177,6 +184,13 @@ public interface ValueSetIndexes
   {
     return new BaseValueSetIndexesFromIterable(bitmapFactory, bitmaps, getUnknownsIndex)
     {
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        return values.size();
+      }
+
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
@@ -236,14 +250,14 @@ public interface ValueSetIndexes
    * {@link Indexed<T>} value dictionary. This algorithm iterates the values to match and does a binary search for
    * matching values using {@link Indexed#indexOf(Object)} to build a {@link Iterable<ImmutableBitmap>} until the match
    * values iterator is exhausted.
-   * <p> 
+   * <p>
    * If values of the iterator are sorted the same as the dictionary, use
    * {@link #buildBitmapColumnIndexFromSortedIteratorScan} or
    * {@link #buildBitmapColumnIndexFromSortedIteratorBinarySearch} instead.
    */
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromIteratorBinarySearch(
       BitmapFactory bitmapFactory,
-      Iterable<T> values,
+      List<? extends T> values,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       Supplier<ImmutableBitmap> getUnknownsIndex
@@ -252,11 +266,17 @@ public interface ValueSetIndexes
     return new BaseValueSetIndexesFromIterable(bitmapFactory, bitmaps, getUnknownsIndex)
     {
       @Override
+      public int estimatedComputeCost()
+      {
+        return values.size();
+      }
+
+      @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
         return () -> new Iterator<ImmutableBitmap>()
         {
-          final Iterator<T> iterator = values.iterator();
+          final Iterator<? extends T> iterator = values.iterator();
           int next = -1;
 
           @Override
