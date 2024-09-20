@@ -17,46 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.emitter.core;
+package org.apache.druid.java.util.http.client.pool;
 
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
-/**
- */
-public class NoopEmitter extends ServiceEmitter implements Emitter
+public class MetricsEmittingResourcePool<K, V> extends ResourcePool<K, V>
 {
-  public NoopEmitter()
+  private final ServiceEmitter emitter;
+
+  public MetricsEmittingResourcePool(ResourceFactory factory, ResourcePoolConfig config, boolean eagerInitialization, ServiceEmitter emitter)
   {
-    super("", "", null);
+    super(factory, config, eagerInitialization);
+    this.emitter = emitter;
   }
 
   @Override
-  public void start()
+  public ResourceContainer<V> take(final K key)
   {
-    // Do nothing
+    long startTime = System.nanoTime();
+    ResourceContainer<V> retVal = super.take(key);
+    long totalduration = System.nanoTime() - startTime;
+    emitter.emit(ServiceMetricEvent.builder().setDimension("destination", key.toString()).setMetric("httpClient/channelAcquire/time", totalduration));
+    return retVal;
   }
 
-  @Override
-  public void emit(Event event)
-  {
-    // Do nothing
-  }
-
-  @Override
-  public void flush()
-  {
-    // Do nothing
-  }
-
-  @Override
-  public void close()
-  {
-    // Do nothing
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NoopEmitter{}";
-  }
 }
