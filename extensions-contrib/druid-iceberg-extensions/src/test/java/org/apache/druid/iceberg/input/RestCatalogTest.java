@@ -22,7 +22,6 @@ package org.apache.druid.iceberg.input;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.HttpHeaders;
 import com.sun.net.httpserver.HttpServer;
-import org.apache.commons.io.IOUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.rest.RESTCatalog;
@@ -30,7 +29,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -44,10 +42,7 @@ public class RestCatalogTest
   @Test
   public void testCatalogCreate() throws IOException
   {
-
     HttpServer server = null;
-    InputStream inputStream = null;
-    InputStream inputStreamPartial = null;
     ServerSocket serverSocket = null;
     try {
       serverSocket = new ServerSocket(0);
@@ -86,8 +81,6 @@ public class RestCatalogTest
       Assert.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
     }
     finally {
-      IOUtils.closeQuietly(inputStream);
-      IOUtils.closeQuietly(inputStreamPartial);
       if (server != null) {
         server.stop(0);
       }
