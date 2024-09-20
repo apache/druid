@@ -20,7 +20,6 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Injector;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -101,8 +100,8 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
         new AutoTypeColumnSchema("event", null),
         new AutoTypeColumnSchema("agent", null),
         new StringDimensionSchema("client_ip"),
-        new AutoTypeColumnSchema("geo_ip", null),
-        new AutoTypeColumnSchema("language", null),
+        new StringDimensionSchema("geo_ip"),
+        new StringDimensionSchema("language"),
         new StringDimensionSchema("adblock_list"),
         new StringDimensionSchema("app_version"),
         new StringDimensionSchema("path"),
@@ -121,7 +120,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
-        InputSource inputSource = ResourceInputSource.of(
+        ResourceInputSource inputSource = ResourceInputSource.of(
             TestIndex.class.getClassLoader(),
             "kttm-nested-v2-2019-08-25.json"
         );
