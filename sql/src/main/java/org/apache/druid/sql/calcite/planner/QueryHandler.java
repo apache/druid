@@ -113,7 +113,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     CalcitePlanner planner = handlerContext.planner();
     SqlNode validatedQueryNode;
     try {
-      validatedQueryNode = planner.validate(rewriteParameters(root));
+      validatedQueryNode = planner.validate(root);
     }
     catch (ValidationException e) {
       throw DruidPlanner.translateException(e);
@@ -127,24 +127,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     validatedQueryNode.accept(resourceCollectorShuttle);
     resourceActions = resourceCollectorShuttle.getResourceActions();
     return validatedQueryNode;
-  }
-
-  private SqlNode rewriteParameters(SqlNode original)
-  {
-    // Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
-    // {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
-    // replacement.
-    //
-    // Parameter replacement is done only if the client provides parameter values.
-    // If this is a PREPARE-only, then there will be no values even if the statement contains
-    // parameters. If this is a PLAN, then we'll catch later the case that the statement
-    // contains parameters, but no values were provided.
-    PlannerContext plannerContext = handlerContext.plannerContext();
-    if (plannerContext.getParameters().isEmpty()) {
-      return original;
-    } else {
-      return original.accept(new SqlParameterizerShuttle(plannerContext));
-    }
   }
 
   @Override

@@ -36,6 +36,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -218,7 +219,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -786,13 +786,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private String runMultiStageQuery(String query, Map<String, Object> context)
+  private String runMultiStageQuery(String query, Map<String, Object> context, List<TypedValue> parameters)
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         new SqlQueryPlus(
             query,
             context,
-            Collections.emptyList(),
+            parameters,
             CalciteTests.REGULAR_USER_AUTH_RESULT
         )
     );
@@ -888,6 +888,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected String sql = null;
     protected MSQControllerTask taskSpec = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
+    protected List<TypedValue> dynamicParameters = new ArrayList<>();
     protected List<MSQResultsReport.ColumnAndType> expectedRowSignature = null;
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
@@ -923,6 +924,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
+      return asBuilder();
+    }
+
+    public Builder setDynamicParameters(List<TypedValue> dynamicParameters)
+    {
+      this.dynamicParameters = dynamicParameters;
       return asBuilder();
     }
 
@@ -1059,7 +1066,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
-          () -> runMultiStageQuery(sql, queryContext)
+          () -> runMultiStageQuery(sql, queryContext, dynamicParameters)
       );
 
       assertThat(e, expectedValidationErrorMatcher);
@@ -1211,7 +1218,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         String controllerId;
         if (sql != null) {
           // Run the sql command.
-          controllerId = runMultiStageQuery(sql, queryContext);
+          controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
         } else {
           // Run the task spec directly instead.
           controllerId = TEST_CONTROLLER_TASK_ID;
@@ -1428,7 +1435,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       try {
         String controllerId;
         if (sql != null) {
-          controllerId = runMultiStageQuery(sql, queryContext);
+          controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
         } else {
           // Run the task spec directly instead.
           controllerId = TEST_CONTROLLER_TASK_ID;
@@ -1470,7 +1477,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(sql == null || queryContext != null, "queryContext cannot be null");
 
       try {
-        String controllerId = runMultiStageQuery(sql, queryContext);
+        String controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
 
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);
