@@ -22,7 +22,7 @@ title: "Automatic compaction"
   ~ under the License.
   -->
 
-In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md).
+In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md) or the [Overlord](../design/overlord.md).
 
 You can specify whether Druid uses the native engine on the Coordinator or the multi-stage query (MSQ) task engine or native engine on the Overlord. Using the Overlord and MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage. Both methods use the same syntax, but you use different methods to submit the automatic compaction.
 
@@ -55,7 +55,7 @@ You can run automatic compaction using the Overlord rather than the Coordinator.
   *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
   *  `druid.supervisor.compaction.defaultEngine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native`.
 
-After making these changes, you can submit automatic compaction tasks as supervisors.
+After making these changes, you can submit automatic compaction tasks as supervisors. For more general information about supervisors, see [Supervisors](../ingestion/supervisor.md).
 
 ## Automatic compaction syntax
 
