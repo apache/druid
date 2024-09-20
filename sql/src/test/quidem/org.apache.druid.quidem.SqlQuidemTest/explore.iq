@@ -1,0 +1,215 @@
+!set plannerStrategy DECOUPLED
+!set useApproximateCountDistinct false
+!set useGroupingSetForExactDistinct true
+!set debug true
+!use druidtest://?numMergeBuffers=4
+!set outputformat mysql
+
+SELECT
+  TIME_FLOOR("__time", 'PT1H') ,
+  COUNT(DISTINCT "page") ,
+  COUNT(DISTINCT CASE WHEN "channel" = '#it.wikipedia' THEN "user" END), 
+  COUNT(DISTINCT "user") FILTER (WHERE "channel" = '#it.wikipedia'),   COUNT(DISTINCT "user") 
+FROM "wikipedia"
+GROUP BY 1;
++-------------------------+--------+--------+--------+--------+
+| EXPR$0                  | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
++-------------------------+--------+--------+--------+--------+
+| 2015-09-12 00:00:00.000 |    264 |      5 |      5 |    149 |
+| 2015-09-12 01:00:00.000 |   1090 |     14 |     14 |    506 |
+| 2015-09-12 02:00:00.000 |   1045 |     10 |     10 |    459 |
+| 2015-09-12 03:00:00.000 |    766 |     10 |     10 |    427 |
+| 2015-09-12 04:00:00.000 |    781 |      6 |      6 |    427 |
+| 2015-09-12 05:00:00.000 |   1223 |     10 |     10 |    448 |
+| 2015-09-12 06:00:00.000 |   2092 |     13 |     13 |    498 |
+| 2015-09-12 07:00:00.000 |   2181 |     21 |     21 |    574 |
+| 2015-09-12 08:00:00.000 |   1552 |     36 |     36 |    707 |
+| 2015-09-12 09:00:00.000 |   1624 |     44 |     44 |    770 |
+| 2015-09-12 10:00:00.000 |   1710 |     37 |     37 |    785 |
+| 2015-09-12 11:00:00.000 |   1532 |     40 |     40 |    799 |
+| 2015-09-12 12:00:00.000 |   1633 |     45 |     45 |    855 |
+| 2015-09-12 13:00:00.000 |   1958 |     44 |     44 |    905 |
+| 2015-09-12 14:00:00.000 |   1779 |     48 |     48 |    886 |
+| 2015-09-12 15:00:00.000 |   1868 |     37 |     37 |    949 |
+| 2015-09-12 16:00:00.000 |   1846 |     50 |     50 |    969 |
+| 2015-09-12 17:00:00.000 |   2168 |     38 |     38 |    941 |
+| 2015-09-12 18:00:00.000 |   2043 |     40 |     40 |    925 |
+| 2015-09-12 19:00:00.000 |   1924 |     32 |     32 |    930 |
+| 2015-09-12 20:00:00.000 |   1736 |     31 |     31 |    882 |
+| 2015-09-12 21:00:00.000 |   1672 |     40 |     40 |    861 |
+| 2015-09-12 22:00:00.000 |   1504 |     28 |     28 |    716 |
+| 2015-09-12 23:00:00.000 |   1407 |     20 |     20 |    631 |
++-------------------------+--------+--------+--------+--------+
+(24 rows)
+
+!ok
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT(DISTINCT $1)], EXPR$2=[COUNT(DISTINCT $2)], EXPR$3=[COUNT(DISTINCT $3) FILTER $4], EXPR$4=[COUNT(DISTINCT $3)])
+  LogicalProject(EXPR$0=[TIME_FLOOR($0, 'PT1H')], page=[$13], $f2=[CASE(=($1, '#it.wikipedia'), $16, null:VARCHAR)], user=[$16], $f4=[IS TRUE(=($1, '#it.wikipedia'))])
+    LogicalTableScan(table=[[druid, wikipedia]])
+
+!convertedPlan
+LogicalProject($f0=[$0], EXPR$1=[$1], EXPR$2=[$2], EXPR$3=[$2], EXPR$4=[$3])
+  LogicalAggregate(group=[{0}], EXPR$1=[COUNT($1) FILTER $3], EXPR$2=[COUNT($2) FILTER $4], EXPR$4=[COUNT($2) FILTER $5])
+    LogicalProject($f0=[$0], page=[$1], user=[$2], $g_3=[=($4, 3)], $g_4_f_3=[AND(=($4, 4), IS TRUE($3))], $g_5=[=($4, 5)])
+      LogicalAggregate(group=[{0, 1, 2, 3}], groups=[[{0, 1}, {0, 2, 3}, {0, 2}]], $g=[GROUPING($0, $1, $2, $3)])
+        LogicalProject($f0=[TIME_FLOOR($0, 'PT1H')], page=[$13], user=[$16], $f4=[IS TRUE(=($1, '#it.wikipedia'))])
+          LogicalTableScan(table=[[druid, wikipedia]])
+
+!logicalPlan
+DruidProject($f0=[$0], EXPR$1=[$1], EXPR$2=[$2], EXPR$3=[$2], EXPR$4=[$3], druid=[logical])
+  DruidAggregate(group=[{0}], EXPR$1=[COUNT($1) FILTER $3], EXPR$2=[COUNT($2) FILTER $4], EXPR$4=[COUNT($2) FILTER $5], druid=[logical])
+    DruidProject($f0=[$0], page=[$1], user=[$2], $g_3=[=($4, 3)], $g_4_f_3=[AND(=($4, 4), IS TRUE($3))], $g_5=[=($4, 5)], druid=[logical])
+      DruidAggregate(group=[{0, 1, 2, 3}], groups=[[{0, 1}, {0, 2, 3}, {0, 2}]], $g=[GROUPING($0, $1, $2, $3)], druid=[logical])
+        DruidProject($f0=[TIME_FLOOR($0, 'PT1H')], page=[$13], user=[$16], $f4=[IS TRUE(=($1, '#it.wikipedia'))], druid=[logical])
+          DruidTableScan(table=[[druid, wikipedia]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "wikipedia"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "virtualColumns" : [ {
+        "type" : "expression",
+        "name" : "v0",
+        "expression" : "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+        "outputType" : "LONG"
+      }, {
+        "type" : "expression",
+        "name" : "v1",
+        "expression" : "istrue((\"channel\" == '#it.wikipedia'))",
+        "outputType" : "LONG"
+      } ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "v0",
+        "outputName" : "d0",
+        "outputType" : "LONG"
+      }, {
+        "type" : "default",
+        "dimension" : "page",
+        "outputName" : "d1",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "user",
+        "outputName" : "d2",
+        "outputType" : "STRING"
+      }, {
+        "type" : "default",
+        "dimension" : "v1",
+        "outputName" : "d3",
+        "outputType" : "LONG"
+      } ],
+      "aggregations" : [ {
+        "type" : "grouping",
+        "name" : "a0",
+        "groupings" : [ "v0", "page", "user", "v1" ]
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      },
+      "subtotalsSpec" : [ [ "d0", "d1" ], [ "d0", "d2", "d3" ], [ "d0", "d2" ] ]
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "d0",
+    "outputName" : "_d0",
+    "outputType" : "LONG"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "_a0"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "d1"
+        }
+      }, {
+        "type" : "equals",
+        "column" : "a0",
+        "matchValueType" : "LONG",
+        "matchValue" : 3
+      } ]
+    },
+    "name" : "_a0"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "_a1"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "d2"
+        }
+      }, {
+        "type" : "equals",
+        "column" : "a0",
+        "matchValueType" : "LONG",
+        "matchValue" : 4
+      }, {
+        "type" : "expression",
+        "expression" : "\"d3\""
+      } ]
+    },
+    "name" : "_a1"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "_a2"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "d2"
+        }
+      }, {
+        "type" : "equals",
+        "column" : "a0",
+        "matchValueType" : "LONG",
+        "matchValue" : 5
+      } ]
+    },
+    "name" : "_a2"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan
+

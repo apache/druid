@@ -6409,8 +6409,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
   {
+    assumeFalse(testBuilder().isDecoupledMode(), "only valid in non-decoupled mode");
     msqIncompatible();
-
     Assumptions.assumeFalse(NullHandling.sqlCompatible());
 
     assertQueryIsUnplannable(
@@ -6419,6 +6419,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
         "SQL requires a join with 'NOT_EQUALS' condition that is not supported."
     );
+  }
+
+  @Test
+  public void testUnplannableJoinQueriesInNonSQLCompatibleMode2()
+  {
+    assumeFalse(testBuilder().isDecoupledMode(), "only valid in non-decoupled mode");
+    msqIncompatible();
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
 
     assertQueryIsUnplannable(
         // JOIN condition with a function of both sides.
@@ -6426,6 +6434,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
         "SQL requires a join with 'GREATER_THAN' condition that is not supported."
     );
+  }
+
+  @Test
+  public void testPlannableJoinQueriesInNonSQLCompatibleMode()
+  {
+    assumeTrue(testBuilder().isDecoupledMode(), "only in decoupled mode");
+    msqIncompatible();
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
+
+    testBuilder()
+        .sql(
+            "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+                + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k"
+        )
+        .run();
+  }
+
+  @Test
+  public void testPlannableJoinQueriesInNonSQLCompatibleMode2()
+  {
+    assumeTrue(testBuilder().isDecoupledMode(), "only in decoupled mode");
+    msqIncompatible();
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
+
+    testBuilder()
+        .sql(
+            "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+                + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n"
+        )
+        .run();
   }
 
   @Test
@@ -9362,7 +9400,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_PLAN, separateDefaultModeTest = true)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
@@ -12983,7 +13020,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
+  @NotYetSupported(Modes.REQUIRE_TIME_CONDITION)
   @Test
   public void testRequireTimeConditionPositive3()
   {

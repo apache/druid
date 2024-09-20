@@ -1,0 +1,237 @@
+# testSemiAndAntiJoinSimultaneouslyUsingWhereInSubquery@filter-on-value-column_disabled@NullHandling=default case-crc:13ce8fe9
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters false
+!set enableRewriteJoinToFilter true
+!set enableTimeBoundaryPlanning true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim1, COUNT(*) FROM foo
+WHERE dim1 IN ('abc', 'def')
+AND __time IN (SELECT MAX(__time) FROM foo)
+AND __time NOT IN (SELECT MIN(__time) FROM foo)
+GROUP BY 1;
++------+--------+
+| dim1 | EXPR$1 |
++------+--------+
+| abc  |      1 |
++------+--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
+  LogicalFilter(condition=[OR(=($3, 0), AND(IS NULL($6), >=($4, $3)))])
+    LogicalJoin(condition=[=($0, $5)], joinType=[left])
+      LogicalJoin(condition=[true], joinType=[inner])
+        LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+          LogicalFilter(condition=[SEARCH($1, Sarg['abc':VARCHAR, 'def':VARCHAR]:VARCHAR)])
+            LogicalProject(__time=[$0], dim1=[$1])
+              LogicalTableScan(table=[[druid, foo]])
+          LogicalAggregate(group=[{}], EXPR$0=[MAX($0)])
+            LogicalTableScan(table=[[druid, foo]])
+        LogicalAggregate(group=[{}], c=[COUNT()], ck=[COUNT($0)])
+          LogicalAggregate(group=[{}], EXPR$0=[MIN($0)])
+            LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(EXPR$0=[$0], i=[true])
+        LogicalAggregate(group=[{}], EXPR$0=[MIN($0)])
+          LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
+  DruidFilter(condition=[OR(=($3, 0), AND(IS NULL($6), >=($4, $3)))])
+    DruidJoin(condition=[=($0, $5)], joinType=[left])
+      DruidJoin(condition=[true], joinType=[inner])
+        DruidJoin(condition=[=($0, $2)], joinType=[inner])
+          DruidFilter(condition=[SEARCH($1, Sarg['abc':VARCHAR, 'def':VARCHAR]:VARCHAR)])
+            DruidProject(__time=[$0], dim1=[$1], druid=[logical])
+              DruidTableScan(table=[[druid, foo]], druid=[logical])
+          DruidAggregate(group=[{}], EXPR$0=[MAX($0)], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidAggregate(group=[{}], c=[COUNT()], ck=[COUNT($0)], druid=[logical])
+          DruidAggregate(group=[{}], EXPR$0=[MIN($0)], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidProject(EXPR$0=[$0], i=[true], druid=[logical])
+        DruidAggregate(group=[{}], EXPR$0=[MIN($0)], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "join",
+        "left" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "scan",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "resultFormat" : "compactedList",
+            "filter" : {
+              "type" : "in",
+              "dimension" : "dim1",
+              "values" : [ "abc", "def" ]
+            },
+            "columns" : [ "__time", "dim1" ],
+            "columnTypes" : [ "LONG", "STRING" ],
+            "granularity" : {
+              "type" : "all"
+            },
+            "legacy" : false
+          }
+        },
+        "right" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "timeBoundary",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "bound" : "maxTime",
+            "granularity" : {
+              "type" : "all"
+            }
+          }
+        },
+        "rightPrefix" : "j0.",
+        "condition" : "(\"__time\" == \"j0.a0\")",
+        "joinType" : "INNER"
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "timeBoundary",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "foo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "bound" : "minTime",
+              "granularity" : {
+                "type" : "all"
+              }
+            }
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "_a0"
+          }, {
+            "type" : "count",
+            "name" : "_a1"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          }
+        }
+      },
+      "rightPrefix" : "_j0.",
+      "condition" : "1",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "longMin",
+          "name" : "a0",
+          "fieldName" : "__time"
+        } ],
+        "postAggregations" : [ {
+          "type" : "expression",
+          "name" : "p0",
+          "expression" : "1",
+          "outputType" : "LONG"
+        } ]
+      }
+    },
+    "rightPrefix" : "__j0.",
+    "condition" : "(\"__time\" == \"__j0.a0\")",
+    "joinType" : "LEFT"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "selector",
+      "dimension" : "_j0._a0",
+      "value" : "0"
+    }, {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "selector",
+        "dimension" : "__j0.p0",
+        "value" : null
+      }, {
+        "type" : "expression",
+        "expression" : "(\"_j0._a1\" >= \"_j0._a0\")"
+      } ]
+    } ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

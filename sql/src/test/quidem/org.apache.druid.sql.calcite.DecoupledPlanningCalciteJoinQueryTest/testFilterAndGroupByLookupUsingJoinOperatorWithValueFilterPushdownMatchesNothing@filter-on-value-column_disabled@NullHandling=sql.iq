@@ -1,0 +1,101 @@
+# testFilterAndGroupByLookupUsingJoinOperatorWithValueFilterPushdownMatchesNothing@filter-on-value-column_disabled@NullHandling=sql case-crc:efa3501d
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters false
+!set enableRewriteJoinToFilter true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT lookyloo.k, COUNT(*)
+FROM foo LEFT JOIN lookup.lookyloo ON foo.dim2 = lookyloo.k
+WHERE lookyloo.v = '123'
+GROUP BY lookyloo.k;
++---+--------+
+| k | EXPR$1 |
++---+--------+
++---+--------+
+(0 rows)
+
+!ok
+LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
+  LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+    LogicalProject(dim2=[$2])
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalFilter(condition=[=($1, '123')])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
+  DruidJoin(condition=[=($0, $1)], joinType=[inner])
+    DruidProject(dim2=[$2], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidFilter(condition=[=($1, '123')])
+      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "v",
+          "matchValueType" : "STRING",
+          "matchValue" : "123"
+        },
+        "columns" : [ "k", "v" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.k",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

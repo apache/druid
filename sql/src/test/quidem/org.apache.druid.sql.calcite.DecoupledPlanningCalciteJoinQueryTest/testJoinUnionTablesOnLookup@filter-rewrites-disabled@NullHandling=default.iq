@@ -1,0 +1,118 @@
+# testJoinUnionTablesOnLookup@filter-rewrites-disabled@NullHandling=default case-crc:547b2f23
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite false
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT lookyloo.v, COUNT(*)
+FROM
+  (SELECT dim2 FROM foo UNION ALL SELECT dim2 FROM numfoo) u
+  LEFT JOIN lookup.lookyloo ON u.dim2 = lookyloo.k
+WHERE lookyloo.v <> 'xa'
+GROUP BY lookyloo.v;
++------+--------+
+| v    | EXPR$1 |
++------+--------+
+| xabc |      2 |
++------+--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{2}], EXPR$1=[COUNT()])
+  LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+    LogicalUnion(all=[true])
+      LogicalProject(dim2=[$2])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(dim2=[$2])
+        LogicalTableScan(table=[[druid, numfoo]])
+    LogicalFilter(condition=[<>($1, 'xa')])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidAggregate(group=[{2}], EXPR$1=[COUNT()], druid=[logical])
+  DruidJoin(condition=[=($0, $1)], joinType=[inner])
+    DruidUnion(all=[true])
+      DruidProject(dim2=[$2], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidProject(dim2=[$2], druid=[logical])
+        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+    DruidFilter(condition=[<>($1, 'xa')])
+      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "union",
+      "dataSources" : [ {
+        "type" : "table",
+        "name" : "foo"
+      }, {
+        "type" : "table",
+        "name" : "numfoo"
+      } ]
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "v",
+            "value" : "xa"
+          }
+        },
+        "columns" : [ "k", "v" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.v",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan
