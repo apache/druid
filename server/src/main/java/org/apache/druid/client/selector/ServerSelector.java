@@ -49,15 +49,26 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   private final AtomicReference<DataSegment> segment;
 
+  // This property is true for a used segment which has been once loaded on a historical server.
+  // This is set when metadata for the segment is polled from the Coordinator.
+  private boolean isQueryable;
+
+  public ServerSelector(DataSegment segment, TierSelectorStrategy strategy)
+  {
+    this(segment, strategy, false);
+  }
+
   public ServerSelector(
       DataSegment segment,
-      TierSelectorStrategy strategy
+      TierSelectorStrategy strategy,
+      boolean isQueryable
   )
   {
     this.segment = new AtomicReference<>(DataSegmentInterner.intern(segment));
     this.strategy = strategy;
     this.historicalServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
     this.realtimeServers = new Int2ObjectRBTreeMap<>(strategy.getComparator());
+    this.isQueryable = isQueryable;
   }
 
   public DataSegment getSegment()
@@ -214,5 +225,15 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public boolean hasData()
   {
     return segment.get().hasData();
+  }
+
+  public synchronized boolean isQueryable()
+  {
+    return isQueryable;
+  }
+
+  public synchronized void setQueryable(boolean queryable)
+  {
+    isQueryable = queryable;
   }
 }

@@ -376,7 +376,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
         return future;
       }
     } else {
-      return changes.getRequestsSince(counter);
+      return changes.getRequestsSinceAsync(counter);
     }
   }
 

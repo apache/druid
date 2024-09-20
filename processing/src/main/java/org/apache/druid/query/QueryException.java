@@ -79,6 +79,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
   public static final String SQL_PARSE_FAILED_ERROR_CODE = "SQL parse failed";
   public static final String PLAN_VALIDATION_FAILED_ERROR_CODE = "Plan validation failed";
   public static final String SQL_QUERY_UNSUPPORTED_ERROR_CODE = "SQL query is unsupported";
+  public static final String UNAVAILABLE_SEGMENTS_ERROR_CODE = "Data not available";
 
   public enum FailType
   {
@@ -119,6 +120,7 @@ public class QueryException extends RuntimeException implements SanitizableExcep
       case UNSUPPORTED_OPERATION_ERROR_CODE:
       case UNKNOWN_EXCEPTION_ERROR_CODE:
       case TRUNCATED_RESPONSE_CONTEXT_ERROR_CODE:
+      case UNAVAILABLE_SEGMENTS_ERROR_CODE:
         return FailType.QUERY_RUNTIME_FAILURE;
       case UNAUTHORIZED_ERROR_CODE:
         return FailType.UNAUTHORIZED;

@@ -145,6 +145,30 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     );
   }
 
+  /**
+   * Returns a lazy collection with all {@code PartitionChunkEntry} in this VersionedIntervalTimeline.
+   * The order of objects in this collection is unspecified.
+   * Refer to {@link #iterateAllObjects()} on iterating over the returned collection.
+   */
+  public Collection<PartitionChunkEntry<VersionType, ObjectType>> iterateAllEntries()
+  {
+    return CollectionUtils.createLazyCollectionFromStream(
+        () -> allTimelineEntries
+        .values()
+        .stream()
+        .flatMap((Map<VersionType, TimelineEntry> entry) -> entry.values().stream())
+        .flatMap(entry -> StreamSupport
+            .stream(entry.getPartitionHolder().spliterator(), false)
+            .map(partitionChunk ->
+                     new PartitionChunkEntry<>(
+                         entry.getTrueInterval(),
+                         entry.getVersion(),
+                         partitionChunk
+                     ))),
+       numObjects.get()
+    );
+  }
+
   public int getNumObjects()
   {
     return numObjects.get();

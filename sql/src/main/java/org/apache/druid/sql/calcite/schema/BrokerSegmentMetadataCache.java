@@ -35,6 +35,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.segment.metadata.BrokerSegmentMetadataCacheConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;

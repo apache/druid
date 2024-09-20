@@ -22,8 +22,10 @@ package org.apache.druid.metadata;
 import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
+import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DataSegmentChange;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -96,6 +98,11 @@ public interface SegmentsMetadataManager
   int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions);
 
   int markSegmentsAsUnused(Set<SegmentId> segmentIds);
+
+  /**
+   * Set has_loaded field for the segment
+   */
+  int markSegmentAsLoaded(SegmentId segmentId);
 
   /**
    * Returns true if the state of the segment entry is changed in the database as the result of this call (that is, the
@@ -213,4 +220,6 @@ public interface SegmentsMetadataManager
   void populateUsedFlagLastUpdatedAsync();
 
   void stopAsyncUsedFlagLastUpdatedUpdate();
+
+  ChangeRequestHistory<List<DataSegmentChange>> getChangeRequestHistory();
 }

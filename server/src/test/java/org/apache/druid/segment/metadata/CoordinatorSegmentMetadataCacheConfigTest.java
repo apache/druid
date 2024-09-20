@@ -51,7 +51,6 @@ public class CoordinatorSegmentMetadataCacheConfigTest
     final SegmentMetadataCacheConfig config = provider.get();
     Assert.assertFalse(config.isAwaitInitializationOnStart());
     Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
@@ -68,6 +67,8 @@ public class CoordinatorSegmentMetadataCacheConfigTest
         "latestInterval"
     );
     properties.setProperty(CONFIG_BASE + ".metadataRefreshPeriod", "PT2M");
+    properties.setProperty(CONFIG_BASE + ".metadataSegmentPollPeriod", "15000");
+    properties.setProperty(CONFIG_BASE + ".metadataSegmentCacheEnable", "true");
     properties.setProperty(CONFIG_BASE + ".awaitInitializationOnStart", "false");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final SegmentMetadataCacheConfig config = provider.get();
