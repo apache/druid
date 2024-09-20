@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
@@ -41,6 +42,8 @@ import java.util.Objects;
 
 public class StringMinAggregatorFactory extends AggregatorFactory
 {
+  private static final Comparator<String> VALUE_COMPARATOR = Comparator.nullsLast(Comparator.naturalOrder());
+
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
   private final int maxStringBytes;
   private final String name;
@@ -129,7 +132,7 @@ public class StringMinAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator<String> getComparator()
   {
-    return Comparator.nullsLast(String::compareTo);
+    return StringMinAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Nullable
@@ -139,10 +142,11 @@ public class StringMinAggregatorFactory extends AggregatorFactory
     return StringMinAggregator.combineValues((String) lhs, (String) rhs);
   }
 
+  @JsonIgnore
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringMinAggregatorFactory(name, fieldName, maxStringBytes, aggregateMultipleValues);
+    return new StringMinAggregatorFactory(name, name, maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
