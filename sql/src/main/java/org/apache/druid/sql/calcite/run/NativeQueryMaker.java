@@ -51,6 +51,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.hook.DruidHook;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -171,6 +172,7 @@ public class NativeQueryMaker implements QueryMaker
   )
   {
     Hook.QUERY_PLAN.run(query);
+    plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, query);
 
     if (query.getId() == null) {
       final String queryId = UUID.randomUUID().toString();
