@@ -1,0 +1,12 @@
+[INFO] Running org.apache.druid.sql.calcite.CalciteNestedDataQueryTest
+[INFO] Tests run: 156, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.759 s -- in org.apache.druid.sql.calcite.CalciteNestedDataQueryTest
+[INFO] Running org.apache.druid.sql.calcite.CalciteArraysQueryTest
+[INFO] Tests run: 158, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.10 s -- in org.apache.druid.sql.calcite.CalciteArraysQueryTest
+[INFO] Running org.apache.druid.sql.calcite.CalciteUnionQueryTest
+[INFO] Tests run: 14, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.681 s -- in org.apache.druid.sql.calcite.CalciteUnionQueryTest
+[INFO] Running org.apache.druid.sql.calcite.CalciteSysQueryTest
+[WARN] Tests run: 4, Failures: 0, Errors: 0, Skipped: 1, Time elapsed: 2.526 s -- in org.apache.druid.sql.calcite.CalciteSysQueryTest
+[INFO] Running org.apache.druid.sql.calcite.CalciteExplainQueryTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.390 s -- in org.apache.druid.sql.calcite.CalciteExplainQueryTest
+[INFO] Running org.apache.druid.sql.calcite.DecoupledPlanningCalciteJoinQueryTest
+[ERROR] Tests run: 593, Failures: 28, Errors: 0, Skipped: 50, Time elapsed: 27.80 s <<< FAILURE! -- in org.apache.druid.sql.calcite.DecoupledPlanningCalciteJoinQueryTest
