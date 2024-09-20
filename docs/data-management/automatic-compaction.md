@@ -187,7 +187,7 @@ To submit an automatic compaction task, you submit a supervisor spec through the
 
 ### UI for Overlord-based compaction
 
-To submit a supervisor spec for MSQ task engine autocompaction, perform the following steps:
+To submit a supervisor spec for MSQ task engine automatic compaction, perform the following steps:
 
 1. In the web console, go to the **Supervisors** tab.
 1. Click **...** > **Submit JSON supervisor**.
