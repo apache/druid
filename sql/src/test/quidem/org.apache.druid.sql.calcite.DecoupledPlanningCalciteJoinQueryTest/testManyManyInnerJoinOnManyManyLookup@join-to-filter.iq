@@ -225,10 +225,9 @@ DruidProject(dim1=[$0], druid=[logical])
                                             },
                                             "resultFormat" : "compactedList",
                                             "filter" : {
-                                              "type" : "equals",
-                                              "column" : "v",
-                                              "matchValueType" : "STRING",
-                                              "matchValue" : "xa"
+                                              "type" : "selector",
+                                              "dimension" : "v",
+                                              "value" : "xa"
                                             },
                                             "columns" : [ "k", "v" ],
                                             "columnTypes" : [ "STRING", "STRING" ],

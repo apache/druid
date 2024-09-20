@@ -81,10 +81,9 @@ DruidJoin(condition=[=($0, $1)], joinType=[inner])
         "having" : {
           "type" : "filter",
           "filter" : {
-            "type" : "equals",
-            "column" : "d0",
-            "matchValueType" : "STRING",
-            "matchValue" : "abc"
+            "type" : "selector",
+            "dimension" : "d0",
+            "value" : "abc"
           },
           "finalize" : true
         },

@@ -82,10 +82,9 @@ DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
             },
             "resultFormat" : "compactedList",
             "filter" : {
-              "type" : "equals",
-              "column" : "dim1",
-              "matchValueType" : "STRING",
-              "matchValue" : "def"
+              "type" : "selector",
+              "dimension" : "dim1",
+              "value" : "def"
             },
             "columns" : [ "dim1" ],
             "columnTypes" : [ "STRING" ],
