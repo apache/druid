@@ -215,7 +215,7 @@ public class WorkerMemoryParameters
 
     final long minimumBundleFreeMemory = computeMinimumBundleFreeMemory(frameSize, numFramesPerOutputChannel);
     if (bundleFreeMemory < minimumBundleFreeMemory) {
-      final long requiredTaskMemory = bundleMemory - bundleFreeMemory + minimumBundleFreeMemory;
+      final long requiredTaskMemory = (bundleMemory - bundleFreeMemory + minimumBundleFreeMemory) * maxConcurrentStages;
       throw new MSQException(
           new NotEnoughMemoryFault(
               memoryIntrospector.computeJvmMemoryRequiredForTaskMemory(requiredTaskMemory),
