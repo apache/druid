@@ -118,6 +118,7 @@ public class SqlExpressionBenchmark
     {
       return 1;
     }
+
     @Override
     public String getFormatString()
     {
@@ -220,8 +221,11 @@ public class SqlExpressionBenchmark
       "SELECT ARRAY_CONTAINS(\"multi-string3\", 100) FROM foo",
       "SELECT ARRAY_CONTAINS(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo",
       "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 100]) FROM foo",
-      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo"
-  );
+      "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM foo",
+      // 46: filters with random orders
+      "SELECT string2, SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000' GROUP BY 1 ORDER BY 2",
+      "SELECT string2, SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) AND string1 = '1000' GROUP BY 1 ORDER BY 2"
+      );
 
   @Param({"5000000"})
   private int rowsPerSegment;
@@ -319,7 +323,12 @@ public class SqlExpressionBenchmark
     final PlannerConfig plannerConfig = new PlannerConfig();
 
     final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
-    log.info("Starting benchmark setup using cacheDir[%s], rows[%,d], schema[%s].", segmentGenerator.getCacheDir(), rowsPerSegment, schema);
+    log.info(
+        "Starting benchmark setup using cacheDir[%s], rows[%,d], schema[%s].",
+        segmentGenerator.getCacheDir(),
+        rowsPerSegment,
+        schema
+    );
     final QueryableIndex index;
     if ("auto".equals(schema)) {
       List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
@@ -383,7 +392,14 @@ public class SqlExpressionBenchmark
 
     final String sql = QUERIES.get(Integer.parseInt(query));
 
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, "EXPLAIN PLAN FOR " + sql, ImmutableMap.of("useNativeQueryExplain", true))) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(
+        engine,
+        "EXPLAIN PLAN FOR " + sql,
+        ImmutableMap.of(
+            "useNativeQueryExplain",
+            true
+        )
+    )) {
       final PlannerResult plannerResult = planner.plan();
       final Sequence<Object[]> resultSequence = plannerResult.run().getResults();
       final Object[] planResult = resultSequence.toList().get(0);
