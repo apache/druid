@@ -87,7 +87,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new EqualityFilter("countryName", ColumnType.STRING, "United States", null),
                 new EqualityFilter("isRobot", ColumnType.STRING, "true", null)
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -108,7 +109,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new EqualityFilter("countryName", ColumnType.STRING, "United States", null),
                 new EqualityFilter("isRobot", ColumnType.STRING, "true", null)
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -129,7 +131,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new NullFilter("countryName", null),
                 new LikeDimFilter("page", "%u%", null, null).toFilter()
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -151,7 +154,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new NullFilter("countryName", null),
                 new LikeDimFilter("page", "%u%", null, null).toFilter()
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -172,7 +176,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new EqualityFilter("countryName", ColumnType.STRING, "United States", null),
                 new LikeDimFilter("page", "%u%", null, null).toFilter()
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -192,7 +197,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new LikeDimFilter("page", "%u%", null, null).toFilter(),
                 new EqualityFilter("countryName", ColumnType.STRING, "United States", null)
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     // With cursorAutoArrangeFilters flag on, the indexes are sorted by cost ASC, hence country name index is used first.
@@ -213,7 +219,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new NotFilter(new NullFilter("countryName", null)),
                 new LikeDimFilter("page", "%u%", null, null).toFilter()
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -234,7 +241,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new LikeDimFilter("page", "%u%", null, null).toFilter(),
                 new NotFilter(new NullFilter("countryName", null))
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     // With cursorAutoArrangeFilters flag on, the indexes are sorted by cost ASC, hence country name index is used first.
@@ -256,7 +264,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new NotFilter(new NullFilter("countryName", null)),
                 new LikeDimFilter("page", "%u%", null, null).toFilter()
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -283,7 +292,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new EqualityFilter("isRobot", ColumnType.STRING, "false", null),
                 new NotFilter(new NullFilter("countryName", null))
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     // The estimate cost for child Filters:
@@ -324,7 +334,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                 new EqualityFilter("channel", ColumnType.STRING, "#en.wikipedia", null),
                 new NullFilter("countryName", null)
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     // The estimate cost for child Filters:
@@ -377,7 +388,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                     )
                 )
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -411,7 +423,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                     )
                 )
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -443,7 +456,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
                     )
                 )
             )
-        ), cursorAutoArrangeFilters
+        ),
+        cursorAutoArrangeFilters
     );
 
     Assert.assertEquals(
@@ -459,7 +473,9 @@ public class FilterBundleTest extends InitializedNullHandlingTest
 
   protected FilterBundle makeFilterBundle(final Filter filter, boolean cursorAutoArrangeFilters)
   {
-    return new FilterBundle.Builder(filter, indexSelector, cursorAutoArrangeFilters).build(
+    return new FilterBundle.Builder(filter, indexSelector,
+                                    cursorAutoArrangeFilters
+    ).build(
         new DefaultBitmapResultFactory(bitmapFactory),
         indexSelector.getNumRows(),
         indexSelector.getNumRows(),

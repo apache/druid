@@ -298,7 +298,9 @@ public class SqlExpressionBenchmark
       "42",
       "43",
       "44",
-      "45"
+      "45",
+      "46",
+      "47"
   })
   private String query;
 

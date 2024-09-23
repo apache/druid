@@ -21,7 +21,7 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
@@ -311,6 +311,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               bitmapFactory,
               ColumnType.LONG.getNullableStrategy(),
               tailSet,
+              tailSet.size(),
               dictionary,
               valueIndexes,
               unknownsIndex
@@ -320,6 +321,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
+            tailSet.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -328,10 +330,11 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         // values in set are not sorted in double order, transform them on the fly and iterate them all
         return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
-            Lists.transform(
+            Iterables.transform(
                 sortedValues,
                 DimensionHandlerUtils::convertObjectToLong
             ),
+            sortedValues.size(),
             dictionary,
             valueIndexes,
             unknownsIndex

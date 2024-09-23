@@ -88,7 +88,8 @@ public interface ValueSetIndexes
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorScan(
       BitmapFactory bitmapFactory,
       Comparator<T> comparator,
-      List<? extends T> values,
+      Iterable<? extends T> values,
+      int size,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       Supplier<ImmutableBitmap> unknownsBitmap
@@ -100,7 +101,7 @@ public interface ValueSetIndexes
       @Override
       public int estimatedComputeCost()
       {
-        return Integer.max(values.size(), dictionary.size());
+        return Integer.max(size, dictionary.size());
       }
 
       @Override
@@ -176,7 +177,8 @@ public interface ValueSetIndexes
    */
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorBinarySearch(
       BitmapFactory bitmapFactory,
-      List<T> values,
+      Iterable<T> values,
+      int size,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       Supplier<ImmutableBitmap> getUnknownsIndex
@@ -188,7 +190,7 @@ public interface ValueSetIndexes
       @Override
       public int estimatedComputeCost()
       {
-        return values.size();
+        return size;
       }
 
       @Override
@@ -257,7 +259,8 @@ public interface ValueSetIndexes
    */
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromIteratorBinarySearch(
       BitmapFactory bitmapFactory,
-      List<? extends T> values,
+      Iterable<? extends T> values,
+      int size,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
       Supplier<ImmutableBitmap> getUnknownsIndex
@@ -268,7 +271,7 @@ public interface ValueSetIndexes
       @Override
       public int estimatedComputeCost()
       {
-        return values.size();
+        return size;
       }
 
       @Override

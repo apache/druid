@@ -22,7 +22,7 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleArraySet;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
@@ -314,6 +314,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               bitmapFactory,
               ColumnType.DOUBLE.getNullableStrategy(),
               tailSet,
+              tailSet.size(),
               dictionary,
               valueIndexes,
               unknownsIndex
@@ -323,6 +324,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
+            tailSet.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -331,7 +333,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         // values in set are not sorted in double order, transform them on the fly and iterate them all
         return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
-            Lists.transform(sortedValues, DimensionHandlerUtils::convertObjectToDouble),
+            Iterables.transform(sortedValues, DimensionHandlerUtils::convertObjectToDouble),
+            sortedValues.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
