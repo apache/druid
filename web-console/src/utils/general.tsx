@@ -381,12 +381,26 @@ export function findMap<T, Q>(
   return filterMap(xs, f)[0];
 }
 
+export function changeByIndex<T>(
+  xs: readonly T[],
+  i: number,
+  f: (x: T, i: number) => T | undefined,
+): T[] {
+  return filterMap(xs, (x, j) => (j === i ? f(x, i) : x));
+}
+
 export function compact<T>(xs: (T | undefined | false | null | '')[]): T[] {
   return xs.filter(Boolean) as T[];
 }
 
 export function assemble<T>(...xs: (T | undefined | false | null | '')[]): T[] {
   return compact(xs);
+}
+
+export function removeUndefinedValues<T extends Record<string, any>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([_, value]) => value !== undefined),
+  ) as Partial<T>;
 }
 
 export function moveToEnd<T>(

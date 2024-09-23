@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -35,6 +36,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -49,18 +51,27 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   private final List<Interval> replaceTimeChunks;
 
+  private final TerminalStageSpec terminalStageSpec;
+
+  @Nullable
+  private final Map<String, DimensionSchema> dimensionSchemas;
+
   @JsonCreator
   public DataSourceMSQDestination(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
-      @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks
+      @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
+      @JsonProperty("dimensionSchemas") @Nullable Map<String, DimensionSchema> dimensionSchemas,
+      @JsonProperty("terminalStageSpec") @Nullable TerminalStageSpec terminalStageSpec
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.segmentGranularity = Preconditions.checkNotNull(segmentGranularity, "segmentGranularity");
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
+    this.dimensionSchemas = dimensionSchemas;
+    this.terminalStageSpec = terminalStageSpec != null ? terminalStageSpec : SegmentGenerationStageSpec.instance();
 
     if (replaceTimeChunks != null) {
       // Verify that if replaceTimeChunks is provided, it is nonempty.
@@ -98,6 +109,17 @@ public class DataSourceMSQDestination implements MSQDestination
     return dataSource;
   }
 
+  /**
+   * Returns the terminal stage spec.
+   * <p>
+   * The terminal stage spec, is a way to tell the MSQ task how to convert the results into segments at the final stage.
+   */
+  @JsonProperty
+  public TerminalStageSpec getTerminalStageSpec()
+  {
+    return terminalStageSpec;
+  }
+
   @JsonProperty
   public Granularity getSegmentGranularity()
   {
@@ -123,6 +145,17 @@ public class DataSourceMSQDestination implements MSQDestination
   public List<Interval> getReplaceTimeChunks()
   {
     return replaceTimeChunks;
+  }
+
+  /**
+   * Returns the map of dimension name to its schema.
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, DimensionSchema> getDimensionSchemas()
+  {
+    return dimensionSchemas;
   }
 
   /**
@@ -158,13 +191,15 @@ public class DataSourceMSQDestination implements MSQDestination
     return Objects.equals(dataSource, that.dataSource)
            && Objects.equals(segmentGranularity, that.segmentGranularity)
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
-           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
+           && Objects.equals(dimensionSchemas, that.dimensionSchemas)
+           && Objects.equals(terminalStageSpec, that.terminalStageSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas, terminalStageSpec);
   }
 
   @Override
@@ -175,6 +210,8 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentGranularity=" + segmentGranularity +
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
+           ", dimensionSchemas=" + dimensionSchemas +
+           ", terminalStageSpec=" + terminalStageSpec +
            '}';
   }
 

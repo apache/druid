@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator.window.ranking;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.operator.window.Processor;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
@@ -60,5 +61,14 @@ public class WindowRowNumberProcessorTest
 
     final RowsAndColumns results = processor.process(rac);
     expectations.validate(results);
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(WindowRowNumberProcessor.class)
+                  .withNonnullFields("outputColumn")
+                  .usingGetClass()
+                  .verify();
   }
 }

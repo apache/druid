@@ -30,7 +30,7 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.function.Function;
 
-@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
+@Test(groups = {TestNGGroup.BATCH_INDEX})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
 {

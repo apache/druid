@@ -35,20 +35,17 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
@@ -182,42 +179,41 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
     // Reuse input row to avoid redoing allocations.
     final MSQInputRow inputRow = new MSQInputRow();
 
-    final Sequence<Cursor> cursorSequence =
-        new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-            .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+    final CursorFactory cursorFactory = frameReader.makeCursorFactory(frame);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      if (cursor == null) {
+        return;
+      }
 
-    SequenceUtils.forEach(
-        cursorSequence,
-        cursor -> {
-          final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+      final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-          //noinspection rawtypes
-          @SuppressWarnings("rawtypes")
-          final List<BaseObjectColumnValueSelector> selectors =
-              frameReader.signature()
-                         .getColumnNames()
-                         .stream()
-                         .map(columnSelectorFactory::makeColumnValueSelector)
-                         .collect(Collectors.toList());
+      //noinspection rawtypes
+      @SuppressWarnings("rawtypes")
+      final List<BaseObjectColumnValueSelector> selectors =
+          frameReader.signature()
+                     .getColumnNames()
+                     .stream()
+                     .map(columnSelectorFactory::makeColumnValueSelector)
+                     .collect(Collectors.toList());
 
-          while (!cursor.isDone()) {
-            for (int j = 0; j < signature.size(); j++) {
-              inputRow.getBackingArray()[j] = selectors.get(j).getObject();
-            }
-
-            try {
-              rowsWritten++;
-              appenderator.add(segmentIdWithShardSpec, inputRow, null);
-              segmentGenerationProgressCounter.incrementRowsProcessed(1);
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
-
-            cursor.advance();
-          }
+      while (!cursor.isDone()) {
+        for (int j = 0; j < signature.size(); j++) {
+          inputRow.getBackingArray()[j] = selectors.get(j).getObject();
         }
-    );
+
+        try {
+          rowsWritten++;
+          appenderator.add(segmentIdWithShardSpec, inputRow, null);
+          segmentGenerationProgressCounter.incrementRowsProcessed(1);
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+
+        cursor.advance();
+      }
+    }
   }
 
   private class MSQInputRow implements InputRow

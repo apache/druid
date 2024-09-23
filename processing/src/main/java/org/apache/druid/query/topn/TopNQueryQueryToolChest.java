@@ -124,7 +124,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     final ResultMergeQueryRunner<Result<TopNResultValue>> delegateRunner = new ResultMergeQueryRunner<>(
         runner,
-        query -> ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending()),
+        query -> ResultGranularTimestampComparator.create(query.getGranularity(), false),
         query -> {
           TopNQuery topNQuery = (TopNQuery) query;
           return new TopNBinaryFn(

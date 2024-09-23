@@ -21,18 +21,13 @@ package org.apache.druid.frame.processor.manager;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
-import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.frame.channel.ReadableFrameChannel;
-import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
-import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -59,7 +54,7 @@ public class SequenceProcessorManagerTest
   @Test
   public void test_one() throws Exception
   {
-    final NilFrameProcessor processor = new NilFrameProcessor();
+    final NilFrameProcessor<Unit> processor = new NilFrameProcessor<>();
     final AtomicLong closed = new AtomicLong();
 
     try (final SequenceProcessorManager<Unit, FrameProcessor<Unit>> manager =
@@ -84,8 +79,8 @@ public class SequenceProcessorManagerTest
   @Test
   public void test_two() throws Exception
   {
-    final NilFrameProcessor processor0 = new NilFrameProcessor();
-    final NilFrameProcessor processor1 = new NilFrameProcessor();
+    final NilFrameProcessor<Unit> processor0 = new NilFrameProcessor<>();
+    final NilFrameProcessor<Unit> processor1 = new NilFrameProcessor<>();
     final AtomicLong closed = new AtomicLong();
 
     try (final SequenceProcessorManager<Unit, FrameProcessor<Unit>> manager =
@@ -138,32 +133,5 @@ public class SequenceProcessorManagerTest
 
     // Sequence is not closed because it never started iterating.
     Assert.assertEquals(0, closed.get());
-  }
-
-  public static class NilFrameProcessor<T> implements FrameProcessor<T>
-  {
-    @Override
-    public List<ReadableFrameChannel> inputChannels()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
-    public List<WritableFrameChannel> outputChannels()
-    {
-      return Collections.emptyList();
-    }
-
-    @Override
-    public ReturnOrAwait<T> runIncrementally(IntSet readableInputs)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void cleanup()
-    {
-      // Do nothing.
-    }
   }
 }

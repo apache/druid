@@ -70,4 +70,10 @@ public class DDSketchObjectStrategy implements ObjectStrategy<DDSketch>
   {
     return DDSketchAggregatorFactory.COMPARATOR.compare(o1, o2);
   }
+
+  @Override
+  public boolean readRetainsBufferReference()
+  {
+    return false;
+  }
 }

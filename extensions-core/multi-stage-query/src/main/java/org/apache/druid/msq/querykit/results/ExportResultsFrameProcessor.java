@@ -31,23 +31,22 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.ResultsContext;
-import org.apache.druid.msq.util.SequenceUtils;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -152,57 +151,58 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private void exportFrame(final Frame frame)
   {
-    final Sequence<Cursor> cursorSequence =
-        new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY)
-            .makeCursors(null, Intervals.ETERNITY, VirtualColumns.EMPTY, Granularities.ALL, false, null);
+    final Segment segment = new FrameSegment(frame, frameReader, SegmentId.dummy("test"));
+    try (final CursorHolder cursorHolder = segment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      if (cursor == null) {
+        exportWriter.writeRowEnd();
+        return;
+      }
+      final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    SequenceUtils.forEach(
-        cursorSequence,
-        cursor -> {
-          try {
-            final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
+      //noinspection rawtypes
+      final List<BaseObjectColumnValueSelector> selectors =
+          frameReader.signature()
+                     .getColumnNames()
+                     .stream()
+                     .map(columnSelectorFactory::makeColumnValueSelector)
+                     .collect(Collectors.toList());
 
-            //noinspection rawtypes
-            final List<BaseObjectColumnValueSelector> selectors =
-                frameReader.signature()
-                           .getColumnNames()
-                           .stream()
-                           .map(columnSelectorFactory::makeColumnValueSelector)
-                           .collect(Collectors.toList());
-
-            while (!cursor.isDone()) {
-              exportWriter.writeRowStart();
-              for (int j = 0; j < exportRowSignature.size(); j++) {
-                String columnName = exportRowSignature.getColumnName(j);
-                BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
-                if (resultsContext == null) {
-                  throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                                      .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                      .build("Received null resultsContext from the controller. This is due to a version mismatch between the controller and the worker. Please ensure that the worker and the controller are on the same version before retrying the query.");
-                }
-                exportWriter.writeRowField(
-                    columnName,
-                    SqlResults.coerce(
-                        jsonMapper,
-                        resultsContext.getSqlResultsContext(),
-                        selector.getObject(),
-                        resultsContext.getSqlTypeNames().get(j),
-                        columnName
-                    )
-                );
-              }
-              channelCounter.incrementRowCount(partitionNum);
-              exportWriter.writeRowEnd();
-              cursor.advance();
-            }
-          }
-          catch (IOException e) {
-            throw DruidException.forPersona(DruidException.Persona.USER)
+      while (!cursor.isDone()) {
+        exportWriter.writeRowStart();
+        for (int j = 0; j < exportRowSignature.size(); j++) {
+          String columnName = exportRowSignature.getColumnName(j);
+          BaseObjectColumnValueSelector<?> selector = selectors.get(outputColumnNameToFrameColumnNumberMap.getInt(columnName));
+          if (resultsContext == null) {
+            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                                 .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                .build(e, "Exception occurred while writing file to the export location [%s].", exportFilePath);
+                                .build("Received null resultsContext from the controller. This is due to a version mismatch between the controller and the worker. Please ensure that the worker and the controller are on the same version before retrying the query.");
           }
+          exportWriter.writeRowField(
+              columnName,
+              SqlResults.coerce(
+                  jsonMapper,
+                  resultsContext.getSqlResultsContext(),
+                  selector.getObject(),
+                  resultsContext.getSqlTypeNames().get(j),
+                  columnName
+              )
+          );
         }
-    );
+        channelCounter.incrementRowCount(partitionNum);
+        exportWriter.writeRowEnd();
+        cursor.advance();
+      }
+    }
+    catch (IOException e) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(
+                              e,
+                              "Exception occurred while writing file to the export location [%s].",
+                              exportFilePath
+                          );
+    }
   }
 
   private void createExportWriter() throws IOException

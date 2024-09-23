@@ -2372,27 +2372,6 @@ public class ExpressionsTest extends CalciteTestBase
   }
 
   @Test
-  public void testAbnormalRightWithWrongType()
-  {
-    Throwable t = Assert.assertThrows(
-        DruidException.class,
-        () -> testHelper.testExpressionString(
-            new RightOperatorConversion().calciteOperator(),
-            ImmutableList.of(
-                testHelper.makeInputRef("s"),
-                testHelper.makeInputRef("s")
-            ),
-            makeExpression("right(\"s\",\"s\")"),
-            null
-        )
-    );
-    Assert.assertEquals(
-        "Function[right] needs a STRING as first argument and a LONG as second argument",
-        t.getMessage()
-    );
-  }
-
-  @Test
   public void testLeft()
   {
     testHelper.testExpressionString(
@@ -2461,28 +2440,7 @@ public class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    Assert.assertEquals("Function[left] needs a postive integer as second argument", t.getMessage());
-  }
-
-  @Test
-  public void testAbnormalLeftWithWrongType()
-  {
-    Throwable t = Assert.assertThrows(
-        DruidException.class,
-        () -> testHelper.testExpressionString(
-            new LeftOperatorConversion().calciteOperator(),
-            ImmutableList.of(
-                testHelper.makeInputRef("s"),
-                testHelper.makeInputRef("s")
-            ),
-            makeExpression("left(\"s\",\"s\")"),
-            null
-        )
-    );
-    Assert.assertEquals(
-        "Function[left] needs a STRING as first argument and a LONG as second argument",
-        t.getMessage()
-    );
+    Assert.assertEquals("Function[left] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
@@ -2516,27 +2474,6 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         makeExpression("repeat(\"s\",-1)"),
         null
-    );
-  }
-
-  @Test
-  public void testAbnormalRepeatWithWrongType()
-  {
-    Throwable t = Assert.assertThrows(
-        DruidException.class,
-        () -> testHelper.testExpressionString(
-            new RepeatOperatorConversion().calciteOperator(),
-            ImmutableList.of(
-                testHelper.makeInputRef("s"),
-                testHelper.makeInputRef("s")
-            ),
-            makeExpression("repeat(\"s\",\"s\")"),
-            null
-        )
-    );
-    Assert.assertEquals(
-        "Function[repeat] needs a STRING as first argument and a LONG as second argument",
-        t.getMessage()
     );
   }
 

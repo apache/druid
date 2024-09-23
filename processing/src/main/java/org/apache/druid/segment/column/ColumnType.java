@@ -124,6 +124,12 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return Types.fromString(ColumnTypeFactory.getInstance(), typeName);
   }
 
+  @Nullable
+  public static ColumnType fromCapabilities(@Nullable ColumnCapabilities capabilities)
+  {
+    return capabilities != null ? capabilities.toColumnType() : null;
+  }
+
   public static ColumnType ofArray(ColumnType elementType)
   {
     return ColumnTypeFactory.getInstance().ofArray(elementType);

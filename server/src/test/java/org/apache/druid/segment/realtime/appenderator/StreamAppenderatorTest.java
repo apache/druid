@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
@@ -1421,7 +1422,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                              )
                                          )
                                      )
-                                     .order(ScanQuery.Order.ASCENDING)
+                                     .order(Order.ASCENDING)
                                      .batchSize(10)
                                      .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                      .build();

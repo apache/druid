@@ -27,18 +27,20 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
 /**
  *
  */
-public class SimpleQueryableIndex implements QueryableIndex
+public abstract class SimpleQueryableIndex implements QueryableIndex
 {
   private final Interval dataInterval;
   private final List<String> columnNames;
@@ -46,8 +48,6 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final BitmapFactory bitmapFactory;
   private final Map<String, Supplier<ColumnHolder>> columns;
   private final SmooshedFileMapper fileMapper;
-  @Nullable
-  private final Metadata metadata;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
   public SimpleQueryableIndex(
@@ -56,24 +56,27 @@ public class SimpleQueryableIndex implements QueryableIndex
       BitmapFactory bitmapFactory,
       Map<String, Supplier<ColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
-      @Nullable Metadata metadata,
       boolean lazy
   )
   {
     Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
     this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
     ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
-    for (String column : columns.keySet()) {
-      if (!ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
-        columnNamesBuilder.add(column);
+    LinkedHashSet<String> dimsFirst = new LinkedHashSet<>();
+    for (String dimName : dimNames) {
+      dimsFirst.add(dimName);
+    }
+    for (String columnName : columns.keySet()) {
+      if (!ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+        dimsFirst.add(columnName);
       }
     }
+    columnNamesBuilder.addAll(dimsFirst);
     this.columnNames = columnNamesBuilder.build();
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
     this.columns = columns;
     this.fileMapper = fileMapper;
-    this.metadata = metadata;
 
     if (lazy) {
       this.dimensionHandlers = Suppliers.memoize(() -> initDimensionHandlers(availableDimensions));
@@ -104,6 +107,18 @@ public class SimpleQueryableIndex implements QueryableIndex
   public Indexed<String> getAvailableDimensions()
   {
     return availableDimensions;
+  }
+
+  @Override
+  public List<OrderBy> getOrdering()
+  {
+    final Metadata metadata = getMetadata();
+    if (metadata != null && metadata.getOrdering() != null) {
+      return metadata.getOrdering();
+    } else {
+      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
+      return Cursors.ascendingTimeOrder();
+    }
   }
 
   @Override
@@ -141,10 +156,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Metadata getMetadata()
-  {
-    return metadata;
-  }
+  public abstract Metadata getMetadata();
 
   @Override
   public Map<String, DimensionHandler> getDimensionHandlers()

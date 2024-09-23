@@ -27,69 +27,26 @@ sidebar_label: "All functions"
  Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
-<!-- The **Learn More** at the end of each function section provides further documentation. -->
-This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more details on a function, refer to the following:
-* [Aggregation functions](sql-aggregations.md)
-* [Array functions](sql-array-functions.md)
-* [JSON functions](sql-json-functions.md)
-* [Multi-value string functions](sql-multivalue-string-functions.md)
-* [Scalar functions](sql-scalar.md)
-* [Window functions](sql-window-functions.md)
 
-The examples on this page use the following example datasources:
-* `flight-carriers` using `FlightCarrierOnTime (1 month)` 
-* `taxi-trips` using `NYC Taxi cabs (3 files)`
+
+This page provides a reference of all Druid SQL functions in alphabetical order.
+Click the linked function type for documentation on a particular function.
 
 ## ABS
 
+`ABS(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the absolute value of a numeric expression.
-
-* **Syntax:** `ABS(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example applies the ABS function to the `ArrDelay` column from the `flight-carriers` datasource.
-
-```sql
-SELECT
-  "ArrDelay" AS "arrival_delay",
-  ABS("ArrDelay") AS "absolute_arrival_delay"
-FROM "flight-carriers"
-WHERE "ArrDelay" < 0
-LIMIT 1
-```
-Returns the following:
-
-| `arrival_delay` | `absolute_arrival_delay` | 
-| -- | -- | 
-| `-27` | `27` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## ACOS
 
-Calculates the arc cosine (arccosine) of a numeric expression.
+`ACOS(<NUMERIC>)`
 
-* **Syntax:** `ACOS(expr)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example calculates the arc cosine  of `0`.
-
-```sql
-SELECT ACOS(0) AS "arc_cosine"
-```
-Returns the following:
-
-| `arc_cosine` |  
-| -- | 
-| `1.5707963267948966` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the arc cosine of a numeric expression.
 
 ## ANY_VALUE
 
@@ -107,7 +64,6 @@ Returns any value of the specified expression.
 
 Counts distinct values of a regular column or a prebuilt sketch column.
 
-## APPROX_COUNT_DISTINCT_BUILTIN
 `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
 
 **Function type:** [Aggregation](sql-aggregations.md)
@@ -295,72 +251,27 @@ Joins all elements of `arr` by the delimiter specified by `str`.
 
 ## ASIN
 
-Calculates the arc sine (arcsine) of a numeric expression.
+`ASIN(<NUMERIC>)`
 
-* **Syntax:** `ASIN(expr)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example calculates the arc sine of `1`.
-
-```sql
-SELECT ASIN(1) AS "arc_sine"
-```
-Returns the following:
-
-| `arc_sine` |  
-| -- | 
-| `1.5707963267948966` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the arc sine of a numeric expression.
 
 ## ATAN
 
-Calculates the arc tangent (arctangent) of a numeric expression.
+`ATAN(<NUMERIC>)`
 
-* **Syntax:** `ATAN(expr)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example calculates the arc tangent of `1`.
-
-```sql
-SELECT ATAN(1) AS "arc_tangent"
-```
-Returns the following:
-
-| `arc_tangent` |  
-| -- | 
-| `0.7853981633974483` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the arc tangent of a numeric expression.
 
 ## ATAN2
 
-Calculates the arc tangent (arctangent) of a specified x and y coordinate.
+`ATAN2(<NUMERIC>, <NUMERIC>)`
 
-* **Syntax:** `ATAN2(x, y)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example calculates the arc tangent of the coordinate `(1, -1)`
-
-```sql
-SELECT ATAN2(1,-1) AS "arc_tangent_2"
-```
-Returns the following:
-
-| `arc_tangent_2` |  
-| -- | 
-| `2.356194490192345` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the arc tangent of the two arguments.
 
 ## AVG
 
@@ -396,188 +307,67 @@ Performs a bitwise XOR operation on all input values.
 
 ## BITWISE_AND
 
-Returns the bitwise AND between two expressions: `expr1 & expr2`. 
+`BITWISE_AND(expr1, expr2)`
 
-* **Syntax:** `BITWISE_AND(expr1, expr2)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example performs the bitwise AND operation `12 & 10`.
-
-```sql
-SELECT BITWISE_AND(12, 10) AS "bitwise_and"
-```
-Returns the following:
-
-| `bitwise_and` | 
-| -- |
-| 8 | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Returns the bitwise AND between the two expressions, that is, `expr1 & expr2`.
 
 ## BITWISE_COMPLEMENT
 
-Returns the bitwise complement (bitwise not) for the expression: `~expr`.
+`BITWISE_COMPLEMENT(expr)`
 
-* **Syntax:** `BITWISE_COMPLEMENT(expr)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example performs the bitwise complement operation `~12`.
-
-```sql
-SELECT BITWISE_COMPLEMENT(12) AS "bitwise_complement"
-```
-Returns the following:
-
-| `bitwise_complement` | 
-| -- |
-| -13 | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Returns the bitwise NOT for the expression, that is, `~expr`.
 
 ## BITWISE_CONVERT_DOUBLE_TO_LONG_BITS
 
-Converts the bits of an IEEE 754 floating-point double value to long.
+`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
 
-* **Syntax:**`BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(expr)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example returns the IEEE 754 floating-point double representation of `255` as a long. 
-
-```sql
-SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
-```
-Returns the following:
-
-| `ieee_754_double_to_long` | 
-| -- |
-| `4643176031446892544` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
-
+Converts the bits of an IEEE 754 floating-point double value to a long.
 
 ## BITWISE_CONVERT_LONG_BITS_TO_DOUBLE
 
+`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Converts a long to the IEEE 754 floating-point double specified by the bits stored in the long.
-
-* **Syntax:**`BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example returns the long representation of `4643176031446892544` as an IEEE 754 floating-point double.
-
-```sql
-SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee_754_double"
-```
-Returns the following:
-
-| `long_to_ieee_754_double` | 
-| -- |
-| `255` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## BITWISE_OR
 
-Returns the bitwise OR between the two expressions: `expr1 | expr2`.
+`BITWISE_OR(expr1, expr2)`
 
-* **Syntax:** `BITWISE_OR(expr1, expr2)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example performs the bitwise OR operation `12 | 10`.
-
-```sql
-SELECT BITWISE_OR(12, 10) AS "bitwise_or"
-```
-Returns the following:
-
-| `bitwise_or` | 
-| -- |
-| `14` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Returns the bitwise OR between the two expressions, that is, `expr1 | expr2`.
 
 ## BITWISE_SHIFT_LEFT
 
-Returns the bitwise left shift by x positions of an expr: `expr << x`.
+`BITWISE_SHIFT_LEFT(expr1, expr2)`
 
-* **Syntax:** `BITWISE_SHIFT_LEFT(expr, x)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example performs the bitwise SHIFT operation `2 << 3`.
-
-```sql
-SELECT BITWISE_SHIFT_LEFT(2, 3) AS "bitwise_shift_left"
-```
-Returns the following:
-
-| `bitwise_shift_left` | 
-| -- |
-| `16` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Returns a bitwise left shift of expr1, that is, `expr1 << expr2`.
 
 ## BITWISE_SHIFT_RIGHT
 
-Returns the bitwise right shift by x positions of an expr: `expr >> x`.
+`BITWISE_SHIFT_RIGHT(expr1, expr2)`
 
-* **Syntax:** `BITWISE_SHIFT_RIGHT(expr, x)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example performs the bitwise SHIFT operation `16 >> 3`.
-
-```sql
-SELECT BITWISE_SHIFT_RIGHT(16, 3) AS "bitwise_shift_right"
-```
-Returns the following:
-
-| `bitwise_shift_right` | 
-| -- |
-| `2` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Returns a bitwise right shift of expr1, that is, `expr1 >> expr2`.
 
 ## BITWISE_XOR
 
-Returns the bitwise exclusive OR between the two expressions: `expr1 ^ expr2`.
+`BITWISE_XOR(expr1, expr2)`
 
-* **Syntax:** `BITWISE_XOR(expr1, expr2)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example performs the bitwise XOR operation `12 ^ 10`.
-
-```sql
-SELECT BITWISE_XOR(12, 10) AS "bitwise_xor"
-```
-Returns the following:
-
-| `bitwise_xor` | 
-| -- |
-| `6` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Returns the bitwise exclusive OR between the two expressions, that is, `expr1 ^ expr2`.
 
 ## BLOOM_FILTER
 
@@ -629,29 +419,11 @@ Rounds up a timestamp by a given time unit.
 
 ## CEIL (numeric)
 
+`CEIL(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the smallest integer value greater than or equal to the numeric expression.
-* **Syntax:** `CEIL(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example applies the CEIL function to the `fare_amount` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "fare_amount" AS "fare_amount",
-  CEIL("fare_amount") AS "ceiling_fare_amount"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `fare_amount` | `ceiling_fare_amount` | 
-| -- | -- | 
-| `21.25` | `22` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## CHAR_LENGTH
 
@@ -695,49 +467,19 @@ Finds whether a string is in a given expression, case-sensitive.
 
 ## COS
 
+`COS(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the trigonometric cosine of an angle expressed in radians.
-
-* **Syntax:** `COS(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates the cosine of angle `PI/3` radians.
-
-```sql
-SELECT COS(PI / 3) AS "cosine"
-```
-Returns the following:
-
-| `cosine` |  
-| -- | 
-| `0.5000000000000001` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## COT
 
+`COT(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the trigonometric cotangent of an angle expressed in radians.
-
-* **Syntax:** `COT(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates the cotangent of angle `PI/3` radians.
-
-```sql
-SELECT COT(PI / 3) AS "cotangent"
-```
-Returns the following:
-
-| `cotangent` |  
-| -- | 
-| `0.577350269189626` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## COUNT
 
@@ -800,26 +542,11 @@ Decodes a Base64-encoded string into a UTF-8 encoded string.
 
 ## DEGREES
 
+`DEGREES(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Converts an angle from radians to degrees.
-
-* **Syntax:** `DEGREES(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example converts an angle of `PI` radians to degrees
-
-```sql
-SELECT DEGREES(PI) AS "degrees"
-```
-Returns the following:
-
-| `degrees` |  
-| -- | 
-| `180` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## DENSE_RANK
 
@@ -831,36 +558,15 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 ## DIV
 
+`DIV(x, y)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Returns the result of integer division of `x` by `y`.
 
-* **Syntax:** `DIV(x, y)`
-* **Function type:** Scalar, numeric
-
-<!--
-<details><summary>Example</summary>
-
-  The following calculates integer divisions of `78` by `10`.
-
-  ```sql
-  SELECT DIV(78, 10) as "division"
-  ``` 
-
-  Returns the following:
-
-  | `division` |
-  | -- |
-  | `7` |
-
-</details>
--->
-
 :::info
-
-  The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md/#safe_divide) instead. 
-
+The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md#safe_divide) instead. 
 :::
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## DS_CDF
 
@@ -995,26 +701,11 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 ## EXP
 
+`EXP(<NUMERIC>)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates _e_ raised to the power of the numeric expression.
-
-* **Syntax:** `EXP(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates _e_ to the power of 1.
-
-```sql
-SELECT EXP(1) AS "exponential" 
-```
-Returns the following:
-
-| `exponential` |
-| -- |
-| `2.7182818284590455` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## EXTRACT
 
@@ -1042,30 +733,11 @@ Rounds down a timestamp by a given time unit.
 
 ## FLOOR (numeric)
 
-Calculates the largest integer less than or equal to the numeric expression.
+`FLOOR(<NUMERIC>)`
 
-* **Syntax:** `FLOOR(<NUMERIC>)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example applies the FLOOR function to the `fare_amount` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "fare_amount" AS "fare_amount",
-  FLOOR("fare_amount") AS "floor_fare_amount"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `fare_amount` | `floor_fare_amount` | 
-| -- | -- | 
-| `21.25` | `21` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the largest integer value less than or equal to the numeric expression.
 
 ## GREATEST
 
@@ -1117,77 +789,27 @@ Returns a union of HLL sketches.
 
 ## HUMAN_READABLE_BINARY_BYTE_FORMAT
 
-Converts an integer byte size into human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format.
+`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`
 
-* **Syntax:** `HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-  The following example converts `1000000` into IEC format.
-
-  ```sql
-    SELECT HUMAN_READABLE_BINARY_BYTE_FORMAT(1000000, 2) AS "iec_format"
-  ```
-  
-  Returns the following:
-
-  | `iec_format` |
-  | -- |
-  | `976.56 KiB` |
- 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Converts an integer byte size into human-readable IEC format.
 
 ## HUMAN_READABLE_DECIMAL_BYTE_FORMAT
 
-Converts a byte size into human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format.
+`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`
 
-* **Syntax:** `HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example converts `1000000` into SI format.
-
-```sql
-SELECT HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1000000, 2) AS "si_format"
-```
-
-Returns the following:
-
-|`si_format`|
-|--|
-|`1.00 MB`|
-
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Converts a byte size into human-readable SI format.
 
 ## HUMAN_READABLE_DECIMAL_FORMAT
 
+`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Converts a byte size into human-readable SI format with single-character units.
-
-* **Syntax:** `HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-  The following example converts `1000000` into single character SI format.
-
-```sql
-SELECT HUMAN_READABLE_DECIMAL_FORMAT(1000000, 2) AS "single_character_si_format"
-```
-
-Returns the following:
-
-|`single_character_si_format`|
-|--|
-|`1.00 M`|
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## ICONTAINS_STRING
 
@@ -1236,6 +858,13 @@ Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 `JSON_KEYS(expr, path)`
 
 Returns an array of field names from `expr` at the specified `path`.
+
+## JSON_MERGE
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_MERGE(expr1, expr2[, expr3 ...])`
+Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
 
 ## JSON_OBJECT
 
@@ -1343,57 +972,19 @@ Returns the length of the expression in UTF-16 encoding.
 
 ## LN
 
+`LN(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the natural logarithm of the numeric expression.
-
-* **Syntax:** `LN(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example applies the LN function to the `max_temperature` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "max_temperature" AS "max_temperature",
-  LN("max_temperature") AS "natural_log_max_temp"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `max_temperature` | `natural_log_max_temp` | 
-| -- | -- | 
-| `76` | `4.330733340286331` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## LOG10
 
-Calculates the base-10 logarithm of the numeric expression.
+`LOG10(expr)`
 
-* **Syntax:** `LOG10(<NUMERIC>)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following example applies the LOG10 function to the `max_temperature` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "max_temperature" AS "max_temperature",
-  LOG10("max_temperature") AS "log10_max_temp"
-FROM "taxi-trips"
-LIMIT 1
-```
-Returns the following:
-
-| `max_temperature` | `log10_max_temp` | 
-| -- | -- | 
-| `76` | `1.8808135922807914` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates the base-10 of the numeric expression.
 
 ## LOOKUP
 
@@ -1453,26 +1044,11 @@ Returns the minimum value of a set of values.
 
 ## MOD
 
-Calculates x modulo y, or the remainder of x divided by y. Where x and y are numeric expressions.
+`MOD(x, y)`
 
-* **Syntax:** `MOD(x, y)`
-* **Function type:** Scalar, numeric
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
 
-<details><summary>Example</summary>
-
-The following calculates 78 MOD 10.
-
-```sql
-SELECT MOD(78, 10) as "modulo"
-```
-Returns the following:
-
-| `modulo` | 
-| -- | 
-| `8` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
+Calculates x modulo y, or the remainder of x divided by y.
 
 ## MV_APPEND
 
@@ -1652,49 +1228,19 @@ Returns the one-based index position of a substring within an expression, option
 
 ## POWER
 
+`POWER(expr, power)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates a numerical expression raised to the specified power.
-
-* **Syntax:** `POWER(base, exponent)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example raises 5 to the power of 2.
-
-```sql
-SELECT POWER(5, 2) AS "power"
-```
-Returns the following:
-
-| `power` |
-| -- |
-| `25` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## RADIANS
 
+`RADIANS(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Converts an angle from degrees to radians.
-
-* **Syntax:** `RADIANS(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example converts an angle of `180` degrees to radians
-
-```sql
-SELECT RADIANS(180) AS "radians"
-```
-Returns the following:
-
-| `radians` |  
-| -- | 
-| `3.141592653589793` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## RANK
 
@@ -1763,31 +1309,11 @@ Returns the rightmost number of characters from an expression.
 
 ## ROUND
 
+`ROUND(expr[, digits])`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the rounded value for a numerical expression.
-
-* **Syntax:** `ROUND(expr[, digits])`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following applies the ROUND function to 0 decimal points on the `pickup_longitude` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "pickup_longitude" AS "pickup_longitude",
-  ROUND("pickup_longitude", 0) as "rounded_pickup_longitude"
-FROM "taxi-trips"
-WHERE "pickup_longitude" IS NOT NULL
-LIMIT 1
-```
-Returns the following:
-
-| `pickup_longitude` | `rounded_pickup_longitude` | 
-| -- | -- | 
-| `-73.9377670288086` | `-74` | 
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## ROW_NUMBER
 
@@ -1815,74 +1341,27 @@ Trims characters from the trailing end of an expression.
 
 ## SAFE_DIVIDE
 
+`SAFE_DIVIDE(x, y)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Returns `x` divided by `y`, guarded on division by 0.
-
-* **Syntax:** `SAFE_DIVIDE(x, y)`
-* **Function type:** Scalar, numeric 
-
-<details><summary>Example</summary>
-
-The following example calculates divisions of integer `78` by integer `10`.
-
-```sql
-SELECT SAFE_DIVIDE(78, 10) AS "safe_division"
-```
-
-Returns the following:
-
-|`safe_division`|
-|--|
-| `7` |
-
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## SIN
 
+`SIN(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the trigonometric sine of an angle expressed in radians.
-
-* **Syntax:** `SIN(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates the sine of angle `PI/3` radians.
-
-```sql
-SELECT SIN(PI / 3) AS "sine"
-```
-Returns the following:
-
-| `sine` |  
-| -- | 
-| `0.8660254037844386` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## SQRT
 
+`SQRT(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the square root of a numeric expression.
-
-* **Syntax:** `SQRT(<NUMERIC>)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates the square root of 25.
-
-```sql
-SELECT SQRT(25) AS "square_root"
-```
-Returns the following:
-
-| `square_root` |  
-| -- | 
-| `5` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## STDDEV
 
@@ -1983,26 +1462,11 @@ Calculates the sum of a set of values.
 
 ## TAN
 
+`TAN(expr)`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Calculates the trigonometric tangent of an angle expressed in radians.
-
-* **Syntax:** `TAN(expr)`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following example calculates the tangent of angle `PI/3` radians.
-
-```sql
-SELECT TAN(PI / 3) AS "tangent"
-```
-Returns the following:
-
-| `tangent` |  
-| -- | 
-| `1.7320508075688767` |
-</details>
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## TDIGEST_GENERATE_SKETCH
 
@@ -2167,41 +1631,20 @@ Trims the leading or trailing characters of an expression.
 
 ## TRUNC
 
+`TRUNC(expr[, digits])`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Alias for [`TRUNCATE`](#truncate).
-
-* **Syntax:** `TRUNC(expr[, digits])`
-* **Function type:** Scalar, numeric
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## TRUNCATE
 
+`TRUNCATE(expr[, digits])`
+
+**Function type:** [Scalar, numeric](sql-scalar.md#numeric-functions)
+
 Truncates a numerical expression to a specific number of decimal digits.
 
-* **Syntax:** `TRUNCATE(expr[, digits])`
-* **Function type:** Scalar, numeric
-
-<details><summary>Example</summary>
-
-The following applies the TRUNCATE function to 1 decimal place on the `pickup_longitude` column from the `taxi-trips` datasource.
-
-```sql
-SELECT
-  "pickup_longitude" as "pickup_longitude",
-  TRUNCATE("pickup_longitude", 1) as "truncate_pickup_longitude"
-FROM "taxi-trips"
-WHERE "pickup_longitude" IS NOT NULL
-LIMIT 1
-```
-Returns the following:
-
-| `pickup_longitude` | `truncate_pickup_longitude` | 
-| -- | -- | 
-| `-73.9377670288086` | `-73.9` | 
-</details>
-
-
-[Learn more](sql-scalar.md#numeric-functions)
 
 ## TRY_PARSE_JSON
 
@@ -2250,5 +1693,3 @@ Calculates the sample variance of a set of values.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Alias for [`VAR_SAMP`](#var_samp).
-
-

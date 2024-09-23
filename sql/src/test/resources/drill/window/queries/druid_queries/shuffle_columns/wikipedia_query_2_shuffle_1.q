@@ -1,5 +1,5 @@
 SELECT
-ROW_NUMBER() OVER(PARTITION BY countryName),
+ROW_NUMBER() OVER(PARTITION BY countryName order by countryName, cityName, channel),
 countryName,
 cityName,
 COUNT(channel) over (PARTITION BY cityName order by countryName, cityName, channel),

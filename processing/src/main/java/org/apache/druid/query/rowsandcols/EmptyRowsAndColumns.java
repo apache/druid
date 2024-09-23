@@ -21,7 +21,6 @@ package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.query.rowsandcols.column.Column;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -41,13 +40,6 @@ public class EmptyRowsAndColumns implements RowsAndColumns
 
   @Override
   public Column findColumn(String name)
-  {
-    return null;
-  }
-
-  @Nullable
-  @Override
-  public <T> T as(Class<T> clazz)
   {
     return null;
   }

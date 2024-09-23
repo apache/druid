@@ -37,6 +37,8 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
+import org.apache.druid.segment.serde.ComplexColumnMetadata;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -77,7 +79,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
     if (version == 0x03 || version == 0x04 || version == 0x05) {
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final NestedDataColumnMetadata metadata;
+        final ComplexColumnMetadata metadata;
         final GenericIndexed<String> fields;
         final FieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
@@ -91,7 +93,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
 
         metadata = jsonMapper.readValue(
             IndexMerger.SERIALIZER_UTILS.readString(bb),
-            NestedDataColumnMetadata.class
+            ComplexColumnMetadata.class
         );
         fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
         fieldInfo = FieldTypeInfo.read(bb, fields.size());
@@ -112,7 +114,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         final ByteBuffer stringDictionaryBuffer = loadInternalFile(
             mapper,
             metadata,
-            NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
         );
 
         stringDictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
@@ -123,7 +125,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         final ByteBuffer longDictionaryBuffer = loadInternalFile(
             mapper,
             metadata,
-            NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
         );
         longDictionarySupplier = FixedIndexed.read(
             longDictionaryBuffer,
@@ -134,7 +136,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         final ByteBuffer doubleDictionaryBuffer = loadInternalFile(
             mapper,
             metadata,
-            NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
         );
         doubleDictionarySupplier = FixedIndexed.read(
             doubleDictionaryBuffer,
@@ -146,7 +148,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
           final ByteBuffer arrayDictionarybuffer = loadInternalFile(
               mapper,
               metadata,
-              NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME
+              ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
           );
           arrayDictionarySupplier = FrontCodedIntArrayIndexed.read(
               arrayDictionarybuffer,
@@ -157,7 +159,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         }
         final ByteBuffer rawBuffer = loadInternalFile(mapper, metadata, NestedCommonFormatColumnSerializer.RAW_FILE_NAME);
         compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
-            NestedCommonFormatColumnSerializer.getInternalFileName(
+            ColumnSerializerUtils.getInternalFileName(
                 metadata.getFileNameBase(), NestedCommonFormatColumnSerializer.RAW_FILE_NAME
             ),
             rawBuffer,
@@ -169,7 +171,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
           final ByteBuffer nullIndexBuffer = loadInternalFile(
               mapper,
               metadata,
-              NestedCommonFormatColumnSerializer.NULL_BITMAP_FILE_NAME
+              ColumnSerializerUtils.NULL_BITMAP_FILE_NAME
           );
           nullValues = metadata.getBitmapSerdeFactory().getObjectStrategy().fromByteBufferWithSize(nullIndexBuffer);
         } else {
@@ -335,12 +337,12 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
 
   private static ByteBuffer loadInternalFile(
       SmooshedFileMapper fileMapper,
-      NestedDataColumnMetadata metadata,
+      ComplexColumnMetadata metadata,
       String internalFileName
   ) throws IOException
   {
     return fileMapper.mapFile(
-        NestedCommonFormatColumnSerializer.getInternalFileName(metadata.getFileNameBase(), internalFileName)
+        ColumnSerializerUtils.getInternalFileName(metadata.getFileNameBase(), internalFileName)
     );
   }
 }

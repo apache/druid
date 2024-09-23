@@ -36,13 +36,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteCatalogIngestionDmlTest.CatalogIngestionDmlComponentSupplier;
@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -58,6 +59,8 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SqlTestFrameworkConfig.ComponentSupplier(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
@@ -479,7 +482,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -541,7 +544,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -581,8 +584,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING),
-                        new ScanQuery.OrderBy("d", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("b"),
+                        OrderBy.ascending("d")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -603,7 +606,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -643,7 +646,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("b", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("b")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -665,7 +668,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -708,7 +711,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .orderBy(
                     ImmutableList.of(
-                        new ScanQuery.OrderBy("e", ScanQuery.Order.ASCENDING)
+                        OrderBy.ascending("e")
                     )
                 )
                 // Scan query lists columns in alphabetical order independent of the
@@ -834,7 +837,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -953,7 +956,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -1012,7 +1015,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -1077,7 +1080,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
   {
     ExternalDataSource externalDataSource = new ExternalDataSource(
         new InlineInputSource("2022-12-26T12:34:56,extra,10,\"20\",foo\n"),
-        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("a", "b", "c", "d", "e"), null, false, false, 0, null),
         RowSignature.builder()
             .add("a", ColumnType.STRING)
             .add("b", ColumnType.STRING)
@@ -1286,6 +1289,21 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .columns("__time", "v0")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testWindowingErrorWithEngineFeatureOff()
+  {
+    assumeFalse(queryFramework().engine().featureAvailable(EngineFeature.WINDOW_FUNCTIONS));
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "foo") + "\n"
+             + "SELECT dim1, ROW_NUMBER() OVER () from foo\n"
+             + "PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            DruidException.class,
+            "The query contains window functions; They are not supported on engine[ingestion-test]. (line [2], column [14])"
         )
         .verify();
   }

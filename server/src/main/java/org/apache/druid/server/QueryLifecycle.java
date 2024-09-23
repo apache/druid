@@ -19,7 +19,7 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -62,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -434,7 +433,7 @@ public class QueryLifecycle
            || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
 
-  public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  public ObjectMapper newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
   {
     return ioReaderWriter.getResponseWriter().newOutputWriter(
         getToolChest(),

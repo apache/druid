@@ -25,11 +25,11 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.FilteredStorageAdapter;
+import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.WrappedSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -67,7 +67,7 @@ public class FilteredDataSource implements DataSource
     return filter;
   }
 
-  private FilteredDataSource(DataSource base, DimFilter filter)
+  private FilteredDataSource(DataSource base, @Nullable DimFilter filter)
   {
     this.base = base;
     this.filter = filter;
@@ -76,7 +76,7 @@ public class FilteredDataSource implements DataSource
   @JsonCreator
   public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("filter") DimFilter f
+      @JsonProperty("filter") @Nullable DimFilter f
   )
   {
     return new FilteredDataSource(base, f);
@@ -134,12 +134,7 @@ public class FilteredDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () ->
-            baseSegment ->
-                new WrappedSegmentReference(
-                    segmentMapFn.apply(baseSegment),
-                    storageAdapter -> new FilteredStorageAdapter(storageAdapter, filter)
-                )
+        () -> baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter)
     );
   }
 

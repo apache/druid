@@ -74,7 +74,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <li>Copy over the .iq.out to .iq to accept the changes</li>
  * </ol>
  *
- * To shorten the above 2 steps
+ * To shorten the above 2 steps you can run the test with system property quiem.overwrite=true
  *
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

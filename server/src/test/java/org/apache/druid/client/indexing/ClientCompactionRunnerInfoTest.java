@@ -52,7 +52,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithHashedPartitionsSpecIsInvalid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new HashedPartitionsSpec(100, null, null),
         Collections.emptyMap(),
         null,
@@ -72,7 +72,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithMaxTotalRowsIsInvalid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(100, 100L),
         Collections.emptyMap(),
         null,
@@ -92,7 +92,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithDynamicPartitionsSpecIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(100, null),
         Collections.emptyMap(),
         null,
@@ -105,7 +105,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithDimensionRangePartitionsSpecIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
         Collections.emptyMap(),
         null,
@@ -118,7 +118,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithQueryGranularityAllIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(Granularities.ALL, Granularities.ALL, false),
@@ -131,7 +131,7 @@ public class ClientCompactionRunnerInfoTest
   @Test
   public void testMSQEngineWithRollupFalseWithMetricsSpecIsInvalid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, false),
@@ -149,9 +149,52 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
+  public void testMSQEngineWithRollupTrueWithoutMetricsSpecIsInvalid()
+  {
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, true),
+        null
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInvalid()
+  {
+    // Aggregators having combiningFactory different from the aggregatorFactory are unsupported.
+    final String inputColName = "added";
+    final String outputColName = "sum_added";
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        new DynamicPartitionsSpec(3, null),
+        Collections.emptyMap(),
+        new UserCompactionTaskGranularityConfig(null, null, null),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
   public void testMSQEngineWithRollupNullWithMetricsSpecIsValid()
   {
-    DataSourceCompactionConfig compactionConfig = createCompactionConfig(
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, null),
@@ -161,7 +204,7 @@ public class ClientCompactionRunnerInfoTest
                                          .isValid());
   }
 
-  private static DataSourceCompactionConfig createCompactionConfig(
+  private static DataSourceCompactionConfig createMSQCompactionConfig(
       PartitionsSpec partitionsSpec,
       Map<String, Object> context,
       @Nullable UserCompactionTaskGranularityConfig granularitySpec,
