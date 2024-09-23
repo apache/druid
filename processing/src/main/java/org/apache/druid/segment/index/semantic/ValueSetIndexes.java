@@ -88,7 +88,7 @@ public interface ValueSetIndexes
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromSortedIteratorScan(
       BitmapFactory bitmapFactory,
       Comparator<T> comparator,
-      Iterable<? extends T> values,
+      Iterable<T> values,
       int size,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
@@ -259,7 +259,7 @@ public interface ValueSetIndexes
    */
   static <T> BitmapColumnIndex buildBitmapColumnIndexFromIteratorBinarySearch(
       BitmapFactory bitmapFactory,
-      Iterable<? extends T> values,
+      Iterable<T> values,
       int size,
       Indexed<T> dictionary,
       Indexed<ImmutableBitmap> bitmaps,
@@ -279,7 +279,7 @@ public interface ValueSetIndexes
       {
         return () -> new Iterator<ImmutableBitmap>()
         {
-          final Iterator<? extends T> iterator = values.iterator();
+          final Iterator<T> iterator = values.iterator();
           int next = -1;
 
           @Override

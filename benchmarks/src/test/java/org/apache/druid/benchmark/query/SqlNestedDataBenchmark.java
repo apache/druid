@@ -199,7 +199,7 @@ public class SqlNestedDataBenchmark
       // 42, 43 big cardinality like predicate filter
       "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%'",
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
-      // 44, 45 big cardinality like filter + selector filter + different ordering
+      // 44, 45 big cardinality like filter + selector filter with different ordering
       "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000'",
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
       "SELECT SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%'",
