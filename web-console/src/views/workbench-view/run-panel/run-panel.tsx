@@ -111,6 +111,9 @@ const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
     case 'sql-msq-task':
       return { text: 'SQL MSQ-task', label: 'multi-stage-query' };
 
+    case 'sql-msq-dart':
+      return { text: 'SQL MSQ Dart', label: 'multi-stage-query' };
+
     default:
       return { text: engine };
   }
@@ -159,12 +162,14 @@ function optionVisible(
     case 'group-by-enable-multi-value-unnesting':
     case 'durable-shuffle-storage':
     case 'include-all-counters':
-    case 'join-algorithm':
       return engine === 'sql-msq-task';
+
+    case 'join-algorithm':
+      return engine === 'sql-msq-task' || engine === 'sql-msq-dart';
 
     case 'timezone':
     case 'approximate-count-distinct':
-      return engine === 'sql-native' || engine === 'sql-msq-task';
+      return engine === 'sql-native' || engine === 'sql-msq-task' || engine === 'sql-msq-dart';
 
     case 'use-cache':
       return engine === 'native' || engine === 'sql-native';

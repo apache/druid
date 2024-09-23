@@ -18,7 +18,7 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import { QueryResult, QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -41,6 +41,7 @@ import type { WorkbenchRunningPromise } from '../../../singletons/workbench-runn
 import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
 import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
+  deepGet,
   DruidError,
   findAllSqlQueriesInText,
   localStorageGet,
@@ -252,6 +253,67 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   const druidError = new DruidError(e, prefixLines);
                   druidError.queryDuration = Date.now() - startTime.valueOf();
                   throw druidError;
+                },
+              );
+
+            WorkbenchRunningPromises.storePromise(id, {
+              executionPromise,
+              startTime,
+            });
+
+            let execution: Execution;
+            try {
+              execution = await executionPromise;
+              nativeQueryCancelFnRef.current = undefined;
+            } catch (e) {
+              nativeQueryCancelFnRef.current = undefined;
+              throw e;
+            }
+
+            return execution;
+          }
+
+          case 'sql-msq-dart': {
+            if (cancelQueryId) {
+              void cancelToken.promise
+                .then(cancel => {
+                  if (cancel.message === QueryManager.TERMINATION_MESSAGE) return;
+                  return Api.instance.delete(`/druid/v2/sql/dart/${Api.encodePath(cancelQueryId)}`);
+                })
+                .catch(() => {});
+            }
+
+            onQueryChange(props.query.changeLastExecution(undefined));
+
+            const executionPromise = Api.instance
+              .post(`/druid/v2/sql/dart`, query, {
+                cancelToken: new axios.CancelToken(cancelFn => {
+                  nativeQueryCancelFnRef.current = cancelFn;
+                }),
+              })
+              .then(
+                ({ data: dartResponse }) => {
+                  if (deepGet(query, 'context.fullReport') && dartResponse[0][0] === 'fullReport') {
+                    const dartReport = dartResponse[dartResponse.length - 1][0];
+
+                    return Execution.fromTaskReport(dartReport)
+                      .changeEngine('sql-msq-dart')
+                      .changeSqlQuery(query.query, query.context);
+                  } else {
+                    return Execution.fromResult(
+                      engine,
+                      QueryResult.fromRawResult(
+                        dartResponse,
+                        false,
+                        query.header,
+                        query.typesHeader,
+                        query.sqlTypesHeader,
+                      ),
+                    ).changeSqlQuery(query.query, query.context);
+                  }
+                },
+                e => {
+                  throw new DruidError(e, prefixLines);
                 },
               );
 
