@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.variance.sql;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -34,7 +33,6 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -64,7 +62,6 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -715,10 +712,6 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
             "select dim4, dim5, mod(m1, 3), var_pop(mod(m1, 3)) over (partition by dim4 order by dim5) c\n"
             + "from numfoo\n"
             + "group by dim4, dim5, mod(m1, 3)")
-        .queryContext(ImmutableMap.of(
-            PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-            QueryContexts.ENABLE_DEBUG, true
-        ))
         .expectedResults(ImmutableList.of(
             new Object[]{"a", "aa", 1.0D, 0.0D},
             new Object[]{"a", "ab", 2.0D, 0.25D},
@@ -738,7 +731,6 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(
         DruidException.class,
         () -> testBuilder()
-            .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
             .sql("SELECT stddev(m1) OVER () from numfoo")
             .run()
     );

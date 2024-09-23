@@ -30,10 +30,7 @@ This document describes the SQL language.
 
 Window functions are an [experimental](../development/experimental.md) feature.
 Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
-Windows functions are not currently supported by multi-stage-query engine so you cannot use them in SQL-based ingestion. 
-
-
-Set the context parameter `enableWindowing: true` to use window functions.
+Windows functions are not currently supported by multi-stage-query engine so you cannot use them in SQL-based ingestion.
 
 :::
 

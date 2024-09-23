@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +49,6 @@ import java.util.Map;
 public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 {
   private final Map<String, Object> queryContext = new HashMap<>(ImmutableMap.of(
-      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
       PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
       QueryContexts.ENABLE_DEBUG, true,
       MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5
