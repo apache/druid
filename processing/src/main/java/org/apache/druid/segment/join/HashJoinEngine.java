@@ -55,7 +55,6 @@ public class HashJoinEngine
   public static Cursor makeJoinCursor(
       final Cursor leftCursor,
       final JoinableClause joinableClause,
-      final boolean descending,
       final Closer closer
   )
   {
@@ -65,7 +64,6 @@ public class HashJoinEngine
                                                       leftColumnSelectorFactory,
                                                       joinableClause.getCondition(),
                                                       joinableClause.getJoinType().isRighty(),
-                                                      descending,
                                                       closer
                                                   );
 

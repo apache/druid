@@ -19,10 +19,12 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.OrderBy;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Indexed;
@@ -31,201 +33,246 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Optional;
 
 /**
+ *
  */
+@Deprecated
 @PublicApi
-public interface StorageAdapter extends CursorFactory, ColumnInspector, CursorHolderFactory
+public interface StorageAdapter extends ColumnInspector
 {
-
   /**
-   * Build a {@link CursorHolder} which can provide {@link Cursor} and {@link VectorCursor} (if capable) which allows
-   * scanning segments and creating {@link ColumnSelectorFactory} and
-   * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} respectively to read row values at the cursor
-   * position.
+   * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
+   * and call {@link CursorHolder#canVectorize()} instead.
    */
-  @Override
-  default CursorHolder makeCursorHolder(CursorBuildSpec spec)
+  @Deprecated
+  default boolean canVectorize(
+      @Nullable Filter filter,
+      VirtualColumns virtualColumns,
+      boolean descending
+  )
   {
-    // adequate for time ordering, but needs to be updated if we support cursors ordered other time as the primary
-    final List<OrderBy> ordering;
-    final boolean descending;
-    if (Cursors.preferDescendingTimeOrdering(spec)) {
-      ordering = Cursors.descendingTimeOrder();
-      descending = true;
-    } else {
-      ordering = Cursors.ascendingTimeOrder();
-      descending = false;
-    }
-    return new CursorHolder()
-    {
-      @Override
-      public boolean canVectorize()
-      {
-        return StorageAdapter.this.canVectorize(
-            spec.getFilter(),
-            spec.getVirtualColumns(),
-            Cursors.preferDescendingTimeOrdering(spec)
-        );
-      }
-
-      @Override
-      public Cursor asCursor()
-      {
-        return Iterables.getOnlyElement(
-            StorageAdapter.this.makeCursors(
-                spec.getFilter(),
-                spec.getInterval(),
-                spec.getVirtualColumns(),
-                Granularities.ALL,
-                descending,
-                spec.getQueryMetrics()
-            ).toList()
-        );
-      }
-
-      @Override
-      public VectorCursor asVectorCursor()
-      {
-        return StorageAdapter.this.makeVectorCursor(
-            spec.getFilter(),
-            spec.getInterval(),
-            spec.getVirtualColumns(),
-            descending,
-            spec.getQueryContext().getVectorSize(),
-            spec.getQueryMetrics()
-        );
-      }
-
-      @Nullable
-      @Override
-      public List<OrderBy> getOrdering()
-      {
-        return ordering;
-      }
-
-      @Override
-      public void close()
-      {
-        // consuming sequences of CursorFactory are expected to close themselves.
-      }
-    };
+    throw DruidException.defensive(
+        "canVectorize is no longer supported, use Segment.asCursorFactory().makeCursorHolder(..).canVectorize() instead"
+    );
   }
 
-  Interval getInterval();
-  Indexed<String> getAvailableDimensions();
-  Iterable<String> getAvailableMetrics();
+  /**
+   * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
+   * and call {@link CursorHolder#asCursor()} instead.
+   */
+  @Deprecated
+  default Sequence<Cursor> makeCursors(
+      @Nullable Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      Granularity gran,
+      boolean descending,
+      @Nullable QueryMetrics<?> queryMetrics
+  )
+  {
+    throw DruidException.defensive(
+        "makeCursors is no longer supported, use Segment.asCursorFactory().makeCursorHolder(..).asCursor() instead"
+    );
+  }
 
   /**
-   * Returns the row signature of the data available from this adapter. For mutable adapters, even though the signature
-   * may evolve over time, any particular object returned by this method is an immutable snapshot.
+   * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}
+   * and call {@link CursorHolder#asVectorCursor()} instead.
    */
+  @Deprecated
+  @Nullable
+  default VectorCursor makeVectorCursor(
+      @Nullable Filter filter,
+      Interval interval,
+      VirtualColumns virtualColumns,
+      boolean descending,
+      int vectorSize,
+      @Nullable QueryMetrics<?> queryMetrics
+  )
+  {
+    throw DruidException.defensive(
+        "makeVectorCursor is no longer supported, use Segment.asCursorFactory().makeCursorHolder(..).asVectorCursor() instead"
+    );
+  }
+
+  /**
+   * @deprecated Callers should use {@link Segment#getDataInterval()} instead.
+   */
+  @Deprecated
+  default Interval getInterval()
+  {
+    throw DruidException.defensive(
+        "getInterval is no longer supported, use Segment.getDataInterval() instead."
+    );
+  }
+
+  /**
+   * @deprecated Callers should use {@link Segment#as(Class)} to construct a {@link Metadata} instead.
+   */
+  @Deprecated
+  default Indexed<String> getAvailableDimensions()
+  {
+    throw DruidException.defensive(
+        "getAvailableDimensions is no longer supported, use Segment.getRowSignature() and or Segment.as(PhysicalSegmentInspector.class) instead"
+    );
+  }
+
+  /**
+   * @deprecated Callers should use {@link Segment#as(Class)} to construct a {@link Metadata} if available and check
+   * {@link Metadata#getAggregators()} instead.
+   */
+  @Deprecated
+  default Iterable<String> getAvailableMetrics()
+  {
+    throw DruidException.defensive(
+        "getAvailableMetrics is no longer supported, use Segment.as(PhysicalSegmentInspector.class) instead"
+    );
+  }
+
+  /**
+   * @deprecated use {@link Segment#asCursorFactory()} and {@link CursorFactory#getRowSignature()} instead.
+   */
+  @Deprecated
   default RowSignature getRowSignature()
   {
-    final RowSignature.Builder builder = RowSignature.builder();
-    builder.addTimeColumn();
-
-    for (final String column : Iterables.concat(getAvailableDimensions(), getAvailableMetrics())) {
-      builder.add(
-          column,
-          Optional.ofNullable(getColumnCapabilities(column)).map(ColumnCapabilities::toColumnType).orElse(null)
-      );
-    }
-
-    return builder.build();
+    throw DruidException.defensive(
+        "getRowSignature is no longer supported, use Segment.asCursorFactory().getRowSignature() instead"
+    );
   }
 
   /**
-   * Returns the number of distinct values for a column, or {@link DimensionDictionarySelector#CARDINALITY_UNKNOWN}
-   * if unknown.
-   *
-   * If the column doesn't exist, returns 1, because a column that doesn't exist is treated as a column of default
-   * (or null) values.
+   * @deprecated Callers should use {@link Segment#as(Class)} to construct a {@link PhysicalSegmentInspector} if
+   * available and call {@link PhysicalSegmentInspector#getDimensionCardinality(String)} instead.
    */
-  int getDimensionCardinality(String column);
+  @Deprecated
+  default int getDimensionCardinality(String column)
+  {
+    throw DruidException.defensive(
+        "getDimensionCardinality is no longer supported, use Segment.as(SegmentAnalysisInspector.class) instead"
+    );
+  }
 
   /**
-   * Metadata-only operation that returns a lower bound on
-   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} values for this adapter. May be earlier than
-   * the actual minimum data timestamp.
-   *
-   * For {@link QueryableIndexStorageAdapter} and {@link org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter}
-   * specifically, which back regular tables (i.e. {@link org.apache.druid.query.TableDataSource}), this method
-   * contract is tighter: it does return the actual minimum data timestamp. This fact is leveraged by
-   * {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} to return results using metadata only.
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link TimeBoundaryInspector} if available and call
+   * {@link TimeBoundaryInspector#getMinTime()} instead.
    */
-  DateTime getMinTime();
+  @Deprecated
+  default DateTime getMinTime()
+  {
+    throw DruidException.defensive(
+        "getMinTime is no longer supported, use Segment.as(TimeBoundaryInspector.class) instead"
+    );
+  }
 
   /**
-   * Metadata-only operation that returns an upper bound on
-   * {@link org.apache.druid.segment.column.ColumnHolder#TIME_COLUMN_NAME} values for this adapter. May be later than
-   * the actual maximum data timestamp.
-   *
-   * For {@link QueryableIndexStorageAdapter} and {@link org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter}
-   * specifically, which back regular tables (i.e. {@link org.apache.druid.query.TableDataSource}), this method
-   * contract is tighter: it does return the actual maximum data timestamp. This fact is leveraged by
-   * {@link org.apache.druid.query.timeboundary.TimeBoundaryQuery} to return results using metadata only.
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link TimeBoundaryInspector} if available and call
+   * {@link TimeBoundaryInspector#getMaxTime()} instead.
    */
-  DateTime getMaxTime();
+  @Deprecated
+  default DateTime getMaxTime()
+  {
+    throw DruidException.defensive(
+        "getMaxTime is no longer supported, use Segment.as(TimeBoundaryInspector.class) instead"
+    );
+  }
 
   /**
-   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
-   * if not known. Does not scan the column to find the minimum value.
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link PhysicalSegmentInspector} if available and call
+   * {@link PhysicalSegmentInspector#getMinValue(String)}
    */
+  @Deprecated
   @Nullable
-  Comparable getMinValue(String column);
+  default Comparable getMinValue(String column)
+  {
+    throw DruidException.defensive(
+        "getMinValue is no longer supported, use Segment.as(SegmentAnalysisInspector.class) instead"
+    );
+  }
 
   /**
-   * Returns the minimum value of the provided column, if known through an index, dictionary, or cache. Returns null
-   * if not known. Does not scan the column to find the maximum value.
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link PhysicalSegmentInspector} if available and call
+   * {@link PhysicalSegmentInspector#getMaxValue(String)}
    */
+  @Deprecated
   @Nullable
-  Comparable getMaxValue(String column);
+  default Comparable getMaxValue(String column)
+  {
+    throw DruidException.defensive(
+        "getMaxValue is no longer supported, use Segment.as(SegmentAnalysisInspector.class) instead"
+    );
+  }
 
   /**
-   * Returns capabilities of a particular column, if known. May be null if the column doesn't exist, or if
-   * the column does exist but the capabilities are unknown. The latter is possible with dynamically discovered
-   * columns.
-   *
-   * Note that StorageAdapters are representations of "real" segments, so they are not aware of any virtual columns
-   * that may be involved in a query. In general, query engines should instead use the method
-   * {@link ColumnSelectorFactory#getColumnCapabilities(String)}, which returns capabilities for virtual columns as
-   * well.
-   *
-   * @param column column name
-   *
-   * @return capabilities, or null
+   * @deprecated Use {@link Segment#asCursorFactory()} and then {@link CursorFactory#getColumnCapabilities(String)}
+   * instead.
    */
+  @Deprecated
   @Override
   @Nullable
-  ColumnCapabilities getColumnCapabilities(String column);
-
-  int getNumRows();
-  DateTime getMaxIngestedEventTime();
-
-  @Nullable
-  Metadata getMetadata();
-
-  /**
-   * Returns true if this storage adapter can filter some rows out. The actual column cardinality can be lower than
-   * what {@link #getDimensionCardinality} returns if this returns true. Dimension selectors for such storage adapter
-   * can return non-contiguous dictionary IDs because the dictionary IDs in filtered rows will not be returned.
-   * Note that the number of rows accessible via this storage adapter will not necessarily decrease because of
-   * the built-in filters. For inner joins, for example, the number of joined rows can be larger than
-   * the number of rows in the base adapter even though this method returns true.
-   */
-  default boolean hasBuiltInFilters()
+  default ColumnCapabilities getColumnCapabilities(String column)
   {
-    return false;
+    throw DruidException.defensive(
+        "getColumnCapabilities is no longer supported, use Segment.asCursorFactory().getColumnCapabilities(..) instead"
+    );
   }
 
   /**
-   * @return true if this index was created from a tombstone or false otherwise
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link PhysicalSegmentInspector} if available then call
+   * {@link PhysicalSegmentInspector#getNumRows()} instead.
    */
+  @Deprecated
+  default int getNumRows()
+  {
+    throw DruidException.defensive(
+        "getNumRows is no longer supported, use Segment.as(PhysicalSegmentInspector.class) instead"
+    );
+  }
+
+  /**
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link MaxIngestedEventTimeInspector} if available and call
+   * {@link MaxIngestedEventTimeInspector#getMaxIngestedEventTime()} instead.
+   */
+  @Deprecated
+  default DateTime getMaxIngestedEventTime()
+  {
+    throw DruidException.defensive(
+        "getMaxIngestedEventTime is no longer supported, use Segment.as(MaxIngestedEventTimeInspector.class) instead"
+    );
+  }
+
+  /**
+   * @deprecated Use {@link Segment#as(Class)} to fetch a {@link Metadata} if available
+   */
+  @Deprecated
+  @Nullable
+  default Metadata getMetadata()
+  {
+    throw DruidException.defensive(
+        "getMetadata is no longer supported, use Segment.as(PhysicalSegmentInspector.class) instead"
+    );
+  }
+
+  /**
+   * @deprecated Use {@link Segment#as(Class)} to get a {@link TopNOptimizationInspector} if available and call
+   * {@link TopNOptimizationInspector#areAllDictionaryIdsPresent()} instead.
+   */
+  @Deprecated
+  default boolean hasBuiltInFilters()
+  {
+    throw DruidException.defensive(
+        "hasBuiltInFilters is no longer supported, use Segment.as(FilteredSegmentInspector.class) instead"
+    );
+  }
+
+  /**
+   * @deprecated Use {@link Segment#isTombstone()}
+   */
+  @Deprecated
   default boolean isFromTombstone()
   {
-    return false;
+    throw DruidException.defensive(
+        "isFromTombstone is no longer supported, use Segment.isTombstone instead"
+    );
   }
 }

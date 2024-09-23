@@ -145,7 +145,7 @@ public class OverlordResourceTest
         taskLockbox,
         taskMaster,
         provisioningStrategy,
-        configManager
+        () -> configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class).get()
     );
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);

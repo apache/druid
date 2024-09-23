@@ -23,9 +23,7 @@ import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
-import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.DimensionHandlerUtils;
 
 import javax.annotation.Nullable;
 
@@ -45,19 +43,13 @@ public class TopNMapFn
 
   @SuppressWarnings("unchecked")
   @Nullable
-  public Result<TopNResultValue> apply(final Cursor cursor, final CursorGranularizer granularizer, final @Nullable TopNQueryMetrics queryMetrics)
+  public Result<TopNResultValue> apply(
+      final Cursor cursor,
+      ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus,
+      final CursorGranularizer granularizer,
+      final @Nullable TopNQueryMetrics queryMetrics
+  )
   {
-    final ColumnSelectorPlus<TopNColumnAggregatesProcessor<?>> selectorPlus =
-        DimensionHandlerUtils.createColumnSelectorPlus(
-            new TopNColumnAggregatesProcessorFactory(query.getDimensionSpec().getOutputType()),
-            query.getDimensionSpec(),
-            cursor.getColumnSelectorFactory()
-        );
-
-    if (selectorPlus.getSelector() == null) {
-      return null;
-    }
-
     TopNParams params = null;
     try {
       params = topNAlgorithm.makeInitParams(selectorPlus, cursor, granularizer);

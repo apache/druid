@@ -20,12 +20,14 @@
 package org.apache.druid.query.vector;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.query.Order;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -42,17 +44,32 @@ public class VectorCursorGranularizer
 {
   @Nullable
   public static VectorCursorGranularizer create(
-      final StorageAdapter storageAdapter,
       final VectorCursor cursor,
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      final Order timeOrder,
       final Granularity granularity,
       final Interval queryInterval
   )
   {
-    final DateTime minTime = storageAdapter.getMinTime();
-    final DateTime maxTime = storageAdapter.getMaxTime();
+    if (!Granularities.ALL.equals(granularity) && timeOrder == Order.NONE) {
+      throw DruidException
+          .forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.UNSUPPORTED)
+          .build("Cannot use granularity[%s] on non-time-sorted data.", granularity);
+    }
 
-    final Interval storageAdapterInterval = new Interval(minTime, granularity.bucketEnd(maxTime));
-    final Interval clippedQueryInterval = queryInterval.overlap(storageAdapterInterval);
+    final Interval clippedQueryInterval;
+
+    if (timeBoundaryInspector != null) {
+      clippedQueryInterval = queryInterval.overlap(
+          new Interval(
+              timeBoundaryInspector.getMinTime(),
+              granularity.bucketEnd(timeBoundaryInspector.getMaxTime())
+          )
+      );
+    } else {
+      clippedQueryInterval = queryInterval;
+    }
 
     if (clippedQueryInterval == null) {
       return null;

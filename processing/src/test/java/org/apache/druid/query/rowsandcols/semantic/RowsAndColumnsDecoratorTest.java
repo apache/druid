@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.rowsandcols.semantic;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -32,6 +33,9 @@ import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
 import org.apache.druid.segment.ArrayListSegment;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -214,6 +218,39 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
     }
   }
 
+  @Test
+  public void testDecoratorWithColumnBasedFrameRAC()
+  {
+    RowSignature siggy = RowSignature.builder()
+                                     .add("colA", ColumnType.LONG)
+                                     .add("colB", ColumnType.LONG)
+                                     .build();
+
+    Object[][] vals = new Object[][]{
+        {1L, 4L},
+        {2L, -4L},
+        {3L, 3L},
+        {4L, -3L},
+        {5L, 4L},
+        {6L, 82L},
+        {7L, -90L},
+        {8L, 4L},
+        {9L, 0L},
+        {10L, 0L}
+        };
+
+    MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+            "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+        )
+    );
+
+    ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+
+    validateDecorated(frc, siggy, vals, null, null, OffsetLimit.NONE, null);
+  }
+
   private void validateDecorated(
       RowsAndColumns base,
       RowSignature siggy,
@@ -254,7 +291,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
       if (interval != null) {
         builder.setInterval(interval);
       }
-      try (final CursorHolder cursorHolder = seggy.asStorageAdapter().makeCursorHolder(builder.build())) {
+      try (final CursorHolder cursorHolder = seggy.asCursorFactory().makeCursorHolder(builder.build())) {
         final Cursor cursor = cursorHolder.asCursor();
 
         vals = new ArrayList<>();

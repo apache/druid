@@ -20,13 +20,8 @@
 package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
@@ -41,6 +36,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 
@@ -52,19 +48,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
 {
   public static final String TYPE_NAME = "json";
 
-  public static final ObjectMapper OBJECT_MAPPER;
-
   public static final NestedDataComplexTypeSerde INSTANCE = new NestedDataComplexTypeSerde();
-
-  static {
-    final SmileFactory smileFactory = new SmileFactory();
-    smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
-    smileFactory.delegateToTextual(true);
-    final ObjectMapper mapper = new DefaultObjectMapper(smileFactory, null);
-    mapper.getFactory().setCodec(mapper);
-    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
-    OBJECT_MAPPER = mapper;
-  }
 
   @Override
   public String getTypeName()
@@ -95,7 +79,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
         buffer,
         builder,
         columnConfig,
-        OBJECT_MAPPER
+        ColumnSerializerUtils.SMILE_MAPPER
     );
     final ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
     capabilitiesBuilder.setDictionaryEncoded(true);
@@ -136,7 +120,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
         final byte[] bytes = new byte[numBytes];
         buffer.get(bytes, 0, numBytes);
         try {
-          return OBJECT_MAPPER.readValue(bytes, StructuredData.class);
+          return ColumnSerializerUtils.SMILE_MAPPER.readValue(bytes, StructuredData.class);
         }
         catch (IOException e) {
           throw new ISE(e, "Unable to deserialize value");
@@ -151,11 +135,17 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
           return new byte[0];
         }
         try {
-          return OBJECT_MAPPER.writeValueAsBytes(val);
+          return ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(val);
         }
         catch (JsonProcessingException e) {
           throw new ISE(e, "Unable to serialize value [%s]", val);
         }
+      }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
       }
     };
   }

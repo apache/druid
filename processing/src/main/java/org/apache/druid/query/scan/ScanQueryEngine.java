@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
@@ -37,13 +38,14 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.timeline.SegmentId;
@@ -73,18 +75,18 @@ public class ScanQueryEngine
     if (numScannedRows != null && numScannedRows >= query.getScanRowsLimit() && query.getTimeOrder().equals(Order.NONE)) {
       return Sequences.empty();
     }
-    final boolean hasTimeout = query.context().hasTimeout();
-    final Long timeoutAt = responseContext.getTimeoutTime();
-    final StorageAdapter adapter = segment.asStorageAdapter();
-
-    if (adapter == null) {
-      throw new ISE(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-      );
+    if (segment.isTombstone()) {
+      return Sequences.empty();
     }
 
-    if (adapter.isFromTombstone()) {
-      return Sequences.empty();
+    final boolean hasTimeout = query.context().hasTimeout();
+    final Long timeoutAt = responseContext.getTimeoutTime();
+    final CursorFactory cursorFactory = segment.asCursorFactory();
+
+    if (cursorFactory == null) {
+      throw new ISE(
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
+      );
     }
 
     final List<String> allColumns = new ArrayList<>();
@@ -97,13 +99,11 @@ public class ScanQueryEngine
     } else {
       final Set<String> availableColumns = Sets.newLinkedHashSet(
           Iterables.concat(
-              Collections.singleton(ColumnHolder.TIME_COLUMN_NAME),
+              cursorFactory.getRowSignature().getColumnNames(),
               Iterables.transform(
                   Arrays.asList(query.getVirtualColumns().getVirtualColumns()),
                   VirtualColumn::getOutputName
-              ),
-              adapter.getAvailableDimensions(),
-              adapter.getAvailableMetrics()
+              )
           )
       );
 
@@ -118,9 +118,21 @@ public class ScanQueryEngine
     // If the row count is not set, set it to 0, else do nothing.
     responseContext.addRowScanCount(0);
     final long limit = calculateRemainingScanRowsLimit(query, responseContext);
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
-    if (Order.NONE != query.getTimeOrder()) {
-      Cursors.requireTimeOrdering(cursorHolder, query.getTimeOrder());
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(query, queryMetrics));
+    if (Order.NONE != query.getTimeOrder()
+        && Cursors.getTimeOrdering(cursorHolder.getOrdering()) != query.getTimeOrder()) {
+      final String failureReason = StringUtils.format(
+          "Cannot order by[%s] with direction[%s] on cursor with order[%s].",
+          ColumnHolder.TIME_COLUMN_NAME,
+          query.getTimeOrder(),
+          cursorHolder.getOrdering()
+      );
+
+      cursorHolder.close();
+
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build("%s", failureReason);
     }
     return new BaseSequence<>(
         new BaseSequence.IteratorMaker<ScanResultValue, Iterator<ScanResultValue>>()
@@ -139,11 +151,7 @@ public class ScanQueryEngine
             for (String column : allColumns) {
               final BaseObjectColumnValueSelector selector = factory.makeColumnValueSelector(column);
               ColumnCapabilities columnCapabilities = factory.getColumnCapabilities(column);
-              rowSignatureBuilder.add(
-                  column,
-                  columnCapabilities == null ? null : columnCapabilities.toColumnType()
-              );
-
+              rowSignatureBuilder.add(column, ColumnType.fromCapabilities(columnCapabilities));
               columnSelectors.add(selector);
             }
 

@@ -41,6 +41,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private static final IndexSpec DEFAULT_INDEX_SPEC = IndexSpec.DEFAULT;
   private static final Boolean DEFAULT_REPORT_PARSE_EXCEPTIONS = Boolean.FALSE;
   private static final long DEFAULT_HANDOFF_CONDITION_TIMEOUT = Duration.ofMinutes(15).toMillis();
+  private static final int DEFAULT_MAX_COLUMNS_TO_MERGE = -1;
 
   private final AppendableIndexSpec appendableIndexSpec;
   private final int maxRowsInMemory;
@@ -66,6 +67,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   private final int maxSavedParseExceptions;
 
   private final int numPersistThreads;
+  private final int maxColumnsToMerge;
 
   public SeekableStreamIndexTaskTuningConfig(
       @Nullable AppendableIndexSpec appendableIndexSpec,
@@ -88,7 +90,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       @Nullable Boolean logParseExceptions,
       @Nullable Integer maxParseExceptions,
       @Nullable Integer maxSavedParseExceptions,
-      @Nullable Integer numPersistThreads
+      @Nullable Integer numPersistThreads,
+      @Nullable Integer maxColumnsToMerge
   )
   {
     this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
@@ -139,6 +142,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
                               : logParseExceptions;
     this.numPersistThreads = numPersistThreads == null ?
                                 DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);
+    this.maxColumnsToMerge = maxColumnsToMerge == null ? DEFAULT_MAX_COLUMNS_TO_MERGE : maxColumnsToMerge;
   }
 
   @Override
@@ -290,6 +294,13 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
   }
 
   @Override
+  @JsonProperty
+  public int getMaxColumnsToMerge()
+  {
+    return maxColumnsToMerge;
+  }
+
+  @Override
   public abstract SeekableStreamIndexTaskTuningConfig withBasePersistDirectory(File dir);
 
   @Override
@@ -315,6 +326,7 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
            maxParseExceptions == that.maxParseExceptions &&
            maxSavedParseExceptions == that.maxSavedParseExceptions &&
            numPersistThreads == that.numPersistThreads &&
+           maxColumnsToMerge == that.maxColumnsToMerge &&
            Objects.equals(partitionsSpec, that.partitionsSpec) &&
            Objects.equals(intermediatePersistPeriod, that.intermediatePersistPeriod) &&
            Objects.equals(basePersistDirectory, that.basePersistDirectory) &&
@@ -347,7 +359,8 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
-        numPersistThreads
+        numPersistThreads,
+        maxColumnsToMerge
     );
   }
 

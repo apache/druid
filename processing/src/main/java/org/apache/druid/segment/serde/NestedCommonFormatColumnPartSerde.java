@@ -32,7 +32,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
-import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
 import org.apache.druid.segment.nested.NestedDataColumnSupplier;
 import org.apache.druid.segment.nested.ScalarDoubleColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarLongColumnAndIndexSupplier;
@@ -70,7 +69,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   ) throws IOException
   {
     return fileMapper.mapFile(
-        NestedCommonFormatColumnSerializer.getInternalFileName(fileNameBase, internalFileName)
+        ColumnSerializerUtils.getInternalFileName(fileNameBase, internalFileName)
     );
   }
 

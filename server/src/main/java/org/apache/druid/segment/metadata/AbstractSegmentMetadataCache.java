@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -101,6 +102,13 @@ import java.util.stream.StreamSupport;
  * <p>
  * This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
  * with the logic to build and cache table schema.
+ * <p>
+ * Note on handling tombstone segments:
+ * These segments lack data or column information.
+ * Additionally, segment metadata queries, which are not yet implemented for tombstone segments
+ * (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
+ * leading to indefinite refresh attempts for these segments.
+ * Therefore, these segments are never added to the set of segments being refreshed.
  *
  * @param <T> The type of information associated with the data source, which must extend {@link DataSourceInformation}.
  */
@@ -413,11 +421,26 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
-    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-      segmentMetadata.putAll(val);
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
+    final Iterator<AvailableSegmentMetadata> it = iterateSegmentMetadata();
+    while (it.hasNext()) {
+      final AvailableSegmentMetadata availableSegmentMetadata = it.next();
+      segmentMetadata.put(availableSegmentMetadata.getSegment().getId(), availableSegmentMetadata);
     }
     return segmentMetadata;
+  }
+
+  /**
+   * Get metadata for all the cached segments, which includes information like RowSignature, realtime & numRows etc.
+   * This is a lower-overhead method than {@link #getSegmentMetadataSnapshot()}.
+   *
+   * @return iterator of metadata.
+   */
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata()
+  {
+    return FluentIterable.from(segmentMetadataInfo.values())
+                         .transformAndConcat(Map::values)
+                         .iterator();
   }
 
   /**
@@ -431,10 +454,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @Nullable
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
-    if (!segmentMetadataInfo.containsKey(datasource)) {
+    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceMap =
+        segmentMetadataInfo.get(datasource);
+
+    if (dataSourceMap == null) {
       return null;
+    } else {
+      return dataSourceMap.get(segmentId);
     }
-    return segmentMetadataInfo.get(datasource).get(segmentId);
   }
 
   /**
@@ -484,7 +511,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                       segmentMetadata = AvailableSegmentMetadata
                           .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
-                      markSegmentAsNeedRefresh(segment.getId());
+                      if (segment.isTombstone()) {
+                        log.debug("Skipping refresh for tombstone segment.");
+                      } else {
+                        markSegmentAsNeedRefresh(segment.getId());
+                      }
                       if (!server.isSegmentReplicationTarget()) {
                         log.debug("Added new mutable segment [%s].", segment.getId());
                         markSegmentAsMutable(segment.getId());
@@ -730,6 +761,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
 
     final Set<SegmentId> retVal = new HashSet<>();
+
+    logSegmentsToRefresh(dataSource, segments);
+
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
     );
@@ -772,6 +806,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     );
 
     return retVal;
+  }
+
+  /**
+   * Log the segment details for a datasource to be refreshed for debugging purpose.
+   */
+  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  {
+    // no-op
   }
 
   /**

@@ -25,7 +25,7 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import javax.annotation.Nullable;
 
 /**
- * Listener for various things that may happen during execution of {@link RunWorkOrder#start()}. Listener methods are
+ * Listener for various things that may happen during execution of {@link RunWorkOrder#startAsync()}. Listener methods are
  * fired in processing threads, so they must be thread-safe, and it is important that they run quickly.
  */
 public interface RunWorkOrderListener

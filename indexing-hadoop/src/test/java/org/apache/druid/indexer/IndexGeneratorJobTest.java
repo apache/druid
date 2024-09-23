@@ -506,17 +506,19 @@ public class IndexGeneratorJobTest
 
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                datasourceName,
-                mapper.convertValue(
-                    inputRowParser,
-                    Map.class
-                ),
-                aggs,
-                new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)),
-                null,
-                mapper
-            ),
+            DataSchema.builder()
+                      .withDataSource(datasourceName)
+                      .withParserMap(mapper.convertValue(inputRowParser, Map.class))
+                      .withAggregators(aggs)
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              Granularities.NONE,
+                              ImmutableList.of(interval)
+                          )
+                      )
+                      .withObjectMapper(mapper)
+                      .build(),
             new HadoopIOConfig(
                 ImmutableMap.copyOf(inputSpec),
                 null,

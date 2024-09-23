@@ -1,7 +1,7 @@
 select
-countryName, cityName, channel,
-row_number() over (order by channel) as c1,
-lag(cityName) over (order by countryName) as c2
+countryName, cityName, page, delta,
+row_number() over (order by page) as c1,
+lag(cityName) over (order by delta) as c2
 from wikipedia
-where countryName in ('Austria', 'Republic of Korea')
-group by countryName, cityName, channel
+where countryName in ('Guatemala', 'El Salvador')
+group by countryName, cityName, page, delta

@@ -61,7 +61,7 @@ public class FixedBucketsHistogramTopNQueryTest extends InitializedNullHandlingT
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners());
+    return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(true));
   }
 
   private final QueryRunner runner;

@@ -200,6 +200,16 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     return bound.equalsIgnoreCase(MAX_TIME);
   }
 
+  boolean needsMinTime()
+  {
+    return !isMaxTime();
+  }
+
+  boolean needsMaxTime()
+  {
+    return !isMinTime();
+  }
+
   @Override
   public String toString()
   {

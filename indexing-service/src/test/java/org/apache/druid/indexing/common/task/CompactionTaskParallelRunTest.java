@@ -29,8 +29,10 @@ import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -180,7 +182,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("fieldName", "val");
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -230,7 +237,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new HashedPartitionsSpec(null, 3, null),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -295,7 +307,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -410,7 +427,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -460,7 +482,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new SingleDimensionPartitionsSpec(7, null, "dim", false),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -513,7 +540,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       Assert.assertSame(DimensionRangeShardSpec.class, segment.getShardSpec().getClass());
       CompactionState expectedState = new CompactionState(
           new DimensionRangePartitionsSpec(7, null, Arrays.asList("dim1", "dim2"), false),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           null,
           compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -596,7 +628,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("fieldName", "val");
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedLongSumMetric),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
@@ -658,7 +695,12 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
       expectedLongSumMetric.put("fieldName", "val");
       CompactionState expectedState = new CompactionState(
           new DynamicPartitionsSpec(null, Long.MAX_VALUE),
-          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+          new DimensionsSpec(
+              ImmutableList.of(
+                  new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                  new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+              )
+          ),
           ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
           getObjectMapper().readValue(
               getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()),
@@ -928,7 +970,8 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
             "|",
             null,
             false,
-            0
+            0,
+            null
         ),
         appendToExisting,
         null
@@ -939,18 +982,19 @@ public class CompactionTaskParallelRunTest extends AbstractParallelIndexSupervis
         null,
         null,
         new ParallelIndexIngestionSpec(
-            new DataSchema(
-                DATA_SOURCE,
-                new TimestampSpec("ts", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
-                new UniformGranularitySpec(
-                    Granularities.HOUR,
-                    Granularities.MINUTE,
-                    ImmutableList.of(INTERVAL_TO_INDEX)
-                ),
-                null
-            ),
+            DataSchema.builder()
+                      .withDataSource(DATA_SOURCE)
+                      .withTimestamp(new TimestampSpec("ts", "auto", null))
+                      .withDimensions(DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim")))
+                      .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.HOUR,
+                              Granularities.MINUTE,
+                              ImmutableList.of(INTERVAL_TO_INDEX)
+                          )
+                      )
+                      .build(),
             ioConfig,
             tuningConfig
         ),

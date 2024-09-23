@@ -238,7 +238,7 @@ public class IndexedTableJoinCursorBenchmark
 
   private CursorHolder makeCursorHolder()
   {
-    return hashJoinSegment.asStorageAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN);
+    return hashJoinSegment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN);
   }
 
 

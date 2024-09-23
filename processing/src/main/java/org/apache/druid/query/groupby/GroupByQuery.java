@@ -202,7 +202,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, granularity);
+    super(dataSource, querySegmentSpec, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;

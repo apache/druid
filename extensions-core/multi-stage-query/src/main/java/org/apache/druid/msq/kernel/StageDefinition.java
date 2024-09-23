@@ -146,6 +146,13 @@ public class StageDefinition
     }
   }
 
+  public static boolean mustGatherResultKeyStatistics(@Nullable final ShuffleSpec shuffleSpec)
+  {
+    return shuffleSpec != null
+           && shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT
+           && ((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics();
+  }
+
   public static StageDefinitionBuilder builder(final int stageNumber)
   {
     return new StageDefinitionBuilder(stageNumber);
@@ -302,14 +309,10 @@ public class StageDefinition
    * For eg: we know there's exactly one partition in query shapes like `select with limit`.
    * <br></br>
    * In such cases, we return a false.
-   *
-   * @return
    */
   public boolean mustGatherResultKeyStatistics()
   {
-    return shuffleSpec != null
-           && shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT
-           && ((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics();
+    return mustGatherResultKeyStatistics(shuffleSpec);
   }
 
   public Either<Long, ClusterByPartitions> generatePartitionBoundariesForShuffle(

@@ -31,8 +31,7 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.frame.segment.FrameSegment;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -40,13 +39,14 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.run.SqlResults;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.timeline.SegmentId;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -151,8 +151,8 @@ public class ExportResultsFrameProcessor implements FrameProcessor<Object>
 
   private void exportFrame(final Frame frame)
   {
-    final StorageAdapter adapter = new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY);
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    final Segment segment = new FrameSegment(frame, frameReader, SegmentId.dummy("test"));
+    try (final CursorHolder cursorHolder = segment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
       if (cursor == null) {
         exportWriter.writeRowEnd();

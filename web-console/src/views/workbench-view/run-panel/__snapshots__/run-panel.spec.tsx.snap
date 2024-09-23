@@ -46,7 +46,7 @@ exports[`RunPanel matches snapshot on msq (auto) query 1`] = `
         <span
           class="bp5-button-text"
         >
-          Engine: sql-msq-task
+          Engine: SQL MSQ-task
         </span>
         <span
           aria-hidden="true"
@@ -150,7 +150,7 @@ exports[`RunPanel matches snapshot on native (auto) query 1`] = `
         <span
           class="bp5-button-text"
         >
-          Engine: auto (sql-native)
+          Engine: Auto (SQL native)
         </span>
         <span
           aria-hidden="true"

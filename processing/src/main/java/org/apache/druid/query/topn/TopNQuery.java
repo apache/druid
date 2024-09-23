@@ -76,7 +76,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, granularity);
+    super(dataSource, querySegmentSpec, context, granularity);
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
     Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");

@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
@@ -90,11 +91,6 @@ public class PlannerContext
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   /**
-   * Key to enable window functions.
-   */
-  public static final String CTX_ENABLE_WINDOW_FNS = "enableWindowing";
-
-  /**
    * Context key for {@link PlannerContext#isUseBoundsAndSelectors()}.
    */
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
@@ -112,6 +108,12 @@ public class PlannerContext
   public static final String CTX_SQL_REVERSE_LOOKUP = "sqlReverseLookup";
   public static final boolean DEFAULT_SQL_REVERSE_LOOKUP = true;
 
+  /**
+   * Context key for {@link PlannerContext#isUseGranularity()}.
+   */
+  public static final String CTX_SQL_USE_GRANULARITY = "sqlUseGranularity";
+  public static final boolean DEFAULT_SQL_USE_GRANULARITY = true;
+
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
@@ -127,6 +129,7 @@ public class PlannerContext
   private final boolean useBoundsAndSelectors;
   private final boolean pullUpLookup;
   private final boolean reverseLookup;
+  private final boolean useGranularity;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   // bindings for dynamic parameters to bind during planning
@@ -156,6 +159,7 @@ public class PlannerContext
       final boolean useBoundsAndSelectors,
       final boolean pullUpLookup,
       final boolean reverseLookup,
+      final boolean useGranularity,
       final SqlEngine engine,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -172,6 +176,7 @@ public class PlannerContext
     this.useBoundsAndSelectors = useBoundsAndSelectors;
     this.pullUpLookup = pullUpLookup;
     this.reverseLookup = reverseLookup;
+    this.useGranularity = useGranularity;
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
 
     String sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
@@ -196,6 +201,7 @@ public class PlannerContext
     final boolean useBoundsAndSelectors;
     final boolean pullUpLookup;
     final boolean reverseLookup;
+    final boolean useGranularity;
 
     final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
     final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
@@ -203,6 +209,7 @@ public class PlannerContext
     final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
     final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
     final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
+    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
 
     if (tsParam != null) {
       utcNow = new DateTime(tsParam, DateTimeZone.UTC);
@@ -240,6 +247,12 @@ public class PlannerContext
       reverseLookup = DEFAULT_SQL_REVERSE_LOOKUP;
     }
 
+    if (useGranularityParam != null) {
+      useGranularity = Numbers.parseBoolean(useGranularityParam);
+    } else {
+      useGranularity = DEFAULT_SQL_USE_GRANULARITY;
+    }
+
     return new PlannerContext(
         plannerToolbox,
         sql,
@@ -249,6 +262,7 @@ public class PlannerContext
         useBoundsAndSelectors,
         pullUpLookup,
         reverseLookup,
+        useGranularity,
         engine,
         queryContext,
         hook
@@ -423,6 +437,16 @@ public class PlannerContext
   public boolean isReverseLookup()
   {
     return reverseLookup;
+  }
+
+  /**
+   * Whether we should use granularities other than {@link Granularities#ALL} when planning queries. This is provided
+   * mainly so it can be set to false when running SQL queries on non-time-ordered tables, which do not support
+   * any other granularities.
+   */
+  public boolean isUseGranularity()
+  {
+    return useGranularity;
   }
 
   public List<TypedValue> getParameters()
@@ -605,15 +629,10 @@ public class PlannerContext
    * Checks if the current {@link SqlEngine} supports a particular feature.
    *
    * When executing a specific query, use this method instead of {@link SqlEngine#featureAvailable(EngineFeature)}
-   * because it also verifies feature flags such as {@link #CTX_ENABLE_WINDOW_FNS}.
+   * because it also verifies feature flags.
    */
   public boolean featureAvailable(final EngineFeature feature)
   {
-    if (feature == EngineFeature.WINDOW_FUNCTIONS &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
-      // Short-circuit: feature requires context flag.
-      return false;
-    }
     if (feature == EngineFeature.TIME_BOUNDARY_QUERY && !queryContext().isTimeBoundaryPlanningEnabled()) {
       // Short-circuit: feature requires context flag.
       return false;

@@ -25,15 +25,9 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -132,13 +126,6 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
   }
 
   @Override
-  public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
-  {
-    final GenericIndexed column = GenericIndexed.read(buffer, getObjectStrategy(), builder.getFileMapper());
-    builder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
-  }
-
-  @Override
   public ObjectStrategy getObjectStrategy()
   {
     return new ObjectStrategy<FixedBucketsHistogram>()
@@ -172,15 +159,12 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
       {
         return comparator.compare(o1, o2);
       }
-    };
-  }
 
-  @Override
-  public GenericColumnSerializer getSerializer(
-      SegmentWriteOutMedium segmentWriteOutMedium,
-      String column
-  )
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
+    };
   }
 }
