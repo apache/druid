@@ -25,7 +25,9 @@ import com.sun.net.httpserver.HttpServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.rest.RESTCatalog;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -38,55 +40,60 @@ import java.util.HashMap;
 public class RestCatalogTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
+  private int port = 0;
+  private HttpServer server = null;
+  private ServerSocket serverSocket = null;
+
+  @Before
+  public void setup() throws Exception
+  {
+    serverSocket = new ServerSocket(0);
+    port = serverSocket.getLocalPort();
+    serverSocket.close();
+    server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
+    server.createContext(
+        "/v1/config", // API for catalog fetchConfig which is invoked on catalog initialization
+        (httpExchange) -> {
+          String payload = "{}";
+          byte[] outputBytes = payload.getBytes(StandardCharsets.UTF_8);
+          httpExchange.sendResponseHeaders(200, outputBytes.length);
+          OutputStream os = httpExchange.getResponseBody();
+          httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
+          httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_LENGTH, String.valueOf(outputBytes.length));
+          httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_RANGE, "bytes 0");
+          os.write(outputBytes);
+          os.close();
+        }
+    );
+    server.start();
+  }
 
   @Test
-  public void testCatalogCreate() throws IOException
+  public void testCatalogCreate()
   {
-    HttpServer server = null;
-    ServerSocket serverSocket = null;
-    try {
-      serverSocket = new ServerSocket(0);
-      int port = serverSocket.getLocalPort();
-      serverSocket.close();
-      server = HttpServer.create(new InetSocketAddress("localhost", port), 0);
-      server.createContext(
-          "/v1/config", // API for catalog fetchConfig which is invoked on catalog initialization
-          (httpExchange) -> {
-            String payload = "{}";
-            byte[] outputBytes = payload.getBytes(StandardCharsets.UTF_8);
-            httpExchange.sendResponseHeaders(200, outputBytes.length);
-            OutputStream os = httpExchange.getResponseBody();
-            httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, "application/octet-stream");
-            httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_LENGTH, String.valueOf(outputBytes.length));
-            httpExchange.getResponseHeaders().set(HttpHeaders.CONTENT_RANGE, "bytes 0");
-            os.write(outputBytes);
-            os.close();
-          }
-      );
-      server.start();
+    String catalogUri = "http://localhost:" + port;
 
-      String catalogUri = "http://localhost:" + port;
+    RestIcebergCatalog testRestCatalog = new RestIcebergCatalog(
+        catalogUri,
+        new HashMap<>(),
+        mapper,
+        new Configuration()
+    );
+    RESTCatalog innerCatalog = (RESTCatalog) testRestCatalog.retrieveCatalog();
 
-      RestIcebergCatalog testRestCatalog = new RestIcebergCatalog(
-          catalogUri,
-          new HashMap<>(),
-          mapper,
-          new Configuration()
-      );
-      RESTCatalog innerCatalog = (RESTCatalog) testRestCatalog.retrieveCatalog();
-
-      Assert.assertEquals("rest", innerCatalog.name());
-      Assert.assertNotNull(innerCatalog.properties());
-      Assert.assertNotNull(testRestCatalog.getCatalogProperties());
-      Assert.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
+    Assert.assertEquals("rest", innerCatalog.name());
+    Assert.assertNotNull(innerCatalog.properties());
+    Assert.assertNotNull(testRestCatalog.getCatalogProperties());
+    Assert.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
+  }
+  @After
+  public void tearDown() throws IOException
+  {
+    if (server != null) {
+      server.stop(0);
     }
-    finally {
-      if (server != null) {
-        server.stop(0);
-      }
-      if (serverSocket != null) {
-        serverSocket.close();
-      }
+    if (serverSocket != null) {
+      serverSocket.close();
     }
   }
 }

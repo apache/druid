@@ -28,6 +28,7 @@ Apache Iceberg is an open table format for huge analytic datasets. [IcebergInput
 
 Iceberg manages most of its metadata in metadata files in the object storage. However, it is still dependent on a metastore to manage a certain amount of metadata.
 Iceberg refers to these metastores as catalogs. The Iceberg extension lets you connect to the following Iceberg catalog types:
+* REST-based catalog
 * Hive metastore catalog
 * Local catalog
 

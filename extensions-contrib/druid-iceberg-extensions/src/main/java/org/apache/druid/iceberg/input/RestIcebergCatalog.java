@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.iceberg.guice.HiveConf;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
@@ -63,7 +63,10 @@ public class RestIcebergCatalog extends IcebergCatalog
       @JacksonInject @HiveConf Configuration configuration
   )
   {
-    this.catalogUri = Preconditions.checkNotNull(catalogUri, "catalogUri cannot be null");
+    if (catalogUri == null) {
+      throw InvalidInput.exception("catalogUri cannot be null");
+    }
+    this.catalogUri = catalogUri;
     this.catalogProperties = DynamicConfigProviderUtils.extraConfigAndSetStringMap(
         catalogProperties,
         DRUID_DYNAMIC_CONFIG_PROVIDER_KEY,
