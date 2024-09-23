@@ -44,7 +44,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper();
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), "|", null, true, 10);
+    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), "|", null, true, 10, null);
     final byte[] bytes = mapper.writeValueAsBytes(format);
     final CsvInputFormat fromJson = (CsvInputFormat) mapper.readValue(bytes, InputFormat.class);
     Assert.assertEquals(format, fromJson);
@@ -128,11 +128,22 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testDeserializeWithTryParseNumbers() throws IOException
+  {
+    final ObjectMapper mapper = new ObjectMapper();
+    final CsvInputFormat inputFormat = (CsvInputFormat) mapper.readValue(
+        "{\"type\":\"csv\",\"hasHeaderRow\":true,\"tryParseNumbers\":true}",
+        InputFormat.class
+    );
+    Assert.assertTrue(inputFormat.shouldTryParseNumbers());
+  }
+
+  @Test
   public void testComma()
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Column[a,] cannot have the delimiter[,] in its name");
-    new CsvInputFormat(Collections.singletonList("a,"), "|", null, false, 0);
+    new CsvInputFormat(Collections.singletonList("a,"), "|", null, false, 0, null);
   }
 
   @Test
@@ -140,20 +151,20 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot have same delimiter and list delimiter of [,]");
-    new CsvInputFormat(Collections.singletonList("a\t"), ",", null, false, 0);
+    new CsvInputFormat(Collections.singletonList("a\t"), ",", null, false, 0, null);
   }
 
   @Test
   public void testFindColumnsFromHeaderWithColumnsReturningItsValue()
   {
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, true, 0);
+    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, true, 0, null);
     Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
   @Test
   public void testFindColumnsFromHeaderWithMissingColumnsReturningItsValue()
   {
-    final CsvInputFormat format = new CsvInputFormat(null, null, null, true, 0);
+    final CsvInputFormat format = new CsvInputFormat(null, null, null, true, 0, null);
     Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
@@ -162,13 +173,13 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Either [columns] or [findColumnsFromHeader] must be set");
-    new CsvInputFormat(null, null, null, null, 0);
+    new CsvInputFormat(null, null, null, null, 0, null);
   }
 
   @Test
   public void testMissingFindColumnsFromHeaderWithColumnsReturningFalse()
   {
-    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, null, 0);
+    final CsvInputFormat format = new CsvInputFormat(Collections.singletonList("a"), null, null, null, 0, null);
     Assert.assertFalse(format.isFindColumnsFromHeader());
   }
 
@@ -177,20 +188,20 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage("Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]");
-    new CsvInputFormat(null, null, true, false, 0);
+    new CsvInputFormat(null, null, true, false, 0, null);
   }
 
   @Test
   public void testHasHeaderRowWithMissingColumnsReturningItsValue()
   {
-    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
+    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0, null);
     Assert.assertTrue(format.isFindColumnsFromHeader());
   }
 
   @Test
   public void test_getWeightedSize_withoutCompression()
   {
-    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
+    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0, null);
     final long unweightedSize = 100L;
     Assert.assertEquals(unweightedSize, format.getWeightedSize("file.csv", unweightedSize));
   }
@@ -198,7 +209,7 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
   @Test
   public void test_getWeightedSize_withGzCompression()
   {
-    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0);
+    final CsvInputFormat format = new CsvInputFormat(null, null, true, null, 0, null);
     final long unweightedSize = 100L;
     Assert.assertEquals(
         unweightedSize * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR,

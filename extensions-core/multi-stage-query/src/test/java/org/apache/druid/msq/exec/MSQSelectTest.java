@@ -1779,7 +1779,7 @@ public class MSQSelectTest extends MSQTestBase
                                      .setDataSource(
                                          new ExternalDataSource(
                                              new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
-                                             new CsvInputFormat(null, null, null, true, 0),
+                                             new CsvInputFormat(null, null, null, true, 0, null),
                                              RowSignature.builder().add("dim1", ColumnType.STRING).build()
                                          )
                                      )
@@ -2376,7 +2376,7 @@ public class MSQSelectTest extends MSQTestBase
                                    Collections.nCopies(numFiles, toRead),
                                    SystemFields.none()
                                ),
-                               new CsvInputFormat(null, null, null, true, 0),
+                               new CsvInputFormat(null, null, null, true, 0, null),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
                            .intervals(querySegmentSpec(Filtration.eternity()))

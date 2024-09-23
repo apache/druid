@@ -78,6 +78,12 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
     {
       return injector.getInstance(MSQTaskSqlEngine.class);
     }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return false;
+    }
   }
 
   @Override
