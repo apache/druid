@@ -1,2 +1,0 @@
-[INFO] Running org.apache.druid.sql.calcite.DecoupledPlanningCalciteJoinQueryTest
-[ERROR] Tests run: 593, Failures: 28, Errors: 0, Skipped: 50, Time elapsed: 27.80 s <<< FAILURE! -- in org.apache.druid.sql.calcite.DecoupledPlanningCalciteJoinQueryTest
