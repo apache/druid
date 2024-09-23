@@ -78,7 +78,6 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -335,7 +334,6 @@ public class SqlWindowFunctionsBenchmark
   public void querySql(String sql, Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
-        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
         QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto"
     );
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {

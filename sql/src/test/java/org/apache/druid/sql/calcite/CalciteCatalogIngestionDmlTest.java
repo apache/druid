@@ -50,6 +50,7 @@ import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.Externals;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -58,6 +59,8 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 @SqlTestFrameworkConfig.ComponentSupplier(CatalogIngestionDmlComponentSupplier.class)
 public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDmlTest
@@ -1286,6 +1289,21 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .columns("__time", "v0")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
+        )
+        .verify();
+  }
+
+  @Test
+  public void testWindowingErrorWithEngineFeatureOff()
+  {
+    assumeFalse(queryFramework().engine().featureAvailable(EngineFeature.WINDOW_FUNCTIONS));
+    testIngestionQuery()
+        .sql(StringUtils.format(dmlPrefixPattern, "foo") + "\n"
+             + "SELECT dim1, ROW_NUMBER() OVER () from foo\n"
+             + "PARTITIONED BY ALL TIME")
+        .expectValidationError(
+            DruidException.class,
+            "The query contains window functions; They are not supported on engine[ingestion-test]. (line [2], column [14])"
         )
         .verify();
   }
