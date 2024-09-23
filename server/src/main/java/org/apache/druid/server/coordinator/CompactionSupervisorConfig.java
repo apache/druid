@@ -39,7 +39,7 @@ public class CompactionSupervisorConfig
   @JsonProperty
   private final boolean enabled;
   @JsonProperty
-  private final CompactionEngine defaultEngine;
+  private final CompactionEngine engine;
 
   public static CompactionSupervisorConfig defaultConfig()
   {
@@ -49,11 +49,11 @@ public class CompactionSupervisorConfig
   @JsonCreator
   public CompactionSupervisorConfig(
       @JsonProperty("enabled") @Nullable Boolean enabled,
-      @JsonProperty("defaultEngine") @Nullable CompactionEngine defaultEngine
+      @JsonProperty("engine") @Nullable CompactionEngine engine
   )
   {
     this.enabled = Configs.valueOrDefault(enabled, false);
-    this.defaultEngine = Configs.valueOrDefault(defaultEngine, CompactionEngine.NATIVE);
+    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
   }
 
   public boolean isEnabled()
@@ -61,9 +61,9 @@ public class CompactionSupervisorConfig
     return enabled;
   }
 
-  public CompactionEngine getDefaultEngine()
+  public CompactionEngine getEngine()
   {
-    return defaultEngine;
+    return engine;
   }
 
   @Override
@@ -76,13 +76,13 @@ public class CompactionSupervisorConfig
       return false;
     }
     CompactionSupervisorConfig that = (CompactionSupervisorConfig) o;
-    return enabled == that.enabled && defaultEngine == that.defaultEngine;
+    return enabled == that.enabled && engine == that.engine;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(enabled, defaultEngine);
+    return Objects.hash(enabled, engine);
   }
 
   @Override
@@ -90,7 +90,7 @@ public class CompactionSupervisorConfig
   {
     return "CompactionSchedulerConfig{" +
            "enabled=" + enabled +
-           "engine=" + defaultEngine +
+           "engine=" + engine +
            '}';
   }
 }

@@ -19,13 +19,13 @@
 
 package org.apache.druid.indexing.compact;
 
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 
@@ -57,8 +57,8 @@ public class CompactionSupervisor implements Supervisor
       log.info("Suspending compaction for dataSource[%s].", dataSource);
       scheduler.stopCompaction(dataSource);
     } else if (!supervisorSpec.getValidationResult().isValid()) {
-      log.error(
-          "Failed to start compaction supervisor for datasource[%s] due to invalid compaction supervisor spec. "
+      log.warn(
+          "Cannot start compaction supervisor for datasource[%s] since the compaction supervisor spec is invalid. "
           + "Reason[%s].",
           dataSource,
           supervisorSpec.getValidationResult().getReason()
@@ -85,10 +85,12 @@ public class CompactionSupervisor implements Supervisor
                                        .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED)
                                        .build();
     } else if (!supervisorSpec.getValidationResult().isValid()) {
-      throw InvalidInput.exception(
-          "Compaction supervisor spec is invalid. Reason[%s].",
-          supervisorSpec.getValidationResult().getReason()
-      );
+      snapshot = AutoCompactionSnapshot.builder(dataSource)
+                                       .withMessage(StringUtils.format(
+                                           "Compaction supervisor spec is invalid. Reason[%s].",
+                                           supervisorSpec.getValidationResult().getReason()
+                                       ))
+                                       .build();
     } else {
       snapshot = scheduler.getCompactionSnapshot(dataSource);
     }

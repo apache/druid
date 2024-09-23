@@ -151,11 +151,11 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testCompactionSupervisorConfigSerde() throws JsonProcessingException
   {
-    boolean enabled = true;
-    CompactionEngine defaultEngine = CompactionEngine.MSQ;
+    final boolean enabled = true;
+    final CompactionEngine defaultEngine = CompactionEngine.MSQ;
     CompactionSupervisorConfig compactionSupervisorConfig =
         OBJECT_MAPPER.readValue(
-            OBJECT_MAPPER.writeValueAsString(ImmutableMap.of("enabled", enabled, "defaultEngine", defaultEngine)),
+            OBJECT_MAPPER.writeValueAsString(ImmutableMap.of("enabled", enabled, "engine", defaultEngine)),
             CompactionSupervisorConfig.class
         );
     Assert.assertEquals(new CompactionSupervisorConfig(enabled, defaultEngine), compactionSupervisorConfig);

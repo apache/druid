@@ -64,7 +64,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either dynamic or range",
+        "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either 'dynamic' or 'range'",
         validationResult.getReason()
     );
   }
