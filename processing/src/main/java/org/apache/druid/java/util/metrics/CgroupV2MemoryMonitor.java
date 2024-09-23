@@ -25,6 +25,9 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
+/**
+ * Monitor that reports memory usage stats by reading `memory.*` files reported by cgroupv2
+ */
 public class CgroupV2MemoryMonitor extends CgroupMemoryMonitor
 {
 

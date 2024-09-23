@@ -40,6 +40,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+/**
+ * Monitor that reports cpu usage stats by reading `cpu.stat` reported by cgroupv2
+ */
 public class CgroupV2CpuMonitor extends FeedDefiningMonitor
 {
   private static final Logger LOG = new Logger(CgroupV2CpuMonitor.class);

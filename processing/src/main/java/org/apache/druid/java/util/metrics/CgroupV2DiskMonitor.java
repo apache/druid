@@ -39,6 +39,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+/**
+ * Monitor that reports disk usage stats by reading `io.stat` reported by cgroupv2
+ */
 public class CgroupV2DiskMonitor extends FeedDefiningMonitor
 {
   private static final Logger LOG = new Logger(CgroupV2DiskMonitor.class);
