@@ -210,6 +210,7 @@ public class ImmutableWorkerInfoTest
             "http", "testWorker1", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
         ),
         3,
+        0,
         new HashMap<>(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
@@ -220,6 +221,7 @@ public class ImmutableWorkerInfoTest
             "http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY
         ),
         2,
+        0,
         new HashMap<>(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
@@ -234,6 +236,7 @@ public class ImmutableWorkerInfoTest
     ImmutableWorkerInfo workerInfo = new ImmutableWorkerInfo(
         new Worker("http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY),
         6,
+        0,
         new HashMap<>(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -48,6 +49,7 @@ public class ImmutableWorkerInfo
   private static final Logger logger = new Logger(ImmutableWorkerInfo.class);
   private final Worker worker;
   private final int currCapacityUsed;
+  private final int currParallelIndexCapacityUsed;
   private final Map<String, Integer> typeSpecificCapacityMap;
   private final ImmutableSet<String> availabilityGroups;
   private final ImmutableSet<String> runningTasks;
@@ -60,6 +62,7 @@ public class ImmutableWorkerInfo
   public ImmutableWorkerInfo(
       @JsonProperty("worker") Worker worker,
       @JsonProperty("currCapacityUsed") int currCapacityUsed,
+      @JsonProperty("currParallelIndexCapacityUsed") int currParallelIndexCapacityUsed,
       @JsonProperty("currTypeSpecificCapacityUsed") Map<String, Integer> typeSpecificCapacityMap,
       @JsonProperty("availabilityGroups") Set<String> availabilityGroups,
       @JsonProperty("runningTasks") Collection<String> runningTasks,
@@ -69,6 +72,7 @@ public class ImmutableWorkerInfo
   {
     this.worker = worker;
     this.currCapacityUsed = currCapacityUsed;
+    this.currParallelIndexCapacityUsed = currParallelIndexCapacityUsed;
     this.typeSpecificCapacityMap = typeSpecificCapacityMap;
     this.availabilityGroups = ImmutableSet.copyOf(availabilityGroups);
     this.runningTasks = ImmutableSet.copyOf(runningTasks);
@@ -79,13 +83,14 @@ public class ImmutableWorkerInfo
   public ImmutableWorkerInfo(
       Worker worker,
       int currCapacityUsed,
+      int currParallelIndexCapacityUsed,
       Map<String, Integer> typeSpecificCapacityMap,
       Set<String> availabilityGroups,
       Collection<String> runningTasks,
       DateTime lastCompletedTaskTime
   )
   {
-    this(worker, currCapacityUsed, typeSpecificCapacityMap, availabilityGroups,
+    this(worker, currCapacityUsed, currParallelIndexCapacityUsed, typeSpecificCapacityMap, availabilityGroups,
          runningTasks, lastCompletedTaskTime, null
     );
   }
@@ -101,6 +106,7 @@ public class ImmutableWorkerInfo
     this(
         worker,
         currCapacityUsed,
+        0,
         Collections.emptyMap(),
         availabilityGroups,
         runningTasks,
@@ -120,6 +126,7 @@ public class ImmutableWorkerInfo
   )
   {
     int currCapacityUsed = 0;
+    int currParallelIndexCapacityUsed = 0;
     Map<String, Integer> typeSpecificCapacityMap = new HashMap<>();
     ImmutableSet.Builder<String> taskIds = ImmutableSet.builder();
     ImmutableSet.Builder<String> availabilityGroups = ImmutableSet.builder();
@@ -134,6 +141,10 @@ public class ImmutableWorkerInfo
 
         currCapacityUsed += requiredCapacity;
 
+        if (ParallelIndexSupervisorTask.TYPE.equals(announcement.getTaskType())) {
+          currParallelIndexCapacityUsed += requiredCapacity;
+        }
+
         typeSpecificCapacityMap.merge(announcement.getTaskType(), 1, Integer::sum);
 
         taskIds.add(taskId);
@@ -144,6 +155,7 @@ public class ImmutableWorkerInfo
     return new ImmutableWorkerInfo(
         worker,
         currCapacityUsed,
+        currParallelIndexCapacityUsed,
         typeSpecificCapacityMap,
         availabilityGroups.build(),
         taskIds.build(),
@@ -162,6 +174,12 @@ public class ImmutableWorkerInfo
   public int getCurrCapacityUsed()
   {
     return currCapacityUsed;
+  }
+
+  @JsonProperty("currParallelIndexCapacityUsed")
+  public int getCurrParallelIndexCapacityUsed()
+  {
+    return currParallelIndexCapacityUsed;
   }
 
   @JsonProperty("currTypeSpecificCapacityUsed")
@@ -203,6 +221,36 @@ public class ImmutableWorkerInfo
   public boolean isValidVersion(String minVersion)
   {
     return worker.getVersion().compareTo(minVersion) >= 0;
+  }
+
+  public boolean canRunTask(Task task, double parallelIndexTaskSlotRatio)
+  {
+    return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
+            && canRunParallelIndexTask(task, parallelIndexTaskSlotRatio)
+            && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
+  }
+
+  private boolean canRunParallelIndexTask(Task task, double parallelIndexTaskSlotRatio)
+  {
+    if (!task.getType().equals(ParallelIndexSupervisorTask.TYPE)) {
+      return true;
+    }
+    return getWorkerParallelIndexCapacity(parallelIndexTaskSlotRatio) - getCurrParallelIndexCapacityUsed()
+           >= task.getTaskResource().getRequiredCapacity();
+
+  }
+
+  private int getWorkerParallelIndexCapacity(double parallelIndexTaskSlotRatio)
+  {
+    int totalCapacity = worker.getCapacity();
+    int workerParallelIndexCapacity = (int) Math.floor(parallelIndexTaskSlotRatio * totalCapacity);
+    if (workerParallelIndexCapacity < 1) {
+      workerParallelIndexCapacity = 1;
+    }
+    if (workerParallelIndexCapacity > totalCapacity) {
+      workerParallelIndexCapacity = totalCapacity;
+    }
+    return workerParallelIndexCapacity;
   }
 
   public boolean canRunTask(Task task, Map<String, Number> taskLimits)
@@ -303,6 +351,9 @@ public class ImmutableWorkerInfo
     if (currCapacityUsed != that.currCapacityUsed) {
       return false;
     }
+    if (currParallelIndexCapacityUsed != that.currParallelIndexCapacityUsed) {
+      return false;
+    }
     if (!typeSpecificCapacityMap.equals(that.typeSpecificCapacityMap)) {
       return false;
     }
@@ -339,6 +390,7 @@ public class ImmutableWorkerInfo
   {
     int result = worker.hashCode();
     result = 31 * result + currCapacityUsed;
+    result = 31 * result + currParallelIndexCapacityUsed;
     result = 31 * result + typeSpecificCapacityMap.hashCode();
     result = 31 * result + availabilityGroups.hashCode();
     result = 31 * result + runningTasks.hashCode();
@@ -353,6 +405,7 @@ public class ImmutableWorkerInfo
     return "ImmutableWorkerInfo{" +
            "worker=" + worker +
            ", currCapacityUsed=" + currCapacityUsed +
+           ", currParallelIndexCapacityUsed=" + currParallelIndexCapacityUsed +
            ", currTypeSpecificCapacityUsed=" + typeSpecificCapacityMap +
            ", availabilityGroups=" + availabilityGroups +
            ", runningTasks=" + runningTasks +

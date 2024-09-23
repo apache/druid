@@ -31,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -478,11 +479,15 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
 
   private static ImmutableWorkerInfo workerWithTask(ImmutableWorkerInfo immutableWorker, Task task)
   {
+    int parallelIndexTaskCapacity = task.getType().equals(ParallelIndexSupervisorTask.TYPE)
+                                    ? task.getTaskResource().getRequiredCapacity()
+                                    : 0;
     int taskCapacity = task.getTaskResource().getRequiredCapacity();
 
     return new ImmutableWorkerInfo(
         immutableWorker.getWorker(),
         immutableWorker.getCurrCapacityUsed() + 1,
+        immutableWorker.getCurrParallelIndexCapacityUsed() + parallelIndexTaskCapacity,
         immutableWorker.incrementTypeSpecificCapacity(task.getType(), taskCapacity),
         Sets.union(
             immutableWorker.getAvailabilityGroups(),

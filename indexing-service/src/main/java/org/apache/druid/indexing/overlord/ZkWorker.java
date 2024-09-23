@@ -30,6 +30,7 @@ import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.druid.annotations.UsedInGeneratedCode;
+import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
@@ -147,6 +148,23 @@ public class ZkWorker implements Closeable
       currCapacity += taskAnnouncement.getTaskResource().getRequiredCapacity();
     }
     return currCapacity;
+  }
+
+  @JsonProperty("currParallelIndexCapacityUsed")
+  public int getCurrParallelIndexCapacityUsed()
+  {
+    return getCurrParallelIndexCapacityUsed(getRunningTasks());
+  }
+
+  private int getCurrParallelIndexCapacityUsed(Map<String, TaskAnnouncement> tasks)
+  {
+    int currParallelIndexCapacityUsed = 0;
+    for (TaskAnnouncement taskAnnouncement : tasks.values()) {
+      if (taskAnnouncement.getTaskType().equals(ParallelIndexSupervisorTask.TYPE)) {
+        currParallelIndexCapacityUsed += taskAnnouncement.getTaskResource().getRequiredCapacity();
+      }
+    }
+    return currParallelIndexCapacityUsed;
   }
 
   @JsonProperty("currTypeSpecificCapacityUsed")

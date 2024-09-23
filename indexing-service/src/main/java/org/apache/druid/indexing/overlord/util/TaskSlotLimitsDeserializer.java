@@ -29,14 +29,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-public class CustomJobTypeLimitsDeserializer extends JsonDeserializer<Map<String, Number>>
+public class TaskSlotLimitsDeserializer extends JsonDeserializer<Map<String, Number>>
 {
 
   @Override
   public Map<String, Number> deserialize(JsonParser p, DeserializationContext ctxt)
       throws IOException
   {
-    Map<String, Number> customJobTypeLimits = new HashMap<>();
+    Map<String, Number> taskSlotLimits = new HashMap<>();
 
     JsonNode node = p.getCodec().readTree(p);
     Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
@@ -52,19 +52,19 @@ public class CustomJobTypeLimitsDeserializer extends JsonDeserializer<Map<String
           throw new IllegalArgumentException(
               "Limit value for task type '" + key + "' must be between 0 and 1 for ratios.");
         }
-        customJobTypeLimits.put(key, value);
+        taskSlotLimits.put(key, value);
       } else if (valueNode.isInt()) {
         int value = valueNode.asInt();
         if (value < 0) {
           throw new IllegalArgumentException(
               "Limit value for task type '" + key + "' must be >= 0 for integer limits.");
         }
-        customJobTypeLimits.put(key, value);
+        taskSlotLimits.put(key, value);
       } else {
         throw new IllegalArgumentException(
             "Limit value for task type '" + key + "' must be a number (either Double or Integer).");
       }
     }
-    return customJobTypeLimits;
+    return taskSlotLimits;
   }
 }
