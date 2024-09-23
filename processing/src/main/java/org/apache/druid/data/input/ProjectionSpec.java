@@ -29,7 +29,7 @@ import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
-    @JsonSubTypes.Type(name = "aggregate", value = AggregateProjectionSpec.class)
+    @JsonSubTypes.Type(name = AggregateProjectionSpec.TYPE_NAME, value = AggregateProjectionSpec.class)
 })
 public interface ProjectionSpec
 {

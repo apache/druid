@@ -112,6 +112,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTest
@@ -125,6 +126,64 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
   private final NonBlockingPool<ByteBuffer> nonBlockingPool;
 
+  private final DateTime timestamp = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
+
+  final RowSignature projectionBaseSignature = RowSignature.builder()
+                                                           .add("a", ColumnType.STRING)
+                                                           .add("b", ColumnType.STRING)
+                                                           .add("c", ColumnType.LONG)
+                                                           .add("d", ColumnType.DOUBLE)
+                                                           .build();
+  final List<InputRow> projectionBaseRows = Arrays.asList(
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp,
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("a", "aa", 1L, 1.0)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusMinutes(2),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("a", "bb", 1L, 1.1, 1.1f)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusMinutes(4),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("a", "cc", 2L, 2.2, 2.2f)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusMinutes(6),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("b", "aa", 3L, 3.3, 3.3f)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusMinutes(8),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("b", "aa", 4L, 4.4, 4.4f)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusMinutes(10),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("b", "bb", 5L, 5.5, 5.5f)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusHours(1),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("a", "aa", 1L, 1.1, 1.1f)
+      ),
+      new ListBasedInputRow(
+          projectionBaseSignature,
+          timestamp.plusHours(1).plusMinutes(1),
+          projectionBaseSignature.getColumnNames(),
+          Arrays.asList("a", "dd", 2L, 2.2, 2.2f)
+      )
+  );
   /**
    * If true, sort by [billy, __time]. If false, sort by [__time].
    */
@@ -169,7 +228,6 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         )
     );
 
-    final DateTime timestamp = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
     final IncrementalIndexCreator projectionsCreator = closer.closeLater(
         new IncrementalIndexCreator(
             indexType,
@@ -213,7 +271,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                                       }
                                   ),
                                   new AggregateProjectionSpec(
-                                      "a_hourly_c_sum",
+                                      "a_hourly_c_sum_with_count",
                                       Arrays.asList(
                                           new LongDimensionSchema("__gran"),
                                           new StringDimensionSchema("a")
@@ -222,6 +280,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                                           Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                                       ),
                                       new AggregatorFactory[]{
+                                          new CountAggregatorFactory("chocula"),
                                           new LongSumAggregatorFactory("_c_sum", "c")
                                       }
                                   ),
@@ -275,59 +334,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     );
 
     final IncrementalIndex projectionsIndex = projectionsCreator.createIndex();
-    final RowSignature signature = RowSignature.builder()
-                                               .add("a", ColumnType.STRING)
-                                               .add("b", ColumnType.STRING)
-                                               .add("c", ColumnType.LONG)
-                                               .add("d", ColumnType.DOUBLE)
-                                               .build();
-    final List<InputRow> rows = Arrays.asList(
-        new ListBasedInputRow(signature, timestamp, signature.getColumnNames(), Arrays.asList("a", "aa", 1L, 1.0)),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusMinutes(2),
-            signature.getColumnNames(),
-            Arrays.asList("a", "bb", 1L, 1.1, 1.1f)
-        ),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusMinutes(4),
-            signature.getColumnNames(),
-            Arrays.asList("a", "cc", 2L, 2.2, 2.2f)
-        ),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusMinutes(6),
-            signature.getColumnNames(),
-            Arrays.asList("b", "aa", 3L, 3.3, 3.3f)
-        ),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusMinutes(8),
-            signature.getColumnNames(),
-            Arrays.asList("b", "aa", 4L, 4.4, 4.4f)
-        ),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusMinutes(10),
-            signature.getColumnNames(),
-            Arrays.asList("b", "bb", 5L, 5.5, 5.5f)
-        ),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusHours(1),
-            signature.getColumnNames(),
-            Arrays.asList("a", "aa", 1L, 1.1, 1.1f)
-        ),
-        new ListBasedInputRow(
-            signature,
-            timestamp.plusHours(1).plusMinutes(1),
-            signature.getColumnNames(),
-            Arrays.asList("a", "dd", 2L, 2.2, 2.2f)
-        )
-    );
 
-    for (InputRow row : rows) {
+    for (InputRow row : projectionBaseRows) {
       projectionsIndex.add(row);
     }
 
@@ -354,7 +362,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
-        (query, future) -> {}
+        (query, future) -> {
+        }
     );
     topnQueryEngine = new TopNQueryEngine(nonBlockingPool);
   }
@@ -918,6 +927,50 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void testProjectionSelectionTwoDimsCount()
+  {
+    // this query can use the projection with 2 dims, which has 7 rows instead of the total of 8
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("a")
+                    .addDimension("b")
+                    .addAggregator(new CountAggregatorFactory("count"))
+                    .build();
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(6, rowCount);
+    }
+
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(6, results.size());
+    Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(1).getArray());
+    Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(2).getArray());
+    Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(3).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(4).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(5).getArray());
+  }
+
+  @Test
   public void testProjectionSkipContext()
   {
     // setting context flag to skip projection
@@ -980,6 +1033,42 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
   }
 
   @Test
+  public void testProjectionSingleDimCount()
+  {
+    // test can use the single dimension projection
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("a")
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new CountAggregatorFactory("cnt"))
+                    .build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(3, rowCount);
+    }
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(2, results.size());
+    Assert.assertArrayEquals(new Object[]{"a", 7L, 5L}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 12L, 3L}, results.get(1).getArray());
+  }
+
+  @Test
   public void testQueryGranularityFinerThanProjectionGranularity()
   {
     final GroupByQuery.Builder queryBuilder =
@@ -1021,14 +1110,38 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(8, results.size());
 
-    Assert.assertArrayEquals(new Object[]{1726704000000L, "a", 1L}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{1726704120000L, "a", 1L}, results.get(1).getArray());
-    Assert.assertArrayEquals(new Object[]{1726704240000L, "a", 2L}, results.get(2).getArray());
-    Assert.assertArrayEquals(new Object[]{1726704360000L, "b", 3L}, results.get(3).getArray());
-    Assert.assertArrayEquals(new Object[]{1726704480000L, "b", 4L}, results.get(4).getArray());
-    Assert.assertArrayEquals(new Object[]{1726704600000L, "b", 5L}, results.get(5).getArray());
-    Assert.assertArrayEquals(new Object[]{1726707600000L, "a", 1L}, results.get(6).getArray());
-    Assert.assertArrayEquals(new Object[]{1726707660000L, "a", 2L}, results.get(7).getArray());
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(0).getTimestamp().getMillis(), "a", 1L},
+        results.get(0).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(1).getTimestamp().getMillis(), "a", 1L},
+        results.get(1).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(2).getTimestamp().getMillis(), "a", 2L},
+        results.get(2).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(3).getTimestamp().getMillis(), "b", 3L},
+        results.get(3).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(4).getTimestamp().getMillis(), "b", 4L},
+        results.get(4).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(5).getTimestamp().getMillis(), "b", 5L},
+        results.get(5).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(6).getTimestamp().getMillis(), "a", 1L},
+        results.get(6).getArray()
+    );
+    Assert.assertArrayEquals(
+        new Object[]{projectionBaseRows.get(7).getTimestamp().getMillis(), "a", 2L},
+        results.get(7).getArray()
+    );
   }
 
   @Test
@@ -1072,9 +1185,9 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(3, results.size());
-    Assert.assertArrayEquals(new Object[]{1726704000000L, "a", 4L}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{1726704000000L, "b", 12L}, results.get(1).getArray());
-    Assert.assertArrayEquals(new Object[]{1726707600000L, "a", 3L}, results.get(2).getArray());
+    Assert.assertArrayEquals(new Object[]{timestamp.getMillis(), "a", 4L}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{timestamp.getMillis(), "b", 12L}, results.get(1).getArray());
+    Assert.assertArrayEquals(new Object[]{timestamp.plusHours(1).getMillis(), "a", 3L}, results.get(2).getArray());
   }
 
   @Test
@@ -1111,10 +1224,10 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(4, results.size());
-    Assert.assertArrayEquals(new Object[]{"aa", 9L, null}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"bb", 6L, null}, results.get(1).getArray());
-    Assert.assertArrayEquals(new Object[]{"cc", 2L, null}, results.get(2).getArray());
-    Assert.assertArrayEquals(new Object[]{"dd", 2L, null}, results.get(3).getArray());
+    Assert.assertArrayEquals(new Object[]{"aa", 9L, NullHandling.defaultFloatValue()}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"bb", 6L, NullHandling.defaultFloatValue()}, results.get(1).getArray());
+    Assert.assertArrayEquals(new Object[]{"cc", 2L, NullHandling.defaultFloatValue()}, results.get(2).getArray());
+    Assert.assertArrayEquals(new Object[]{"dd", 2L, NullHandling.defaultFloatValue()  }, results.get(3).getArray());
   }
 
   @Test
@@ -1236,6 +1349,13 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     {
       // Test code, hashcode and equals isn't important
       return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      // Test code, hashcode and equals isn't important
+      return super.equals(obj);
     }
 
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory

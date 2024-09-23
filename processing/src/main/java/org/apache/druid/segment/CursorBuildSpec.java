@@ -59,6 +59,8 @@ public class CursorBuildSpec
 
   private final QueryContext queryContext;
 
+  private final boolean isAggregate;
+
   @Nullable
   private final QueryMetrics<?> queryMetrics;
 
@@ -81,6 +83,7 @@ public class CursorBuildSpec
     this.orderByColumns = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.queryMetrics = queryMetrics;
+    this.isAggregate = !CollectionUtils.isNullOrEmpty(groupingColumns) || !CollectionUtils.isNullOrEmpty(aggregators);
   }
 
   /**
@@ -167,9 +170,32 @@ public class CursorBuildSpec
     return queryMetrics;
   }
 
+  /**
+   * Returns true if {@link #getGroupingColumns()} is not null or empty and/or {@link #getAggregators()} is not null or
+   * empty. This method is useful for quickly checking if it is worth considering if a {@link CursorFactory} should
+   * attempt to produce a {@link CursorHolder} that is {@link CursorHolder#isPreAggregated()} to satisfy the build spec.
+   */
   public boolean isAggregate()
   {
-    return !CollectionUtils.isNullOrEmpty(groupingColumns) || !CollectionUtils.isNullOrEmpty(aggregators);
+    return isAggregate;
+  }
+
+  public boolean isCompatibleOrdering(List<OrderBy> ordering)
+  {
+    // if the build spec doesn't prefer an ordering, any order is ok
+    if (orderByColumns.isEmpty()) {
+      return true;
+    }
+    // all columns must be present in ordering if the build spec specifies them
+    if (ordering.size() < orderByColumns.size()) {
+      return false;
+    }
+    for (int i = 0; i < orderByColumns.size(); i++) {
+      if (!ordering.get(i).equals(orderByColumns.get(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static class CursorBuildSpecBuilder

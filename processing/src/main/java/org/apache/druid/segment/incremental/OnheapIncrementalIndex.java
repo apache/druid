@@ -46,13 +46,13 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
@@ -71,6 +71,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
@@ -196,63 +197,88 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       if (projectionSpec instanceof AggregateProjectionSpec) {
         AggregateProjectionSpec schema = (AggregateProjectionSpec) projectionSpec;
         final List<DimensionDesc> descs = new ArrayList<>();
+        // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
+        // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
+        // handled as the timestamp of the row. Unlike the parent incremental index, an aggregating projection will
+        // always have its time-like column in the grouping columns list, so its position in this array specifies -1
         final int[] parentDimIndex = new int[schema.getGroupingColumns().size()];
-        int i = 0;
+        Arrays.fill(parentDimIndex, -1);
         int foundTimePosition = -1;
         String timeColumnName = null;
-        for (DimensionSchema dimension : schema.getGroupingColumns()) {
+        Granularity granularity = null;
+        // try to find the __time column equivalent, which might be a time_floor expression to model granularity
+        // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
+        // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
+        // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
+        for (int i = 0; i < schema.getGroupingColumns().size(); i++) {
+          final DimensionSchema dimension = schema.getGroupingColumns().get(i);
           if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
             timeColumnName = dimension.getName();
             foundTimePosition = i;
             parentDimIndex[i] = -1;
+            granularity = Granularities.NONE;
           } else {
-            VirtualColumn vc = schema.getVirtualColumns().getVirtualColumn(dimension.getName());
-            Granularity granularity = Granularities.fromVirtualColumn(vc);
-            if (granularity != null) {
+            final VirtualColumn vc = schema.getVirtualColumns().getVirtualColumn(dimension.getName());
+            final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
+            if (granularity == null && maybeGranularity != null) {
+              granularity = maybeGranularity;
               timeColumnName = dimension.getName();
               foundTimePosition = i;
-              parentDimIndex[i] = -1;
-            } else {
-              final DimensionDesc parent = getDimension(dimension.getName());
-              if (parent == null) {
-                final DimensionDesc childOnly = new DimensionDesc(
-                    i++,
-                    dimension.getName(),
-                    dimension.getDimensionHandler(),
-                    useMaxMemoryEstimates
-                );
-                descs.add(childOnly);
-                parentDimIndex[childOnly.getIndex()] = -1;
-              } else {
-
-                if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
-                  throw InvalidInput.exception(
-                      "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
-                      schema.getName(),
-                      dimension.getName(),
-                      dimension.getColumnType(),
-                      parent.getCapabilities().toColumnType()
-                  );
-                }
-                final DimensionDesc rewrite = new DimensionDesc(
-                    i++,
-                    parent.getName(),
-                    parent.getHandler(),
-                    parent.getIndexer()
-                );
-                descs.add(rewrite);
-                parentDimIndex[rewrite.getIndex()] = parent.getIndex();
-              }
+            } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
+              granularity = maybeGranularity;
+              timeColumnName = dimension.getName();
+              foundTimePosition = i;
             }
+          }
+        }
+        int i = 0;
+        final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
+        for (DimensionSchema dimension : schema.getGroupingColumns()) {
+          if (dimension.getName().equals(timeColumnName)) {
+            continue;
+          }
+          final DimensionDesc parent = getDimension(dimension.getName());
+          if (parent == null) {
+            // this dimension only exists in the child, it needs its own handler
+            final DimensionDesc childOnly = new DimensionDesc(
+                i++,
+                dimension.getName(),
+                dimension.getDimensionHandler(),
+                useMaxMemoryEstimates
+            );
+            descs.add(childOnly);
+            dimensionsMap.put(dimension.getName(), childOnly);
+          } else {
+            if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
+              throw InvalidInput.exception(
+                  "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
+                  schema.getName(),
+                  dimension.getName(),
+                  dimension.getColumnType(),
+                  parent.getCapabilities().toColumnType()
+              );
+            }
+            // make a new DimensionDesc from the child, containing all of the parents stuff but with the childs position
+            final DimensionDesc child = new DimensionDesc(
+                i++,
+                parent.getName(),
+                parent.getHandler(),
+                parent.getIndexer()
+            );
+            descs.add(child);
+            dimensionsMap.put(dimension.getName(), child);
+            parentDimIndex[child.getIndex()] = parent.getIndex();
           }
         }
         aggregateProjections.add(
             new OnHeapAggregateProjection(
                 schema,
                 descs,
+                dimensionsMap,
                 parentDimIndex,
                 this,
                 timeColumnName,
+                granularity,
                 foundTimePosition,
                 incrementalIndexSchema.getMinTimestamp(),
                 this.useMaxMemoryEstimates,
@@ -357,10 +383,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final List<String> parseExceptionMessages = new ArrayList<>();
     final AtomicLong totalSizeInBytes = getBytesInMemory();
 
-    for (OnHeapAggregateProjection projection : aggregateProjections) {
-      projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
-    }
-
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
@@ -408,6 +430,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       totalSizeInBytes.addAndGet(rowSize);
     }
 
+    for (OnHeapAggregateProjection projection : aggregateProjections) {
+      projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
+    }
+
     return new AddToFactsResult(numEntries.get(), totalSizeInBytes.get(), parseExceptionMessages);
   }
 
@@ -443,11 +469,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       }
       // Creates aggregators to combine already aggregated field
       if (preserveExistingMetrics) {
+        AggregatorFactory combiningAgg = agg.getCombiningFactory();
         if (useMaxMemoryEstimates) {
-          AggregatorFactory combiningAgg = agg.getCombiningFactory();
           aggs[i + metrics.length] = combiningAgg.factorize(combiningAggSelectors.get(combiningAgg.getName()));
         } else {
-          AggregatorFactory combiningAgg = agg.getCombiningFactory();
           AggregatorAndSize aggregatorAndSize = combiningAgg.factorizeWithSize(combiningAggSelectors.get(combiningAgg.getName()));
           aggs[i + metrics.length] = aggregatorAndSize.getAggregator();
           totalInitialSizeBytes += aggregatorAndSize.getInitialSizeBytes();
@@ -549,13 +574,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
     if (buildSpec.isAggregate()) {
       for (OnHeapAggregateProjection projection : aggregateProjections) {
-        if (name != null && !name.equals(projection.schema.getName())) {
+        if (name != null && !name.equals(projection.name)) {
           continue;
         }
         final Map<String, String> rewriteColumns = new HashMap<>();
         final Set<VirtualColumn> referenced = new HashSet<>();
         if (projection.matches(buildSpec, referenced, rewriteColumns)) {
-          log.debug("Using projection[%s]", projection.schema.getName());
+          log.debug("Using projection[%s]", projection.name);
           final CursorBuildSpec rewrittenBuildSpec =
               CursorBuildSpec.builder(buildSpec)
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
@@ -1195,45 +1220,47 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       }
       // fewer dimensions first
       final int dimsCompare = Integer.compare(
-          o1.schema.getGroupingColumns().size(),
-          o2.schema.getGroupingColumns().size()
+          o1.dimensions.size(),
+          o2.dimensions.size()
       );
       if (dimsCompare != 0) {
         return dimsCompare;
       }
       // more metrics first
-      int metCompare = Integer.compare(o2.schema.getAggregators().length, o1.schema.getAggregators().length);
+      int metCompare = Integer.compare(o2.aggregatorFactories.length, o1.aggregatorFactories.length);
       if (metCompare != 0) {
         return metCompare;
       }
       // more virtual columns first
       final int virtCompare = Integer.compare(
-          o2.schema.getVirtualColumns().getVirtualColumns().length,
-          o1.schema.getVirtualColumns().getVirtualColumns().length
+          o2.virtualColumns.getVirtualColumns().length,
+          o1.virtualColumns.getVirtualColumns().length
       );
       if (virtCompare != 0) {
         return virtCompare;
       }
-      return o1.schema.getName().compareTo(o2.schema.getName());
+      return o1.name.compareTo(o2.name);
     };
 
-    private final AggregateProjectionSpec schema;
+    private final String name;
     private final Granularity projectionGranularity;
     private final boolean hasTimeColumn;
     @Nullable
     private final String timeColumnName;
     private final long minTimestamp;
     private final List<DimensionDesc> dimensions;
+    private final VirtualColumns virtualColumns;
+    private final AggregatorFactory[] aggregatorFactories;
     private final int[] parentDimensionIndex;
     private final Map<String, DimensionDesc> dimensionsMap;
     private final Map<String, MetricDesc> aggregatorsMap;
     private final List<OrderBy> ordering;
     private final FactsHolder factsHolder;
-    private final InputRowHolder inputRowHolder = new InputRowHolder();
-    private final Map<String, ColumnSelectorFactory> aggSelectors;
-    private final ColumnSelectorFactory virtualSelectorFactory;
-    private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
     private final ColumnInspector baseTableInspector;
+    private final InputRowHolder inputRowHolder = new InputRowHolder();
+    private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+    private final ColumnSelectorFactory virtualSelectorFactory;
+    private final Map<String, ColumnSelectorFactory> aggSelectors;
     private final AtomicInteger rowCounter = new AtomicInteger(0);
     private final boolean useMaxMemoryEstimates;
     private final long maxBytesPerRowForAggregators;
@@ -1242,32 +1269,25 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     public OnHeapAggregateProjection(
         AggregateProjectionSpec schema,
         List<DimensionDesc> dimensions,
+        Map<String, DimensionDesc> dimensionsMap,
         int[] parentDimensionIndex,
         ColumnInspector baseTableInspector,
         @Nullable String timeColumnName,
+        @Nullable Granularity granularity,
         int foundTimePosition,
         long minTimestamp,
         boolean useMaxMemoryEstimates,
         long maxBytesPerRowForAggregators
     )
     {
-      this.schema = schema;
+      this.name = schema.getName();
       this.dimensions = dimensions;
+      this.virtualColumns = schema.getVirtualColumns();
       this.parentDimensionIndex = parentDimensionIndex;
-      this.dimensionsMap = new HashMap<>();
-      for (DimensionDesc desc : dimensions) {
-        dimensionsMap.put(desc.getName(), desc);
-      }
+      this.dimensionsMap = dimensionsMap;
       this.baseTableInspector = baseTableInspector;
       this.timeColumnName = timeColumnName;
-      Granularity virtualGranularity = null;
-      for (VirtualColumn vc : schema.getVirtualColumns().getVirtualColumns()) {
-        if (vc.requiresColumn(ColumnHolder.TIME_COLUMN_NAME) && vc.requiredColumns().size() == 1) {
-          virtualGranularity = Granularities.fromVirtualColumn(vc);
-          break;
-        }
-      }
-      this.projectionGranularity = virtualGranularity == null ? Granularities.ALL : virtualGranularity;
+      this.projectionGranularity = granularity == null ? Granularities.ALL : granularity;
       this.hasTimeColumn = foundTimePosition >= 0;
       this.minTimestamp = minTimestamp;
       final IncrementalIndexRowComparator rowComparator = new IncrementalIndexRowComparator(
@@ -1283,8 +1303,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       );
       this.aggSelectors = new HashMap<>();
       this.aggregatorsMap = new HashMap<>();
+      final AggregatorFactory[] metrics = new AggregatorFactory[schema.getAggregators().length];
+      int i = 0;
+      // all aggregating projections have a count. its cheap and convenient to be able to correctly satisfy any query
+      // with a count(*). it may be explicitly defined, but if not, we create one
+      boolean hasCount = false;
       for (AggregatorFactory agg : schema.getAggregators()) {
-        MetricDesc metricDesc = new MetricDesc(aggregatorsMap.size(), agg.getCombiningFactory());
+        if (agg instanceof CountAggregatorFactory) {
+          hasCount = true;
+        }
+        MetricDesc metricDesc = new MetricDesc(aggregatorsMap.size(), agg);
         aggregatorsMap.put(metricDesc.getName(), metricDesc);
         final ColumnSelectorFactory factory;
         if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
@@ -1295,6 +1323,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           factory = virtualSelectorFactory;
         }
         aggSelectors.put(agg.getName(), factory);
+        metrics[i++] = agg;
+      }
+      if (!hasCount) {
+        this.aggregatorFactories = new AggregatorFactory[metrics.length + 1];
+        System.arraycopy(metrics, 0, this.aggregatorFactories, 0, metrics.length);
+        AggregatorFactory count = new CountAggregatorFactory("__count");
+        this.aggregatorFactories[metrics.length] = count;
+        MetricDesc metricDesc = new MetricDesc(aggregatorsMap.size(), count);
+        aggregatorsMap.put(count.getName(), metricDesc);
+      } else {
+        this.aggregatorFactories = metrics;
       }
       this.ordering = getOrder(dimensions, foundTimePosition);
     }
@@ -1353,15 +1392,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       final int priorIndex = factsHolder.getPriorIndex(subKey);
 
       final Aggregator[] aggs;
-      final AggregatorFactory[] metrics = schema.getAggregators();
       if (IncrementalIndexRow.EMPTY_ROW_INDEX != priorIndex) {
         aggs = aggregators.get(priorIndex);
-        long aggForProjectionSizeDelta = doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages, useMaxMemoryEstimates, false);
+        long aggForProjectionSizeDelta = doAggregate(aggregatorFactories, aggs, inputRowHolder, parseExceptionMessages, useMaxMemoryEstimates, false);
         totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : aggForProjectionSizeDelta);
       } else {
-        aggs = new Aggregator[metrics.length];
-        long aggSizeForProjectionRow = factorizeProjectionAggs(metrics, aggs);
-        aggSizeForProjectionRow += doAggregate(metrics, aggs, inputRowHolder, parseExceptionMessages, useMaxMemoryEstimates, false);
+        aggs = new Aggregator[aggregatorFactories.length];
+        long aggSizeForProjectionRow = factorizeAggs(aggregatorFactories, aggs);
+        aggSizeForProjectionRow += doAggregate(aggregatorFactories, aggs, inputRowHolder, parseExceptionMessages, useMaxMemoryEstimates, false);
         final long estimatedSizeOfAggregators =
             useMaxMemoryEstimates ? maxBytesPerRowForAggregators : aggSizeForProjectionRow;
         final long projectionRowSize = key.estimateBytesInMemory()
@@ -1380,7 +1418,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         Map<String, String> rewriteColumns
     )
     {
-      if (!Cursors.compatibleOrdering(buildSpec, schema.getOrdering())) {
+      if (!buildSpec.isCompatibleOrdering(ordering)) {
         return false;
       }
       if (CollectionUtils.isNullOrEmpty(buildSpec.getGroupingColumns()) && CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
@@ -1390,9 +1428,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       if (grouping != null) {
         for (String column : grouping) {
           if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns)) {
-            if (schema.getVirtualColumns().getVirtualColumn(column) == null && buildSpec.getVirtualColumns().getVirtualColumn(column) == null && baseTableInspector.getColumnCapabilities(column) == null) {
-              continue;
-            }
             return false;
           }
         }
@@ -1405,21 +1440,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
       }
       if (!CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
-        if (schema.getAggregators().length != buildSpec.getAggregators().size()) {
-          return false;
-        }
+        int matchCount = 0;
         boolean allMatch = true;
         for (AggregatorFactory factory : buildSpec.getAggregators()) {
           boolean foundMatch = false;
-          for (AggregatorFactory schemaFactory : schema.getAggregators()) {
+          for (AggregatorFactory schemaFactory : aggregatorFactories) {
             if (schemaFactory.withName(factory.getName()).equals(factory)) {
               rewriteColumns.put(factory.getName(), schemaFactory.getName());
               foundMatch = true;
+              matchCount++;
             }
           }
           allMatch = allMatch && foundMatch;
         }
-        if (!allMatch) {
+        if (!allMatch || matchCount < buildSpec.getAggregators().size()) {
           return false;
         }
       }
@@ -1509,60 +1543,63 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       return null;
     }
 
+    /**
+     * Ensure that the projection has the specified column required by a {@link CursorBuildSpec} in one form or another.
+     * If the column is a {@link VirtualColumn} on the build spec, ensure that the projection has an equivalent virtual
+     * column, or has the required inputs to compute the virtual column. If an equivalent virtual column exists, its
+     * name will be added to the 'rewriteVirtualColumns' parameter  so that the build spec name can be mapped to the
+     * projection name. If no equivalent virtual column exists, but the inputs are available on the projection to
+     * compute it, it will be added to 'referencedVirtualColumns' parameter.
+     */
     private boolean hasRequiredColumn(
         String column,
-        VirtualColumns virtualColumns,
+        VirtualColumns buildSpecVirtualColumns,
         Set<VirtualColumn> referencedVirtualColumns,
         Map<String, String> rewriteVirtualColumns
     )
     {
-      VirtualColumn vc = virtualColumns.getVirtualColumn(column);
-      if (vc != null) {
-        final VirtualColumn equivalent = schema.getVirtualColumns().findEquivalent(vc);
-        if (equivalent != null) {
-          if (!vc.getOutputName().equals(equivalent.getOutputName())) {
-            rewriteVirtualColumns.put(vc.getOutputName(), equivalent.getOutputName());
+      final VirtualColumn buildSpecVirtualColumn = buildSpecVirtualColumns.getVirtualColumn(column);
+      if (buildSpecVirtualColumn != null) {
+        // check to see if we have an equivalent virtual column defined in the projection, if so we can
+        final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
+        if (projectionEquivalent != null) {
+          if (!buildSpecVirtualColumn.getOutputName().equals(projectionEquivalent.getOutputName())) {
+            rewriteVirtualColumns.put(buildSpecVirtualColumn.getOutputName(), projectionEquivalent.getOutputName());
           }
           return true;
         }
 
-        referencedVirtualColumns.add(vc);
-        final List<String> requiredInputs = vc.requiredColumns();
+        referencedVirtualColumns.add(buildSpecVirtualColumn);
+        final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
         if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
           // special handle time granularity
-          final Granularity virtualGranularity = Granularities.fromVirtualColumn(vc);
+          final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
           if (virtualGranularity != null) {
-            if (virtualGranularity.isFinerThan(projectionGranularity)) {
-              return false;
-            }
+            return !virtualGranularity.isFinerThan(projectionGranularity);
           } else {
             // anything else with __time requires none granularity
-            if (!Granularities.NONE.equals(projectionGranularity)) {
-              return false;
-            }
+            return Granularities.NONE.equals(projectionGranularity);
           }
         } else {
           for (String required : requiredInputs) {
-            if (!dimensionsMap.containsKey(required)) {
+            if (!hasRequiredColumn(required, buildSpecVirtualColumns, referencedVirtualColumns, rewriteVirtualColumns)) {
               return false;
             }
           }
         }
+        return true;
       } else {
-        return dimensionsMap.containsKey(column);
+        // a physical column must either be present or also missing from the base table
+        return dimensionsMap.containsKey(column) || baseTableInspector.getColumnCapabilities(column) == null;
       }
-      return true;
     }
 
-    private long factorizeProjectionAggs(
-        AggregatorFactory[] metrics,
-        Aggregator[] aggs
-    )
+    private long factorizeAggs(AggregatorFactory[] aggregatorFactories, Aggregator[] aggs)
     {
       long totalInitialSizeBytes = 0L;
       final long aggReferenceSize = Long.BYTES;
-      for (int i = 0; i < metrics.length; i++) {
-        final AggregatorFactory agg = metrics[i];
+      for (int i = 0; i < aggregatorFactories.length; i++) {
+        final AggregatorFactory agg = aggregatorFactories[i];
         // Creates aggregators to aggregate from input into output fields
         if (useMaxMemoryEstimates) {
           aggs[i] = agg.factorize(aggSelectors.get(agg.getName()));

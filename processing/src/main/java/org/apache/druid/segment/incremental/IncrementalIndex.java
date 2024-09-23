@@ -936,7 +936,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return new IncrementalIndexRowComparator(timePosition, dimensionDescsList);
   }
 
-
   private static String getSimplifiedEventStringFromRow(InputRow inputRow)
   {
     if (inputRow instanceof MapBasedInputRow) {
@@ -1383,19 +1382,19 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   public static final class ProjectionRowSelector
   {
     private final IncrementalIndexRowSelector rowSelector;
-    private final CursorBuildSpec rewrittenBuildSpec;
+    private final CursorBuildSpec cursorBuildSpec;
     private final Map<String, String> rewriteColumns;
     private final String timeColumnName;
 
     ProjectionRowSelector(
         IncrementalIndexRowSelector rowSelector,
-        CursorBuildSpec rewrittenBuildSpec,
+        CursorBuildSpec cursorBuildSpec,
         Map<String, String> rewriteColumns,
         @Nullable String timeColumnName
     )
     {
       this.rowSelector = rowSelector;
-      this.rewrittenBuildSpec = rewrittenBuildSpec;
+      this.cursorBuildSpec = cursorBuildSpec;
       this.rewriteColumns = rewriteColumns;
       this.timeColumnName = timeColumnName == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumnName;
     }
@@ -1485,9 +1484,9 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
       };
     }
 
-    public CursorBuildSpec getRewrittenBuildSpec()
+    public CursorBuildSpec getCursorBuildSpec()
     {
-      return rewrittenBuildSpec;
+      return cursorBuildSpec;
     }
 
     public String getTimeColumnName()

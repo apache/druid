@@ -88,7 +88,7 @@ public class IncrementalIndexCursorFactory implements CursorFactory
       timeColumnName = ColumnHolder.TIME_COLUMN_NAME;
     } else {
       rowSelector = projection.getRowSelector();
-      buildSpec = projection.getRewrittenBuildSpec();
+      buildSpec = projection.getCursorBuildSpec();
       timeColumnName = projection.getTimeColumnName();
     }
     return new IncrementalIndexCursorHolder(rowSelector, buildSpec, timeColumnName, projection != null);

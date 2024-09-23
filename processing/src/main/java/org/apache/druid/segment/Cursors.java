@@ -64,26 +64,6 @@ public class Cursors
     }
   }
 
-  public static boolean compatibleOrdering(CursorBuildSpec buildSpec, List<OrderBy> ordering)
-  {
-    // if the build spec doesn't prefer an ordering, any order is ok
-    if (buildSpec.getPreferredOrdering().isEmpty()) {
-      return true;
-    }
-    // all columns must be present in ordering if the build spec specifies them
-    if (ordering.size() < buildSpec.getPreferredOrdering().size()) {
-      return false;
-    }
-    for (int i = 0; i < buildSpec.getPreferredOrdering().size(); i++) {
-      final OrderBy preferredOrderBy = buildSpec.getPreferredOrdering().get(i);
-      final OrderBy orderBy = ordering.get(i);
-      if (!orderBy.equals(preferredOrderBy)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   /**
    * Get a {@link CursorHolder} {@link OrderBy} list that contains only a {@link ColumnHolder#TIME_COLUMN_NAME} as
    * {@link Order#ASCENDING}, classic Druid segment order.

@@ -37,7 +37,7 @@ import java.util.Objects;
 
 public class AggregateProjectionSpec implements ProjectionSpec
 {
-  public static String TYPE_NAME = "aggregate";
+  public static final String TYPE_NAME = "aggregate";
 
   private final String name;
   private final List<DimensionSchema> groupingColumns;
