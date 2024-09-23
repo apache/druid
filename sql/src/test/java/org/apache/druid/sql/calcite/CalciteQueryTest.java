@@ -16439,4 +16439,29 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             )
         ).run();
   }
+
+  @Test
+  public void testGroupingSetsWithSimpleExtraction()
+  {
+    cannotVectorize();
+    msqIncompatible();
+    testBuilder()
+        .sql(
+            "SELECT LOOKUP(dim3,'lookyloo'), dim3, sum(m1), "
+            + "Grouping(LOOKUP(dim3,'lookyloo'), dim3) "
+            + "FROM druid.foo "
+            + "where dim3 in ('a', 'b', 'c') "
+            + "group by grouping sets ((LOOKUP(dim3,'lookyloo'), dim3))"
+        )
+        .expectedResults(
+            ResultMatchMode.RELAX_NULLS,
+            ImmutableList.of(
+                new Object[]{null, "a", 1.0D, 0L},
+                new Object[]{null, "b", 5.0D, 0L},
+                new Object[]{null, "c", 4.0D, 0L},
+                new Object[]{"xa", "a", 1.0D, 0L},
+                new Object[]{"xa", "b", 1.0D, 0L}
+            )
+        ).run();
+  }
 }
