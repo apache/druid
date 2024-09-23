@@ -29,9 +29,9 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -343,8 +343,13 @@ public class SegmentManager
                 dataSegment.getVersion(),
                 dataSegment.getShardSpec().createChunk(segment)
             );
-            final StorageAdapter storageAdapter = segment.asStorageAdapter();
-            final long numOfRows = (dataSegment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+            final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+            final long numOfRows;
+            if (dataSegment.isTombstone() || countInspector == null) {
+              numOfRows = 0;
+            } else {
+              numOfRows = countInspector.getNumRows();
+            }
             dataSourceState.addSegment(dataSegment, numOfRows);
 
             pageCacheLoadFunction.accept(dataSegment);
@@ -387,8 +392,13 @@ public class SegmentManager
 
             if (oldQueryable != null) {
               try (final Closer closer = Closer.create()) {
-                StorageAdapter storageAdapter = oldQueryable.asStorageAdapter();
-                long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+                final PhysicalSegmentInspector countInspector = oldQueryable.as(PhysicalSegmentInspector.class);
+                final long numOfRows;
+                if (segment.isTombstone() || countInspector == null) {
+                  numOfRows = 0;
+                } else {
+                  numOfRows = countInspector.getNumRows();
+                }
                 dataSourceState.removeSegment(segment, numOfRows);
 
                 closer.register(oldQueryable);

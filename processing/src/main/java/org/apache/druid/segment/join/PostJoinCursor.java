@@ -24,14 +24,14 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
 /**
- * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#makeCursors} to add post-join virtual columns
- * and filters.
+ * A Cursor decorator used by {@link HashJoinSegmentCursorFactory#makeCursorHolder(CursorBuildSpec)} to add post-join
+ * virtual columns and filters.
  */
 public class PostJoinCursor implements Cursor
 {
@@ -84,31 +84,10 @@ public class PostJoinCursor implements Cursor
     }
   }
 
-  /**
-   * Matches tuples coming out of a join to a post-join condition uninterruptibly, and hence can be a long-running call.
-   * For this reason, {@link PostJoinCursor#advance()} instead calls {@link PostJoinCursor#advanceToMatch()} (unlike
-   * other cursors) that allows interruptions, thereby resolving issues where the
-   * <a href="https://github.com/apache/druid/issues/14514">CPU thread running PostJoinCursor cannot be terminated</a>
-   */
-  private void advanceToMatchUninterruptibly()
-  {
-    if (valueMatcher != null) {
-      while (!isDone() && !valueMatcher.matches(false)) {
-        baseCursor.advanceUninterruptibly();
-      }
-    }
-  }
-
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     return columnSelectorFactory;
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Nullable
@@ -126,11 +105,17 @@ public class PostJoinCursor implements Cursor
     advanceToMatch();
   }
 
+
+  /**
+   * Advancing the post-join requires evaluating the join on whole segment and advancing without interruption can take
+   * a long time if there are no matches but the join itself is big. This can leave the thread running well after
+   * the timeout elapses. One such issue is described in
+   * <a href="https://github.com/apache/druid/issues/14514">CPU thread running PostJoinCursor cannot be terminated</a>
+   */
   @Override
   public void advanceUninterruptibly()
   {
-    baseCursor.advanceUninterruptibly();
-    advanceToMatchUninterruptibly();
+    advance();
   }
 
   @Override

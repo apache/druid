@@ -1,8 +1,5 @@
 type: "operatorValidation"
 
-queryContext:
-  maxSubqueryBytes: 100000
-
 sql: |
   SELECT
       __time

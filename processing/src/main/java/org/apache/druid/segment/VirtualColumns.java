@@ -26,11 +26,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -129,22 +129,16 @@ public class VirtualColumns implements Cacheable
     return virtualColumns == null ? EMPTY : virtualColumns;
   }
 
-  public static boolean shouldVectorize(Query<?> query, VirtualColumns virtualColumns, ColumnInspector inspector)
-  {
-    if (virtualColumns.getVirtualColumns().length > 0) {
-      return query.context().getVectorizeVirtualColumns().shouldVectorize(virtualColumns.canVectorize(inspector));
-    } else {
-      return true;
-    }
-  }
-
   // For equals, hashCode, toString, and serialization:
   private final List<VirtualColumn> virtualColumns;
   private final List<String> virtualColumnNames;
+  // For equivalence
+  private final Map<VirtualColumn.EquivalenceKey, VirtualColumn> equivalence;
 
   // For getVirtualColumn:
   private final Map<String, VirtualColumn> withDotSupport;
   private final Map<String, VirtualColumn> withoutDotSupport;
+  private final boolean hasNoDotColumns;
 
   private VirtualColumns(
       List<VirtualColumn> virtualColumns,
@@ -156,10 +150,15 @@ public class VirtualColumns implements Cacheable
     this.withDotSupport = withDotSupport;
     this.withoutDotSupport = withoutDotSupport;
     this.virtualColumnNames = new ArrayList<>(virtualColumns.size());
-
+    this.hasNoDotColumns = withDotSupport.isEmpty();
+    this.equivalence = Maps.newHashMapWithExpectedSize(virtualColumns.size());
     for (VirtualColumn virtualColumn : virtualColumns) {
       detectCycles(virtualColumn, null);
       virtualColumnNames.add(virtualColumn.getOutputName());
+      VirtualColumn.EquivalenceKey key = virtualColumn.getEquivalanceKey();
+      if (key != null) {
+        equivalence.put(key, virtualColumn);
+      }
     }
   }
 
@@ -182,8 +181,21 @@ public class VirtualColumns implements Cacheable
     if (vc != null) {
       return vc;
     }
+    if (hasNoDotColumns) {
+      return null;
+    }
     final String baseColumnName = splitColumnName(columnName).lhs;
     return withDotSupport.get(baseColumnName);
+  }
+
+  /**
+   * Check if a virtual column is already defined which is the same as some other virtual column, ignoring output name,
+   * returning that virtual column if it exists, or null if there is no equivalent virtual column.
+   */
+  @Nullable
+  public VirtualColumn findEquivalent(VirtualColumn virtualColumn)
+  {
+    return equivalence.get(virtualColumn.getEquivalanceKey());
   }
 
   /**

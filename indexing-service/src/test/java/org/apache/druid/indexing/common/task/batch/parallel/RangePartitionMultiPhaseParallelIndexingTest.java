@@ -110,7 +110,8 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       LIST_DELIMITER,
       false,
       false,
-      0
+      0,
+      null
   );
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}, maxNumConcurrentSubTasks={2}, useMultiValueDim={3}, intervalToIndex={4}")

@@ -96,6 +96,16 @@ function externalDataTabId(tabId: string | undefined): boolean {
   return String(tabId).startsWith('connect-external-data');
 }
 
+type MoreMenuItem =
+  | 'explain'
+  | 'history'
+  | 'prettify'
+  | 'convert-ingestion-to-sql'
+  | 'attach-tab-from-task-id'
+  | 'open-query-detail-archive'
+  | 'druid-sql-documentation'
+  | 'load-demo-queries';
+
 export interface WorkbenchViewProps
   extends Pick<
     QueryTabProps,
@@ -110,10 +120,16 @@ export interface WorkbenchViewProps
   mandatoryQueryContext?: QueryContext;
   serverQueryContext?: QueryContext;
   queryEngines: DruidEngine[];
-  allowExplain: boolean;
+  hiddenMoreMenuItems?: MoreMenuItem[] | ((engine: DruidEngine) => MoreMenuItem[]);
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
+  maxTasksOptions?:
+    | QueryTabProps['maxTasksOptions']
+    | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
+  hiddenOptions?:
+    | QueryTabProps['hiddenOptions']
+    | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
 }
 
 export interface WorkbenchViewState {
@@ -122,9 +138,6 @@ export interface WorkbenchViewState {
   columnMetadataState: QueryState<readonly ColumnMetadata[]>;
 
   details?: { id: string; initTab?: ExecutionDetailsTab; initExecution?: Execution };
-
-  defaultSchema?: string;
-  defaultTable?: string;
 
   connectExternalDataDialogOpen: boolean;
   explainDialogOpen: boolean;
@@ -666,17 +679,23 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       baseQueryContext,
       serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
       queryEngines,
-      allowExplain,
       goToTask,
       getClusterCapacity,
       maxTasksMenuHeader,
       enginesLabelFn,
       maxTasksLabelFn,
+      maxTasksOptions,
       fullClusterCapacityLabelFn,
+      hiddenOptions,
     } = this.props;
     const { columnMetadataState } = this.state;
     const currentTabEntry = this.getCurrentTabEntry();
     const effectiveEngine = currentTabEntry.query.getEffectiveEngine();
+
+    const hiddenMoreMenuItems =
+      typeof this.props.hiddenMoreMenuItems === 'function'
+        ? this.props.hiddenMoreMenuItems(effectiveEngine)
+        : this.props.hiddenMoreMenuItems || [];
 
     return (
       <div className="center-panel">
@@ -702,10 +721,18 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           maxTasksMenuHeader={maxTasksMenuHeader}
           enginesLabelFn={enginesLabelFn}
           maxTasksLabelFn={maxTasksLabelFn}
+          maxTasksOptions={
+            typeof maxTasksOptions === 'function'
+              ? maxTasksOptions(effectiveEngine)
+              : maxTasksOptions
+          }
           fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
+          hiddenOptions={
+            typeof hiddenOptions === 'function' ? hiddenOptions(effectiveEngine) : hiddenOptions
+          }
           runMoreMenu={
             <Menu>
-              {allowExplain &&
+              {!hiddenMoreMenuItems.includes('explain') &&
                 (effectiveEngine === 'sql-native' || effectiveEngine === 'sql-msq-task') && (
                   <MenuItem
                     icon={IconNames.CLEAN}
@@ -713,14 +740,14 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                     onClick={this.openExplainDialog}
                   />
                 )}
-              {effectiveEngine !== 'sql-msq-task' && (
+              {effectiveEngine !== 'sql-msq-task' && !hiddenMoreMenuItems.includes('history') && (
                 <MenuItem
                   icon={IconNames.HISTORY}
                   text="Query history"
                   onClick={this.openHistoryDialog}
                 />
               )}
-              {currentTabEntry.query.canPrettify() && (
+              {currentTabEntry.query.canPrettify() && !hiddenMoreMenuItems.includes('prettify') && (
                 <MenuItem
                   icon={IconNames.ALIGN_LEFT}
                   text="Prettify query"
@@ -729,38 +756,47 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               )}
               {queryEngines.includes('sql-msq-task') && (
                 <>
-                  <MenuItem
-                    icon={IconNames.TEXT_HIGHLIGHT}
-                    text="Convert ingestion spec to SQL"
-                    onClick={this.openSpecDialog}
-                  />
-                  <MenuItem
-                    icon={IconNames.DOCUMENT_OPEN}
-                    text="Attach tab from task ID"
-                    onClick={this.openTaskIdSubmitDialog}
-                  />
-                  <MenuItem
-                    icon={IconNames.UNARCHIVE}
-                    text="Open query detail archive"
-                    onClick={this.openExecutionSubmitDialog}
-                  />
+                  {!hiddenMoreMenuItems.includes('convert-ingestion-to-sql') && (
+                    <MenuItem
+                      icon={IconNames.TEXT_HIGHLIGHT}
+                      text="Convert ingestion spec to SQL"
+                      onClick={this.openSpecDialog}
+                    />
+                  )}
+                  {!hiddenMoreMenuItems.includes('attach-tab-from-task-id') && (
+                    <MenuItem
+                      icon={IconNames.DOCUMENT_OPEN}
+                      text="Attach tab from task ID"
+                      onClick={this.openTaskIdSubmitDialog}
+                    />
+                  )}
+                  {!hiddenMoreMenuItems.includes('open-query-detail-archive') && (
+                    <MenuItem
+                      icon={IconNames.UNARCHIVE}
+                      text="Open query detail archive"
+                      onClick={this.openExecutionSubmitDialog}
+                    />
+                  )}
                 </>
               )}
               <MenuDivider />
-              <MenuItem
-                icon={IconNames.HELP}
-                text="DruidSQL documentation"
-                href={getLink('DOCS_SQL')}
-                target="_blank"
-              />
-              {queryEngines.includes('sql-msq-task') && (
+              {!hiddenMoreMenuItems.includes('druid-sql-documentation') && (
                 <MenuItem
-                  icon={IconNames.ROCKET_SLANT}
-                  text="Load demo queries"
-                  label="(replaces current tabs)"
-                  onClick={() => this.handleQueriesChange(getDemoQueries())}
+                  icon={IconNames.HELP}
+                  text="DruidSQL documentation"
+                  href={getLink('DOCS_SQL')}
+                  target="_blank"
                 />
               )}
+              {queryEngines.includes('sql-msq-task') &&
+                !hiddenMoreMenuItems.includes('load-demo-queries') && (
+                  <MenuItem
+                    icon={IconNames.ROCKET_SLANT}
+                    text="Load demo queries"
+                    label="(replaces current tabs)"
+                    onClick={() => this.handleQueriesChange(getDemoQueries())}
+                  />
+                )}
             </Menu>
           }
         />
@@ -818,12 +854,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();
 
-    let defaultSchema;
-    let defaultTable;
+    let defaultSchema: string | undefined;
+    let defaultTables: string[] | undefined;
     const parsedQuery = query.getParsedQuery();
     if (parsedQuery) {
       defaultSchema = parsedQuery.getFirstSchema();
-      defaultTable = parsedQuery.getFirstTableName();
+      defaultTables = parsedQuery.getUsedTableNames();
     }
 
     return (
@@ -840,8 +876,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+            defaultTables={defaultTables}
             defaultWhere={LAST_DAY}
-            defaultTable={defaultTable}
             highlightTable={undefined}
           />
         )}

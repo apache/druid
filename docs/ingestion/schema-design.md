@@ -57,7 +57,7 @@ In Druid, on the other hand, it is common to use totally flat datasources that d
 the example of the "sales" table, in Druid it would be typical to store "product_id", "product_name", and
 "product_category" as dimensions directly in a Druid "sales" datasource, without using a separate "products" table.
 Totally flat schemas substantially increase performance, since the need for joins is eliminated at query time. As an
-an added speed boost, this also allows Druid's query layer to operate directly on compressed dictionary-encoded data.
+added speed boost, this also allows Druid's query layer to operate directly on compressed dictionary-encoded data.
 Perhaps counter-intuitively, this does _not_ substantially increase storage footprint relative to normalized schemas,
 since Druid uses dictionary encoding to effectively store just a single integer per row for string columns.
 
@@ -101,7 +101,7 @@ see [partitioning and sorting](./partitioning.md) below for details).
 * Create other dimensions for attributes attached to your data points. These are often called "tags" in timeseries
 database systems.
 * Create [metrics](../querying/aggregations.md) corresponding to the types of aggregations that you want to be able
-to query. Typically this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want the ability
+to query. Typically, this includes "sum", "min", and "max" (in one of the long, float, or double flavors). If you want the ability
 to compute percentiles or quantiles, use Druid's [approximate aggregators](../querying/aggregations.md#approximate-aggregations).
 * Consider enabling [rollup](./rollup.md), which will allow Druid to potentially combine multiple points into one
 row in your Druid datasource. This can be useful if you want to store data at a different time granularity than it is
@@ -160,7 +160,7 @@ approximate distinct counts, and you'll reduce your storage footprint.
 
 Sketches reduce memory footprint at query time because they limit the amount of data that needs to be shuffled between
 servers. For example, in a quantile computation, instead of needing to send all data points to a central location
-so they can be sorted and the quantile can be computed, Druid instead only needs to send a sketch of the points. This
+so that they can be sorted and the quantile can be computed, Druid instead only needs to send a sketch of the points. This
 can reduce data transfer needs to mere kilobytes.
 
 For details about the sketches available in Druid, see the
@@ -255,7 +255,7 @@ Druid can infer the schema for your data in one of two ways:
 
 You can have Druid infer the schema and types for your data partially or fully by setting `dimensionsSpec.useSchemaDiscovery` to `true` and defining some or no dimensions in the dimensions list. 
 
-When performing type-aware schema discovery, Druid can discover all of the columns of your input data (that aren't in
+When performing type-aware schema discovery, Druid can discover all the columns of your input data (that are not present in
 the exclusion list). Druid automatically chooses the most appropriate native Druid type among `STRING`, `LONG`,
 `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, `ARRAY<DOUBLE>`, or `COMPLEX<json>` for nested data. For input formats with
 native boolean types, Druid ingests these values as longs if `druid.expressions.useStrictBooleans` is set to `true`
@@ -298,7 +298,7 @@ If you previously used string-based schema discovery and want to migrate to type
 ### Including the same column as a dimension and a metric
 
 One workflow with unique IDs is to be able to filter on a particular ID, while still being able to do fast unique counts on the ID column.
-If you are not using schema-less dimensions, this use case is supported by setting the `name` of the metric to something different than the dimension.
+If you are not using schema-less dimensions, this use case is supported by setting the `name` of the metric to something different from the dimension.
 If you are using schema-less dimensions, the best practice here is to include the same column twice, once as a dimension, and as a `hyperUnique` metric. This may involve
 some work at ETL time.
 

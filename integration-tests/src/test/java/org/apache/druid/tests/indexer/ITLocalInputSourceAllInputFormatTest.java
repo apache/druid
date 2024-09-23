@@ -30,7 +30,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 import java.util.Map;
 
-@Test(groups = {TestNGGroup.INPUT_FORMAT, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
+@Test(groups = {TestNGGroup.INPUT_FORMAT})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSourceParallelIndexTest
 {

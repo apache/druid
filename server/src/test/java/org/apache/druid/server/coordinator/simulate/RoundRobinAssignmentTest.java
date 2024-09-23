@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -58,7 +59,7 @@ public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
         CoordinatorSimulation.builder()
                              .withDynamicConfig(config)
                              .withBalancer("random")
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 2).forever())
+                             .withRules(TestDataSource.WIKI, Load.on(Tier.T1, 2).forever())
                              .withServers(historicals)
                              .withSegments(Segments.WIKI_10X100D)
                              .build();
@@ -92,8 +93,8 @@ public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
         CoordinatorSimulation.builder()
                              .withDynamicConfig(config)
                              .withBalancer("random")
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 3).forever())
-                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.WIKI, Load.on(Tier.T1, 3).forever())
+                             .withRules(TestDataSource.KOALA, Load.on(Tier.T1, 1).forever())
                              .withServers(historicals)
                              .withSegments(segments)
                              .build();
@@ -102,8 +103,8 @@ public class RoundRobinAssignmentTest extends CoordinatorSimulationBaseTest
     // Run 1: all segments are assigned and loaded
     runCoordinatorCycle();
     loadQueuedSegments();
-    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.KOALA), 10000L);
-    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.WIKI), 3000L);
+    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(TestDataSource.KOALA), 10000L);
+    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(TestDataSource.WIKI), 3000L);
 
     for (DruidServer historical : historicals) {
       Assert.assertEquals(1300, historical.getTotalSegments());

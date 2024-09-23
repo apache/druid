@@ -1,13 +1,8 @@
-Austria	null	#de.wikipedia	1	null
-Austria	Horsching	#de.wikipedia	2	null
-Austria	Vienna	#de.wikipedia	3	Horsching
-Republic of Korea	null	#en.wikipedia	4	Vienna
-Austria	Vienna	#es.wikipedia	5	null
-Republic of Korea	null	#ja.wikipedia	6	Vienna
-Republic of Korea	null	#ko.wikipedia	7	null
-Republic of Korea	Jeonju	#ko.wikipedia	8	null
-Republic of Korea	Seongnam-si	#ko.wikipedia	9	Jeonju
-Republic of Korea	Seoul	#ko.wikipedia	10	Seongnam-si
-Republic of Korea	Suwon-si	#ko.wikipedia	11	Seoul
-Republic of Korea	Yongsan-dong	#ko.wikipedia	12	Suwon-si
-Austria	Vienna	#tr.wikipedia	13	Yongsan-dong
+El Salvador	San Salvador	0	1	null
+Egypt	null	1	2	San Salvador
+El Salvador	San Salvador	9	3	null
+Egypt	Cairo	14	4	San Salvador
+Egypt	null	16	5	Cairo
+Egypt	null	27	6	null
+El Salvador	San Salvador	106	7	null
+Egypt	null	112	8	San Salvador

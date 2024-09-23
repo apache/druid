@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -110,8 +109,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Float> columnValueSelector = TestColumnValueSelector.of(
         Float.class,
-        ImmutableList.of(2.f),
-        DateTimes.nowUtc()
+        ImmutableList.of(2.f)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2.f").makeFloatProcessor(columnValueSelector);
@@ -123,8 +121,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Float> columnValueSelector = TestColumnValueSelector.of(
         Float.class,
-        ImmutableList.of(2.f),
-        DateTimes.nowUtc()
+        ImmutableList.of(2.f)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5.f").makeFloatProcessor(columnValueSelector);
@@ -136,8 +133,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Double> columnValueSelector = TestColumnValueSelector.of(
         Double.class,
-        ImmutableList.of(2.),
-        DateTimes.nowUtc()
+        ImmutableList.of(2.)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2.").makeDoubleProcessor(columnValueSelector);
@@ -149,8 +145,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Double> columnValueSelector = TestColumnValueSelector.of(
         Double.class,
-        ImmutableList.of(2.),
-        DateTimes.nowUtc()
+        ImmutableList.of(2.)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5.").makeDoubleProcessor(columnValueSelector);
@@ -187,8 +182,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
               {
                 return num;
               }
-            }),
-            DateTimes.nowUtc()
+            })
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2").makeComplexProcessor(columnValueSelector);
@@ -225,8 +219,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
               {
                 return num;
               }
-            }),
-            DateTimes.nowUtc()
+            })
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5").makeComplexProcessor(columnValueSelector);
@@ -238,8 +231,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Long> columnValueSelector = TestColumnValueSelector.of(
         Long.class,
-        ImmutableList.of(2L),
-        DateTimes.nowUtc()
+        ImmutableList.of(2L)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("2").makeLongProcessor(columnValueSelector);
@@ -251,8 +243,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Long> columnValueSelector = TestColumnValueSelector.of(
         Long.class,
-        ImmutableList.of(2L),
-        DateTimes.nowUtc()
+        ImmutableList.of(2L)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("5").makeLongProcessor(columnValueSelector);
@@ -264,8 +255,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        Arrays.asList(null, "v"),
-        DateTimes.nowUtc()
+        Arrays.asList(null, "v")
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
@@ -277,8 +267,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        Arrays.asList("", "v"),
-        DateTimes.nowUtc()
+        Arrays.asList("", "v")
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
@@ -294,8 +283,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Integer> columnValueSelector = TestColumnValueSelector.of(
         Integer.class,
-        ImmutableList.of(11),
-        DateTimes.nowUtc()
+        ImmutableList.of(11)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
@@ -307,8 +295,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Integer> columnValueSelector = TestColumnValueSelector.of(
         Integer.class,
-        ImmutableList.of(15),
-        DateTimes.nowUtc()
+        ImmutableList.of(15)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
@@ -320,8 +307,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Long> columnValueSelector = TestColumnValueSelector.of(
         Long.class,
-        ImmutableList.of(11L),
-        DateTimes.nowUtc()
+        ImmutableList.of(11L)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
@@ -333,8 +319,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Long> columnValueSelector = TestColumnValueSelector.of(
         Long.class,
-        ImmutableList.of(15L),
-        DateTimes.nowUtc()
+        ImmutableList.of(15L)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11").makeComplexProcessor(columnValueSelector);
@@ -346,8 +331,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Float> columnValueSelector = TestColumnValueSelector.of(
         Float.class,
-        ImmutableList.of(11.f),
-        DateTimes.nowUtc()
+        ImmutableList.of(11.f)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.f").makeComplexProcessor(columnValueSelector);
@@ -359,8 +343,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Float> columnValueSelector = TestColumnValueSelector.of(
         Float.class,
-        ImmutableList.of(15.f),
-        DateTimes.nowUtc()
+        ImmutableList.of(15.f)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.f").makeComplexProcessor(columnValueSelector);
@@ -372,8 +355,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Double> columnValueSelector = TestColumnValueSelector.of(
         Double.class,
-        ImmutableList.of(11.d),
-        DateTimes.nowUtc()
+        ImmutableList.of(11.d)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.d").makeComplexProcessor(columnValueSelector);
@@ -385,8 +367,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<Double> columnValueSelector = TestColumnValueSelector.of(
         Double.class,
-        ImmutableList.of(15.d),
-        DateTimes.nowUtc()
+        ImmutableList.of(15.d)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("11.d").makeComplexProcessor(columnValueSelector);
@@ -398,8 +379,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of("val"),
-        DateTimes.nowUtc()
+        ImmutableList.of("val")
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
@@ -411,8 +391,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of("bar"),
-        DateTimes.nowUtc()
+        ImmutableList.of("bar")
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
@@ -424,8 +403,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(ImmutableList.of("val")),
-        DateTimes.nowUtc()
+        ImmutableList.of(ImmutableList.of("val"))
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
@@ -437,8 +415,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(ImmutableList.of("bar")),
-        DateTimes.nowUtc()
+        ImmutableList.of(ImmutableList.of("bar"))
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);
@@ -450,8 +427,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(ImmutableList.of()),
-        DateTimes.nowUtc()
+        ImmutableList.of(ImmutableList.of())
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
@@ -463,8 +439,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(false),
-        DateTimes.nowUtc()
+        ImmutableList.of(false)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("false").makeComplexProcessor(columnValueSelector);
@@ -476,8 +451,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(true),
-        DateTimes.nowUtc()
+        ImmutableList.of(true)
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("false").makeComplexProcessor(columnValueSelector);
@@ -489,8 +463,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(StringUtils.toUtf8("var")),
-        DateTimes.nowUtc()
+        ImmutableList.of(StringUtils.toUtf8("var"))
     );
     columnValueSelector.advance();
     final String base64Encoded = StringUtils.encodeBase64String(StringUtils.toUtf8("var"));
@@ -503,8 +476,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
   {
     final TestColumnValueSelector<String> columnValueSelector = TestColumnValueSelector.of(
         String.class,
-        ImmutableList.of(StringUtils.toUtf8("var")),
-        DateTimes.nowUtc()
+        ImmutableList.of(StringUtils.toUtf8("var"))
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector("val").makeComplexProcessor(columnValueSelector);

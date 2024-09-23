@@ -44,7 +44,6 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -308,33 +307,34 @@ public class DatasourcePathSpecTest
   {
     return new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                ingestionSpec1.getDataSource(),
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            DimensionsSpec.EMPTY,
-                            null,
-                            ImmutableList.of("timestamp", "host", "visited"),
-                            false,
-                            0
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited")
-                },
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.NONE,
-                    ImmutableList.of(Intervals.of("2000/3000"))
-                ),
-                null,
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource(ingestionSpec1.getDataSource())
+                      .withParserMap(
+                          HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                              new StringInputRowParser(
+                                  new CSVParseSpec(
+                                      new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                      DimensionsSpec.EMPTY,
+                                      null,
+                                      ImmutableList.of("timestamp", "host", "visited"),
+                                      false,
+                                      0
+                                  ),
+                                  null
+                              ),
+                              Map.class
+                          )
+                      )
+                      .withAggregators(new LongSumAggregatorFactory("visited_sum", "visited"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              Granularities.NONE,
+                              ImmutableList.of(Intervals.of("2000/3000"))
+                          )
+                      )
+                      .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 ImmutableMap.of(
                     "paths",

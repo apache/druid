@@ -25,7 +25,9 @@ import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -52,6 +54,8 @@ import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggrega
 import org.apache.druid.query.aggregation.datasketches.quantiles.DoublesSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -515,6 +519,88 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
     }
   }
 
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionPreservesCreateBitmapIndexInDimensionSchema(CompactionEngine engine) throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      LOG.info("Auto compaction test with YEAR segment granularity, dropExisting is true");
+      Granularity newSegmentGranularity = Granularities.YEAR;
+
+      List<DimensionSchema> dimensionSchemas = ImmutableList.of(
+          new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE)
+      );
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(newSegmentGranularity, null, true),
+          new UserCompactionTaskDimensionsConfig(dimensionSchemas),
+          null,
+          new AggregatorFactory[] {new LongSumAggregatorFactory("added", "added")},
+          true,
+          engine
+      );
+      // Compacted into 1 segment for the entire year.
+      forceTriggerAutoCompaction(1);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifySegmentsCompactedDimensionSchema(dimensionSchemas);
+    }
+  }
+
+  @Test(dataProvider = "engine")
+  public void testAutoCompactionRollsUpMultiValueDimensionsWithoutUnnest(CompactionEngine engine) throws Exception
+  {
+    loadData(INDEX_TASK);
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      final List<String> intervalsBeforeCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      intervalsBeforeCompaction.sort(null);
+      // 4 segments across 2 days (4 total)
+      verifySegmentsCount(4);
+      verifyQuery(INDEX_QUERIES_RESOURCE);
+
+      LOG.info("Auto compaction test with YEAR segment granularity, DAY query granularity, dropExisting is true");
+
+      List<DimensionSchema> dimensionSchemas = ImmutableList.of(
+          new StringDimensionSchema("language", null, true),
+          new StringDimensionSchema("tags", DimensionSchema.MultiValueHandling.SORTED_ARRAY, true)
+      );
+
+      submitCompactionConfig(
+          MAX_ROWS_PER_SEGMENT_COMPACTED,
+          NO_SKIP_OFFSET,
+          new UserCompactionTaskGranularityConfig(Granularities.YEAR, Granularities.DAY, true),
+          new UserCompactionTaskDimensionsConfig(dimensionSchemas),
+          null,
+          new AggregatorFactory[] {new LongSumAggregatorFactory("added", "added")},
+          true,
+          engine
+      );
+      // Compacted into 1 segment for the entire year.
+      forceTriggerAutoCompaction(1);
+      Map<String, Object> queryAndResultFields = ImmutableMap.of(
+          "%%FIELD_TO_QUERY%%",
+          "added",
+          "%%EXPECTED_COUNT_RESULT%%",
+          1,
+          "%%EXPECTED_SCAN_RESULT%%",
+          ImmutableList.of(
+              ImmutableMap.of("events", ImmutableList.of(ImmutableList.of(516)))
+          )
+      );
+      verifyQuery(INDEX_ROLLUP_QUERIES_RESOURCE, queryAndResultFields);
+      verifySegmentsCompacted(1, MAX_ROWS_PER_SEGMENT_COMPACTED);
+      verifySegmentsCompactedDimensionSchema(dimensionSchemas);
+    }
+  }
+
   @Test
   public void testAutoCompactionDutySubmitAndVerifyCompaction() throws Exception
   {
@@ -596,25 +682,36 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
         final HashedPartitionsSpec hashedPartitionsSpec = new HashedPartitionsSpec(null, 3, null);
         submitCompactionConfig(hashedPartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
-        // 2 segments published per day after compaction.
-        forceTriggerAutoCompaction(4);
+        // 3 segments for both 2013-08-31 and 2013-09-01. (Note that numShards guarantees max shards but not exact
+        // number of final shards, since some shards may end up empty.)
+        forceTriggerAutoCompaction(6);
         verifyQuery(INDEX_QUERIES_RESOURCE);
-        verifySegmentsCompacted(hashedPartitionsSpec, 4);
+        verifySegmentsCompacted(hashedPartitionsSpec, 6);
         checkCompactionIntervals(intervalsBeforeCompaction);
       }
 
       LOG.info("Auto compaction test with range partitioning");
 
-      final DimensionRangePartitionsSpec rangePartitionsSpec = new DimensionRangePartitionsSpec(
+      final DimensionRangePartitionsSpec inputRangePartitionsSpec = new DimensionRangePartitionsSpec(
           5,
           null,
           ImmutableList.of("city"),
           false
       );
-      submitCompactionConfig(rangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
+      DimensionRangePartitionsSpec expectedRangePartitionsSpec = inputRangePartitionsSpec;
+      if (engine == CompactionEngine.MSQ) {
+        // Range spec is transformed to its effective maxRowsPerSegment equivalent in MSQ
+        expectedRangePartitionsSpec = new DimensionRangePartitionsSpec(
+            null,
+            7,
+            ImmutableList.of("city"),
+            false
+        );
+      }
+      submitCompactionConfig(inputRangePartitionsSpec, NO_SKIP_OFFSET, 1, null, null, null, null, false, engine);
       forceTriggerAutoCompaction(2);
       verifyQuery(INDEX_QUERIES_RESOURCE);
-      verifySegmentsCompacted(rangePartitionsSpec, 2);
+      verifySegmentsCompacted(expectedRangePartitionsSpec, 2);
       checkCompactionIntervals(intervalsBeforeCompaction);
     }
   }
@@ -1940,6 +2037,28 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Assert.assertNotNull(compactedSegment.getLastCompactionState());
       Assert.assertNotNull(compactedSegment.getLastCompactionState().getPartitionsSpec());
       Assert.assertEquals(compactedSegment.getLastCompactionState().getPartitionsSpec(), partitionsSpec);
+    }
+
+  }
+
+  private void verifySegmentsCompactedDimensionSchema(List<DimensionSchema> dimensionSchemas)
+  {
+    List<DataSegment> segments = coordinator.getFullSegmentsMetadata(fullDatasourceName);
+    List<DataSegment> foundCompactedSegments = new ArrayList<>();
+    for (DataSegment segment : segments) {
+      if (segment.getLastCompactionState() != null) {
+        foundCompactedSegments.add(segment);
+      }
+    }
+    for (DataSegment compactedSegment : foundCompactedSegments) {
+      MatcherAssert.assertThat(
+          dimensionSchemas,
+          Matchers.containsInAnyOrder(
+              compactedSegment.getLastCompactionState()
+                              .getDimensionsSpec()
+                              .getDimensions()
+                              .toArray(new DimensionSchema[0]))
+      );
     }
   }
 

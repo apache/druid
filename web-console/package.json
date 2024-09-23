@@ -1,6 +1,6 @@
 {
   "name": "web-console",
-  "version": "31.0.0",
+  "version": "32.0.0",
   "description": "A web console for Apache Druid",
   "author": "Apache Druid Developers <dev@druid.apache.org>",
   "license": "Apache-2.0",
@@ -68,7 +68,7 @@
     "@blueprintjs/datetime2": "^2.3.7",
     "@blueprintjs/icons": "^5.10.0",
     "@blueprintjs/select": "^5.2.1",
-    "@druid-toolkit/query": "^0.22.21",
+    "@druid-toolkit/query": "^0.22.22",
     "@druid-toolkit/visuals-core": "^0.3.3",
     "@druid-toolkit/visuals-react": "^0.3.3",
     "@fontsource/open-sans": "^5.0.28",

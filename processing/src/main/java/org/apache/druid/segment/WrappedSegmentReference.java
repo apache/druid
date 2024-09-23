@@ -19,33 +19,28 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
- * This class is used as a wrapper for other classes that just want to
- * modify the storage adapter for a datasource. Examples include:
- * {@link org.apache.druid.query.UnnestDataSource}, {@link FilteredDataSource}
+ * Simple {@link SegmentReference} implementation for a segment that wraps a base segment such as
+ * {@link UnnestSegment} or {@link FilteredSegment}
  */
-public class WrappedSegmentReference implements SegmentReference
+public abstract class WrappedSegmentReference implements SegmentReference
 {
-  private final SegmentReference delegate;
-  private final Function<StorageAdapter, StorageAdapter> storageAdapterWrapperFunction;
+  protected final SegmentReference delegate;
 
   public WrappedSegmentReference(
-      SegmentReference delegate,
-      Function<StorageAdapter, StorageAdapter> storageAdapterWrapperFunction
+      SegmentReference delegate
   )
   {
     this.delegate = delegate;
-    this.storageAdapterWrapperFunction = storageAdapterWrapperFunction;
   }
 
   @Override
@@ -73,16 +68,33 @@ public class WrappedSegmentReference implements SegmentReference
     return delegate.asQueryableIndex();
   }
 
+  @Nullable
   @Override
-  public StorageAdapter asStorageAdapter()
+  public <T> T as(@Nonnull Class<T> clazz)
   {
-    return storageAdapterWrapperFunction.apply(delegate.asStorageAdapter());
+    if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) WrappedTimeBoundaryInspector.create(delegate.as(TimeBoundaryInspector.class));
+    } else {
+      return SegmentReference.super.as(clazz);
+    }
+  }
+
+  @Override
+  public boolean isTombstone()
+  {
+    return delegate.isTombstone();
   }
 
   @Override
   public void close() throws IOException
   {
     delegate.close();
+  }
+
+  @Override
+  public String asString()
+  {
+    return delegate.asString();
   }
 }
 
