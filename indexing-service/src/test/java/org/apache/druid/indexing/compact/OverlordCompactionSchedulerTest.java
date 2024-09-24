@@ -158,10 +158,21 @@ public class OverlordCompactionSchedulerTest
             OBJECT_MAPPER.writeValueAsString(ImmutableMap.of("enabled", enabled, "engine", defaultEngine)),
             CompactionSupervisorConfig.class
         );
-    CompactionSupervisorConfig expectedConfig = new CompactionSupervisorConfig(enabled, defaultEngine);
-    Assert.assertEquals(expectedConfig, compactionSupervisorConfig);
-    // Superfluous test to meet min branch coverage for CompactionSupervisorSpec.
-    Assert.assertNotEquals(expectedConfig, "enabled");
+    Assert.assertEquals(new CompactionSupervisorConfig(enabled, defaultEngine), compactionSupervisorConfig);
+  }
+
+  @Test
+  public void testCompactionSupervisorConfigEquality()
+  {
+    Assert.assertEquals(
+        new CompactionSupervisorConfig(true, CompactionEngine.MSQ),
+        new CompactionSupervisorConfig(true, CompactionEngine.MSQ)
+    );
+    Assert.assertNotEquals(
+        new CompactionSupervisorConfig(true, CompactionEngine.NATIVE),
+        new CompactionSupervisorConfig(true, CompactionEngine.MSQ)
+    );
+    Assert.assertNotEquals(new CompactionSupervisorConfig(true, CompactionEngine.NATIVE), "true");
   }
 
   @Test
