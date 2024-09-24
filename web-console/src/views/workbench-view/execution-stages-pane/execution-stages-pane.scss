@@ -23,6 +23,24 @@
     cursor: default;
   }
 
+  .graph-cell {
+    position: relative;
+
+    & > svg {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+
+      line {
+        stroke: $light-gray5;
+      }
+
+      circle {
+        fill: $light-gray5;
+      }
+    }
+  }
+
   .stage {
     color: #8dd3c7;
   }

@@ -22,6 +22,9 @@ import { deleteKeys, filterMap, oneOf, zeroDivide } from '../../utils';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
 
+import type { GraphInfo } from './graph-info';
+import { computeNextInfo } from './graph-info';
+
 const SHUFFLE_WEIGHT = 0.5;
 const READING_INPUT_WITH_SHUFFLE_WEIGHT = 1 - SHUFFLE_WEIGHT;
 
@@ -577,5 +580,20 @@ export class Stages {
     }
 
     return potentiallyStuckIndex;
+  }
+
+  getGraphInfos(): GraphInfo[] {
+    const { stages } = this;
+
+    let prevInfo: GraphInfo = [];
+    const ret: GraphInfo[] = [];
+
+    for (const stage of stages) {
+      ret.push(
+        (prevInfo = computeNextInfo(stage, prevInfo, stage.stageNumber === stages.length - 1)),
+      );
+    }
+
+    return ret;
   }
 }
