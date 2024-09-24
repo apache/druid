@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
@@ -62,4 +63,10 @@ public interface Supervisor
   {
     return null; // default implementation for interface compatability; returning null since true or false is misleading
   }
+
+  /**
+   * Resets any stored metadata by the supervisor.
+   * @param dataSourceMetadata optional dataSource metadata.
+   */
+  void reset(@Nullable DataSourceMetadata dataSourceMetadata);
 }

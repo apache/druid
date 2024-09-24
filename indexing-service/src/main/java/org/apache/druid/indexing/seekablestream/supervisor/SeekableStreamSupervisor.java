@@ -56,7 +56,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
+import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
@@ -146,7 +146,7 @@ import java.util.stream.Stream;
  * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
-    implements StreamSupervisor
+    implements Supervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
@@ -975,7 +975,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, maxNumTasks, this.tuningConfig);
   }
 
-  @Override
   public int getActiveTaskGroupsCount()
   {
     return activelyReadingTaskGroups.values().size();
@@ -1107,7 +1106,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
-  @Override
   public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
     if (resetDataSourceMetadata == null) {
@@ -1975,7 +1973,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  @Override
   public void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
     addNotice(new HandoffTaskGroupsNotice(taskGroupIds));
@@ -4170,7 +4167,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return ioConfig;
   }
 
-  @Override
+
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     Preconditions.checkNotNull(checkpointMetadata, "checkpointMetadata");
@@ -4331,6 +4328,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       SequenceOffsetType seq,
       boolean isExclusive
   );
+
+
+  /**
+   * Computes maxLag, totalLag and avgLag
+   */
+  public abstract LagStats computeLagStats();
+
 
   /**
    * default implementation, schedules periodic fetch of latest offsets and {@link #emitLag} reporting for Kafka and Kinesis

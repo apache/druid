@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -29,7 +30,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -143,14 +143,7 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    if (!(supervisor.lhs instanceof StreamSupervisor)) {
-      throw new UOE(
-          "Handoff task groups operation is not supported by the supervisor[%s] of type[%s].",
-          id,
-          supervisor.rhs.getType()
-      );
-    }
-    final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "Handoff task groups");
     streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
@@ -286,16 +279,7 @@ public class SupervisorManager
       return false;
     }
 
-    if (!(supervisor.lhs instanceof StreamSupervisor)) {
-      throw new UOE(
-          "Reset operation is not supported by the supervisor[%s] of type[%s].",
-          id,
-          supervisor.rhs.getType()
-      );
-    }
-
-    final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
-
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "Reset");
     if (resetDataSourceMetadata == null) {
       streamSupervisor.reset(null);
     } else {
@@ -322,14 +306,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      if (!(supervisor.lhs instanceof StreamSupervisor)) {
-        throw new UOE(
-            "Checkpoint operation is not supported by the supervisor[%s] of type[%s].",
-            supervisorId,
-            supervisor.rhs.getType()
-        );
-      }
-      final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
+      final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(supervisorId, "Checkpoint");
       streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
@@ -471,5 +448,23 @@ public class SupervisorManager
     }
 
     return true;
+  }
+
+  private SeekableStreamSupervisor requireSeekableStreamSupervisor(final String supervisorId, final String operation)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor.lhs instanceof SeekableStreamSupervisor) {
+      // cast and return
+      return (SeekableStreamSupervisor) supervisor.lhs;
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(
+                              "[%s] operation is not supported by the supervisor[%s] of type[%s].",
+                              operation,
+                              supervisorId,
+                              supervisor.rhs.getType()
+                          );
+    }
   }
 }

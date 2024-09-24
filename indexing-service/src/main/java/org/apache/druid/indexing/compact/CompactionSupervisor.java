@@ -19,12 +19,15 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+
+import javax.annotation.Nullable;
 
 /**
  * Supervisor for compaction of a single datasource.
@@ -91,6 +94,12 @@ public class CompactionSupervisor implements Supervisor
     } else {
       return State.RUNNING;
     }
+  }
+
+  @Override
+  public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
+  {
+    // do nothing
   }
 
   public enum State implements SupervisorStateManager.State

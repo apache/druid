@@ -23,6 +23,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -32,6 +34,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -42,6 +45,7 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -61,10 +65,10 @@ public class SupervisorManagerTest extends EasyMockSupport
   private MetadataSupervisorManager metadataSupervisorManager;
 
   @Mock
-  private StreamSupervisor supervisor1;
+  private SeekableStreamSupervisor supervisor1;
 
   @Mock
-  private StreamSupervisor supervisor2;
+  private SeekableStreamSupervisor supervisor2;
 
   @Mock
   private Supervisor supervisor3;
@@ -276,15 +280,16 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    final UOE ex = Assert.assertThrows(
-        UOE.class,
-        () -> manager.handoffTaskGroupsEarly("id3", ImmutableList.of(1))
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () -> manager.handoffTaskGroupsEarly("id3", ImmutableList.of(1))),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.UNSUPPORTED,
+            "general"
+        ).expectMessageIs(
+                "[Handoff task groups] operation is not supported by the supervisor[id3] of type[TestSupervisorSpec]."
+        )
     );
-    Assert.assertEquals(
-        "Handoff task groups operation is not supported by the supervisor[id3] of type[TestSupervisorSpec].",
-        ex.getMessage()
-    );
-
     verifyAll();
   }
 
@@ -398,13 +403,16 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
-    final UOE ex = Assert.assertThrows(
-        UOE.class,
-        () -> manager.resetSupervisor("id3", null)
-    );
-    Assert.assertEquals(
-        "Reset operation is not supported by the supervisor[id3] of type[TestSupervisorSpec].",
-        ex.getMessage()
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () ->  manager.resetSupervisor("id3", null)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.UNSUPPORTED,
+            "general"
+        ).expectMessageIs(
+            "[Reset] operation is not supported by the supervisor[id3] of type[TestSupervisorSpec]."
+        )
     );
 
     verifyAll();
