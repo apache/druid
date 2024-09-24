@@ -143,7 +143,7 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "Handoff task groups");
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "handof");
     streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
@@ -279,7 +279,7 @@ public class SupervisorManager
       return false;
     }
 
-    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "Reset");
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "reset");
     if (resetDataSourceMetadata == null) {
       streamSupervisor.reset(null);
     } else {
@@ -306,7 +306,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(supervisorId, "Checkpoint");
+      final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(supervisorId, "checkPoint");
       streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
@@ -454,13 +454,12 @@ public class SupervisorManager
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
     if (supervisor.lhs instanceof SeekableStreamSupervisor) {
-      // cast and return
       return (SeekableStreamSupervisor) supervisor.lhs;
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
                           .build(
-                              "[%s] operation is not supported by the supervisor[%s] of type[%s].",
+                              "Opeartion[%s] is not supported by supervisor[%s] of type[%s].",
                               operation,
                               supervisorId,
                               supervisor.rhs.getType()

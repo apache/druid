@@ -1973,6 +1973,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  /**
+   * Marks the given task groups as ready for segment hand-off irrespective of the task run times.
+   * In the subsequent run, the supervisor initiates segment publish and hand-off for these task groups and rolls over their tasks.
+   * taskGroupIds that are not valid or not actively reading are simply ignored.
+   */
   public void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
     addNotice(new HandoffTaskGroupsNotice(taskGroupIds));
@@ -4167,7 +4172,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return ioConfig;
   }
 
-
+  /**
+   * The definition of checkpoint is not very strict as currently it does not affect data or control path.
+   * On this call Supervisor can potentially checkpoint data processed so far to some durable storage
+   * for example - Kafka/Kinesis Supervisor uses this to merge and handoff segments containing at least the data
+   * represented by {@param currentCheckpoint} DataSourceMetadata
+   *
+   * @param taskGroupId        unique Identifier to figure out for which sequence to do checkpointing
+   * @param checkpointMetadata metadata for the sequence to currently checkpoint
+   */
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     Preconditions.checkNotNull(checkpointMetadata, "checkpointMetadata");

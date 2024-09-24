@@ -285,7 +285,7 @@ public class SupervisorManagerTest extends EasyMockSupport
             DruidException.Category.UNSUPPORTED,
             "general"
         ).expectMessageIs(
-                "[Handoff task groups] operation is not supported by the supervisor[id3] of type[TestSupervisorSpec]."
+                "Operation[handoff] is not supported by supervisor[id3] of type[TestSupervisorSpec]."
         )
     );
     verifyAll();
@@ -409,7 +409,7 @@ public class SupervisorManagerTest extends EasyMockSupport
             DruidException.Category.UNSUPPORTED,
             "general"
         ).expectMessageIs(
-            "[Reset] operation is not supported by the supervisor[id3] of type[TestSupervisorSpec]."
+            "Operation[reset] is not supported by supervisor[id3] of type[TestSupervisorSpec]."
         )
     );
 
