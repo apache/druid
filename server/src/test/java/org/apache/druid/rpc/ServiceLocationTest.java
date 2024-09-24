@@ -28,6 +28,14 @@ import org.junit.Test;
 public class ServiceLocationTest
 {
   @Test
+  public void test_stripBrackets()
+  {
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceLocation.stripBrackets("[1:2:3:4:5:6:7:8]"));
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceLocation.stripBrackets("1:2:3:4:5:6:7:8"));
+    Assert.assertEquals("1.2.3.4", ServiceLocation.stripBrackets("1.2.3.4"));
+  }
+
+  @Test
   public void test_fromDruidServerMetadata_withPort()
   {
     DruidServerMetadata druidServerMetadata = new DruidServerMetadata(

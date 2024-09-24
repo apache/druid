@@ -186,7 +186,8 @@ public abstract class IngestHandler extends QueryHandler
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     return handlerContext.engine().resultTypeForInsert(
         typeFactory,
-        rootQueryRel.validatedRowType
+        rootQueryRel.validatedRowType,
+        handlerContext.queryContextMap()
     );
   }
 

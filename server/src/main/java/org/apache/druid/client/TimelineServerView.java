@@ -27,6 +27,7 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -48,7 +49,20 @@ public interface TimelineServerView extends ServerView
   Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis);
 
   /**
-   * Returns a list of {@link ImmutableDruidServer}
+   * Returns a snapshot of the current set of server metadata.
+   */
+  default List<DruidServerMetadata> getDruidServerMetadata()
+  {
+    final List<ImmutableDruidServer> druidServers = getDruidServers();
+    final List<DruidServerMetadata> metadatas = new ArrayList<>(druidServers.size());
+    for (final ImmutableDruidServer druidServer : druidServers) {
+      metadatas.add(druidServer.getMetadata());
+    }
+    return metadatas;
+  }
+
+  /**
+   * Returns a snapshot of the current servers, their metadata, and their inventory.
    */
   List<ImmutableDruidServer> getDruidServers();
 

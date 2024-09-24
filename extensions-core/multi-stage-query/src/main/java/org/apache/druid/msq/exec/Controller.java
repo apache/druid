@@ -121,6 +121,11 @@ public interface Controller
    */
   List<String> getWorkerIds();
 
+  /**
+   * Returns whether this controller has a worker with the given ID.
+   */
+  boolean hasWorker(final String workerId);
+
   @Nullable
   TaskReport.ReportMap liveReports();
 
