@@ -21,12 +21,12 @@ package org.apache.druid.msq.dart.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Injector;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.messages.server.Outbox;
+import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.MemoryIntrospector;
@@ -41,13 +41,13 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.io.File;
 
@@ -74,7 +74,10 @@ public class DartWorkerContext implements WorkerContext
   private final File tempDir;
   private final QueryContext queryContext;
 
-  @GuardedBy("this")
+  /**
+   * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
+   */
+  @MonotonicNonNull
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
 
   DartWorkerContext(

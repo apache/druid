@@ -62,5 +62,5 @@ public interface Outbox<MessageType>
    *
    * @param clientHost the client host:port
    */
-  void resetOutbox(final String clientHost);
+  void resetOutbox(String clientHost);
 }

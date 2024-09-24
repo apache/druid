@@ -39,7 +39,6 @@ import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -99,7 +98,7 @@ public class DartWorkerClient extends BaseWorkerClientImpl
   }
 
   @Override
-  public void close() throws IOException
+  public void close()
   {
     synchronized (clientMap) {
       clientMap.clear();

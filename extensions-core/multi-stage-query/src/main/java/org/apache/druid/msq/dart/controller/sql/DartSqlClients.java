@@ -41,12 +41,12 @@ import java.util.Map;
 
 /**
  * Keeps {@link DartSqlClient} for all servers except ourselves. Currently the purpose of this is to power
- * the "get all queries" API at {@link DartSqlResource#doGet(HttpServletRequest)}.
+ * the "get all queries" API at {@link DartSqlResource#doGetRunningQueries(String, HttpServletRequest)}.
  */
 @ManageLifecycle
 public class DartSqlClients implements DruidNodeDiscovery.Listener
 {
-  @GuardedBy("servers")
+  @GuardedBy("clients")
   private final Map<DruidNode, DartSqlClient> clients = new HashMap<>();
   private final DruidNode selfNode;
   private final DruidNodeDiscoveryProvider discoveryProvider;

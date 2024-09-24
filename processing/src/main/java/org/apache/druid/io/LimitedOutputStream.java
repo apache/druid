@@ -21,7 +21,6 @@ package org.apache.druid.io;
 
 import org.apache.druid.java.util.common.IOE;
 
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.function.Function;
@@ -30,15 +29,23 @@ import java.util.function.Function;
  * An {@link OutputStream} that limits how many bytes can be written. Throws {@link IOException} if the limit
  * is exceeded.
  */
-public class LimitedOutputStream extends FilterOutputStream
+public class LimitedOutputStream extends OutputStream
 {
+  private final OutputStream out;
   private final long limit;
   private final Function<Long, String> exceptionMessageFn;
   long written;
 
+  /**
+   * Create a bytes-limited output stream.
+   *
+   * @param out                output stream to wrap
+   * @param limit              bytes limit
+   * @param exceptionMessageFn function for generating an exception message for an {@link IOException}, given the limit.
+   */
   public LimitedOutputStream(OutputStream out, long limit, Function<Long, String> exceptionMessageFn)
   {
-    super(out);
+    this.out = out;
     this.limit = limit;
     this.exceptionMessageFn = exceptionMessageFn;
   }
@@ -47,21 +54,33 @@ public class LimitedOutputStream extends FilterOutputStream
   public void write(int b) throws IOException
   {
     plus(1);
-    super.write(b);
+    out.write(b);
   }
 
   @Override
   public void write(byte[] b) throws IOException
   {
     plus(b.length);
-    super.write(b);
+    out.write(b);
   }
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException
   {
     plus(len);
-    super.write(b, off, len);
+    out.write(b, off, len);
+  }
+
+  @Override
+  public void flush() throws IOException
+  {
+    out.flush();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    out.close();
   }
 
   private void plus(final int n) throws IOException

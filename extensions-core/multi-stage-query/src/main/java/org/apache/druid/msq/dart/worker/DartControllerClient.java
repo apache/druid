@@ -35,7 +35,6 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -103,7 +102,7 @@ public class DartControllerClient implements ControllerClient
   }
 
   @Override
-  public List<String> getWorkerIds() throws IOException
+  public List<String> getWorkerIds()
   {
     // Workers are set in advance through the WorkOrder, so this method isn't used.
     throw new UnsupportedOperationException();
