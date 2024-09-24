@@ -43,7 +43,6 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.joda.time.DateTime;
@@ -413,7 +412,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   protected Map<String, Object> getQueryContext()
   {
     return ImmutableMap.of(
-        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
         PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
         QueryContexts.ENABLE_DEBUG, true
     );
