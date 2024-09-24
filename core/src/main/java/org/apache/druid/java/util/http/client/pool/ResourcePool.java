@@ -245,6 +245,7 @@ public class ResourcePool<K, V> implements Closeable
       synchronized (this) {
         while (!closed && (numLentResources == maxSize)) {
           try {
+            log.debug("Thread [%s] is blocked waiting for resource for key [%s]", Thread.currentThread().getName(), key);
             this.wait();
           }
           catch (InterruptedException e) {
